@@ -16,6 +16,7 @@ import com.example.admin_demo.global.exception.DuplicateException;
 import com.example.admin_demo.global.exception.InternalException;
 import com.example.admin_demo.global.exception.InvalidInputException;
 import com.example.admin_demo.global.exception.NotFoundException;
+import com.example.admin_demo.global.config.MenuProperties;
 import com.example.admin_demo.global.util.AuditUtil;
 import com.example.admin_demo.global.util.ExcelColumnDefinition;
 import com.example.admin_demo.global.util.ExcelExportUtil;
@@ -37,6 +38,7 @@ public class MenuService {
     private final UserMapper userMapper;
     private final RoleMenuMapper roleMenuMapper;
     private final UserMenuMapper userMenuMapper;
+    private final MenuProperties menuProperties;
 
     // ==================== 조회 (Query) ====================
 
@@ -253,7 +255,7 @@ public class MenuService {
     // ==================== 계층 조회 (사용자/역할별) ====================
 
     public List<MenuHierarchyResponse> getAllMenuHierarchy() {
-        List<MenuResponse> allMenus = menuMapper.findAllHierarchy();
+        List<MenuResponse> allMenus = filterHiddenMenus(menuMapper.findAllHierarchy());
         if (allMenus.isEmpty()) {
             return Collections.emptyList();
         }
@@ -279,7 +281,8 @@ public class MenuService {
 
         List<String> allowedMenuIds = new ArrayList<>(menuPermissions.keySet());
 
-        List<MenuResponse> allMenus = menuMapper.findMenuHierarchyByMenuIds(allowedMenuIds, "Y", "Y");
+        List<MenuResponse> allMenus =
+                filterHiddenMenus(menuMapper.findMenuHierarchyByMenuIds(allowedMenuIds, "Y", "Y"));
 
         if (allMenus.isEmpty()) {
             return Collections.emptyList();
@@ -303,13 +306,44 @@ public class MenuService {
 
         List<String> allowedMenuIds = new ArrayList<>(menuPermissions.keySet());
 
-        List<MenuResponse> allMenus = menuMapper.findMenuHierarchyByMenuIds(allowedMenuIds, "Y", "Y");
+        List<MenuResponse> allMenus =
+                filterHiddenMenus(menuMapper.findMenuHierarchyByMenuIds(allowedMenuIds, "Y", "Y"));
 
         if (allMenus.isEmpty()) {
             return Collections.emptyList();
         }
 
         return buildMenuHierarchy(allMenus, menuPermissions);
+    }
+
+    private List<MenuResponse> filterHiddenMenus(List<MenuResponse> menus) {
+        List<String> hiddenMenuIds = menuProperties.getHiddenMenuIds();
+        if (hiddenMenuIds == null || hiddenMenuIds.isEmpty()) {
+            return menus;
+        }
+
+        // 부모 → 자식 ID 목록 맵 구성
+        Map<String, List<String>> childrenMap = new HashMap<>();
+        for (MenuResponse menu : menus) {
+            String prior = menu.getPriorMenuId();
+            if (prior != null && !prior.isEmpty()) {
+                childrenMap.computeIfAbsent(prior, k -> new ArrayList<>()).add(menu.getMenuId());
+            }
+        }
+
+        // BFS로 숨길 메뉴 + 모든 하위 메뉴 ID 수집
+        Set<String> toHide = new HashSet<>();
+        Queue<String> queue = new LinkedList<>(hiddenMenuIds);
+        while (!queue.isEmpty()) {
+            String id = queue.poll();
+            if (toHide.add(id)) {
+                queue.addAll(childrenMap.getOrDefault(id, Collections.emptyList()));
+            }
+        }
+
+        return menus.stream()
+                .filter(m -> !toHide.contains(m.getMenuId()))
+                .collect(Collectors.toList());
     }
 
     private List<MenuHierarchyResponse> buildMenuHierarchy(
