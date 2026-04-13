@@ -13,7 +13,7 @@
  * @param onLogin  - 로그인 버튼 클릭 핸들러
  */
 import React from "react";
-import { EyeOff, KeyRound, Fingerprint, QrCode } from "lucide-react";
+import { Eye, EyeOff, KeyRound, Fingerprint, QrCode } from "lucide-react";
 
 import { BlankPageLayout } from "@cl/layout/BlankPageLayout";
 import { AppBrandHeader } from "@cl/layout/AppBrandHeader";
@@ -30,8 +30,10 @@ export type { LoginPageProps } from "./types";
 
 export function LoginPage({
   hasError = false,
+  showPassword = false,
+  onTogglePassword,
   onLogin,
-}: LoginPageProps & { onLogin?: () => void }) {
+}: LoginPageProps) {
   const ALT_LOGIN_ITEMS = [
     {
       id: "pin",
@@ -57,7 +59,7 @@ export function LoginPage({
     <BlankPageLayout>
       <AppBrandHeader brandInitial="H" brandName="하나카드" />
 
-      <Stack gap="md" className="flex-1 px-standard pt-xl pb-md">
+      <Stack gap="md" className="px-standard pt-xl pb-md">
         <Stack gap="xs" className="pb-md">
           <Typography
             as="h1"
@@ -82,20 +84,23 @@ export function LoginPage({
           />
           <Input
             label="비밀번호"
-            type="password"
+            type={showPassword ? "text" : "password"}
             placeholder="비밀번호를 입력하세요"
-            defaultValue="••••••••"
+            defaultValue="password123"
             fullWidth
             validationState={hasError ? "error" : "default"}
             helperText={
               hasError ? "아이디 또는 비밀번호가 틀렸습니다" : undefined
             }
             rightElement={
-              <EyeOff
-                size={20}
+              <button
+                type="button"
+                onClick={onTogglePassword}
+                aria-label={showPassword ? "비밀번호 숨김" : "비밀번호 표시"}
                 className="text-text-muted"
-                aria-label="비밀번호 숨김"
-              />
+              >
+                {showPassword ? <Eye size={20} /> : <EyeOff size={20} />}
+              </button>
             }
           />
         </Stack>
@@ -120,7 +125,7 @@ export function LoginPage({
           </Button>
         </Inline>
 
-        <div className="mt-auto pt-xl">
+        <div className="pt-md">
           <Button variant="primary" size="lg" fullWidth onClick={onLogin}>
             로그인
           </Button>

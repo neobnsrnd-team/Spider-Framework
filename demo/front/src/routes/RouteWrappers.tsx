@@ -50,7 +50,14 @@ import {
 
 export function LoginRoute() {
   const navigate = useNavigate();
-  return <LoginPage onLogin={() => navigate(PATHS.CARD.DASHBOARD)} />;
+  const [showPassword, setShowPassword] = useState(false);
+  return (
+    <LoginPage
+      showPassword={showPassword}
+      onTogglePassword={() => setShowPassword((v) => !v)}
+      onLogin={() => navigate(PATHS.CARD.DASHBOARD)}
+    />
+  );
 }
 
 /* ------------------------------------------------------------------ */
