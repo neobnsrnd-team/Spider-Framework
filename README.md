@@ -45,7 +45,7 @@ cp .env.example .env
 | `REMEMBER_ME_KEY` | Remember-me 시크릿 | |
 | `AUTHORITY_SOURCE` | 권한 소스 | `user-menu` |
 
-전체 목록은 [.env.example](.env.example) 참조.
+전체 목록은 [.env.example](admin/.env.example) 참조.
 
 ### 2. 데이터베이스 초기화
 

@@ -1,16 +1,4 @@
-# Claude Code 프로젝트 지침_dev version
-
-## GitHub 작업 규칙
-
-### 이슈 생성
-
-- 이슈 생성 시 반드시 `.github/ISSUE_TEMPLATE/feature_request.md` 템플릿을 기반으로 작성한다.
-- 이슈 생성 시 label은 `.github/label.json`을 사용한다.
-
-### PR 생성
-
-- PR 생성 시 반드시 `.github/pull_request_template.md` 템플릿을 기반으로 작성한다.
-- PR 생성 시 label은 `.github/label.json`을 사용한다.
+# Reactive-Springware Claude Code 지침_dev version
 
 ## 코드 작성 규칙
 
