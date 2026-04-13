@@ -1,0 +1,33 @@
+{
+  "compilerOptions": {
+    "target": "ES2020",
+    "useDefineForClassFields": true,
+    "lib": ["ES2020", "DOM", "DOM.Iterable"],
+    "module": "ESNext",
+    "skipLibCheck": true,
+
+    /* 번들러(Vite)가 모듈 해석을 담당하므로 bundler 모드 사용 */
+    "moduleResolution": "bundler",
+    "allowImportingTsExtensions": true,
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+
+    /* 타입 검사 전용 — 실제 emit은 Vite가 처리 */
+    "noEmit": true,
+    "jsx": "react-jsx",
+
+    /* Strict 모드 */
+    "strict": true,
+    "noFallthroughCasesInSwitch": true,
+
+    /* 미사용 변수/파라미터 오류는 끔 (컴포넌트 prop 미사용 케이스 허용) */
+    "noUnusedLocals": false,
+    "noUnusedParameters": false,
+
+    /* Storybook viteFinalConfig의 alias(@lib → lib/)와 동기화 */
+    "paths": {
+      "@lib/*": ["./lib/*"]
+    }
+  },
+  "include": ["packages/**/*", "lib/**/*"]
+}

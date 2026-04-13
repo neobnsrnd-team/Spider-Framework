@@ -1,0 +1,106 @@
+/**
+ * @file index.tsx
+ * @description 홈/메인 대시보드 전용 레이아웃 컴포넌트.
+ * layoutType: 'home' (component-map.md §1.3)
+ *
+ * PageLayout과의 차이:
+ * - 뒤로가기 버튼 없음 (홈은 루트 화면)
+ * - 인사말(greeting) 영역 지원
+ * - 하단 글로벌 탭바 여백(pb-nav) 자동 처리
+ * - 우측 기본 액션: Bell(알림) 아이콘
+ *
+ * @example
+ * <HomePageLayout title="하나은행" greeting="홍길동님, 안녕하세요">
+ *   <BannerCarousel items={banners} />
+ *   <QuickMenuGrid items={menus} />
+ * </HomePageLayout>
+ */
+import React from 'react';
+import { Bell, User, Menu } from 'lucide-react';
+import { cn } from '@lib/cn';
+import type { HomePageLayoutProps } from './types';
+
+export type { HomePageLayoutProps } from './types';
+
+/** 헤더 아이콘 버튼 공통 스타일 */
+const iconBtnCls = cn(
+  'flex items-center justify-center size-9 rounded-full',
+  'text-text-muted hover:bg-surface-raised hover:text-text-heading',
+  'transition-colors duration-150',
+);
+
+export function HomePageLayout({
+  title,
+  logo,
+  rightAction,
+  hasNotification = false,
+  withBottomNav = true,
+  className,
+  children,
+  ...props
+}: HomePageLayoutProps) {
+  return (
+    <div className={cn('flex flex-col h-dvh', className)} {...props}>
+      {/* ── 상단 고정 헤더 ────────────────────────────── */}
+      {/*
+       * backdrop-blur + 반투명 흰 배경: 스크롤 시 콘텐츠가 헤더 아래로 자연스럽게 가려짐.
+       * Figma 디자인(node 1:221) 기준: backdrop-blur-sm / bg-white/80 / border-b
+       */}
+      <header className="sticky top-0 z-sticky backdrop-blur-sm bg-white/80 border-b border-border-subtle">
+        <div className="flex items-center h-14 px-standard gap-sm">
+          <div className="flex-1 flex flex-col justify-center">
+            <div className="flex items-center gap-xs">
+              {/* 로고 아이콘 — logo 전달 시만 노출 */}
+              {logo && <span aria-hidden="true">{logo}</span>}
+              {/* 타이틀: 브랜드 컬러(teal) + 볼드 — Figma node 1:226 */}
+              <h1 className="text-xl font-bold text-brand leading-none">{title}</h1>
+            </div>
+          </div>
+
+          {/* 우측 액션 슬롯 — 미전달 시 프로필·벨·메뉴 기본 3버튼 */}
+          <div className="shrink-0">
+            {rightAction ?? (
+              <div className="flex items-center gap-1">
+                {/* 프로필 버튼 */}
+                <button type="button" aria-label="프로필" className={iconBtnCls}>
+                  <User className="size-4" aria-hidden="true" />
+                </button>
+
+                {/* 알림(벨) 버튼 — hasNotification 시 빨간 뱃지 표시 */}
+                <button type="button" aria-label="알림" className={cn(iconBtnCls, 'relative')}>
+                  <Bell className="size-4" aria-hidden="true" />
+                  {hasNotification && (
+                    /* 알림 뱃지: Figma node 1:234 — 빨간 원, 흰 테두리 */
+                    <span
+                      className="absolute top-1.5 right-1.5 size-2 rounded-full bg-danger-badge border-2 border-white"
+                      aria-hidden="true"
+                    />
+                  )}
+                </button>
+
+                {/* 메뉴 버튼 */}
+                <button type="button" aria-label="메뉴" className={iconBtnCls}>
+                  <Menu className="size-4" aria-hidden="true" />
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      </header>
+
+      {/* ── 스크롤 가능한 본문 영역 ────────────────────── */}
+      <main
+        className={cn(
+          'flex-1 overflow-y-auto [&::-webkit-scrollbar]:hidden',
+          /* 좌우 기본 여백 + 상하 여백 — 콘텐츠가 화면 끝에 붙지 않도록 */
+          'py-md',
+          /* 하단 탭바(80px) 높이만큼 여백 확보 — 탭바가 콘텐츠를 가리지 않도록 */
+          withBottomNav && 'pb-nav',
+        )}
+        style={{ scrollbarWidth: 'none' }}
+      >
+        {children}
+      </main>
+    </div>
+  );
+}

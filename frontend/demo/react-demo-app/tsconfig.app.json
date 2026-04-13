@@ -1,0 +1,36 @@
+{
+  "compilerOptions": {
+    "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.app.tsbuildinfo",
+    "target": "ES2023",
+    "useDefineForClassFields": true,
+    "lib": ["ES2023", "DOM", "DOM.Iterable"],
+    "module": "ESNext",
+    "types": ["vite/client"],
+    "skipLibCheck": true,
+
+    /* Bundler mode */
+    "moduleResolution": "bundler",
+    "allowImportingTsExtensions": true,
+    "verbatimModuleSyntax": true,
+    "moduleDetection": "force",
+    "noEmit": true,
+    "jsx": "react-jsx",
+
+    /* Linting */
+    "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "erasableSyntaxOnly": true,
+    "noFallthroughCasesInSwitch": true,
+    "noUncheckedSideEffectImports": true,
+    "paths": {
+      "@/*": ["./src/*"],
+      "@neobnsrnd-team/reactive-springware": ["../../packages/component-library/index.ts"],
+      "@lib/*": ["../../lib/*"]
+    }
+  },
+  "include": ["src"],
+  /* 컴포넌트 라이브러리 소스는 데모 앱에서 별도로 타입 체크하지 않는다.
+     Vite 빌드 시 path alias로 올바르게 resolve됨 */
+  "exclude": ["../../packages", "../../lib", "node_modules"]
+}

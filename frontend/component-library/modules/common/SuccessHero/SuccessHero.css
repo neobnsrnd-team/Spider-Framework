@@ -1,0 +1,44 @@
+/**
+ * SuccessHero.css
+ * Confetti 폭발 + 부유 애니메이션 정의.
+ *
+ * 각 아이템은 --confetti-rotate CSS 변수를 통해 개별 회전값을 주입받는다.
+ * animation-delay는 컴포넌트 inline style로 아이템별로 다르게 적용한다.
+ */
+
+/**
+ * confetti-pop: 화면 진입 시 scale 0 → 팝인 → 안착.
+ * cubic-bezier(0.34, 1.56, 0.64, 1) 스프링 커브로 통통 튀는 느낌 구현.
+ */
+@keyframes confetti-pop {
+  0% {
+    opacity: 0;
+    transform: scale(0) rotate(0deg);
+  }
+  55% {
+    opacity: 0.9;
+    transform: scale(1.25) rotate(var(--confetti-rotate, 0deg));
+  }
+  75% {
+    transform: scale(0.9) rotate(var(--confetti-rotate, 0deg));
+  }
+  100% {
+    opacity: 0.6;
+    transform: scale(1) rotate(var(--confetti-rotate, 0deg));
+  }
+}
+
+/**
+ * confetti-float: 안착 후 위아래로 천천히 떠다니는 반복 효과.
+ * confetti-pop 종료 후 연속 재생하여 화면에 생동감을 유지한다.
+ */
+@keyframes confetti-float {
+  0%, 100% {
+    opacity: 0.6;
+    transform: scale(1) rotate(var(--confetti-rotate, 0deg)) translateY(0px);
+  }
+  50% {
+    opacity: 0.55;
+    transform: scale(1) rotate(var(--confetti-rotate, 0deg)) translateY(-6px);
+  }
+}

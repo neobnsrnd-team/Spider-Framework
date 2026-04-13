@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "figma": {
+      "type": "remote",
+      "url": "https://mcp.figma.com/mcp",
+      "headers": {
+        "X-Figma-Token": "${FIGMA_TOKEN}"
+      }
+    }
+  }
+}
