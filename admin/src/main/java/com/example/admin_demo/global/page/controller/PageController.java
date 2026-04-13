@@ -320,6 +320,13 @@ public class PageController {
         return resolveView(request, "pages/message-parsing-json/message-parsing-json :: content", model);
     }
 
+    // ── React 플랫폼 ── react_generate
+
+    @GetMapping("/react-generate")
+    public String reactGenerate(HttpServletRequest request, Model model) {
+        return resolveView(request, "pages/react-generate/react-generate :: content", model);
+    }
+
     // ── 서비스 관리 ── v3_neb_service_base_info, v3_neb_biz_component, v3_validator_component,
     //                    v3_biz_app, v3_sql_query_manage, v3_sql_dataSource_manage
 
