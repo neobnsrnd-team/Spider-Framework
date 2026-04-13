@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<!-- Message Bottom Actions Fragment -->
+<div th:fragment="buttons" class="bottom-actions"
+     th:if="${userAuthorities != null and userAuthorities.contains('MESSAGE:W')}">
+    <button class="btn btn-success btn-sm ms-2" onclick="MessageExcelUpload.open()">
+        <i class="bi bi-file-earmark-arrow-up"></i> 엑셀 UPLOAD
+    </button>
+    <button class="btn btn-primary btn-sm ms-2" onclick="MessageModal.open('create')">
+        + 등록
+    </button>
+</div>
+</body>
+</html>

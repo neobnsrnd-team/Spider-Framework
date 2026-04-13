@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<div th:fragment="content">
+    <!-- Include Page Content Layout Styles -->
+
+    <!-- Search Section Header -->
+    <div class="page-header">
+        <h4 class="page-title">
+            <i class="bi bi-exclamation-circle-fill text-danger"></i>
+            검색조건
+            <button class="btn btn-outline-secondary btn-sm" id="btnToggleSearch">
+                <span id="searchToggleText">축소/확대</span>
+            </button>
+        </h4>
+    </div>
+
+    <!-- Search Box -->
+    <div th:replace="~{pages/db-log/db-log-search :: search}"></div>
+
+    <!-- List Section Header -->
+    <div class="page-header">
+        <h4 class="page-title">
+            <i class="bi bi-exclamation-circle-fill text-danger"></i>
+            리스트
+        </h4>
+    </div>
+
+    <!-- Table -->
+    <div th:replace="~{pages/db-log/db-log-table :: table}"></div>
+
+    <!-- Pagination -->
+    <div th:replace="~{fragments/page-content-layout :: pagination}"></div>
+
+    <!-- Detail Modal -->
+    <div th:replace="~{pages/db-log/db-log-detail-modal :: detailModal}"></div>
+
+    <!-- Message Instance Script -->
+    <th:block th:replace="~{pages/db-log/db-log-script :: script}" />
+
+    <!-- Detail Modal Script -->
+    <th:block th:replace="~{pages/db-log/db-log-detail-modal :: detailModalScript}" />
+</div>
+</body>
+</html>

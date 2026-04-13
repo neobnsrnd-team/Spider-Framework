@@ -1,0 +1,12 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<!-- User Bottom Actions Fragment -->
+<div th:fragment="buttons" class="bottom-actions">
+    <button th:if="${userAuthorities != null and userAuthorities.contains('USER:W')}"
+            class="btn btn-primary btn-sm ms-2" onclick="UserModal.open('create')">
+        + 등록
+    </button>
+</div>
+</body>
+</html>

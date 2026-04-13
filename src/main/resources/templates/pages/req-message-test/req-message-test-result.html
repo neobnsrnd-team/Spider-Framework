@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<div th:fragment="result">
+    <!-- Result Section (초기에는 숨김) -->
+    <div class="page-content mt-3 d-hidden" id="resultSection">
+        <div class="card">
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-bordered table-hover table-sm fs-sm" id="resultTable">
+                        <thead class="table-light">
+                        <tr>
+                            <th class="col-w-pct-12">메시지ID</th>
+                            <th class="col-w-pct-12">필드ID</th>
+                            <th class="col-w-pct-20">필드명</th>
+                            <th class="col-w-pct-8">길이</th>
+                            <th class="col-w-pct-8">필수여부</th>
+                            <th class="col-w-pct-40">값</th>
+                        </tr>
+                        </thead>
+                        <tbody id="resultTableBody">
+                        <!-- 조회 결과가 여기에 표시됩니다 -->
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Test Case Input Section (데이터가 있을 때만 표시) -->
+                <div id="testCaseInputSection">
+                    <div class="row mt-3">
+                        <div class="col-md-12">
+                            <label for="testCaseName" class="form-label">테스트 명</label>
+                            <input type="text" class="form-control" id="testCaseName" placeholder="테스트 케이스 이름 입력">
+                        </div>
+                    </div>
+                    <div class="row mt-2">
+                        <div class="col-md-12">
+                            <label for="testCaseDesc" class="form-label">테스트 설명</label>
+                            <textarea class="form-control" id="testCaseDesc" rows="3" placeholder="테스트 케이스 설명 입력"></textarea>
+                        </div>
+                    </div>
+
+                    <!-- Action Buttons -->
+                    <div class="text-center mt-3">
+                        <button type="button" class="btn btn-primary" id="btnSaveTestCase"
+                                th:if="${userAuthorities != null and userAuthorities.contains('TRX_TEST:W')}">테스트 케이스 저장</button>
+                        <button type="button" class="btn btn-secondary" id="btnLoadTestCase">테스트 케이스 선택</button>
+                        <button type="button" class="btn btn-outline-primary" id="btnSaveHeaderData"
+                                th:if="${userAuthorities != null and userAuthorities.contains('TRX_TEST:W')}">기본(헤더)데이터 저장</button>
+                        <button type="button" class="btn btn-outline-secondary" id="btnLoadHeaderData">기본(헤더)데이터 선택</button>
+                        <button type="button" class="btn btn-danger d-hidden" id="btnDeleteTestCase"
+                                th:if="${userAuthorities != null and userAuthorities.contains('TRX_TEST:W')}">테스트 케이스 삭제</button>
+                        <button type="button" class="btn btn-success" id="btnSimulation">시뮬레이션</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+</body>
+</html>

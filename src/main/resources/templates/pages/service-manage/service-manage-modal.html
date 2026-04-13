@@ -1,0 +1,1416 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<div th:fragment="modal">
+
+    <!-- ① 메인 서비스 모달 -->
+    <div class="modal fade" id="serviceModal" tabindex="-1" aria-labelledby="serviceModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-xl modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="serviceModalLabel">서비스 상세</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="serviceForm">
+
+                        <!-- ── 기본 정보 ── -->
+                        <div class="form-section">
+                            <h6 class="fw-semibold mb-3">기본 정보</h6>
+
+                            <!-- Row 1: 서비스 ID + [네이밍룰], 서비스명 -->
+                            <div class="row mb-3">
+                                <div class="col-md-5">
+                                    <label class="form-label">서비스 ID <span class="text-danger">*</span></label>
+                                    <div class="input-group">
+                                        <input type="text" class="form-control" id="svcModalServiceId" name="serviceId"
+                                               maxlength="50" required>
+                                        <button type="button" class="btn btn-outline-secondary" id="btnNamingRule">
+                                            네이밍룰
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="col-md-7">
+                                    <label class="form-label">서비스명 <span class="text-danger">*</span></label>
+                                    <input type="text" class="form-control" id="svcModalServiceName" name="serviceName"
+                                           maxlength="200" required>
+                                </div>
+                            </div>
+
+                            <!-- Row 2: 서비스 유형(select), 업무분류(select), 사용여부 -->
+                            <div class="row mb-3">
+                                <div class="col-md-3">
+                                    <label class="form-label">서비스 유형</label>
+                                    <select class="form-select" id="svcModalServiceType" name="serviceType"></select>
+                                </div>
+                                <div class="col-md-5">
+                                    <label class="form-label">업무분류</label>
+                                    <select class="form-select" id="svcModalBizGroupId" name="bizGroupId"></select>
+                                </div>
+                                <div class="col-md-2">
+                                    <label class="form-label">사용여부 <span class="text-danger">*</span></label>
+                                    <select class="form-select" id="svcModalUseYn" name="useYn"></select>
+                                </div>
+                            </div>
+
+                            <!-- Row 3: Work Space ID + [조회] -->
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                    <label class="form-label">Work Space ID</label>
+                                    <div class="input-group">
+                                        <input type="text" class="form-control" id="svcModalWorkSpaceId" name="workSpaceId"
+                                               maxlength="50">
+                                        <button type="button" class="btn btn-outline-secondary" id="btnWorkspaceSearch">
+                                            조회
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Row 4: 요청채널구분 -->
+                            <div class="row mb-3">
+                                <div class="col-md-3">
+                                    <label class="form-label">요청채널구분</label>
+                                    <select class="form-select" id="svcModalReqChannelCode" name="reqChannelCode"></select>
+                                </div>
+                            </div>
+
+                            <!-- Row 5: 전처리 App ID + [조회], 후처리 App ID -->
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                    <label class="form-label">전처리 App ID</label>
+                                    <div class="input-group">
+                                        <input type="text" class="form-control" id="svcModalPreProcessAppId" name="preProcessAppId"
+                                               maxlength="50">
+                                        <button type="button" class="btn btn-outline-secondary" id="btnPreprocessSearch">
+                                            조회
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">후처리 App ID</label>
+                                    <input type="text" class="form-control" id="svcModalPostProcessAppId" name="postProcessAppId"
+                                           maxlength="50">
+                                </div>
+                            </div>
+
+                            <!-- Row 6: 서비스 설명 -->
+                            <div class="row mb-3">
+                                <div class="col-12">
+                                    <label class="form-label">서비스 설명</label>
+                                    <textarea class="form-control resize-vertical" id="svcModalServiceDesc"
+                                              name="serviceDesc" rows="2" maxlength="4000"></textarea>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- ── 시간 제어 설정 ── -->
+                        <div class="form-section mt-3">
+                            <h6 class="fw-semibold mb-3">시간 제어 설정</h6>
+
+                            <div class="row mb-2 align-items-end">
+                                <div class="col-md-2">
+                                    <label class="form-label d-block">영업일 서비스여부</label>
+                                    <div class="form-check mt-1">
+                                        <input class="form-check-input" type="checkbox" id="svcModalBizdayServiceYn" name="bizdayServiceYn" value="Y">
+                                        <label class="form-check-label" for="svcModalBizdayServiceYn">서비스여부</label>
+                                    </div>
+                                </div>
+                                <div class="col-md-2">
+                                    <label class="form-label">영업일 시작</label>
+                                    <input type="text" class="form-control" id="svcModalBizdayStartTime" name="bizdayStartTime" maxlength="6" placeholder="HHmmss">
+                                </div>
+                                <div class="col-md-2">
+                                    <label class="form-label">영업일 종료</label>
+                                    <input type="text" class="form-control" id="svcModalBizdayEndTime" name="bizdayEndTime" maxlength="6" placeholder="HHmmss">
+                                </div>
+                            </div>
+
+                            <div class="row mb-2 align-items-end">
+                                <div class="col-md-2">
+                                    <label class="form-label d-block">토요일 서비스여부</label>
+                                    <div class="form-check mt-1">
+                                        <input class="form-check-input" type="checkbox" id="svcModalSaturdayServiceYn" name="saturdayServiceYn" value="Y">
+                                        <label class="form-check-label" for="svcModalSaturdayServiceYn">서비스여부</label>
+                                    </div>
+                                </div>
+                                <div class="col-md-2">
+                                    <label class="form-label">토요일 시작</label>
+                                    <input type="text" class="form-control" id="svcModalSaturdayStartTime" name="saturdayStartTime" maxlength="6" placeholder="HHmmss">
+                                </div>
+                                <div class="col-md-2">
+                                    <label class="form-label">토요일 종료</label>
+                                    <input type="text" class="form-control" id="svcModalSaturdayEndTime" name="saturdayEndTime" maxlength="6" placeholder="HHmmss">
+                                </div>
+                            </div>
+
+                            <div class="row mb-2 align-items-end">
+                                <div class="col-md-2">
+                                    <label class="form-label d-block">공휴일 서비스여부</label>
+                                    <div class="form-check mt-1">
+                                        <input class="form-check-input" type="checkbox" id="svcModalHolidayServiceYn" name="holidayServiceYn" value="Y">
+                                        <label class="form-check-label" for="svcModalHolidayServiceYn">서비스여부</label>
+                                    </div>
+                                </div>
+                                <div class="col-md-2">
+                                    <label class="form-label">공휴일 시작</label>
+                                    <input type="text" class="form-control" id="svcModalHolidayStartTime" name="holidayStartTime" maxlength="6" placeholder="HHmmss">
+                                </div>
+                                <div class="col-md-2">
+                                    <label class="form-label">공휴일 종료</label>
+                                    <input type="text" class="form-control" id="svcModalHolidayEndTime" name="holidayEndTime" maxlength="6" placeholder="HHmmss">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- ── 옵션 ── -->
+                        <div class="form-section mt-3">
+                            <h6 class="fw-semibold mb-3">옵션</h6>
+                            <div class="d-flex flex-wrap align-items-center gap-4">
+                                <div class="form-check mb-0">
+                                    <input class="form-check-input" type="checkbox" id="svcModalLoginOnlyYn" name="loginOnlyYn" value="Y">
+                                    <label class="form-check-label" for="svcModalLoginOnlyYn">로그인체크</label>
+                                </div>
+                                <div class="form-check mb-0">
+                                    <input class="form-check-input" type="checkbox" id="svcModalSecureSignYn" name="secureSignYn" value="Y">
+                                    <label class="form-check-label" for="svcModalSecureSignYn">전자서명로그저장</label>
+                                </div>
+                                <div class="form-check mb-0">
+                                    <input class="form-check-input" type="checkbox" id="svcModalBankStatusCheckYn" name="bankStatusCheckYn" value="Y">
+                                    <label class="form-check-label" for="svcModalBankStatusCheckYn">타행상태체크여부</label>
+                                </div>
+                                <div id="svcModalBankCodeFieldWrap" class="d-none">
+                                    <div class="input-group input-group-sm">
+                                        <span class="input-group-text">타행코드필드명</span>
+                                        <input type="text" class="form-control" id="svcModalBankCodeField" name="bankCodeField" maxlength="50" style="width: 140px;">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- ── 연결 컴포넌트 목록 ── -->
+                        <div class="form-section mt-3">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <h6 class="mb-0 fw-semibold">연결 컴포넌트 목록</h6>
+                                <button type="button" class="btn btn-outline-secondary btn-sm" id="btnToggleRelation">
+                                    <i class="bi bi-chevron-down"></i> 컴포넌트 목록 열기
+                                </button>
+                            </div>
+                            <div id="relationSection" class="d-none">
+                                <div class="row g-2">
+                                    <!-- 등록된 컴포넌트 -->
+                                    <div class="col-md-6">
+                                        <div class="mb-1">
+                                            <small class="fw-semibold">등록된 컴포넌트</small>
+                                        </div>
+                                        <div class="table-responsive">
+                                            <table class="table table-sm table-bordered mb-0">
+                                                <thead class="table-light">
+                                                    <tr>
+                                                        <th>등록된 컴포넌트</th>
+                                                        <th>업무분류</th>
+                                                        <th style="width:60px;">상세정보</th>
+                                                        <th style="width:40px;" class="btn-col"></th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody id="registeredBody">
+                                                    <!-- 동적 행 생성 -->
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                        <p class="text-muted small mt-1 mb-0" id="relationEmptyMsg">등록된 연결 컴포넌트가 없습니다.</p>
+                                    </div>
+                                    <!-- 기본 컴포넌트 (컴포넌트 카탈로그 검색) -->
+                                    <div class="col-md-6" id="baseComponentCol">
+                                        <div class="mb-1">
+                                            <small class="fw-semibold">기본 컴포넌트</small>
+                                        </div>
+                                        <div class="d-flex gap-1 mb-2">
+                                            <input type="text" class="form-control form-control-sm" id="baseCompIdInput" placeholder="컴포넌트 ID">
+                                            <input type="text" class="form-control form-control-sm" id="baseCompNameInput" placeholder="컴포넌트명">
+                                            <button type="button" class="btn btn-primary btn-sm" id="btnBaseComponentSearch">
+                                                <i class="bi bi-search"></i>
+                                            </button>
+                                        </div>
+                                        <div class="table-responsive">
+                                            <table class="table table-sm table-bordered table-hover mb-0">
+                                                <thead class="table-light">
+                                                    <tr>
+                                                        <th>컴포넌트 ID</th>
+                                                        <th>컴포넌트명</th>
+                                                        <th>업무분류</th>
+                                                        <th style="width:60px;">상세정보</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody id="baseComponentBody">
+                                                    <tr><td colspan="4" class="text-center text-muted small">조회 버튼을 클릭하세요.</td></tr>
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- ── 시스템 정보 (상세 모드에서만 표시) ── -->
+                        <div class="row mb-3 mt-3 d-hidden" id="svcSystemInfoRow">
+                            <div class="col-md-6">
+                                <label class="form-label">최종수정자 ID</label>
+                                <input type="text" class="form-control" id="svcModalLastUpdateUserId" readonly>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">최종수정일시</label>
+                                <input type="text" class="form-control" id="svcModalLastUpdateDtime" readonly>
+                            </div>
+                        </div>
+
+                    </form>
+                </div>
+                <!-- Modal Footer -->
+                <div class="modal-footer justify-content-between">
+                    <div class="d-flex gap-2">
+                        <button type="button" class="btn btn-outline-secondary btn-sm d-hidden" id="btnServicePrint">
+                            <i class="bi bi-printer"></i> 출력
+                        </button>
+                        <button type="button" class="btn btn-outline-success btn-sm d-hidden" id="btnServiceExcel">
+                            <i class="bi bi-file-earmark-excel"></i> 엑셀
+                        </button>
+                    </div>
+                    <div class="d-flex gap-2">
+                        <button th:if="${userAuthorities != null and userAuthorities.contains('FWK_SERVICE:W')}"
+                                type="button" class="btn btn-outline-primary btn-sm d-hidden" id="btnServiceSimilar">
+                            <i class="bi bi-copy"></i> 유사서비스등록
+                        </button>
+                        <button th:if="${userAuthorities != null and userAuthorities.contains('FWK_SERVICE:W')}"
+                                type="button" class="btn btn-primary btn-sm d-hidden" id="btnServiceSave">
+                            <i class="bi bi-floppy"></i> 저장
+                        </button>
+                        <button th:if="${userAuthorities != null and userAuthorities.contains('FWK_SERVICE:W')}"
+                                type="button" class="btn btn-danger btn-sm d-hidden" id="btnServiceDelete">
+                            <i class="bi bi-trash"></i> 삭제
+                        </button>
+                        <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal"><i class="bi bi-x-lg"></i> 닫기</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ② 네이밍룰 모달 (serviceModal 뒤에 선언 → DOM 후순위로 위에 렌더링) -->
+    <div class="modal fade" id="serviceNamingRuleModal" tabindex="-1" data-bs-backdrop="false" aria-labelledby="namingRuleModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-md">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="namingRuleModalLabel">서비스 네이밍 룰 가이드</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <table class="table table-bordered table-sm mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th style="width: 100px;">코드</th>
+                                <th>업무 내용</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr><td>1T</td><td>이체 (Transfer)</td></tr>
+                            <tr><td>1L</td><td>대출 (Loan)</td></tr>
+                            <tr><td>1B</td><td>B2B</td></tr>
+                            <tr><td>1U</td><td>정보관리 (Information Mgmt)</td></tr>
+                            <tr><td>1N</td><td>공통 (Common)</td></tr>
+                            <tr><td>1V</td><td>부가서비스 (Added Services)</td></tr>
+                            <tr><td>1R</td><td>인증센터 (Auth Center)</td></tr>
+                            <tr><td>1A</td><td>후선관리 (Back Office)</td></tr>
+                            <tr><td>1I</td><td>조회 (Inquiry)</td></tr>
+                            <tr><td>1F</td><td>외환 (Foreign Exchange)</td></tr>
+                            <tr><td>1C</td><td>신용카드 (Credit Card)</td></tr>
+                            <tr><td>1P</td><td>공과금 (Utility)</td></tr>
+                            <tr><td>1S</td><td>결재함 (Payment)</td></tr>
+                            <tr><td>1D</td><td>예금/펀드 (Deposit/Fund)</td></tr>
+                            <tr><td>1H</td><td>헬프데스크 (Help Desk)</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal"><i class="bi bi-x-lg"></i> 닫기</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ③ WorkSpace 검색 모달 (serviceModal 뒤에 선언 → DOM 후순위로 위에 렌더링) -->
+    <div class="modal fade" id="workspaceSearchModal" tabindex="-1" data-bs-backdrop="false" aria-labelledby="workspaceSearchModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-md">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="workspaceSearchModalLabel">WorkSpace 검색</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row g-2 mb-3">
+                        <div class="col">
+                            <input type="text" class="form-control form-control-sm" id="wsSearchIdInput" placeholder="WorkSpace ID">
+                        </div>
+                        <div class="col">
+                            <input type="text" class="form-control form-control-sm" id="wsSearchNameInput" placeholder="WorkSpace 명">
+                        </div>
+                        <div class="col-auto">
+                            <button type="button" class="btn btn-primary btn-sm" id="btnWsSearch">
+                                <i class="bi bi-search"></i> 조회
+                            </button>
+                        </div>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table table-sm table-bordered table-hover mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>WorkSpace ID</th>
+                                    <th>WorkSpace 명</th>
+                                    <th>Thread 수</th>
+                                </tr>
+                            </thead>
+                            <tbody id="wsSearchResults">
+                                <tr><td colspan="3" class="text-center text-muted">조회 버튼을 클릭하세요.</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal"><i class="bi bi-x-lg"></i> 닫기</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ④ 컴포넌트 상세 모달 (view 버튼 클릭 시 사용, serviceModal 뒤에 선언) -->
+    <div th:replace="~{pages/component-manage/component-modal :: modal}"></div>
+
+    <!-- ⑤ 전처리 App 검색 모달 (serviceModal 뒤에 선언 → DOM 후순위로 위에 렌더링) -->
+    <div class="modal fade" id="preprocessSearchModal" tabindex="-1" data-bs-backdrop="false" aria-labelledby="preprocessSearchModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-md">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="preprocessSearchModalLabel">전처리 App 검색</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="d-flex gap-2 mb-3">
+                        <input type="text" class="form-control form-control-sm" id="ppSearchInput" placeholder="전처리 App ID">
+                        <button type="button" class="btn btn-primary btn-sm" id="btnPpSearch">
+                            <i class="bi bi-search"></i> 조회
+                        </button>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table table-sm table-bordered table-hover mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>App ID</th>
+                                    <th>App 명</th>
+                                </tr>
+                            </thead>
+                            <tbody id="ppSearchResults">
+                                <tr><td colspan="2" class="text-center text-muted">조회 버튼을 클릭하세요.</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal"><i class="bi bi-x-lg"></i> 닫기</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ⑥ 서비스 Reload 모달 -->
+    <div class="modal fade" id="svcReloadModal" tabindex="-1" aria-labelledby="svcReloadModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-md">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="svcReloadModalLabel">서비스 Reload</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="alert alert-info py-2 small mb-3">
+                        <strong>대상 서비스 ID: </strong><span id="reloadTargetServiceId" class="fw-bold"></span>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center mb-1">
+                        <small class="fw-semibold">WAS 인스턴스 선택</small>
+                        <div class="form-check mb-0">
+                            <input class="form-check-input" type="checkbox" id="chkReloadAll">
+                            <label class="form-check-label small" for="chkReloadAll">전체선택</label>
+                        </div>
+                    </div>
+                    <div id="reloadInstanceList" class="border rounded p-2" style="max-height:220px; overflow-y:auto;">
+                        <div class="text-center text-muted small">로딩 중...</div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-warning btn-sm" id="btnExecuteReload">
+                        <i class="bi bi-arrow-clockwise"></i> Reload 실행
+                    </button>
+                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal"><i class="bi bi-x-lg"></i> 닫기</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ⑦ 서비스거래 접근 허용자 모달 -->
+    <div class="modal fade" id="svcAccessModal" tabindex="-1" aria-labelledby="svcAccessModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="svcAccessModalLabel">서비스거래 접근 허용자</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row g-2 mb-3">
+                        <div class="col">
+                            <input type="text" class="form-control form-control-sm" id="accessSvcIdInput" placeholder="서비스 ID">
+                        </div>
+                        <div class="col">
+                            <input type="text" class="form-control form-control-sm" id="accessCustUserIdInput" placeholder="고객사용자 ID">
+                        </div>
+                        <div class="col-auto">
+                            <button type="button" class="btn btn-primary btn-sm" id="btnAccessSearch">
+                                <i class="bi bi-search"></i> 조회
+                            </button>
+                        </div>
+                    </div>
+                    <div class="table-responsive mb-3">
+                        <table class="table table-sm table-bordered mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th style="width:60px;">구분</th>
+                                    <th>서비스 ID</th>
+                                    <th>고객사용자 ID</th>
+                                    <th style="width:60px;">사용여부</th>
+                                    <th style="width:40px;"></th>
+                                </tr>
+                            </thead>
+                            <tbody id="accessUserList">
+                                <tr><td colspan="5" class="text-center text-muted small">조회 버튼을 클릭하세요.</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <!-- 추가 폼 (쓰기 권한) -->
+                    <div th:if="${userAuthorities != null and userAuthorities.contains('ACCESS_USER:W')}"
+                         class="border rounded p-2 bg-light">
+                        <small class="fw-semibold d-block mb-2">허용자 추가</small>
+                        <div class="row g-2 align-items-end">
+                            <div class="col">
+                                <label class="form-label small mb-1">서비스 ID</label>
+                                <input type="text" class="form-control form-control-sm" id="accessAddSvcId" placeholder="서비스 ID">
+                            </div>
+                            <div class="col">
+                                <label class="form-label small mb-1">고객사용자 ID</label>
+                                <input type="text" class="form-control form-control-sm" id="accessAddCustUserId" placeholder="고객사용자 ID">
+                            </div>
+                            <div class="col-auto">
+                                <label class="form-label small mb-1">사용여부</label>
+                                <select class="form-select form-select-sm" id="accessAddUseYn" style="width:80px;">
+                                    <option value="Y">Y</option>
+                                    <option value="N">N</option>
+                                </select>
+                            </div>
+                            <div class="col-auto">
+                                <button type="button" class="btn btn-primary btn-sm" id="btnAccessAdd">추가</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal"><i class="bi bi-x-lg"></i> 닫기</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        (function () {
+            // ── 정적 콤보 초기화 ─────────────────────────────────────────
+            ComboManager.simple.populateSelect('#svcModalUseYn', 'USE_YN');
+
+            // ── DB 콤보 초기화 ───────────────────────────────────────────
+            ComboManager.db.getListAutoText('/api/codes/by-group/FR90002', null, '선택 안 함', '').then(function (options) {
+                var $sel = $('#svcModalServiceType').empty();
+                options.forEach(function (o) { $sel.append($('<option>').val(o.value).text(o.label)); });
+            });
+
+            ComboManager.db.getListAutoText('/api/codes/by-group/FR90003', null, '선택 안 함', '').then(function (options) {
+                var $sel = $('#svcModalReqChannelCode').empty();
+                options.forEach(function (o) { $sel.append($('<option>').val(o.value).text(o.label)); });
+            });
+
+            ComboManager.db.getList(API_BASE_URL + '/biz-groups', function (res) {
+                if (!res.success || !res.data) return [];
+                return res.data.map(function (b) { return { value: b.bizGroupId, label: b.bizGroupName }; });
+            }).then(function (options) {
+                var $sel = $('#svcModalBizGroupId').empty().append($('<option>').val('').text('선택 안 함'));
+                options.forEach(function (o) { $sel.append($('<option>').val(o.value).text(o.label)); });
+            });
+
+            window.FwkServiceModal = {
+                mode: 'detail',
+                currentServiceId: null,
+
+                // ── 모달 제어 ──────────────────────────────────────────
+
+                _showModal: function () {
+                    bootstrap.Modal.getOrCreateInstance(document.getElementById('serviceModal')).show();
+                },
+
+                _hideModal: function () {
+                    const modalEl = document.getElementById('serviceModal');
+                    const modal = bootstrap.Modal.getInstance(modalEl);
+                    if (modal) modal.hide();
+                },
+
+                // ── 진입점 ────────────────────────────────────────────
+
+                openForDetail: function (serviceId) {
+                    this.mode = 'detail';
+                    this.currentServiceId = serviceId;
+
+                    $.ajax({
+                        url: API_BASE_URL + '/fwk-services/' + encodeURIComponent(serviceId),
+                        method: 'GET',
+                        success: (response) => {
+                            if (response.success && response.data) {
+                                const data = response.data;
+                                const hasWrite = fwk_service_access;
+
+                                $('#serviceModalLabel').text('서비스 상세');
+                                this._fillForm(data);
+                                this._fillRelations(data.relations || []);
+                                this._setFieldsReadonly(!hasWrite);
+
+                                // 서비스 ID는 상세 모드에서 항상 수정 불가
+                                $('#svcModalServiceId').prop('disabled', true);
+
+                                $('#svcSystemInfoRow').removeClass('d-hidden');
+                                $('#btnServicePrint').removeClass('d-hidden');
+                                $('#btnServiceExcel').removeClass('d-hidden');
+                                $('#btnServiceSave').toggleClass('d-hidden', !hasWrite);
+                                $('#btnServiceDelete').toggleClass('d-hidden', !hasWrite);
+                                $('#btnServiceSimilar').toggleClass('d-hidden', !hasWrite);
+
+                                this._showModal();
+                            } else {
+                                Toast.error('서비스 정보를 불러오는데 실패했습니다.');
+                            }
+                        },
+                        error: () => Toast.error('서비스 정보를 불러오는데 실패했습니다.')
+                    });
+                },
+
+                openForSimilar: function (serviceId) {
+                    $.ajax({
+                        url: API_BASE_URL + '/fwk-services/' + encodeURIComponent(serviceId),
+                        method: 'GET',
+                        success: (response) => {
+                            if (response.success && response.data) {
+                                const data = response.data;
+                                this.mode = 'create';
+                                this.currentServiceId = null;
+
+                                $('#serviceModalLabel').text('서비스 등록 (유사)');
+                                $('#serviceForm')[0].reset();
+                                this._fillForm(data);
+                                this._fillRelations(data.relations || []);
+                                this._setFieldsReadonly(false);
+
+                                // 서비스 ID 초기화 (새로 입력)
+                                $('#svcModalServiceId').val('').prop('disabled', false).prop('readonly', false);
+                                $('#svcSystemInfoRow').addClass('d-hidden');
+                                $('#btnServicePrint').addClass('d-hidden');
+                                $('#btnServiceExcel').addClass('d-hidden');
+                                $('#btnServiceSave').removeClass('d-hidden');
+                                $('#btnServiceDelete').addClass('d-hidden');
+                                $('#btnServiceSimilar').addClass('d-hidden');
+
+                                this._showModal();
+                            } else {
+                                Toast.error('서비스 정보를 불러오는데 실패했습니다.');
+                            }
+                        },
+                        error: () => Toast.error('서비스 정보를 불러오는데 실패했습니다.')
+                    });
+                },
+
+                openForCreate: function () {
+                    this.mode = 'create';
+                    this.currentServiceId = null;
+
+                    $('#serviceModalLabel').text('서비스 등록');
+                    $('#serviceForm')[0].reset();
+                    $('#registeredBody').empty();
+                    $('#baseComponentBody').html('<tr><td colspan="4" class="text-center text-muted small">조회 버튼을 클릭하세요.</td></tr>');
+                    $('#baseCompIdInput, #baseCompNameInput').val('');
+                    $('#relationSection').addClass('d-none');
+                    $('#btnToggleRelation').html('<i class="bi bi-chevron-down"></i> 컴포넌트 목록 열기');
+                    this._updateRelationEmptyMsg();
+                    this._setFieldsReadonly(false);
+
+                    $('#svcModalServiceId').prop('disabled', false).prop('readonly', false);
+                    $('#svcModalUseYn').val('Y');
+                    $('#svcModalBankCodeFieldWrap').addClass('d-none');
+                    $('#svcSystemInfoRow').addClass('d-hidden');
+                    $('#btnServicePrint').addClass('d-hidden');
+                    $('#btnServiceExcel').addClass('d-hidden');
+                    $('#btnServiceSave').removeClass('d-hidden');
+                    $('#btnServiceDelete').addClass('d-hidden');
+                    $('#btnServiceSimilar').addClass('d-hidden');
+
+                    this._showModal();
+                },
+
+                // ── 폼 채우기 ─────────────────────────────────────────
+
+                _fillForm: function (data) {
+                    // 텍스트 · 셀렉트 필드
+                    const textFields = [
+                        'serviceId', 'serviceName', 'serviceDesc', 'serviceType',
+                        'bizGroupId', 'workSpaceId', 'preProcessAppId', 'postProcessAppId',
+                        'bizdayStartTime', 'bizdayEndTime',
+                        'saturdayStartTime', 'saturdayEndTime',
+                        'holidayStartTime', 'holidayEndTime',
+                        'reqChannelCode', 'bankCodeField'
+                    ];
+                    textFields.forEach(f => {
+                        const el = document.getElementById('svcModal' + f.charAt(0).toUpperCase() + f.slice(1));
+                        if (el) el.value = data[f] || '';
+                    });
+                    $('#svcModalUseYn').val(data.useYn || 'Y');
+
+                    // 체크박스 필드
+                    ['loginOnlyYn', 'secureSignYn', 'bankStatusCheckYn',
+                     'bizdayServiceYn', 'saturdayServiceYn', 'holidayServiceYn'].forEach(f => {
+                        $('#svcModal' + f.charAt(0).toUpperCase() + f.slice(1))
+                            .prop('checked', data[f] === 'Y');
+                    });
+
+                    // 타행코드필드명 조건부 표시
+                    $('#svcModalBankCodeFieldWrap').toggleClass('d-none', data.bankStatusCheckYn !== 'Y');
+
+                    $('#svcModalLastUpdateUserId').val(data.lastUpdateUserId || '');
+                    $('#svcModalLastUpdateDtime').val(this._formatDatetime(data.lastUpdateDtime));
+                },
+
+                _setFieldsReadonly: function (readonly) {
+                    $('#serviceForm input:not([readonly]):not([type="checkbox"])').prop('readonly', readonly);
+                    $('#serviceForm textarea').prop('readonly', readonly);
+                    $('#serviceForm select').prop('disabled', readonly);
+                    $('#serviceForm input[type="checkbox"]').prop('disabled', readonly);
+                    $('#btnWorkspaceSearch, #btnPreprocessSearch').prop('disabled', readonly);
+                    $('#registeredBody .btn-remove-relation').toggleClass('d-none', readonly);
+                    // 쓰기 모드에서만 기본 컴포넌트 행 클릭으로 추가 가능
+                    $('#baseComponentBody').toggleClass('write-mode', !readonly);
+                },
+
+                // ── 연결 컴포넌트 행 관리 ─────────────────────────────
+
+                _fillRelations: function (relations) {
+                    $('#registeredBody').empty();
+                    relations.forEach(r => this._addRelationRow(r));
+                    this._updateRelationEmptyMsg();
+                    if (relations.length > 0) {
+                        $('#relationSection').removeClass('d-none');
+                        $('#btnToggleRelation').html('<i class="bi bi-chevron-up"></i> 컴포넌트 목록 닫기');
+                    } else {
+                        $('#relationSection').addClass('d-none');
+                        $('#btnToggleRelation').html('<i class="bi bi-chevron-down"></i> 컴포넌트 목록 열기');
+                    }
+                },
+
+                _isWriteMode: function () {
+                    return $('#btnServiceSave').length > 0 && !$('#btnServiceSave').hasClass('d-hidden');
+                },
+
+                _addRelationRow: function (relation) {
+                    const componentId = relation ? (relation.componentId || '') : '';
+                    const componentName = relation ? (relation.componentName || '') : '';
+                    const bizGroupId = relation ? (relation.bizGroupId || '') : '';
+
+                    // 중복 체크
+                    if (componentId && $('#registeredBody tr[data-component-id="' + componentId + '"]').length > 0) {
+                        Toast.warning('이미 등록된 컴포넌트입니다: ' + componentId);
+                        return;
+                    }
+
+                    const deleteBtnClass = this._isWriteMode() ? '' : 'd-none';
+                    const row = `
+                        <tr data-component-id="${this._esc(componentId)}">
+                            <td class="align-middle">${this._esc(componentName)}</td>
+                            <td class="align-middle small text-muted">${this._esc(bizGroupId)}</td>
+                            <td class="text-center align-middle">
+                                <button type="button" class="btn btn-outline-secondary btn-sm btn-view-component"
+                                        data-component-id="${this._esc(componentId)}">View</button>
+                            </td>
+                            <td class="text-center align-middle">
+                                <button type="button" class="btn btn-outline-danger btn-sm btn-remove-relation ${deleteBtnClass}">
+                                    <i class="bi bi-dash"></i>
+                                </button>
+                            </td>
+                        </tr>`;
+                    $('#registeredBody').append(row);
+                    this._updateRelationEmptyMsg();
+                },
+
+                _collectRelations: function () {
+                    const relations = [];
+                    $('#registeredBody tr[data-component-id]').each(function (idx) {
+                        const componentId = $(this).attr('data-component-id');
+                        if (componentId) {
+                            relations.push({ serviceSeqNo: idx + 1, componentId: componentId, params: [] });
+                        }
+                    });
+                    return relations;
+                },
+
+                _updateRelationEmptyMsg: function () {
+                    const hasRows = $('#registeredBody tr[data-component-id]').length > 0;
+                    $('#relationEmptyMsg').toggleClass('d-none', hasRows);
+                },
+
+                // ── 저장 / 삭제 ───────────────────────────────────────
+
+                save: function () {
+                    if (!this._validateForm()) return;
+
+                    const formData = this._collectFormData();
+
+                    if (this.mode === 'create') {
+                        $.ajax({
+                            url: API_BASE_URL + '/fwk-services',
+                            method: 'POST',
+                            contentType: 'application/json',
+                            data: JSON.stringify(formData),
+                            success: (response) => {
+                                if (response.success) {
+                                    this._saveRelations(formData.serviceId, () => {
+                                        Toast.success('서비스가 등록되었습니다.');
+                                        this._hideModal();
+                                        if (window.FwkServicePage) FwkServicePage.load();
+                                    });
+                                } else {
+                                    Toast.error(response.message || '서비스 등록에 실패했습니다.');
+                                }
+                            },
+                            error: (xhr) => {
+                                Toast.error(xhr.responseJSON?.message || '서비스 등록에 실패했습니다.');
+                            }
+                        });
+                    } else {
+                        $.ajax({
+                            url: API_BASE_URL + '/fwk-services/' + encodeURIComponent(this.currentServiceId),
+                            method: 'PUT',
+                            contentType: 'application/json',
+                            data: JSON.stringify(formData),
+                            success: (response) => {
+                                if (response.success) {
+                                    this._saveRelations(this.currentServiceId, () => {
+                                        Toast.success('서비스가 수정되었습니다.');
+                                        this._hideModal();
+                                        if (window.FwkServicePage) FwkServicePage.load();
+                                    });
+                                } else {
+                                    Toast.error(response.message || '서비스 수정에 실패했습니다.');
+                                }
+                            },
+                            error: (xhr) => {
+                                Toast.error(xhr.responseJSON?.message || '서비스 수정에 실패했습니다.');
+                            }
+                        });
+                    }
+                },
+
+                _saveRelations: function (serviceId, onSuccess) {
+                    const relations = this._collectRelations();
+                    $.ajax({
+                        url: API_BASE_URL + '/fwk-services/' + encodeURIComponent(serviceId) + '/relations',
+                        method: 'PUT',
+                        contentType: 'application/json',
+                        data: JSON.stringify({ relations: relations }),
+                        success: (response) => {
+                            if (response.success) {
+                                onSuccess();
+                            } else {
+                                Toast.warning('서비스는 저장되었으나 연결 컴포넌트 저장에 실패했습니다.');
+                                onSuccess();
+                            }
+                        },
+                        error: () => {
+                            Toast.warning('서비스는 저장되었으나 연결 컴포넌트 저장에 실패했습니다.');
+                            onSuccess();
+                        }
+                    });
+                },
+
+                delete: function () {
+                    Toast.confirm('정말 삭제하시겠습니까? 연결 컴포넌트 정보도 함께 삭제됩니다.', () => {
+                        $.ajax({
+                            url: API_BASE_URL + '/fwk-services/' + encodeURIComponent(this.currentServiceId),
+                            method: 'DELETE',
+                            success: (response) => {
+                                if (response.success) {
+                                    Toast.success('서비스가 삭제되었습니다.');
+                                    this._hideModal();
+                                    if (window.FwkServicePage) FwkServicePage.load();
+                                } else {
+                                    Toast.error(response.message || '서비스 삭제에 실패했습니다.');
+                                }
+                            },
+                            error: (xhr) => {
+                                Toast.error(xhr.responseJSON?.message || '서비스 삭제에 실패했습니다.');
+                            }
+                        });
+                    });
+                },
+
+                // ── 폼 데이터 수집 ────────────────────────────────────
+
+                _collectFormData: function () {
+                    return {
+                        serviceId:          $('#svcModalServiceId').val().trim(),
+                        serviceName:        $('#svcModalServiceName').val().trim(),
+                        serviceDesc:        $('#svcModalServiceDesc').val().trim() || null,
+                        serviceType:        $('#svcModalServiceType').val() || null,
+                        bizGroupId:         $('#svcModalBizGroupId').val() || null,
+                        workSpaceId:        $('#svcModalWorkSpaceId').val().trim() || null,
+                        useYn:              $('#svcModalUseYn').val(),
+                        preProcessAppId:    $('#svcModalPreProcessAppId').val().trim() || null,
+                        postProcessAppId:   $('#svcModalPostProcessAppId').val().trim() || null,
+                        bizdayServiceYn:    $('#svcModalBizdayServiceYn').is(':checked') ? 'Y' : null,
+                        bizdayStartTime:    $('#svcModalBizdayStartTime').val().trim() || null,
+                        bizdayEndTime:      $('#svcModalBizdayEndTime').val().trim() || null,
+                        saturdayServiceYn:  $('#svcModalSaturdayServiceYn').is(':checked') ? 'Y' : null,
+                        saturdayStartTime:  $('#svcModalSaturdayStartTime').val().trim() || null,
+                        saturdayEndTime:    $('#svcModalSaturdayEndTime').val().trim() || null,
+                        holidayServiceYn:   $('#svcModalHolidayServiceYn').is(':checked') ? 'Y' : null,
+                        holidayStartTime:   $('#svcModalHolidayStartTime').val().trim() || null,
+                        holidayEndTime:     $('#svcModalHolidayEndTime').val().trim() || null,
+                        loginOnlyYn:        $('#svcModalLoginOnlyYn').is(':checked') ? 'Y' : null,
+                        secureSignYn:       $('#svcModalSecureSignYn').is(':checked') ? 'Y' : null,
+                        reqChannelCode:     $('#svcModalReqChannelCode').val() || null,
+                        bankStatusCheckYn:  $('#svcModalBankStatusCheckYn').is(':checked') ? 'Y' : null,
+                        bankCodeField:      $('#svcModalBankStatusCheckYn').is(':checked')
+                                            ? ($('#svcModalBankCodeField').val().trim() || null) : null
+                    };
+                },
+
+                // ── 유효성 검증 ───────────────────────────────────────
+
+                _validateForm: function () {
+                    if (this.mode === 'create') {
+                        if (!$('#svcModalServiceId').val().trim()) {
+                            Toast.warning('서비스 ID를 입력해주세요.');
+                            $('#svcModalServiceId').focus();
+                            return false;
+                        }
+                    }
+                    if (!$('#svcModalServiceName').val().trim()) {
+                        Toast.warning('서비스명을 입력해주세요.');
+                        $('#svcModalServiceName').focus();
+                        return false;
+                    }
+                    if (!$('#svcModalUseYn').val()) {
+                        Toast.warning('사용여부를 선택해주세요.');
+                        $('#svcModalUseYn').focus();
+                        return false;
+                    }
+                    return true;
+                },
+
+                // ── 유틸 ──────────────────────────────────────────────
+
+                _formatDatetime: function (dateStr) {
+                    if (!dateStr || dateStr.length < 14) return dateStr || '';
+                    return dateStr.substring(0, 4) + '/' +
+                           dateStr.substring(4, 6) + '/' +
+                           dateStr.substring(6, 8) + ' ' +
+                           dateStr.substring(8, 10) + ':' +
+                           dateStr.substring(10, 12) + ':' +
+                           dateStr.substring(12, 14);
+                },
+
+                _esc: function (str) {
+                    if (!str) return '';
+                    return String(str)
+                        .replace(/&/g, '&amp;')
+                        .replace(/"/g, '&quot;')
+                        .replace(/</g, '&lt;')
+                        .replace(/>/g, '&gt;')
+                        .replace(/'/g, '&#39;');
+                }
+            };
+
+            // ── 이벤트 바인딩 ──────────────────────────────────────────
+
+            $(document).off('click', '#btnServiceSave').on('click', '#btnServiceSave', function () {
+                FwkServiceModal.save();
+            });
+
+            $(document).off('click', '#btnServiceDelete').on('click', '#btnServiceDelete', function () {
+                FwkServiceModal.delete();
+            });
+
+            // 유사서비스등록: 현재 서비스 데이터를 복사하여 신규 등록 모드로 전환
+            $(document).off('click', '#btnServiceSimilar').on('click', '#btnServiceSimilar', function () {
+                const currentRelations = FwkServiceModal._collectRelations();
+
+                FwkServiceModal.mode = 'create';
+                FwkServiceModal.currentServiceId = null;
+
+                $('#serviceModalLabel').text('서비스 등록 (유사)');
+                // 서비스 ID 초기화 및 활성화 (새로 입력)
+                $('#svcModalServiceId').val('').prop('disabled', false).prop('readonly', false).focus();
+                $('#svcSystemInfoRow').addClass('d-hidden');
+                $('#btnServicePrint').addClass('d-hidden');
+                $('#btnServiceExcel').addClass('d-hidden');
+                $('#btnServiceSave').removeClass('d-hidden');
+                $('#btnServiceDelete').addClass('d-hidden');
+                $('#btnServiceSimilar').addClass('d-hidden');
+
+                // 기존 관계 데이터는 유지 (이미 registeredBody에 렌더링됨)
+                // 쓰기 모드로 전환: 삭제 버튼 표시
+                $('#registeredBody .btn-remove-relation').removeClass('d-none');
+                $('#baseComponentBody').addClass('write-mode');
+                FwkServiceModal._setFieldsReadonly(false);
+                $('#svcModalServiceId').prop('disabled', false).prop('readonly', false);
+            });
+
+            $(document).off('click', '.btn-remove-relation').on('click', '.btn-remove-relation', function () {
+                $(this).closest('tr').remove();
+                FwkServiceModal._updateRelationEmptyMsg();
+            });
+
+            // 타행상태체크 → 타행코드필드명 조건부 표시
+            $(document).off('change', '#svcModalBankStatusCheckYn').on('change', '#svcModalBankStatusCheckYn', function () {
+                $('#svcModalBankCodeFieldWrap').toggleClass('d-none', !$(this).is(':checked'));
+            });
+
+            // 기본 컴포넌트 검색
+            $(document).off('click', '#btnBaseComponentSearch').on('click', '#btnBaseComponentSearch', function () {
+                const compId = $('#baseCompIdInput').val().trim();
+                const compName = $('#baseCompNameInput').val().trim();
+                $.ajax({
+                    url: API_BASE_URL + '/components/page',
+                    method: 'GET',
+                    data: { componentId: compId, componentName: compName, page: 1, size: 50 },
+                    success: function (res) {
+                        const $tbody = $('#baseComponentBody').empty();
+                        const list = res.success && res.data ? (res.data.content || []) : [];
+                        if (list.length > 0) {
+                            list.forEach(function (c) {
+                                const $viewBtn = $('<button type="button" class="btn btn-outline-secondary btn-sm">View</button>')
+                                    .attr('data-component-id', c.componentId || '');
+                                const $tr = $('<tr style="cursor:pointer">')
+                                    .attr('data-component-id', c.componentId || '')
+                                    .attr('data-component-name', c.componentName || '')
+                                    .attr('data-biz-group-id', c.bizGroupId || '')
+                                    .append($('<td class="small">').text(c.componentId || ''))
+                                    .append($('<td class="small">').text(c.componentName || ''))
+                                    .append($('<td class="small text-muted">').text(c.bizGroupId || ''))
+                                    .append($('<td class="text-center align-middle">').append($viewBtn));
+                                $tbody.append($tr);
+                            });
+                        } else {
+                            $tbody.html('<tr><td colspan="4" class="text-center text-muted small">조회 결과가 없습니다.</td></tr>');
+                        }
+                    },
+                    error: function () {
+                        $('#baseComponentBody').html('<tr><td colspan="4" class="text-center text-danger small">조회 중 오류가 발생했습니다.</td></tr>');
+                    }
+                });
+            });
+
+            // 기본 컴포넌트 행 클릭 → 등록된 컴포넌트에 추가 (쓰기 모드만, View 버튼 제외)
+            $(document).off('click', '#baseComponentBody tr[data-component-id]').on('click', '#baseComponentBody tr[data-component-id]', function (e) {
+                if ($(e.target).closest('button').length) return;
+                if (!$('#baseComponentBody').hasClass('write-mode')) return;
+                FwkServiceModal._addRelationRow({
+                    componentId: $(this).attr('data-component-id'),
+                    componentName: $(this).attr('data-component-name'),
+                    bizGroupId: $(this).attr('data-biz-group-id')
+                });
+            });
+
+            // View 버튼 → 컴포넌트 상세 모달 (등록된 컴포넌트 + 기본 컴포넌트 공용)
+            function openComponentDetailModal(componentId) {
+                if (!componentId) return;
+                if (!window.ComponentModal) {
+                    Toast.warning('컴포넌트 모달을 로드할 수 없습니다.');
+                    return;
+                }
+                const compModalEl = document.getElementById('componentModal');
+                if (compModalEl) {
+                    // Bootstrap이 모달 인스턴스를 캐싱하기 전에 backdrop 옵션 설정
+                    const existingInstance = bootstrap.Modal.getInstance(compModalEl);
+                    if (existingInstance) existingInstance.dispose();
+                    compModalEl.setAttribute('data-bs-backdrop', 'false');
+                }
+                ComponentModal.openForDetail(componentId);
+            }
+
+            $(document).off('click.svcView', '#registeredBody .btn-view-component').on('click.svcView', '#registeredBody .btn-view-component', function (e) {
+                e.stopPropagation();
+                openComponentDetailModal($(this).attr('data-component-id'));
+            });
+
+            $(document).off('click.svcView', '#baseComponentBody button[data-component-id]').on('click.svcView', '#baseComponentBody button[data-component-id]', function (e) {
+                e.stopPropagation();
+                openComponentDetailModal($(this).attr('data-component-id'));
+            });
+
+            // Enter 키로 기본 컴포넌트 검색
+            $(document).off('keypress', '#baseCompIdInput, #baseCompNameInput').on('keypress', '#baseCompIdInput, #baseCompNameInput', function (e) {
+                if (e.key === 'Enter') $('#btnBaseComponentSearch').trigger('click');
+            });
+
+            // 컴포넌트 목록 토글
+            $(document).off('click', '#btnToggleRelation').on('click', '#btnToggleRelation', function () {
+                const $section = $('#relationSection');
+                if ($section.hasClass('d-none')) {
+                    $section.removeClass('d-none');
+                    $(this).html('<i class="bi bi-chevron-up"></i> 컴포넌트 목록 닫기');
+                } else {
+                    $section.addClass('d-none');
+                    $(this).html('<i class="bi bi-chevron-down"></i> 컴포넌트 목록 열기');
+                }
+            });
+
+            // 출력 버튼
+            $(document).off('click', '#btnServicePrint').on('click', '#btnServicePrint', function () {
+                const data = FwkServiceModal._collectFormData();
+                const columns = [
+                    { key: 'serviceId', label: '서비스 ID' },
+                    { key: 'serviceName', label: '서비스명' },
+                    { key: 'serviceType', label: '서비스 유형' },
+                    { key: 'bizGroupId', label: 'Biz Group ID' },
+                    { key: 'workSpaceId', label: 'WorkSpace ID' },
+                    { key: 'useYn', label: '사용여부' },
+                    { key: 'reqChannelCode', label: '요청채널구분' },
+                    { key: 'loginOnlyYn', label: '로그인체크' },
+                    { key: 'secureSignYn', label: '전자서명로그저장' },
+                    { key: 'bankStatusCheckYn', label: '타행상태체크' }
+                ];
+                PrintUtil.print({ title: '서비스 상세', columns: columns, data: [data] });
+            });
+
+            // 엑셀 버튼
+            $(document).off('click', '#btnServiceExcel').on('click', '#btnServiceExcel', function () {
+                if (!FwkServiceModal.currentServiceId) return;
+                window.location = API_BASE_URL + '/fwk-services/export?' + $.param({ serviceId: FwkServiceModal.currentServiceId });
+            });
+
+            // Work Space ID 조회 버튼
+            $(document).off('click', '#btnWorkspaceSearch').on('click', '#btnWorkspaceSearch', function () {
+                $('#wsSearchIdInput').val('');
+                $('#wsSearchNameInput').val('');
+                $('#wsSearchResults').html('<tr><td colspan="3" class="text-center text-muted">조회 버튼을 클릭하세요.</td></tr>');
+                bootstrap.Modal.getOrCreateInstance(document.getElementById('workspaceSearchModal')).show();
+            });
+
+            // 네이밍룰 버튼 → 자식 모달만 열기 (serviceModal 닫히지 않도록 JS로 처리)
+            $(document).off('click', '#btnNamingRule').on('click', '#btnNamingRule', function () {
+                bootstrap.Modal.getOrCreateInstance(document.getElementById('serviceNamingRuleModal')).show();
+            });
+
+            // 전처리 조회 버튼 → 전처리 검색 모달 오픈
+            $(document).off('click', '#btnPreprocessSearch').on('click', '#btnPreprocessSearch', function () {
+                $('#ppSearchInput').val('');
+                $('#ppSearchResults').html('<tr><td colspan="2" class="text-center text-muted">조회 버튼을 클릭하세요.</td></tr>');
+                bootstrap.Modal.getOrCreateInstance(document.getElementById('preprocessSearchModal')).show();
+            });
+
+            // 자식 모달 닫힐 때 부모(serviceModal) body 상태 복원
+            // Bootstrap 5는 모달 hide 시 body의 modal-open 클래스와 overflow를 제거하므로 재설정
+            ['serviceNamingRuleModal', 'workspaceSearchModal', 'preprocessSearchModal', 'componentModal', 'svcReloadModal', 'svcAccessModal'].forEach(function (id) {
+                const el = document.getElementById(id);
+                if (!el) return;
+                el.addEventListener('hidden.bs.modal', function () {
+                    if (document.getElementById('serviceModal').classList.contains('show')) {
+                        document.body.classList.add('modal-open');
+                        document.body.style.overflow = 'hidden';
+                    }
+                });
+            });
+
+            // WorkSpace 검색 실행
+            $(document).off('click', '#btnWsSearch').on('click', '#btnWsSearch', function () {
+                const wsId = $('#wsSearchIdInput').val().trim();
+                const wsName = $('#wsSearchNameInput').val().trim();
+                $.ajax({
+                    url: API_BASE_URL + '/fwk-services/popup/workspaces',
+                    method: 'GET',
+                    data: { workSpaceId: wsId, workSpaceName: wsName, page: 1, size: 50 },
+                    success: function (res) {
+                        const $tbody = $('#wsSearchResults');
+                        $tbody.empty();
+                        const list = res.success && res.data ? (res.data.content || []) : [];
+                        if (list.length > 0) {
+                            list.forEach(function (ws) {
+                                $tbody.append(
+                                    $('<tr style="cursor:pointer">')
+                                        .attr('data-id', ws.workSpaceId)
+                                        .append($('<td>').text(ws.workSpaceId || ''))
+                                        .append($('<td>').text(ws.workSpaceName || ''))
+                                        .append($('<td>').text(ws.threadCount != null ? ws.threadCount : ''))
+                                );
+                            });
+                        } else {
+                            $tbody.html('<tr><td colspan="3" class="text-center text-muted">조회 결과가 없습니다.</td></tr>');
+                        }
+                    },
+                    error: function () {
+                        $('#wsSearchResults').html('<tr><td colspan="3" class="text-center text-danger">조회 중 오류가 발생했습니다.</td></tr>');
+                    }
+                });
+            });
+
+            // WorkSpace 검색 결과 행 클릭 → 선택
+            $(document).off('click', '#wsSearchResults tr[data-id]').on('click', '#wsSearchResults tr[data-id]', function () {
+                $('#svcModalWorkSpaceId').val($(this).attr('data-id'));
+                bootstrap.Modal.getInstance(document.getElementById('workspaceSearchModal')).hide();
+            });
+
+            // Enter 키로 WorkSpace 검색
+            $(document).off('keypress', '#wsSearchIdInput, #wsSearchNameInput').on('keypress', '#wsSearchIdInput, #wsSearchNameInput', function (e) {
+                if (e.key === 'Enter') $('#btnWsSearch').trigger('click');
+            });
+
+            // 전처리 검색 실행
+            $(document).off('click', '#btnPpSearch').on('click', '#btnPpSearch', function () {
+                const searchId = $('#ppSearchInput').val().trim();
+                $.ajax({
+                    url: API_BASE_URL + '/biz-apps/page',
+                    method: 'GET',
+                    data: { bizAppId: searchId, page: 1, size: 50 },
+                    success: function (res) {
+                        const $tbody = $('#ppSearchResults');
+                        $tbody.empty();
+                        const list = res.success && res.data ? (res.data.content || []) : [];
+                        if (list.length > 0) {
+                            list.forEach(function (app) {
+                                $tbody.append(
+                                    $('<tr style="cursor:pointer">')
+                                        .attr('data-id', app.bizAppId)
+                                        .append($('<td>').text(app.bizAppId || ''))
+                                        .append($('<td>').text(app.bizAppName || ''))
+                                );
+                            });
+                        } else {
+                            $tbody.html('<tr><td colspan="2" class="text-center text-muted">조회 결과가 없습니다.</td></tr>');
+                        }
+                    },
+                    error: function () {
+                        $('#ppSearchResults').html('<tr><td colspan="2" class="text-center text-danger">조회 중 오류가 발생했습니다.</td></tr>');
+                    }
+                });
+            });
+
+            // 전처리 검색 결과 행 클릭 → 선택
+            $(document).off('click', '#ppSearchResults tr[data-id]').on('click', '#ppSearchResults tr[data-id]', function () {
+                $('#svcModalPreProcessAppId').val($(this).attr('data-id'));
+                bootstrap.Modal.getInstance(document.getElementById('preprocessSearchModal')).hide();
+            });
+
+            // Enter 키로 전처리 검색
+            $(document).off('keypress', '#ppSearchInput').on('keypress', '#ppSearchInput', function (e) {
+                if (e.key === 'Enter') $('#btnPpSearch').trigger('click');
+            });
+
+            // ── Reload 모달 ───────────────────────────────────────────
+
+            window.SvcReloadModal = {
+                currentServiceId: null,
+
+                open: function (serviceId) {
+                    this.currentServiceId = serviceId || null;
+                    $('#reloadTargetServiceId').text(serviceId || '(전체 서비스)');
+                    $('#chkReloadAll').prop('checked', false);
+                    $('#reloadInstanceList').html('<div class="text-center text-muted small">로딩 중...</div>');
+                    $.ajax({
+                        url: API_BASE_URL + '/reload/instances',
+                        method: 'GET',
+                        success: function (res) {
+                            const instances = res.success && res.data ? res.data : [];
+                            const $list = $('#reloadInstanceList').empty();
+                            if (instances.length > 0) {
+                                instances.forEach(function (inst) {
+                                    $list.append(
+                                        '<div class="form-check">' +
+                                        '<input class="form-check-input reload-instance-chk" type="checkbox"' +
+                                        ' id="ri_' + inst.instanceId + '" value="' + inst.instanceId + '">' +
+                                        '<label class="form-check-label small" for="ri_' + inst.instanceId + '">' +
+                                        inst.instanceId + (inst.instanceName ? ' — ' + inst.instanceName : '') +
+                                        '</label></div>'
+                                    );
+                                });
+                            } else {
+                                $list.html('<div class="text-center text-muted small">WAS 인스턴스가 없습니다.</div>');
+                            }
+                        },
+                        error: function () {
+                            $('#reloadInstanceList').html('<div class="text-center text-danger small">인스턴스 조회 실패</div>');
+                        }
+                    });
+                    bootstrap.Modal.getOrCreateInstance(document.getElementById('svcReloadModal')).show();
+                }
+            };
+
+            $(document).off('change', '#chkReloadAll').on('change', '#chkReloadAll', function () {
+                $('.reload-instance-chk').prop('checked', $(this).is(':checked'));
+            });
+
+            $(document).off('click', '#btnExecuteReload').on('click', '#btnExecuteReload', function () {
+                const instanceIds = [];
+                $('.reload-instance-chk:checked').each(function () { instanceIds.push($(this).val()); });
+                if (instanceIds.length === 0) {
+                    Toast.warning('Reload할 WAS 인스턴스를 선택해주세요.');
+                    return;
+                }
+                const request = { reloadType: 'service_reload_all', instanceIds: instanceIds };
+                if (SvcReloadModal.currentServiceId) {
+                    request.additionalParams = { trxId: SvcReloadModal.currentServiceId };
+                }
+                $.ajax({
+                    url: API_BASE_URL + '/reload/execute',
+                    method: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify(request),
+                    success: function (res) {
+                        if (res.success) {
+                            Toast.success('서비스 Reload가 실행되었습니다.');
+                            bootstrap.Modal.getInstance(document.getElementById('svcReloadModal')).hide();
+                        } else {
+                            Toast.error(res.message || 'Reload 실행에 실패했습니다.');
+                        }
+                    },
+                    error: function (xhr) {
+                        Toast.error(xhr.responseJSON?.message || 'Reload 실행에 실패했습니다.');
+                    }
+                });
+            });
+
+            // ── 접근 허용자 모달 ──────────────────────────────────────
+
+            window.SvcAccessModal = {
+                open: function (serviceId) {
+                    const svcId = serviceId || '';
+                    $('#accessSvcIdInput').val(svcId);
+                    $('#accessCustUserIdInput').val('');
+                    $('#accessAddSvcId').val(svcId);
+                    $('#accessAddCustUserId').val('');
+                    if (svcId) {
+                        this._load();
+                    } else {
+                        $('#accessUserList').html('<tr><td colspan="5" class="text-center text-muted small">조회 버튼을 클릭하세요.</td></tr>');
+                    }
+                    bootstrap.Modal.getOrCreateInstance(document.getElementById('svcAccessModal')).show();
+                },
+
+                _load: function () {
+                    const trxId = $('#accessSvcIdInput').val().trim();
+                    const custUserId = $('#accessCustUserIdInput').val().trim();
+                    $.ajax({
+                        url: API_BASE_URL + '/access-users/page',
+                        method: 'GET',
+                        data: { trxId: trxId, gubunType: 'S', custUserId: custUserId, page: 1, size: 100 },
+                        success: function (res) {
+                            const $tbody = $('#accessUserList').empty();
+                            const list = res.success && res.data ? (res.data.content || []) : [];
+                            if (list.length > 0) {
+                                list.forEach(function (row) {
+                                    const $tr = $('<tr>')
+                                        .append($('<td class="small text-center">').text(row.gubunType || ''))
+                                        .append($('<td class="small">').text(row.trxId || ''))
+                                        .append($('<td class="small">').text(row.custUserId || ''))
+                                        .append($('<td class="small text-center">').text(row.useYn || ''));
+                                    if (access_user_write) {
+                                        $tr.append(
+                                            $('<td class="text-center">').append(
+                                                $('<button type="button" class="btn btn-outline-danger btn-sm py-0 px-1 btn-access-delete">')
+                                                    .attr('data-gubun', row.gubunType || '')
+                                                    .attr('data-trx', row.trxId || '')
+                                                    .attr('data-user', row.custUserId || '')
+                                                    .html('<i class="bi bi-dash"></i>')
+                                            )
+                                        );
+                                    } else {
+                                        $tr.append($('<td>'));
+                                    }
+                                    $tbody.append($tr);
+                                });
+                            } else {
+                                $tbody.html('<tr><td colspan="5" class="text-center text-muted small">조회 결과가 없습니다.</td></tr>');
+                            }
+                        },
+                        error: function () {
+                            $('#accessUserList').html('<tr><td colspan="5" class="text-center text-danger small">조회 실패</td></tr>');
+                        }
+                    });
+                }
+            };
+
+            $(document).off('click', '#btnAccessSearch').on('click', '#btnAccessSearch', function () {
+                SvcAccessModal._load();
+            });
+
+            $(document).off('click', '.btn-access-delete').on('click', '.btn-access-delete', function () {
+                const gubun = $(this).attr('data-gubun');
+                const trx = $(this).attr('data-trx');
+                const user = $(this).attr('data-user');
+                Toast.confirm('해당 허용자를 삭제하시겠습니까?', function () {
+                    $.ajax({
+                        url: API_BASE_URL + '/access-users/' + encodeURIComponent(gubun) + '/' + encodeURIComponent(trx) + '/' + encodeURIComponent(user),
+                        method: 'DELETE',
+                        success: function (res) {
+                            if (res.success) {
+                                Toast.success('삭제되었습니다.');
+                                SvcAccessModal._load();
+                            } else {
+                                Toast.error(res.message || '삭제에 실패했습니다.');
+                            }
+                        },
+                        error: function (xhr) {
+                            Toast.error(xhr.responseJSON?.message || '삭제에 실패했습니다.');
+                        }
+                    });
+                });
+            });
+
+            $(document).off('click', '#btnAccessAdd').on('click', '#btnAccessAdd', function () {
+                const svcId = $('#accessAddSvcId').val().trim();
+                const custUserId = $('#accessAddCustUserId').val().trim();
+                const useYn = $('#accessAddUseYn').val();
+                if (!svcId) { Toast.warning('서비스 ID를 입력해주세요.'); return; }
+                if (!custUserId) { Toast.warning('고객사용자 ID를 입력해주세요.'); return; }
+                $.ajax({
+                    url: API_BASE_URL + '/access-users',
+                    method: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify({ gubunType: 'S', trxId: svcId, custUserId: custUserId, useYn: useYn }),
+                    success: function (res) {
+                        if (res.success) {
+                            Toast.success('허용자가 추가되었습니다.');
+                            $('#accessAddCustUserId').val('');
+                            SvcAccessModal._load();
+                        } else {
+                            Toast.error(res.message || '추가에 실패했습니다.');
+                        }
+                    },
+                    error: function (xhr) {
+                        Toast.error(xhr.responseJSON?.message || '추가에 실패했습니다.');
+                    }
+                });
+            });
+
+            $(document).off('keypress', '#accessSvcIdInput, #accessCustUserIdInput').on('keypress', '#accessSvcIdInput, #accessCustUserIdInput', function (e) {
+                if (e.key === 'Enter') $('#btnAccessSearch').trigger('click');
+            });
+        })();
+    </script>
+</div>
+</body>
+</html>

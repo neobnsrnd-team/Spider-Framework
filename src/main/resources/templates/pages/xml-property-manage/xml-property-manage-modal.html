@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<div th:fragment="modals">
+
+    <!-- 파일 등록 모달 -->
+    <div class="modal fade" id="xmlPropAddFileModal" tabindex="-1" aria-hidden="true"
+         data-bs-backdrop="static" data-bs-keyboard="false">
+        <div class="modal-dialog modal-dialog-centered sp-modal-sm">
+        <div class="modal-content">
+            <div class="modal-header py-2">
+                <h6 class="modal-title">XML Property 파일 등록</h6>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close" id="btnCloseAddFileModal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label class="form-label">
+                        파일명 <span class="text-body-secondary small">(.properties.xml 자동 추가)</span>
+                    </label>
+                    <input type="text" id="xmlPropNewFileName"
+                           placeholder="예: application"
+                           class="form-control form-control-sm" />
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">
+                        Property 설명
+                    </label>
+                    <textarea id="xmlPropNewFileDesc" rows="3"
+                              placeholder="파일에 대한 설명을 입력하세요 (선택)"
+                              class="form-control form-control-sm"></textarea>
+                </div>
+            </div>
+            <div class="modal-footer py-2">
+                <button class="btn btn-secondary btn-sm" data-bs-dismiss="modal" id="btnCancelAddFile">
+                    닫기
+                </button>
+                <button class="btn btn-primary btn-sm" id="btnConfirmAddFile">
+                    Property 생성
+                </button>
+            </div>
+        </div>
+        </div>
+    </div>
+
+    <!-- 삭제 확인 모달 -->
+    <div class="modal fade" id="xmlPropDeleteConfirmModal" tabindex="-1" aria-hidden="true"
+         data-bs-backdrop="static" data-bs-keyboard="false">
+        <div class="modal-dialog modal-dialog-centered sp-modal-sm">
+        <div class="modal-content">
+            <div class="modal-header py-2">
+                <h6 class="modal-title">파일 삭제 확인</h6>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close" id="btnCloseDeleteConfirmModal"></button>
+            </div>
+            <div class="modal-body">
+                <p id="xmlPropDeleteConfirmMsg" class="text-center mb-0">삭제하시겠습니까?</p>
+            </div>
+            <div class="modal-footer py-2">
+                <button class="btn btn-secondary btn-sm" data-bs-dismiss="modal" id="btnCancelDeleteConfirm">
+                    취소
+                </button>
+                <button class="btn btn-danger btn-sm" id="btnConfirmDelete">
+                    삭제
+                </button>
+            </div>
+        </div>
+        </div>
+    </div>
+
+</div>
+</body>
+</html>

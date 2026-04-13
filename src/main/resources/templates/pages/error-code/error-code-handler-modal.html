@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<div th:fragment="modal">
+    <!-- Handler Assignment Modal -->
+    <div class="modal fade" id="handlerModal" tabindex="-1" aria-labelledby="handlerModalLabel" aria-hidden="true"
+         data-bs-backdrop="static" data-bs-keyboard="false">
+        <div class="modal-dialog modal-dialog-centered modal-lg sp-modal-lg">
+            <div class="modal-content">
+                <!-- Modal Header -->
+                <div class="modal-header py-2">
+                    <h5 class="modal-title" id="handlerModalLabel">오류코드별 핸들러 등록</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+
+                <!-- Modal Body -->
+                <div class="modal-body">
+                    <div id="handlerErrorInfo" class="sp-handler-info">
+                        [ ] -
+                    </div>
+
+                    <div class="sp-handler-container">
+                        <!-- Available Handlers -->
+                        <div class="sp-handler-panel">
+                            <div class="sp-handler-panel-label">핸들러 명</div>
+                            <select id="availableHandlers" multiple class="form-select">
+                            </select>
+                        </div>
+
+                        <!-- Parameter Input -->
+                        <div th:if="${userAuthorities != null and userAuthorities.contains('ERROR_CODE:W')}"
+                             class="sp-handler-actions">
+                            <div class="sp-handler-actions-label">파라미터</div>
+                            <input type="text" id="handlerParam" class="form-control" placeholder="파라미터 입력">
+                            <button class="btn btn-primary btn-sm w-100" onclick="HandlerModal.addHandler()">
+                                <i class="bi bi-chevron-right"></i> 추가
+                            </button>
+                            <button class="btn btn-danger btn-sm w-100" onclick="HandlerModal.removeHandler()">
+                                <i class="bi bi-chevron-left"></i> 제거
+                            </button>
+                        </div>
+
+                        <!-- Assigned Handlers -->
+                        <div class="sp-handler-panel">
+                            <div class="sp-handler-panel-label">오류처리 핸들러 목록</div>
+                            <select id="assignedHandlers" multiple class="form-select">
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Modal Footer -->
+                <div class="modal-footer py-2">
+                    <button th:if="${userAuthorities != null and userAuthorities.contains('ERROR_CODE:W')}"
+                            type="button" class="btn btn-primary btn-sm" onclick="HandlerModal.save();">
+                        <i class="bi bi-check-lg"></i> 변경사항저장
+                    </button>
+                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">
+                        <i class="bi bi-x-lg"></i> 닫기
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        (function () {
+            window.HandlerModal = {
+                currentErrorCode: null,
+                currentErrorTitle: null,
+                allHandlers: [],
+                assignedHandlerData: [],
+
+                open: function (errorCode, errorTitle) {
+                    this.currentErrorCode = errorCode;
+                    this.currentErrorTitle = errorTitle;
+
+                    $('#handlerErrorInfo').text(`[ ${errorCode} ] - ${errorTitle}`);
+
+                    this.loadHandlers();
+                    $('#handlerModal').modal('show');
+                },
+
+                loadHandlers: function () {
+                    const self = this;
+
+                    // Load all handlers
+                    $.ajax({
+                        url: `${API_BASE_URL}/handle-apps`,
+                        method: 'GET',
+                        success: (response) => {
+                            if (response.success && response.data) {
+                                self.allHandlers = response.data;
+                                self.loadAssignedHandlers();
+                            }
+                        },
+                        error: (xhr) => {
+                            console.error('Failed to load handlers:', xhr);
+                            Toast.error('핸들러 목록을 불러오는데 실패했습니다.');
+                        }
+                    });
+                },
+
+                loadAssignedHandlers: function () {
+                    const self = this;
+
+                    $.ajax({
+                        url: `${API_BASE_URL}/errors/${this.currentErrorCode}/handle-apps`,
+                        method: 'GET',
+                        success: (response) => {
+                            if (response.success && response.data) {
+                                self.assignedHandlerData = response.data;
+                                self.renderHandlerLists();
+                            }
+                        },
+                        error: (xhr) => {
+                            console.error('Failed to load assigned handlers:', xhr);
+                            self.assignedHandlerData = [];
+                            self.renderHandlerLists();
+                        }
+                    });
+                },
+
+                renderHandlerLists: function () {
+                    const assignedIds = this.assignedHandlerData.map(h => h.handleAppId);
+
+                    // Available handlers (not assigned)
+                    const availableSelect = $('#availableHandlers');
+                    availableSelect.empty();
+                    this.allHandlers.forEach(handler => {
+                        if (!assignedIds.includes(handler.handleAppId)) {
+                            availableSelect.append(`<option value="${handler.handleAppId}">${handler.handleAppName}</option>`);
+                        }
+                    });
+
+                    // Assigned handlers
+                    const assignedSelect = $('#assignedHandlers');
+                    assignedSelect.empty();
+                    this.assignedHandlerData.forEach(handler => {
+                        const displayText = handler.userParamValue
+                            ? `${handler.handleAppName} (${handler.userParamValue})`
+                            : handler.handleAppName;
+                        assignedSelect.append(`<option value="${handler.handleAppId}" data-param="${handler.userParamValue || ''}">${displayText}</option>`);
+                    });
+                },
+
+                addHandler: function () {
+                    const selectedOptions = $('#availableHandlers option:selected');
+                    const param = $('#handlerParam').val().trim();
+
+                    if (selectedOptions.length === 0) {
+                        Toast.warning('추가할 핸들러를 선택해주세요.');
+                        return;
+                    }
+
+                    selectedOptions.each((i, opt) => {
+                        const handler = this.allHandlers.find(h => h.handleAppId === opt.value);
+                        if (handler) {
+                            this.assignedHandlerData.push({
+                                errorCode: this.currentErrorCode,
+                                handleAppId: handler.handleAppId,
+                                handleAppName: handler.handleAppName,
+                                userParamValue: param
+                            });
+                        }
+                    });
+
+                    $('#handlerParam').val('');
+                    this.renderHandlerLists();
+                },
+
+                removeHandler: function () {
+                    const selectedOptions = $('#assignedHandlers option:selected');
+
+                    if (selectedOptions.length === 0) {
+                        Toast.warning('제거할 핸들러를 선택해주세요.');
+                        return;
+                    }
+
+                    const removeIds = [];
+                    selectedOptions.each((i, opt) => {
+                        removeIds.push(opt.value);
+                    });
+
+                    this.assignedHandlerData = this.assignedHandlerData.filter(h => !removeIds.includes(h.handleAppId));
+                    this.renderHandlerLists();
+                },
+
+                save: function () {
+                    const handleApps = this.assignedHandlerData.map(h => ({
+                        handleAppId: h.handleAppId,
+                        userParamValue: h.userParamValue || ''
+                    }));
+
+                    $.ajax({
+                        url: `${API_BASE_URL}/errors/${this.currentErrorCode}/handle-apps`,
+                        method: 'PUT',
+                        contentType: 'application/json',
+                        data: JSON.stringify(handleApps),
+                        success: (response) => {
+                            if (response.success) {
+                                Toast.success('핸들러가 저장되었습니다.');
+                                $('#handlerModal').modal('hide');
+                                if (typeof Errors !== 'undefined' && Errors.load) {
+                                    Errors.load();
+                                }
+                            } else {
+                                Toast.error(response.message || '핸들러 저장에 실패했습니다.');
+                            }
+                        },
+                        error: (xhr) => {
+                            const errorMsg = xhr.responseJSON?.message || '핸들러 저장에 실패했습니다.';
+                            Toast.error(errorMsg);
+                        }
+                    });
+                }
+            };
+        })();
+    </script>
+</div>
+</body>
+</html>

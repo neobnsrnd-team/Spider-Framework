@@ -1,0 +1,440 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<div th:fragment="modal">
+    <!-- Property Group Create Modal -->
+    <div class="modal fade" id="propertyGroupCreateModal" tabindex="-1" aria-labelledby="propertyGroupCreateModalLabel" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
+        <div class="modal-dialog modal-xl sp-modal-xl">
+            <div class="modal-content">
+                <!-- Modal Header -->
+                <div class="modal-header">
+                    <h5 class="modal-title" id="propertyGroupCreateModalLabel">
+                        <i class="bi bi-plus-lg-circle"></i> 신규 프로퍼티 그룹 생성
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+
+                <!-- Modal Body -->
+                <div class="modal-body">
+                    <!-- 프로퍼티 그룹 정보 섹션 -->
+                    <div class="property-group-section mb-4">
+                        <h6 class="section-title mb-3">
+                            <i class="bi bi-stack text-danger"></i> 프로퍼티 그룹 정보
+                        </h6>
+                        <div class="row align-items-center">
+                            <div class="col-auto">
+                                <label class="form-label mb-0">프로퍼티 그룹 ID</label>
+                            </div>
+                            <div class="col-md-2">
+                                <input type="text" class="form-control form-control-sm" id="newPropertyGroupId"
+                                       placeholder="그룹 ID 입력" maxlength="100">
+                            </div>
+                            <div class="col-auto">
+                                <button class="btn btn-outline-secondary btn-sm" onclick="PropertyGroupCreateModal.checkDuplicate()">
+                                    <i class="bi bi-check-circle-fill"></i> 중복확인
+                                </button>
+                            </div>
+                            <div class="col-auto">
+                                <label class="form-label mb-0">프로퍼티 그룹명</label>
+                            </div>
+                            <div class="col-md-3">
+                                <input type="text" class="form-control form-control-sm" id="newPropertyGroupName"
+                                       placeholder="그룹명 입력" maxlength="200">
+                            </div>
+                            <div class="col"></div>
+                            <div class="col-auto">
+                                <button class="btn btn-outline-info btn-sm" onclick="PropertyGroupCreateModal.openSimilarPropertyModal()">
+                                    <i class="bi bi-clipboard"></i> 유사 프로퍼티 등록
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 하위 프로퍼티 섹션 -->
+                    <div class="property-info-section">
+                        <h6 class="section-title mb-3">
+                            <i class="bi bi-list-ul text-danger"></i> 하위 프로퍼티
+                        </h6>
+
+                        <!-- 액션 버튼 -->
+                        <div class="row mb-3 align-items-center">
+                            <div class="col"></div>
+                            <div class="col-auto">
+                                <button class="btn btn-outline-primary btn-sm" onclick="PropertyGroupCreateModal.addRow()">
+                                    <i class="bi bi-plus-lg"></i> 행 추가
+                                </button>
+                                <button class="btn btn-outline-danger btn-sm" onclick="PropertyGroupCreateModal.deleteSelected()">
+                                    <i class="bi bi-trash"></i> 선택행 삭제
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- 프로퍼티 테이블 -->
+                        <div class="table-responsive sp-scrollable">
+                            <table class="table table-sm table-hover sp-data-grid" id="newPropertyTable">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th class="col-w-40 text-center">
+                                            <input type="checkbox" id="newSelectAll" onchange="PropertyGroupCreateModal.toggleSelectAll(this)">
+                                        </th>
+                                        <th class="col-w-60 text-center">CRUD</th>
+                                        <th class="col-w-160">프로퍼티ID</th>
+                                        <th class="col-w-150">프로퍼티명</th>
+                                        <th class="col-w-200">프로퍼티 설명</th>
+                                        <th class="col-w-120">초기값</th>
+                                        <th class="col-w-120">유효값</th>
+                                        <th class="col-w-100">DATA 타입</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="newPropertyTableBody">
+                                    <tr>
+                                        <td colspan="8" class="text-center text-muted py-4">
+                                            '행 추가' 버튼을 클릭하여 프로퍼티를 추가하세요.
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Modal Footer -->
+                <div class="modal-footer justify-content-end">
+                    <button type="button" class="btn btn-success btn-sm" onclick="PropertyGroupCreateModal.save()">
+                        <i class="bi bi-floppy"></i> 저장
+                    </button>
+                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">
+                        <i class="bi bi-x-lg"></i> 닫기
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<th:block th:fragment="script">
+<script>
+    const PropertyGroupCreateModal = {
+        rows: [],
+        rowIndex: 0,
+        duplicateChecked: false,
+        checkedGroupId: null,
+
+        // 모달 열기
+        open: function() {
+            this.reset();
+            const modal = bootstrap.Modal.getOrCreateInstance(document.getElementById('propertyGroupCreateModal'));
+            modal.show();
+        },
+
+        // 상태 초기화
+        reset: function() {
+            this.rows = [];
+            this.rowIndex = 0;
+            this.duplicateChecked = false;
+            this.checkedGroupId = null;
+            $('#newPropertyGroupId').val('').prop('readonly', false);
+            $('#newPropertyGroupName').val('');
+            $('#newPropertyTableBody').html(
+                '<tr><td colspan="8" class="text-center text-muted py-4">\'행 추가\' 버튼을 클릭하여 프로퍼티를 추가하세요.</td></tr>'
+            );
+            $('#newSelectAll').prop('checked', false);
+        },
+
+        // 중복확인
+        checkDuplicate: function() {
+            const groupId = $('#newPropertyGroupId').val().trim();
+            if (!groupId) {
+                Toast.warning('프로퍼티 그룹 ID를 입력하세요.');
+                $('#newPropertyGroupId').focus();
+                return;
+            }
+
+            $.ajax({
+                url: API_BASE_URL + '/properties/groups/' + encodeURIComponent(groupId) + '/exists',
+                method: 'GET',
+                success: (response) => {
+                    if (response.success) {
+                        if (response.data === true) {
+                            Toast.warning('이미 존재하는 프로퍼티 그룹 ID입니다.');
+                            this.duplicateChecked = false;
+                            this.checkedGroupId = null;
+                        } else {
+                            Toast.success('사용 가능한 프로퍼티 그룹 ID입니다.');
+                            this.duplicateChecked = true;
+                            this.checkedGroupId = groupId;
+                        }
+                    }
+                },
+                error: (xhr) => {
+                    console.error('중복확인 실패:', xhr);
+                    Toast.error('중복확인에 실패했습니다.');
+                }
+            });
+        },
+
+        // 행 추가
+        addRow: function() {
+            // 빈 행 메시지 제거
+            if (this.rows.length === 0) {
+                $('#newPropertyTableBody').empty();
+            }
+
+            const idx = this.rowIndex++;
+            const row = {
+                index: idx,
+                propertyId: '',
+                propertyName: '',
+                propertyDesc: '',
+                dataType: 'C',
+                validData: '',
+                defaultValue: '',
+                crud: 'C',
+                deleted: false
+            };
+            this.rows.push(row);
+            $('#newPropertyTableBody').append(this.createRow(row));
+        },
+
+        // 행 HTML 생성
+        createRow: function(row) {
+            return '<tr data-row-index="' + row.index + '">' +
+                '<td class="text-center">' +
+                    '<input type="checkbox" class="new-prop-checkbox" data-row-index="' + row.index + '">' +
+                '</td>' +
+                '<td class="text-center">' +
+                    '<span class="badge ' + this.getCrudBadgeClass(row.crud) + '">' + this.getCrudLabel(row.crud) + '</span>' +
+                '</td>' +
+                '<td>' +
+                    '<input type="text" value="' + HtmlUtils.escape(row.propertyId) + '"' +
+                    ' data-field="propertyId" data-row-index="' + row.index + '"' +
+                    ' oninput="PropertyGroupCreateModal.onFieldChange(' + row.index + ', \'propertyId\', this.value)">' +
+                '</td>' +
+                '<td>' +
+                    '<input type="text" value="' + HtmlUtils.escape(row.propertyName) + '"' +
+                    ' data-field="propertyName" data-row-index="' + row.index + '"' +
+                    ' oninput="PropertyGroupCreateModal.onFieldChange(' + row.index + ', \'propertyName\', this.value)">' +
+                '</td>' +
+                '<td>' +
+                    '<input type="text" value="' + HtmlUtils.escape(row.propertyDesc) + '"' +
+                    ' data-field="propertyDesc" data-row-index="' + row.index + '"' +
+                    ' oninput="PropertyGroupCreateModal.onFieldChange(' + row.index + ', \'propertyDesc\', this.value)">' +
+                '</td>' +
+                '<td>' +
+                '<input type="text" value="' + HtmlUtils.escape(row.defaultValue) + '"' +
+                ' data-field="defaultValue" data-row-index="' + row.index + '"' +
+                ' oninput="PropertyGroupCreateModal.onFieldChange(' + row.index + ', \'defaultValue\', this.value)">' +
+                '</td>' +
+                '<td>' +
+                    '<input type="text" value="' + HtmlUtils.escape(row.validData) + '"' +
+                    ' data-field="validData" data-row-index="' + row.index + '"' +
+                    ' oninput="PropertyGroupCreateModal.onFieldChange(' + row.index + ', \'validData\', this.value)">' +
+                '</td>' +
+                '<td>' +
+                '<select data-field="dataType" data-row-index="' + row.index + '"' +
+                ' onchange="PropertyGroupCreateModal.onFieldChange(' + row.index + ', \'dataType\', this.value)">' +
+                '<option value="C"' + (row.dataType === 'C' ? ' selected' : '') + '>String</option>' +
+                '<option value="N"' + (row.dataType === 'N' ? ' selected' : '') + '>Number</option>' +
+                '<option value="B"' + (row.dataType === 'B' ? ' selected' : '') + '>Boolean</option>' +
+                '</select>' +
+                '</td>' +
+            '</tr>';
+        },
+
+        // 필드 변경 시 데이터 동기화
+        onFieldChange: function(rowIndex, field, value) {
+            const row = this.rows.find(r => r.index === rowIndex);
+            if (row) {
+                row[field] = value;
+            }
+        },
+
+        // 전체 선택/해제
+        toggleSelectAll: function(checkbox) {
+            $('.new-prop-checkbox').prop('checked', checkbox.checked);
+        },
+
+        // 선택행 삭제
+        deleteSelected: function() {
+            const checked = $('.new-prop-checkbox:checked');
+            if (checked.length === 0) {
+                Toast.warning('삭제할 항목을 선택해주세요.');
+                return;
+            }
+
+            checked.each((_, el) => {
+                const rowIndex = parseInt($(el).data('row-index'));
+                this.rows = this.rows.filter(r => r.index !== rowIndex);
+                $('tr[data-row-index="' + rowIndex + '"]').remove();
+            });
+
+            $('#newSelectAll').prop('checked', false);
+
+            if (this.rows.length === 0) {
+                $('#newPropertyTableBody').html(
+                    '<tr><td colspan="8" class="text-center text-muted py-4">\'행 추가\' 버튼을 클릭하여 프로퍼티를 추가하세요.</td></tr>'
+                );
+            }
+        },
+
+        // 유사 프로퍼티 모달 열기
+        openSimilarPropertyModal: function() {
+            var self = this;
+            SimilarPropertyModal.open('propertyGroupCreateModal', function(copiedProperties) {
+                if (self.rows.length === 0) {
+                    $('#newPropertyTableBody').empty();
+                }
+                copiedProperties.forEach(function(prop) {
+                    var rowIdx = self.rowIndex++;
+                    var row = {
+                        index: rowIdx,
+                        propertyId: prop.propertyId,
+                        propertyName: prop.propertyName,
+                        propertyDesc: prop.propertyDesc,
+                        dataType: prop.dataType,
+                        validData: prop.validData,
+                        defaultValue: prop.defaultValue,
+                        crud: 'C',
+                        deleted: false
+                    };
+                    self.rows.push(row);
+                    $('#newPropertyTableBody').append(self.createRow(row));
+                });
+            });
+        },
+
+        // 저장
+        save: function() {
+            const groupId = $('#newPropertyGroupId').val().trim();
+            const groupName = $('#newPropertyGroupName').val().trim();
+
+            // 유효성 검사
+            if (!groupId) {
+                Toast.warning('프로퍼티 그룹 ID를 입력하세요.');
+                $('#newPropertyGroupId').focus();
+                return;
+            }
+
+            if (!this.duplicateChecked || this.checkedGroupId !== groupId) {
+                Toast.warning('프로퍼티 그룹 ID 중복확인을 먼저 수행하세요.');
+                return;
+            }
+
+            if (!groupName) {
+                Toast.warning('프로퍼티 그룹명을 입력하세요.');
+                $('#newPropertyGroupName').focus();
+                return;
+            }
+
+            const activeRows = this.rows.filter(r => !r.deleted);
+            if (activeRows.length === 0) {
+                Toast.warning('하위 프로퍼티를 최소 1개 이상 추가하세요.');
+                return;
+            }
+
+            // 프로퍼티 필수값 확인
+            for (let i = 0; i < activeRows.length; i++) {
+                if (!activeRows[i].propertyId || !activeRows[i].propertyId.trim()) {
+                    Toast.warning((i + 1) + '번째 행의 프로퍼티 ID를 입력하세요.');
+                    return;
+                }
+                if (!activeRows[i].propertyName || !activeRows[i].propertyName.trim()) {
+                    Toast.warning((i + 1) + '번째 행의 프로퍼티명을 입력하세요.');
+                    return;
+                }
+                if (!activeRows[i].propertyDesc || !activeRows[i].propertyDesc.trim()) {
+                    Toast.warning((i + 1) + '번째 행의 프로퍼티 설명을 입력하세요.');
+                    return;
+                }
+                if (!activeRows[i].defaultValue || !activeRows[i].defaultValue.trim()) {
+                    Toast.warning((i + 1) + '번째 행의 초기값을 입력하세요.');
+                    return;
+                }
+            }
+
+            // 프로퍼티 ID 중복 확인
+            const propIds = activeRows.map(r => r.propertyId.trim());
+            const duplicates = propIds.filter((id, idx) => propIds.indexOf(id) !== idx);
+            if (duplicates.length > 0) {
+                Toast.warning('중복된 프로퍼티 ID가 있습니다: ' + [...new Set(duplicates)].join(', '));
+                return;
+            }
+
+            const requestData = {
+                propertyGroupId: groupId,
+                propertyGroupName: groupName,
+                properties: activeRows.map(r => ({
+                    propertyId: r.propertyId.trim(),
+                    propertyName: r.propertyName || '',
+                    propertyDesc: r.propertyDesc || '',
+                    defaultValue: r.defaultValue || '',
+                    validData: r.validData || '',
+                    dataType: r.dataType || 'C'
+                }))
+            };
+
+            Toast.confirm('프로퍼티 그룹을 생성하시겠습니까?\n그룹 ID: ' + groupId + '\n프로퍼티 수: ' + activeRows.length + '개', () => {
+                $.ajax({
+                    url: API_BASE_URL + '/properties/groups',
+                    method: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify(requestData),
+                    beforeSend: function(xhr) {
+                        const csrfToken = $('meta[name="_csrf"]').attr('content');
+                        const csrfHeader = $('meta[name="_csrf_header"]').attr('content');
+                        if (csrfToken && csrfHeader) {
+                            xhr.setRequestHeader(csrfHeader, csrfToken);
+                        }
+                    },
+                    success: (response) => {
+                        if (response.success) {
+                            Toast.success('프로퍼티 그룹이 성공적으로 생성되었습니다.');
+                            // 모달 닫기
+                            const modal = bootstrap.Modal.getInstance(document.getElementById('propertyGroupCreateModal'));
+                            if (modal) modal.hide();
+                            // 목록 새로고침
+                            if (window.PropertyPage) {
+                                PropertyPage.load();
+                            }
+                        } else {
+                            Toast.error('저장에 실패했습니다: ' + (response.message || ''));
+                        }
+                    },
+                    error: (xhr) => {
+                        console.error('저장 실패:', xhr);
+                        let msg = '저장에 실패했습니다.';
+                        if (xhr.responseJSON && xhr.responseJSON.message) {
+                            msg += '\n' + xhr.responseJSON.message;
+                        }
+                        Toast.error(msg);
+                    }
+                });
+            });
+        },
+
+        // CRUD 배지 클래스
+        getCrudBadgeClass: function(crud) {
+            switch(crud) {
+                case 'C': return 'bg-success';
+                case 'U': return 'bg-warning text-dark';
+                case 'D': return 'bg-danger';
+                default: return 'bg-secondary';
+            }
+        },
+
+        // CRUD 한글 라벨
+        getCrudLabel: function(crud) {
+            switch(crud) {
+                case 'C': return '추가';
+                case 'U': return '수정';
+                case 'D': return '삭제';
+                default: return '';
+            }
+        },
+
+    };
+</script>
+</th:block>
+</body>
+</html>

@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<div th:fragment="modal">
+
+    <!-- 전문 조회 모달 -->
+    <div id="messageBrowseModal" class="modal fade sp-modal-stacked" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
+        <div class="modal-dialog modal-dialog-centered sp-modal-lg">
+            <div class="modal-content">
+        <div class="modal-header py-2">
+            <span id="messageBrowseTitle">전문조회 팝업</span>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+
+        <div class="modal-body">
+            <!-- 상단 정보 -->
+            <input type="hidden" id="messageBrowseMode" value="message" />
+            <input type="hidden" id="messageBrowseIoType" value="" />
+            <input type="hidden" id="messageBrowseTrxId" value="" />
+            <input type="hidden" id="messageBrowseOrgId" value="" />
+
+            <div class="bg-body-tertiary p-2 rounded mb-3">
+                <div class="d-flex align-items-center gap-2 text-danger">
+                    <i class="bi bi-exclamation-circle-fill"></i>
+                    <span class="fw-semibold">전문 일람</span>
+                </div>
+            </div>
+
+            <!-- 검색 영역 -->
+            <div class="card border p-2 mb-3">
+                <div class="d-flex flex-wrap align-items-center gap-2 mb-1">
+                    <div class="d-flex align-items-center gap-2 flex-shrink-0">
+                        <label class="form-label mb-0 small fw-medium">전문명</label>
+                        <select id="messageBrowseSearchField" class="form-select form-select-sm w-120">
+                            <option value="messageName">전문명</option>
+                            <option value="messageId">전문ID</option>
+                        </select>
+                    </div>
+                    <div class="d-flex align-items-center gap-2 flex-grow-1">
+                        <input id="messageBrowseSearchValue" type="text" class="form-control form-control-sm"
+                               placeholder="검색어 입력" onkeypress="if(event.key==='Enter') MessageBrowseModal.search()">
+                    </div>
+                    <div class="d-flex align-items-center gap-2 flex-shrink-0">
+                        <button type="button" class="btn btn-sm btn-primary" onclick="MessageBrowseModal.search()">
+                            <i class="bi bi-search"></i> 검색
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 테이블 -->
+            <div class="table-responsive sp-scrollable">
+                <table class="table table-sm table-hover sp-data-grid">
+                    <colgroup>
+                        <col class="col-w-80">
+                        <col class="col-w-150">
+                        <col class="col-w-80">
+                        <col>
+                    </colgroup>
+                    <thead class="table-light">
+                        <tr>
+                            <th>기관ID</th>
+                            <th>전문ID</th>
+                            <th>헤더존재여부</th>
+                            <th>전문명</th>
+                        </tr>
+                    </thead>
+                    <tbody id="messageBrowseTableBody" class="sp-clickable-rows">
+                        <tr>
+                            <td colspan="4" class="text-center py-4 text-body-secondary">
+                                검색 버튼을 클릭하여 전문을 조회하세요.
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- 페이징 -->
+            <div id="messageBrowsePagination" class="pagination-container mt-3">
+                <!-- 페이징 버튼 -->
+            </div>
+        </div>
+
+        <div class="modal-footer py-2 modal-actions">
+            <div class="modal-actions-left"></div>
+            <div class="modal-actions-right">
+                <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">
+                    <i class="bi bi-x-lg"></i> 닫기
+                </button>
+            </div>
+        </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 확인 모달 -->
+    <div id="messageConfirmModal" class="modal fade sp-modal-stacked-top" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
+        <div class="modal-dialog modal-dialog-centered modal-sm">
+            <div class="modal-content">
+        <div class="modal-header py-2">
+            <span>Confirmation</span>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+
+        <div class="modal-body text-center py-4">
+            <p class="mb-0 fs-sm">
+                변경 하시겠습니까?
+            </p>
+        </div>
+
+        <div class="modal-footer py-2 modal-actions justify-content-center">
+            <button type="button" class="btn btn-primary btn-sm" onclick="MessageConfirmModal.confirm()">
+                Yes
+            </button>
+            <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">
+                No
+            </button>
+        </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+</body>
+</html>

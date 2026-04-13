@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<div th:fragment="search" class="card border p-2 mb-3">
+    <div class="d-flex flex-wrap align-items-center gap-2 mb-1 justify-content-between">
+        <div class="d-flex align-items-center gap-2 flex-grow-1">
+            <label class="form-label mb-0 small fw-medium">기관</label>
+            <select id="mappingOrgId" class="form-select form-select-sm col-w-200">
+                <option value="">전체</option>
+            </select>
+
+            <label class="form-label mb-0 small fw-medium ms-2">어댑터/리스너</label>
+            <select id="mappingIoType" class="form-select form-select-sm col-w-160">
+                <option value="">전체</option>
+                <option value="O">어댑터(송신)</option>
+                <option value="I">리스너(수신)</option>
+            </select>
+
+            <label class="form-label mb-0 small fw-medium ms-2">요청/응답</label>
+            <select id="mappingReqResType" class="form-select form-select-sm col-w-130">
+                <option value="">전체</option>
+                <option value="Q">요청</option>
+                <option value="S">응답</option>
+            </select>
+        </div>
+
+        <div class="d-flex align-items-center gap-2 flex-shrink-0">
+            <select id="mappingPageSize" class="form-select form-select-sm sp-limit-select">
+                <option value="10" selected>10</option>
+                <option value="20">20</option>
+                <option value="50">50</option>
+                <option value="100">100</option>
+            </select>
+            <span class="fs-sm sp-search-label">건씩</span>
+            <button type="button" class="btn btn-sm btn-primary" onclick="GatewayMappingList.load(1)">조회</button>
+        </div>
+    </div>
+</div>
+</body>
+</html>

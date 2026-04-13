@@ -1,0 +1,994 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<div th:fragment="content">
+    <!-- Include Page Content Layout Styles -->
+
+    <!-- Search Section Header -->
+    <div class="page-header">
+        <h4 class="page-title">
+            <i class="bi bi-exclamation-circle-fill text-danger"></i>
+            검색조건
+        </h4>
+    </div>
+
+    <!-- Search Box -->
+    <div class="card border p-2 mb-3">
+        <div class="d-flex flex-wrap align-items-center gap-2 mb-1">
+            <div class="d-flex align-items-center gap-2 mw-250">
+                <label class="form-label mb-0 small fw-medium">기관명</label>
+                <div class="sp-custom-select-container">
+                    <div class="sp-custom-select-trigger" id="orgSelectTrigger" onclick="toggleOrgDropdown()">
+                        <span id="orgSelectText">기관선택</span>
+                        <i class="bi bi-chevron-down"></i>
+                    </div>
+                    <div class="sp-custom-select-dropdown d-hidden" id="orgSelectDropdown">
+                        <div class="sp-custom-select-search">
+                            <input type="text" id="orgSearchInput" placeholder="검색" oninput="filterOrgList()">
+                            <i class="bi bi-search"></i>
+                        </div>
+                        <ul class="sp-custom-select-list" id="orgSelectList">
+                            <li class="sp-custom-select-empty">로딩 중...</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            <div class="d-flex align-items-center gap-2 mw-300">
+                <label class="form-label mb-0 small fw-medium">전문명</label>
+                <input type="text" id="messageIdInput" class="form-control form-control-sm" placeholder="전문명 입력" readonly>
+            </div>
+            <div class="d-flex align-items-center gap-2 flex-shrink-0">
+                <button class="btn btn-primary btn-sm" onclick="openMessageSearchModal()">
+                    <i class="bi bi-search"></i> 조회
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Message Area (for validation errors) -->
+    <div id="messageArea"></div>
+
+    <!-- Data Section Header -->
+    <div class="page-header mt-3">
+        <h4 class="page-title">
+            <i class="bi bi-exclamation-circle-fill text-danger"></i>
+            전문 데이터
+        </h4>
+    </div>
+
+    <!-- Telegram Data Area -->
+    <div class="mb-3">
+        <textarea id="telegramData" class="sp-telegram-data-area"
+                  placeholder="전문 검색 모달에서 전문을 선택한 후, 여기에 파싱할 전문 원본 데이터를 입력하세요"></textarea>
+    </div>
+
+    <!-- Action Buttons -->
+    <div class="bottom-actions d-flex justify-content-center p-3">
+        <button class="btn btn-primary btn-sm" onclick="parseMessage()">
+            <i class="bi bi-code-slash"></i> 전문파싱
+        </button>
+    </div>
+
+    <!-- 전문 검색 모달 -->
+    <div id="messageSearchModal" class="modal fade" tabindex="-1" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
+        <div class="modal-dialog modal-dialog-centered mw-700">
+        <div class="modal-content resizable-modal" id="messageSearchModalContainer">
+            <div class="modal-header">
+                <h5 class="modal-title">전문 검색</h5>
+                <button class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+
+            <!-- Resize handles -->
+            <div class="resize-handle resize-top"></div>
+            <div class="resize-handle resize-right"></div>
+            <div class="resize-handle resize-bottom"></div>
+            <div class="resize-handle resize-left"></div>
+            <div class="resize-handle resize-corner-nw"></div>
+            <div class="resize-handle resize-corner-ne"></div>
+            <div class="resize-handle resize-corner-sw"></div>
+            <div class="resize-handle resize-corner-se"></div>
+
+            <div class="modal-body">
+                <div class="modal-section">
+                    <div class="section-header">
+                        <i class="bi bi-caret-right-fill"></i>
+                        <span>전문 정보</span>
+                    </div>
+                    <div class="card border p-2 mb-3">
+                        <div class="d-flex flex-wrap align-items-center gap-2 mb-1">
+                            <div class="d-flex align-items-center gap-2 mw-150">
+                                <select id="messageSearchField" class="form-select form-select-sm">
+                                    <option value="messageId">전문ID</option>
+                                    <option value="messageName">전문명</option>
+                                </select>
+                            </div>
+                            <div class="d-flex align-items-center gap-2 mw-250">
+                                <label class="form-label mb-0 small fw-medium">검색어</label>
+                                <input type="text" id="messageSearchValue" class="form-control form-control-sm" placeholder="검색어 입력">
+                            </div>
+                            <div class="d-flex align-items-center gap-2 flex-shrink-0">
+                                <button class="btn btn-primary btn-sm" onclick="searchMessages()">
+                                    <i class="bi bi-search"></i> 조회
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="modal-section">
+                    <div class="section-header">
+                        <i class="bi bi-caret-right-fill"></i>
+                        <span>리스트</span>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table table-sm table-hover sp-data-grid">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>전문ID</th>
+                                    <th>전문명</th>
+                                </tr>
+                            </thead>
+                            <tbody id="messageListBody" class="sp-clickable-rows">
+                                <tr>
+                                    <td colspan="2" class="text-center">조회 버튼을 눌러주세요</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Pagination -->
+                    <div class="pagination-container">
+                        <nav>
+                            <ul class="pagination pagination-sm" id="messagePagination">
+                            </ul>
+                        </nav>
+                        <div class="pagination-info">
+                            <span id="messagePageInfo">0 - 0 of 0 items</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        </div>
+    </div>
+
+    <!-- 파싱 결과 모달 -->
+    <div id="parseResultModal" class="modal fade" tabindex="-1" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
+        <div class="modal-dialog modal-dialog-centered modal-xl">
+        <div class="modal-content resizable-modal" id="parseResultModalContainer">
+            <div class="modal-header py-2">
+                <h5 class="modal-title">파싱결과</h5>
+                <button class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+
+            <!-- Resize handles -->
+            <div class="resize-handle resize-top"></div>
+            <div class="resize-handle resize-right"></div>
+            <div class="resize-handle resize-bottom"></div>
+            <div class="resize-handle resize-left"></div>
+            <div class="resize-handle resize-corner-nw"></div>
+            <div class="resize-handle resize-corner-ne"></div>
+            <div class="resize-handle resize-corner-sw"></div>
+            <div class="resize-handle resize-corner-se"></div>
+
+            <div class="modal-body p-3">
+                <!-- 파싱결과 정보 -->
+                <div class="sp-parse-info-bar">
+                    <div>
+                        <i class="bi bi-info-circle text-danger"></i>
+                        <strong>파싱결과 (거래추적번호: )</strong>
+                    </div>
+                    <div class="d-flex gap-1">
+                        <button class="btn btn-xs btn-secondary" onclick="exportToExcel()">
+                            <i class="bi bi-file-earmark-excel"></i> 엑셀
+                        </button>
+                        <button class="btn btn-xs btn-secondary" onclick="printResult()">
+                            <i class="bi bi-printer"></i> 출력
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 파싱 결과 테이블 -->
+                <div class="table-responsive sp-parse-scrollable">
+                    <table class="table table-sm table-hover sp-data-grid sp-parse-result-table">
+                        <thead class="table-light sp-parse-result-thead">
+                            <tr>
+                                <th class="min-w-120">메시지 ID</th>
+                                <th class="min-w-150">전문필드ID</th>
+                                <th class="min-w-200">전문필드명</th>
+                                <th class="min-w-80">길이[Byte]</th>
+                                <th class="min-w-250">데이터</th>
+                            </tr>
+                        </thead>
+                        <tbody id="parsedFieldsBody">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="modal-footer p-2 d-flex justify-content-end">
+                <button class="btn btn-primary btn-sm" data-bs-dismiss="modal">
+                    <i class="bi bi-x-lg"></i> 닫기
+                </button>
+            </div>
+        </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script th:inline="javascript">
+        var selectedOrgId = '';
+        var selectedMessageId = '';
+        var orgList = []; // 전체 기관 목록 저장
+        var allMessages = []; // 전체 전문 목록
+        var lastParsedFields = []; // 파싱 결과 저장 (엑셀 내보내기용)
+        var currentPage = 1;
+        var itemsPerPage = 10;
+
+        // 기관 목록 조회
+        function loadOrgIdList() {
+            fetch('/api/telegram/orgs')
+                .then(response => response.json())
+                .then(apiResponse => {
+                    if (apiResponse.success) {
+                        orgList = apiResponse.data;
+                        renderOrgList(orgList);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error loading orgs:', error);
+                    showMessage('기관 목록을 불러오는 중 오류가 발생했습니다', 'error');
+                });
+        }
+
+        // 기관 목록 렌더링
+        function renderOrgList(orgs) {
+            const list = document.getElementById('orgSelectList');
+            list.innerHTML = '';
+
+            // 기본 '기관선택' 옵션 추가
+            const defaultLi = document.createElement('li');
+            defaultLi.textContent = '기관선택';
+
+            defaultLi.onclick = function(e) {
+                selectOrg('', '기관선택', e.currentTarget);
+            };
+            list.appendChild(defaultLi);
+
+            if (orgs.length === 0) {
+                return;
+            }
+
+            orgs.forEach(org => {
+                const li = document.createElement('li');
+                li.textContent = org.orgName;
+                li.dataset.orgId = org.orgId;
+                li.dataset.orgName = org.orgName;
+
+                if (selectedOrgId === org.orgId) {
+                    li.classList.add('selected');
+                }
+
+                li.onclick = function(e) {
+                    selectOrg(org.orgId, org.orgName, e.currentTarget);
+                };
+                list.appendChild(li);
+            });
+        }
+
+        // 기관 선택
+        function selectOrg(orgId, orgName, element) {
+            selectedOrgId = orgId;
+            document.getElementById('orgSelectText').textContent = orgName;
+
+            // 기관 선택 해제 시 전문 선택도 초기화
+            if (!orgId) {
+                selectedMessageId = '';
+                document.getElementById('messageIdInput').value = '';
+            }
+
+            // 선택 상태 업데이트
+            document.querySelectorAll('.sp-custom-select-list li').forEach(li => {
+                li.classList.remove('selected');
+            });
+            if (element) {
+                element.classList.add('selected');
+            }
+
+            // 드롭다운 닫기
+            closeOrgDropdown();
+        }
+
+        // 드롭다운 토글
+        function toggleOrgDropdown() {
+            const dropdown = document.getElementById('orgSelectDropdown');
+            const isVisible = !dropdown.classList.contains('d-hidden');
+
+            if (isVisible) {
+                closeOrgDropdown();
+            } else {
+                dropdown.classList.remove('d-hidden');
+                document.getElementById('orgSearchInput').value = '';
+                renderOrgList(orgList);
+                document.getElementById('orgSearchInput').focus();
+            }
+        }
+
+        // 드롭다운 닫기
+        function closeOrgDropdown() {
+            const dropdown = document.getElementById('orgSelectDropdown');
+            dropdown.classList.add('d-hidden');
+        }
+
+        // 기관 목록 필터링
+        function filterOrgList() {
+            const searchInput = document.getElementById('orgSearchInput');
+            const keyword = searchInput.value.toLowerCase();
+
+            if (!keyword) {
+                renderOrgList(orgList);
+                return;
+            }
+
+            const filtered = orgList.filter(org =>
+                org.orgId.toLowerCase().includes(keyword) ||
+                org.orgName.toLowerCase().includes(keyword)
+            );
+
+            renderOrgList(filtered);
+        }
+
+        // 전문 검색 모달 열기
+        function openMessageSearchModal() {
+            // 기관 선택 여부 체크
+            if (!selectedOrgId) {
+                Toast.warning('기관명을 먼저 선택해주세요');
+                return;
+            }
+
+            // 모달 열기
+            bootstrap.Modal.getOrCreateInstance(document.getElementById('messageSearchModal')).show();
+
+            // 검색어 초기화
+            document.getElementById('messageSearchValue').value = '';
+
+            // 선택된 기관의 전문 목록 자동 조회
+            searchMessages();
+        }
+
+        // 전문 검색 모달 닫기
+        function closeMessageSearchModal() {
+            bootstrap.Modal.getInstance(document.getElementById('messageSearchModal'))?.hide();
+        }
+
+        // 전문 검색
+        function searchMessages() {
+            const searchField = document.getElementById('messageSearchField').value;
+            const keyword = document.getElementById('messageSearchValue').value.trim();
+
+            const url = new URL('/api/telegram/messages', window.location.origin);
+
+            // 선택된 기관으로 필터링
+            if (selectedOrgId) {
+                url.searchParams.append('orgId', selectedOrgId);
+            }
+
+            // 서버 사이드 필터링: searchField과 keyword를 API에 전달
+            if (keyword && searchField) {
+                url.searchParams.append('searchField', searchField);
+                url.searchParams.append('keyword', keyword);
+            }
+
+            fetch(url)
+                .then(response => response.json())
+                .then(apiResponse => {
+                    if (apiResponse.success) {
+                        // 서버에서 이미 필터링된 결과 받음
+                        allMessages = apiResponse.data;
+                        currentPage = 1;
+                        displayMessageList();
+                    }
+                })
+                .catch(error => {
+                    console.error('Error searching messages:', error);
+                    Toast.error('전문 검색 중 오류가 발생했습니다');
+                });
+        }
+
+        // 전문 목록 표시 (페이지네이션 적용)
+        function displayMessageList() {
+            const tbody = document.getElementById('messageListBody');
+            tbody.innerHTML = '';
+
+            if (allMessages.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="2" class="text-center">검색 결과가 없습니다</td></tr>';
+                updatePagination(0);
+                return;
+            }
+
+            // 현재 페이지에 해당하는 데이터만 표시
+            const startIndex = (currentPage - 1) * itemsPerPage;
+            const endIndex = Math.min(startIndex + itemsPerPage, allMessages.length);
+            const pageMessages = allMessages.slice(startIndex, endIndex);
+
+            pageMessages.forEach(msg => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>${HtmlUtils.escape(msg.messageId)}</td>
+                    <td>${HtmlUtils.escape(msg.messageName || '')}</td>
+                `;
+                tr.onclick = function() {
+                    selectMessage(msg);
+                };
+                tbody.appendChild(tr);
+            });
+
+            updatePagination(allMessages.length);
+        }
+
+        // 페이지네이션 업데이트
+        function updatePagination(totalItems) {
+            const totalPages = Math.ceil(totalItems / itemsPerPage);
+            const pagination = document.getElementById('messagePagination');
+            pagination.innerHTML = '';
+
+            // 페이지 정보는 항상 표시
+            const start = totalItems === 0 ? 0 : (currentPage - 1) * itemsPerPage + 1;
+            const end = Math.min(currentPage * itemsPerPage, totalItems);
+            document.getElementById('messagePageInfo').textContent = `${start} - ${end} of ${totalItems} items`;
+
+            // 페이지가 1개 이하일 때도 버튼은 표시 (disabled 상태)
+            if (totalPages <= 1) {
+                pagination.innerHTML = `
+                    <li class="page-item disabled">
+                        <a class="page-link" href="#" onclick="return false;">
+                            <i class="bi bi-chevron-left"></i>
+                        </a>
+                    </li>
+                    <li class="page-item active">
+                        <a class="page-link" href="#" onclick="return false;">1</a>
+                    </li>
+                    <li class="page-item disabled">
+                        <a class="page-link" href="#" onclick="return false;">
+                            <i class="bi bi-chevron-right"></i>
+                        </a>
+                    </li>
+                `;
+                return;
+            }
+
+            // 이전 버튼
+            pagination.innerHTML += `
+                <li class="page-item ${currentPage === 1 ? 'disabled' : ''}">
+                    <a class="page-link" href="#" onclick="changeMessagePage(${currentPage - 1}); return false;">
+                        <i class="bi bi-chevron-left"></i>
+                    </a>
+                </li>
+            `;
+
+            // 페이지 번호
+            const maxButtons = 5;
+            let startPage = Math.max(1, currentPage - Math.floor(maxButtons / 2));
+            let endPage = Math.min(totalPages, startPage + maxButtons - 1);
+
+            if (endPage - startPage + 1 < maxButtons) {
+                startPage = Math.max(1, endPage - maxButtons + 1);
+            }
+
+            for (let i = startPage; i <= endPage; i++) {
+                pagination.innerHTML += `
+                    <li class="page-item ${i === currentPage ? 'active' : ''}">
+                        <a class="page-link" href="#" onclick="changeMessagePage(${i}); return false;">${i}</a>
+                    </li>
+                `;
+            }
+
+            // 다음 버튼
+            pagination.innerHTML += `
+                <li class="page-item ${currentPage === totalPages ? 'disabled' : ''}">
+                    <a class="page-link" href="#" onclick="changeMessagePage(${currentPage + 1}); return false;">
+                        <i class="bi bi-chevron-right"></i>
+                    </a>
+                </li>
+            `;
+        }
+
+        // 페이지 변경
+        function changeMessagePage(page) {
+            const totalPages = Math.ceil(allMessages.length / itemsPerPage);
+            if (page < 1 || page > totalPages) return;
+
+            currentPage = page;
+            displayMessageList();
+        }
+
+        // 전문 선택
+        function selectMessage(message) {
+            selectedOrgId = message.orgId;
+            selectedMessageId = message.messageId;
+
+            // 기관 선택 업데이트
+            const org = orgList.find(o => o.orgId === message.orgId);
+            if (org) {
+                document.getElementById('orgSelectText').textContent = org.orgName;
+            }
+
+            // 전문명 표시 (전문ID는 내부적으로만 저장)
+            document.getElementById('messageIdInput').value = message.messageName || message.messageId;
+
+            closeMessageSearchModal();
+        }
+
+        // 전문 파싱
+        function parseMessage() {
+            const orgId = selectedOrgId;
+            const messageId = selectedMessageId;
+            const rawString = document.getElementById('telegramData').value;
+
+            if (!orgId || !messageId) {
+                showMessage('기관과 전문을 선택해주세요', 'error');
+                return;
+            }
+
+            if (!rawString || rawString.trim() === '') {
+                Toast.warning('전문메시지를 입력해주세요.');
+                return;
+            }
+
+            const request = {
+                orgId: orgId,
+                messageId: messageId,
+                rawString: rawString
+            };
+
+            fetch('/api/telegram/parse', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(request)
+            })
+                .then(response => {
+                    if (!response.ok) {
+                        // HTTP 오류 상태 처리 (400, 404, 500 등)
+                        return response.json().then(errorData => {
+                            throw new Error(errorData.message || '파싱에 실패했습니다');
+                        });
+                    }
+                    return response.json();
+                })
+                .then(apiResponse => {
+                    // 성공 응답 처리
+                    showMessage('전문 파싱이 완료되었습니다', 'success');
+                    displayParseResult(apiResponse.data);
+                })
+                .catch(error => {
+                    console.error('Error parsing message:', error);
+                    showMessage(error.message || '전문 파싱 중 오류가 발생했습니다', 'error');
+                });
+        }
+
+        // JSON 여부 확인
+        function isJson(str) {
+            if (!str || typeof str !== 'string') return false;
+            const trimmed = str.trim();
+            if (!(trimmed.startsWith('{') || trimmed.startsWith('['))) return false;
+            try { JSON.parse(trimmed); return true; } catch (e) { return false; }
+        }
+
+        // 파싱 결과 행에 기본 셀(메시지ID, 필드ID, 필드명, 길이) 추가
+        function appendBasicCells(tr, field, options) {
+            const tdMsgId = document.createElement('td');
+            tdMsgId.textContent = field.messageId || '';
+            tr.appendChild(tdMsgId);
+
+            const tdFieldId = document.createElement('td');
+            if (options && options.bold) {
+                const strong = document.createElement('strong');
+                strong.textContent = field.fieldId || '';
+                tdFieldId.appendChild(strong);
+            } else {
+                if (options && options.indent) {
+                    tdFieldId.textContent = '    ' + (field.fieldId || '');
+                } else {
+                    tdFieldId.textContent = field.fieldId || '';
+                }
+            }
+            tr.appendChild(tdFieldId);
+
+            const tdFieldName = document.createElement('td');
+            if (options && options.bold) {
+                const strong = document.createElement('strong');
+                strong.textContent = field.fieldName || '';
+                tdFieldName.appendChild(strong);
+            } else {
+                tdFieldName.textContent = field.fieldName || '';
+            }
+            tr.appendChild(tdFieldName);
+
+            const tdLength = document.createElement('td');
+            tdLength.className = 'text-end';
+            tdLength.textContent = field.dataLength;
+            tr.appendChild(tdLength);
+        }
+
+        // 파싱 결과 표시
+        function displayParseResult(result) {
+            const tbody = document.getElementById('parsedFieldsBody');
+            tbody.textContent = '';
+            lastParsedFields = result.fields || [];
+
+            let insideLoop = false;
+
+            result.fields.forEach((field, index) => {
+                const tr = document.createElement('tr');
+                const dataValue = field.rawValue || '';
+                const fieldId = field.fieldId || '';
+
+                // 반복부 시작 감지
+                if (fieldId.includes('_BeginLoop_')) {
+                    insideLoop = true;
+                    tr.style.borderTop = '2px solid #7b90c0';
+                    tr.style.backgroundColor = '#e8f0fe';
+                    appendBasicCells(tr, field, { bold: true });
+                    const dataTd = document.createElement('td');
+                    dataTd.textContent = dataValue;
+                    tr.appendChild(dataTd);
+                    tbody.appendChild(tr);
+                    return;
+                }
+
+                // 반복부 종료 감지
+                if (fieldId.includes('_EndLoop_')) {
+                    insideLoop = false;
+                    tr.style.borderBottom = '2px solid #7b90c0';
+                    tr.style.backgroundColor = '#e8f0fe';
+                    appendBasicCells(tr, field, { bold: true });
+                    const dataTd = document.createElement('td');
+                    dataTd.textContent = dataValue;
+                    tr.appendChild(dataTd);
+                    tbody.appendChild(tr);
+                    return;
+                }
+
+                // 반복부 내부 필드: 들여쓰기 및 시각적 구분 적용
+                if (insideLoop) {
+                    tr.style.borderLeft = '3px solid #7b90c0';
+                    tr.style.backgroundColor = '#f6f9ff';
+                }
+
+                appendBasicCells(tr, field, { indent: insideLoop });
+
+                const dataTd = document.createElement('td');
+                if (isJson(dataValue)) {
+                    const wrapper = document.createElement('div');
+                    const summary = document.createElement('span');
+                    summary.textContent = dataValue.length > 80 ? dataValue.substring(0, 80) + '...' : dataValue;
+                    summary.className = 'cursor-pointer text-primary';
+                    summary.title = 'JSON 펼치기/접기';
+
+                    const icon = document.createElement('i');
+                    icon.className = 'bi bi-search-plus cursor-pointer ms-1';
+
+                    const pre = document.createElement('pre');
+                    pre.textContent = JSON.stringify(JSON.parse(dataValue.trim()), null, 4);
+                    pre.className = 'd-hidden mt-1 p-2 bg-light border rounded fs-xs text-start sp-json-preview';
+
+                    const toggle = () => {
+                        const visible = !pre.classList.contains('d-hidden');
+                        pre.classList.toggle('d-hidden');
+                        icon.className = visible ? 'bi bi-search-plus cursor-pointer ms-1' : 'bi bi-zoom-out cursor-pointer ms-1';
+                    };
+                    summary.addEventListener('click', toggle);
+                    icon.addEventListener('click', toggle);
+
+                    wrapper.appendChild(summary);
+                    wrapper.appendChild(icon);
+                    wrapper.appendChild(pre);
+                    dataTd.appendChild(wrapper);
+                } else {
+                    dataTd.textContent = dataValue;
+                }
+                tr.appendChild(dataTd);
+                tbody.appendChild(tr);
+            });
+
+            bootstrap.Modal.getOrCreateInstance(document.getElementById('parseResultModal')).show();
+        }
+
+        // 현재 날짜를 YYYYMMDD 형식으로 반환
+        function getDateString() {
+            var now = new Date();
+            var y = now.getFullYear();
+            var m = String(now.getMonth() + 1).padStart(2, '0');
+            var d = String(now.getDate()).padStart(2, '0');
+            return y + m + d;
+        }
+
+        // HTML 테이블 문자열 생성 (엑셀/출력 공용)
+        function buildParseResultHtmlTable() {
+            var tableStyle = 'border: 1px solid #444444; border-collapse: collapse; word-break: break-all; width: 100%;';
+            var thStyle = 'background-color: #adc6f4; border: 1px solid #444444; padding: 8px; text-align: center; font-weight: bold;';
+            var tdStyle = 'border: 1px solid #444444; padding: 5px 8px;';
+            var loopBgStyle = 'background-color: #e8f0fe;';
+            var loopFieldBgStyle = 'background-color: #f6f9ff;';
+
+            var html = '<table style="' + tableStyle + '">';
+            html += '<thead><tr>';
+            html += '<th style="' + thStyle + '">메시지ID</th>';
+            html += '<th style="' + thStyle + '">전문필드ID</th>';
+            html += '<th style="' + thStyle + '">전문필드명</th>';
+            html += '<th style="' + thStyle + '">길이[Byte]</th>';
+            html += '<th style="' + thStyle + '">데이터</th>';
+            html += '</tr></thead><tbody>';
+
+            var inLoop = false;
+            for (var i = 0; i < lastParsedFields.length; i++) {
+                var f = lastParsedFields[i];
+                var fieldId = f.fieldId || '';
+                var isBeginLoop = fieldId.indexOf('_BeginLoop_') !== -1;
+                var isEndLoop = fieldId.indexOf('_EndLoop_') !== -1;
+
+                var rowStyle = '';
+                var boldOpen = '';
+                var boldClose = '';
+
+                if (isBeginLoop) {
+                    inLoop = true;
+                    rowStyle = loopBgStyle;
+                    boldOpen = '<b>';
+                    boldClose = '</b>';
+                } else if (isEndLoop) {
+                    rowStyle = loopBgStyle;
+                    boldOpen = '<b>';
+                    boldClose = '</b>';
+                } else if (inLoop) {
+                    rowStyle = loopFieldBgStyle;
+                }
+
+                html += '<tr style="' + rowStyle + '">';
+                html += '<td style="' + tdStyle + '">' + boldOpen + HtmlUtils.escape(f.messageId || '') + boldClose + '</td>';
+                html += '<td style="' + tdStyle + '">' + boldOpen + (inLoop && !isBeginLoop && !isEndLoop ? '&nbsp;&nbsp;&nbsp;&nbsp;' : '') + HtmlUtils.escape(fieldId) + boldClose + '</td>';
+                html += '<td style="' + tdStyle + '">' + boldOpen + HtmlUtils.escape(f.fieldName || '') + boldClose + '</td>';
+                html += '<td style="' + tdStyle + 'text-align: right;">' + HtmlUtils.escape(String(f.dataLength != null ? f.dataLength : '')) + '</td>';
+                html += '<td style="' + tdStyle + '">' + HtmlUtils.escape(f.rawValue || '') + '</td>';
+                html += '</tr>';
+
+                if (isEndLoop) {
+                    inLoop = false;
+                }
+            }
+
+            html += '</tbody></table>';
+            return html;
+        }
+
+        // 엑셀 내보내기 (HTML Table → .xls 다운로드)
+        function exportToExcel() {
+            if (!lastParsedFields || lastParsedFields.length === 0) {
+                Toast.warning('내보낼 데이터가 없습니다.');
+                return;
+            }
+
+            var tableHtml = buildParseResultHtmlTable();
+            var excelHtml = '<html xmlns:o="urn:schemas-microsoft-com:office:office" '
+                + 'xmlns:x="urn:schemas-microsoft-com:office:excel" '
+                + 'xmlns="http://www.w3.org/TR/REC-html40">'
+                + '<head><meta charset="UTF-8">'
+                + '<!--[if gte mso 9]><xml><x:ExcelWorkbook><x:ExcelWorksheets>'
+                + '<x:ExcelWorksheet><x:Name>파싱결과</x:Name><x:WorksheetOptions>'
+                + '<x:DisplayGridlines/></x:WorksheetOptions></x:ExcelWorksheet>'
+                + '</x:ExcelWorksheets></x:ExcelWorkbook></xml><![endif]-->'
+                + '</head><body>' + tableHtml + '</body></html>';
+
+            var blob = new Blob(['\uFEFF' + excelHtml], { type: 'application/vnd.ms-excel;charset=utf-8;' });
+            var url = URL.createObjectURL(blob);
+            var a = document.createElement('a');
+            a.href = url;
+            a.download = '전문파싱결과_' + getDateString() + '.xls';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+
+        // 출력 (ASIS 패턴: HTML 테이블을 새 창에 출력)
+        function printResult() {
+            if (!lastParsedFields || lastParsedFields.length === 0) {
+                Toast.warning('출력할 데이터가 없습니다.');
+                return;
+            }
+
+            var tableHtml = buildParseResultHtmlTable();
+            var printWindow = window.open('', '_blank', 'width=1000,height=700');
+            if (!printWindow) {
+                Toast.success('팝업이 차단되었습니다. 브라우저 팝업 차단을 해제해주세요.');
+                return;
+            }
+
+            var doc = printWindow.document;
+            doc.open();
+            doc.write(
+                '<!DOCTYPE html><html><head>'
+                + '<meta charset="UTF-8">'
+                + '<title>전문 파싱 결과</title>'
+                + '<style>'
+                + 'body { font-family: "Malgun Gothic", sans-serif; font-size: 12px; margin: 20px; }'
+                + 'h3 { font-size: 14px; margin-bottom: 10px; }'
+                + '@media print { body { margin: 0; } }'
+                + '</style>'
+                + '</head><body>'
+                + '<h3>전문 파싱 결과</h3>'
+                + tableHtml
+                + '</body></html>'
+            );
+            doc.close();
+            printWindow.focus();
+            printWindow.addEventListener('afterprint', function() {
+                printWindow.close();
+            });
+            printWindow.print();
+        }
+
+        // 파싱 결과 모달 닫기
+        function closeParseResultModal() {
+            bootstrap.Modal.getInstance(document.getElementById('parseResultModal'))?.hide();
+        }
+
+        // 메시지 표시
+        function showMessage(message, type) {
+            const messageArea = document.getElementById('messageArea');
+            const className = type === 'error' ? 'sp-parse-error-message' : 'sp-parse-success-message';
+            messageArea.innerHTML = `<div class="${className}">${HtmlUtils.escape(message)}</div>`;
+
+            setTimeout(() => {
+                messageArea.innerHTML = '';
+            }, 5000);
+        }
+
+        // 문자열 자르기
+        function truncate(str, maxLength) {
+            if (!str) return '';
+            if (str.length <= maxLength) return HtmlUtils.escape(str);
+            return HtmlUtils.escape(str.substring(0, maxLength)) + '...';
+        }
+
+        // 드롭다운 외부 클릭 시 닫기
+        window.addEventListener('click', function(event) {
+            var orgDropdown = document.getElementById('orgSelectDropdown');
+            var orgTrigger = document.getElementById('orgSelectTrigger');
+
+            if (orgDropdown && orgTrigger &&
+                !orgDropdown.classList.contains('d-hidden') &&
+                !orgTrigger.contains(event.target) &&
+                !orgDropdown.contains(event.target)) {
+                closeOrgDropdown();
+            }
+        });
+
+        // 모달 크기 조정 기능
+        function initModalResize(modalId) {
+            const modal = document.getElementById(modalId);
+            if (!modal) return;
+
+            const handles = {
+                top: modal.querySelector('.resize-top'),
+                right: modal.querySelector('.resize-right'),
+                bottom: modal.querySelector('.resize-bottom'),
+                left: modal.querySelector('.resize-left'),
+                nw: modal.querySelector('.resize-corner-nw'),
+                ne: modal.querySelector('.resize-corner-ne'),
+                sw: modal.querySelector('.resize-corner-sw'),
+                se: modal.querySelector('.resize-corner-se')
+            };
+
+            let isResizing = false;
+            let resizeType = null;
+            let startX, startY, startWidth, startHeight, startLeft, startTop;
+
+            function startResize(e, type) {
+                isResizing = true;
+                resizeType = type;
+                startX = e.clientX;
+                startY = e.clientY;
+
+                const rect = modal.getBoundingClientRect();
+                startWidth = rect.width;
+                startHeight = rect.height;
+                startLeft = rect.left;
+                startTop = rect.top;
+
+                // transform 제거하고 절대 위치로 전환
+                if (modal.classList.contains('centered')) {
+                    modal.classList.remove('centered');
+                    modal.classList.add('no-transform');
+                    modal.style.top = startTop + 'px';
+                    modal.style.left = startLeft + 'px';
+                }
+
+                e.preventDefault();
+                e.stopPropagation();
+                document.body.classList.add('user-select-none');
+
+                // 커서 설정
+                const cursorMap = {
+                    'top': 'ns-resize',
+                    'right': 'ew-resize',
+                    'bottom': 'ns-resize',
+                    'left': 'ew-resize',
+                    'nw': 'nwse-resize',
+                    'ne': 'nesw-resize',
+                    'sw': 'nesw-resize',
+                    'se': 'nwse-resize'
+                };
+                document.body.style.cursor = cursorMap[type];
+            }
+
+            function doResize(e) {
+                if (!isResizing) return;
+
+                const deltaX = e.clientX - startX;
+                const deltaY = e.clientY - startY;
+
+                // 엣지 및 코너별 크기 조정
+                if (resizeType.includes('right') || resizeType === 'ne' || resizeType === 'se') {
+                    const newWidth = Math.max(400, startWidth + deltaX);
+                    modal.style.width = newWidth + 'px';
+                    modal.style.maxWidth = newWidth + 'px';
+                }
+
+                if (resizeType.includes('left') || resizeType === 'nw' || resizeType === 'sw') {
+                    const newWidth = Math.max(400, startWidth - deltaX);
+                    if (newWidth > 400) {
+                        modal.style.width = newWidth + 'px';
+                        modal.style.maxWidth = newWidth + 'px';
+                        modal.style.left = (startLeft + deltaX) + 'px';
+                    }
+                }
+
+                if (resizeType.includes('bottom') || resizeType === 'sw' || resizeType === 'se') {
+                    const newHeight = Math.max(300, startHeight + deltaY);
+                    modal.style.height = newHeight + 'px';
+                    modal.style.maxHeight = newHeight + 'px';
+                }
+
+                if (resizeType.includes('top') || resizeType === 'nw' || resizeType === 'ne') {
+                    const newHeight = Math.max(300, startHeight - deltaY);
+                    if (newHeight > 300) {
+                        modal.style.height = newHeight + 'px';
+                        modal.style.maxHeight = newHeight + 'px';
+                        modal.style.top = (startTop + deltaY) + 'px';
+                    }
+                }
+            }
+
+            function stopResize() {
+                if (!isResizing) return;
+
+                isResizing = false;
+                resizeType = null;
+                document.body.classList.remove('user-select-none');
+                document.body.style.cursor = '';
+            }
+
+            // Event listeners for all handles
+            Object.entries(handles).forEach(([type, handle]) => {
+                if (handle) {
+                    handle.addEventListener('mousedown', (e) => startResize(e, type));
+                }
+            });
+
+            document.addEventListener('mousemove', doResize);
+            document.addEventListener('mouseup', stopResize);
+        }
+
+        // 모든 크기 조정 가능한 모달 초기화
+        initModalResize('parseResultModalContainer');
+        initModalResize('messageSearchModalContainer');
+
+        // 페이지 로드 시 기관 목록 조회 (AJAX 로드된 페이지이므로 즉시 실행)
+        loadOrgIdList();
+    </script>
+</div>
+</body>
+</html>

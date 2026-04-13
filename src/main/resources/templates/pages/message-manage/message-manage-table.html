@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<!-- Message Table Fragment -->
+<div th:fragment="table" class="table-responsive">
+    <table class="table table-sm table-hover sp-data-grid" id="messageTable">
+        <thead class="table-light">
+            <tr>
+                <th class="col-w-120" data-sort="orgId">기관명</th>
+                <th class="col-w-150" data-sort="messageId">전문ID</th>
+                <th class="col-w-200" data-sort="messageName">전문명</th>
+                <th class="col-w-150" data-sort="parentMessageId">상위전문ID</th>
+                <th class="col-w-60" data-sort="curVersion">버전</th>
+                <th class="col-w-70" th:if="${userAuthorities != null and userAuthorities.contains('MESSAGE:W')}">백업</th>
+                <th class="col-w-70" th:if="${userAuthorities != null and userAuthorities.contains('MESSAGE:W')}">복원</th>
+                <th class="col-w-70" data-sort="lockYn" th:if="${userAuthorities != null and userAuthorities.contains('MESSAGE:W')}">LOCK</th>
+                <th class="col-w-70" th:if="${userAuthorities != null and userAuthorities.contains('MESSAGE:W')}">Reload</th>
+            </tr>
+        </thead>
+        <tbody id="messageTableBody">
+            <tr>
+                <td th:colspan="${userAuthorities != null and userAuthorities.contains('MESSAGE:W') ? 9 : 5}" class="text-center py-4 text-body-secondary">
+                    조회 버튼을 클릭하여 데이터를 불러오세요.
+                </td>
+            </tr>
+        </tbody>
+    </table>
+</div>
+</body>
+</html>

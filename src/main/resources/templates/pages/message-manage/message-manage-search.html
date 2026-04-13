@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<!-- Message Search Fragment -->
+<div th:fragment="search" class="card border p-2 mb-3">
+    <!-- Row 1: 기관명 + 전문ID 검색 -->
+    <div class="d-flex flex-wrap align-items-center gap-2 mb-1">
+        <label class="form-label mb-0 small fw-medium">기관명</label>
+        <select id="orgIdFilter" class="form-select form-select-sm flex-fixed-150">
+            <option value="">전체</option>
+        </select>
+
+        <label class="form-label mb-0 small fw-medium ms-2">전문ID</label>
+        <select id="searchField" class="form-select form-select-sm flex-fixed-100">
+            <option value="messageId">전문ID</option>
+            <option value="messageName">전문명</option>
+        </select>
+        <input type="text" id="searchValue" class="form-control form-control-sm flex-fixed-200" placeholder=""
+               onkeypress="if(event.key === 'Enter') Messages.load()">
+    </div>
+
+    <!-- Row 2: 헤더전문여부 + 상위전문ID -->
+    <div class="d-flex flex-wrap align-items-center gap-2 mb-1 mt-1">
+        <label class="form-label mb-0 small fw-medium">헤더전문여부</label>
+        <select id="headerYnFilter" class="form-select form-select-sm flex-fixed-150">
+            <option value="">선택 안 함</option>
+            <option value="Y">Y</option>
+            <option value="N">N</option>
+        </select>
+
+        <label class="form-label mb-0 small fw-medium ms-2">상위전문ID</label>
+        <select id="parentMessageIdFilter" class="form-select form-select-sm flex-fixed-200">
+            <option value="">선택 안 함</option>
+        </select>
+    </div>
+
+    <!-- Row 3: 정렬선택 + 전문유형 + 건씩 + 조회 -->
+    <div class="d-flex flex-wrap align-items-center gap-2 mb-1 mt-1">
+        <label class="form-label mb-0 small fw-medium">정렬선택</label>
+        <select id="sortSelect" class="form-select form-select-sm flex-fixed-150"
+                onchange="Messages.onSortSelectChange()">
+            <option value="">선택 안 함</option>
+            <option value="messageId">전문ID</option>
+            <option value="messageName">전문명</option>
+            <option value="lastUpdateDtime">최종수정일시</option>
+        </select>
+
+        <label class="form-label mb-0 small fw-medium ms-2">전문유형</label>
+        <select id="messageTypeFilter" class="form-select form-select-sm flex-fixed-150">
+            <option value="">선택 안 함</option>
+        </select>
+
+        <!-- Spacer -->
+        <div class="flex-grow-1"></div>
+
+        <!-- 건씩 + 조회 -->
+        <select id="limitRows" class="form-select form-select-sm sp-limit-select">
+            <option value="10" selected>10</option>
+            <option value="20">20</option>
+            <option value="50">50</option>
+            <option value="100">100</option>
+            <option value="200">200</option>
+        </select>
+        <label class="form-label mb-0 small fw-medium ms-1 me-2 fs-xs">건씩</label>
+
+        <button class="btn btn-primary btn-sm" onclick="Messages.load()">
+            <i class="bi bi-search"></i> 조회
+        </button>
+    </div>
+</div>
+</body>
+</html>

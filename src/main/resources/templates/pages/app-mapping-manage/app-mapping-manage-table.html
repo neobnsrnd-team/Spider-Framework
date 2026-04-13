@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<div th:fragment="table" class="table-responsive">
+    <table class="table table-sm table-hover sp-data-grid" id="appMappingTable">
+        <thead class="table-light">
+        <tr>
+            <th class="col-w-180 sortable" data-sort="gwName">게이트웨이</th>
+            <th class="col-w-160 sortable" data-sort="reqIdCode">전문식별자</th>
+            <th class="col-w-120 sortable" data-sort="orgName">기관</th>
+            <th class="col-w-160 sortable" data-sort="trxName">거래</th>
+            <th class="sortable" data-sort="bizAppId">요청처리 App</th>
+            <th class="col-w-110">거래전문</th>
+        </tr>
+        </thead>
+        <tbody id="appMappingTableBody">
+        <tr>
+            <td colspan="6" class="text-center py-4 text-body-secondary">
+                데이터를 불러오는 중...
+            </td>
+        </tr>
+        </tbody>
+    </table>
+</div>
+</body>
+</html>

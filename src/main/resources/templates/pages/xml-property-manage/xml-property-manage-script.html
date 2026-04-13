@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<th:block th:fragment="script">
+<script th:inline="javascript">
+const HAS_XML_PROPERTY_WRITE = /*[[${userAuthorities != null && userAuthorities.contains('XML_PROPERTY:W')}]]*/ false;
+const DETAIL_CONTAINER = '#xmlPropDetailContainer';
+
+// window 프로퍼티로 선언 → 탭 전환 시 스크립트 재실행 시 재선언 오류 없음
+window.XmlPropertyPage = {
+    currentFileName: null,
+    fileList: [],
+    sortField: null,
+    sortDir: null,
+    pendingReloadFile: null,
+    pendingDeleteFile: null,
+
+    init() {
+        this.initDetailModal();
+        this.loadFileList();
+        WasSelectReloadModal.init();
+        this.bindEvents();
+    },
+
+    // -----------------------------------------------------------------------
+    // 상세 모달 초기화 (Modal.js)
+    // -----------------------------------------------------------------------
+
+    initDetailModal() {
+        const readonlyFlag = !HAS_XML_PROPERTY_WRITE;
+        Modal.init(DETAIL_CONTAINER, {
+            id: 'xmlPropDetailModal',
+            title: 'XML Property 상세',
+            width: '900px',
+            buttons: HAS_XML_PROPERTY_WRITE,
+            showDelete: false,
+            fields: [
+                {
+                    id: 'description', label: '프로퍼티 설명', type: 'text',
+                    fullWidth: true, placeholder: '이 XML Property 파일에 대한 설명을 입력하세요',
+                    readonly: readonlyFlag
+                },
+                {
+                    id: 'entries', type: 'table', label: '항목 목록',
+                    addLabel: '항목 추가', readonly: readonlyFlag,
+                    columns: [
+                        { id: 'key', label: 'Key', width: '220px', placeholder: 'key', className: 'entry-key' },
+                        { id: 'value', label: 'Value', placeholder: 'value', className: 'entry-value' },
+                        { id: 'description', label: 'Description', width: '200px', placeholder: 'description', className: 'entry-desc' }
+                    ]
+                }
+            ],
+            onSave: (data) => {
+                this.saveEntries(data);
+            }
+        });
+    },
+
+    bindEvents() {
+        // 추가 버튼
+        const btnAddFile = document.getElementById('btnAddFile');
+        if (btnAddFile) {
+            btnAddFile.addEventListener('click', () => {
+                document.getElementById('xmlPropNewFileName').value = '';
+                document.getElementById('xmlPropNewFileDesc').value = '';
+                bootstrap.Modal.getOrCreateInstance(document.getElementById('xmlPropAddFileModal')).show();
+                document.getElementById('xmlPropNewFileName').focus();
+            });
+
+            // 파일 등록 확인
+            document.getElementById('btnConfirmAddFile').addEventListener('click', () => {
+                this.createFile();
+            });
+            document.getElementById('xmlPropNewFileName').addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') this.createFile();
+            });
+        }
+
+        // Reload All → WAS 선택 모달 오픈
+        document.getElementById('btnReloadAll').addEventListener('click', () => {
+            this.openReloadModal(null);
+        });
+
+        // 삭제 확인 모달 - 삭제 실행
+        document.getElementById('btnConfirmDelete').addEventListener('click', () => {
+            this.confirmDelete();
+        });
+
+        // 파일 목록 테이블 이벤트 위임 (Reload, 삭제, 파일 선택)
+        document.getElementById('xmlPropFileTableBody').addEventListener('click', (e) => {
+            const reloadBtn = e.target.closest('.btn-table-reload');
+            if (reloadBtn) {
+                this.openReloadModal(reloadBtn.dataset.filename);
+                return;
+            }
+            const deleteBtn = e.target.closest('.btn-table-delete');
+            if (deleteBtn) {
+                this.openDeleteModal(deleteBtn.dataset.filename);
+                return;
+            }
+            const nameLink = e.target.closest('[role="button"][data-filename]');
+            if (nameLink) {
+                this.selectFile(nameLink.dataset.filename);
+            }
+        });
+    },
+
+    // -----------------------------------------------------------------------
+    // 파일 목록
+    // -----------------------------------------------------------------------
+
+    loadFileList() {
+        $.ajax({
+            url: API_BASE_URL + '/xml-property/files',
+            method: 'GET',
+            success: (response) => {
+                if (response.success && response.data != null) {
+                    this.fileList = response.data;
+                    this.renderFileTable();
+                }
+            },
+            error: (xhr) => {
+                console.error('XML Property 파일 목록 조회 실패:', xhr);
+            }
+        });
+    },
+
+    getSortedFiles() {
+        if (!this.sortField || !this.sortDir) return [...this.fileList];
+        const key = this.sortField;
+        return [...this.fileList].sort((a, b) => {
+            const va = (a[key] || '').toLowerCase();
+            const vb = (b[key] || '').toLowerCase();
+            return this.sortDir === 'asc' ? va.localeCompare(vb) : vb.localeCompare(va);
+        });
+    },
+
+    sortBy(field) {
+        if (this.sortField !== field)     { this.sortField = field; this.sortDir = 'asc'; }
+        else if (this.sortDir === 'asc') { this.sortDir = 'desc'; }
+        else                             { this.sortField = null; this.sortDir = null; }
+        this.renderFileTable();
+    },
+
+    updateSortIcons() {
+        const iconMap = { fileName: 'sortIconFileName', description: 'sortIconDescription' };
+        Object.entries(iconMap).forEach(([field, id]) => {
+            const el = document.getElementById(id);
+            if (!el) return;
+            if (this.sortField === field && this.sortDir === 'asc')       { el.textContent = '↑'; el.className = 'sort-icon asc'; }
+            else if (this.sortField === field && this.sortDir === 'desc') { el.textContent = '↓'; el.className = 'sort-icon desc'; }
+            else                                                           { el.textContent = '⇅'; el.className = 'sort-icon'; }
+        });
+    },
+
+    renderFileTable() {
+        const files = this.getSortedFiles();
+        const tbody = document.getElementById('xmlPropFileTableBody');
+        if (files.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="4" class="sp-empty-state">등록된 파일이 없습니다</td></tr>';
+            this.updateSortIcons();
+            return;
+        }
+        tbody.innerHTML = files.map(f => {
+            const fn = HtmlUtils.escape(f.fileName);
+            const desc = HtmlUtils.escape(f.description || '');
+            return `<tr data-filename="${fn}">
+                <td><span class="text-primary fw-semibold text-decoration-underline" role="button" data-filename="${fn}">${fn}</span></td>
+                <td class="text-body-secondary">${desc}</td>
+                <td class="text-center">
+                    <button class="btn btn-xs btn-primary btn-table-reload" data-filename="${fn}">
+                        <i class="bi bi-arrow-clockwise"></i> Reload
+                    </button>
+                </td>
+                <td class="text-center">
+                    ${HAS_XML_PROPERTY_WRITE ? `<button class="btn btn-xs btn-outline-danger btn-table-delete" data-filename="${fn}"><i class="bi bi-trash"></i> 삭제</button>` : ''}
+                </td>
+            </tr>`;
+        }).join('');
+        this.updateSortIcons();
+    },
+
+    // -----------------------------------------------------------------------
+    // 파일 선택 → 상세 모달 열기
+    // -----------------------------------------------------------------------
+
+    selectFile(fileName) {
+        this.currentFileName = fileName;
+
+        $.ajax({
+            url: API_BASE_URL + '/xml-property/files/' + encodeURIComponent(fileName),
+            method: 'GET',
+            success: (response) => {
+                if (response.success && response.data) {
+                    Modal.setTitle(DETAIL_CONTAINER, fileName);
+                    Modal.openForEdit(DETAIL_CONTAINER, {
+                        description: response.data.description || '',
+                        entries: response.data.entries || []
+                    });
+                }
+            },
+            error: (xhr) => {
+                console.error('파일 상세 조회 실패:', xhr);
+            }
+        });
+    },
+
+    // -----------------------------------------------------------------------
+    // 파일 등록
+    // -----------------------------------------------------------------------
+
+    createFile() {
+        const input = document.getElementById('xmlPropNewFileName');
+        const fileName = input.value.trim();
+        const description = document.getElementById('xmlPropNewFileDesc').value.trim();
+        if (!fileName) {
+            Toast.warning('파일명을 입력해주세요.');
+            input.focus();
+            return;
+        }
+
+        $.ajax({
+            url: API_BASE_URL + '/xml-property/files',
+            method: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify({ fileName, description }),
+            success: (response) => {
+                if (response.success) {
+                    bootstrap.Modal.getInstance(document.getElementById('xmlPropAddFileModal')).hide();
+                    document.getElementById('xmlPropNewFileDesc').value = '';
+                    Toast.success('파일이 등록되었습니다.');
+                    this.loadFileList();
+                } else {
+                    Toast.error(response.message || '파일 등록에 실패했습니다.');
+                }
+            },
+            error: (xhr) => {
+                const msg = xhr.responseJSON?.message || '파일 등록 중 오류가 발생했습니다.';
+                Toast.error(msg);
+            }
+        });
+    },
+
+    // -----------------------------------------------------------------------
+    // 항목 저장
+    // -----------------------------------------------------------------------
+
+    saveEntries(data) {
+        if (!this.currentFileName) return;
+
+        $.ajax({
+            url: API_BASE_URL + '/xml-property/files/' + encodeURIComponent(this.currentFileName) + '/entries',
+            method: 'PUT',
+            contentType: 'application/json',
+            data: JSON.stringify({
+                fileName: this.currentFileName,
+                description: data.description,
+                entries: data.entries
+            }),
+            success: (response) => {
+                if (response.success) {
+                    Toast.success('저장되었습니다.');
+                    Modal.close(DETAIL_CONTAINER);
+                    this.loadFileList();
+                } else {
+                    Toast.error(response.message || '저장에 실패했습니다.');
+                }
+            },
+            error: (xhr) => {
+                const msg = xhr.responseJSON?.message || '저장 중 오류가 발생했습니다.';
+                Toast.error(msg);
+            }
+        });
+    },
+
+    // -----------------------------------------------------------------------
+    // 파일 삭제 (모달 경유)
+    // -----------------------------------------------------------------------
+
+    openDeleteModal(fileName) {
+        this.pendingDeleteFile = fileName;
+        document.getElementById('xmlPropDeleteConfirmMsg').textContent = `'${fileName}' 파일을 삭제하시겠습니까?`;
+        bootstrap.Modal.getOrCreateInstance(document.getElementById('xmlPropDeleteConfirmModal')).show();
+    },
+
+    confirmDelete() {
+        bootstrap.Modal.getInstance(document.getElementById('xmlPropDeleteConfirmModal')).hide();
+        this.doDeleteFile(this.pendingDeleteFile);
+    },
+
+    doDeleteFile(fileName) {
+        $.ajax({
+            url: API_BASE_URL + '/xml-property/files/' + encodeURIComponent(fileName),
+            method: 'DELETE',
+            success: () => {
+                if (this.currentFileName === fileName) {
+                    this.currentFileName = null;
+                }
+                this.loadFileList();
+            },
+            error: (xhr) => {
+                const msg = xhr.responseJSON?.message || '삭제 중 오류가 발생했습니다.';
+                Toast.error(msg);
+            }
+        });
+    },
+
+    // -----------------------------------------------------------------------
+    // WAS 선택 모달 (WasSelectReloadModal 컴포넌트 사용)
+    // -----------------------------------------------------------------------
+
+    openReloadModal(fileName) {
+        this.pendingReloadFile = fileName || null;
+
+        WasSelectReloadModal.open({
+            onExecute: (instanceIds) => {
+                const requestData = {
+                    reloadType: 'xml_property',
+                    instanceIds
+                };
+                if (this.pendingReloadFile) {
+                    requestData.additionalParams = { fileName: this.pendingReloadFile };
+                }
+
+                $.ajax({
+                    url: API_BASE_URL + '/reload/execute',
+                    method: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify(requestData),
+                    success: (response) => {
+                        if (response.success && response.data) {
+                            WasSelectReloadModal.showResults(response.data.results);
+                        } else {
+                            WasSelectReloadModal.resetButton();
+                            Toast.error(response.message || 'Reload 실행에 실패했습니다.');
+                        }
+                    },
+                    error: (xhr) => {
+                        WasSelectReloadModal.resetButton();
+                        Toast.error(xhr.responseJSON?.message || 'Reload 실행 중 오류가 발생했습니다.');
+                    }
+                });
+            }
+        });
+    }
+};
+
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => XmlPropertyPage.init());
+} else {
+    XmlPropertyPage.init();
+}
+</script>
+</th:block>
+</body>
+</html>

@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<div th:fragment="content">
+    <!-- Common Page Styles -->
+    <th:block th:replace="~{pages/connect-org-manage/connect-org-manage-modal :: styles}" />
+    <th:block th:replace="~{pages/app-mapping-manage/app-mapping-manage-modal :: styles}" />
+    <th:block th:replace="~{pages/app-mapping-manage/app-mapping-manage-trx-modal :: styles}" />
+
+    <!-- Search Section Header -->
+    <div class="page-header">
+        <h4 class="page-title">
+            <i class="bi bi-exclamation-circle-fill text-danger"></i>
+            검색조건
+        </h4>
+    </div>
+
+    <!-- Search Box -->
+    <div th:replace="~{pages/app-mapping-manage/app-mapping-manage-search :: search}"></div>
+
+    <!-- List Section Header + Toolbar (한 줄) -->
+    <div class="d-flex align-items-center mt-3">
+        <div class="page-header mb-0">
+            <h4 class="page-title mb-0">
+                <i class="bi bi-exclamation-circle-fill text-danger"></i>
+                리스트
+            </h4>
+        </div>
+        <div class="flex-grow-1" th:insert="~{fragments/page-content-layout :: toolbar}"></div>
+    </div>
+
+    <!-- Table -->
+    <div th:replace="~{pages/app-mapping-manage/app-mapping-manage-table :: table}"></div>
+
+    <!-- Pagination -->
+    <div th:replace="~{fragments/page-content-layout :: pagination}"></div>
+
+    <!-- Bottom Action Buttons -->
+    <div th:replace="~{pages/app-mapping-manage/app-mapping-manage-buttons :: buttons}"></div>
+
+    <!-- 상세조회 모달 -->
+    <div th:replace="~{pages/app-mapping-manage/app-mapping-manage-modal :: mappingModal}"></div>
+
+    <!-- 거래조회 모달 -->
+    <div th:replace="~{pages/app-mapping-manage/app-mapping-manage-trx-modal :: trxModal}"></div>
+
+    <!-- 거래 상세 모달 (공통) -->
+    <div th:replace="~{modals/trx-detail-modal :: modal}"></div>
+
+    <!-- 전문 조회/변경 모달 (공통) -->
+    <div th:replace="~{modals/message-browse-modal :: modal}"></div>
+
+    <!-- WAS Reload 모달 -->
+    <div th:replace="~{modals/was-reload-modal :: modal}"></div>
+
+    <!-- Scripts -->
+    <script th:src="@{/js/components/TrxDetailModal.js}"></script>
+    <script th:src="@{/js/components/MessageBrowseModal.js}"></script>
+    <th:block th:replace="~{pages/app-mapping-manage/app-mapping-manage-script :: script}" />
+</div>
+</body>
+</html>

@@ -1,0 +1,73 @@
+HELP.md
+target/
+.mvn/wrapper/maven-wrapper.jar
+!**/src/main/**/target/
+!**/src/test/**/target/
+docs/dev
+docs/TOBE
+
+### STS ###
+.apt_generated
+.classpath
+.factorypath
+.project
+.settings
+.springBeans
+.sts4-cache
+
+### IntelliJ IDEA ###
+.idea
+*.iws
+*.iml
+*.ipr
+
+### NetBeans ###
+/nbproject/private/
+/nbbuild/
+/dist/
+/nbdist/
+/.nb-gradle/
+build/
+!**/src/main/**/build/
+!**/src/test/**/build/
+
+### VS Code ###
+.vscode/
+
+### Environment Configuration ###
+.env
+src/main/resources/application-local.yaml
+
+### Claude temp files ###
+tmpclaude-*
+.claude/settings.local.json
+.claude/settings.json
+.claude/ralph-loop.local.md
+
+### Uploads ###
+uploads/
+
+### XML Property runtime directory ###
+xml-properties/
+
+### Playwright MCP ###
+.playwright-mcp/
+
+### Node.js / Playwright ###
+node_modules/
+playwright-report/
+playwright-results/
+test-results/
+e2e/.auth/session.json
+e2e/.auth/session-readonly.json
+
+### OS generated files ###
+.DS_Store
+*/.DS_Store
+logs/
+nul
+docs/plan
+# Claude Code internal files
+.claude/worktrees/
+.claude/launch.json
+.claude/skills/

@@ -1,0 +1,1250 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<!-- TransData Page Scripts -->
+<th:block th:fragment="script">
+<!-- Flatpickr CSS -->
+<link th:href="@{/vendor/flatpickr/flatpickr.min.css}" rel="stylesheet">
+<script>
+    /**
+     * 일시 포맷 함수 (yyyyMMddHHmmss -> yyyy-MM-dd HH:mm:ss)
+     */
+    function formatDateTime(dtimeStr) {
+        if (!dtimeStr || dtimeStr.length < 14) return dtimeStr || '';
+        return dtimeStr.substring(0, 4) + '-' +
+               dtimeStr.substring(4, 6) + '-' +
+               dtimeStr.substring(6, 8) + ' ' +
+               dtimeStr.substring(8, 10) + ':' +
+               dtimeStr.substring(10, 12) + ':' +
+               dtimeStr.substring(12, 14);
+    }
+
+    /**
+     * 이행결과 표시 함수
+     */
+    function formatTranResult(tranResult, tranResultName) {
+        switch(tranResult) {
+            case 'S': return '<span class="badge bg-success">성공</span>';
+            case 'F': return '<span class="badge bg-danger">실패</span>';
+            default: return HtmlUtils.escape(tranResultName || tranResult || '-');
+        }
+    }
+
+    /**
+     * 파일 사이즈 포맷 함수
+     */
+    function formatFileSize(bytes) {
+        if (bytes == null || bytes === 0) return '0 B';
+        const units = ['B', 'KB', 'MB', 'GB'];
+        let i = 0;
+        let size = bytes;
+        while (size >= 1024 && i < units.length - 1) {
+            size /= 1024;
+            i++;
+        }
+        return size.toFixed(i === 0 ? 0 : 1) + ' ' + units[i];
+    }
+
+    /**
+     * 텍스트 truncate 함수
+     */
+    function truncateText(text, maxLength) {
+        if (!text) return '';
+        return text.length > maxLength ? text.substring(0, maxLength) + '...' : text;
+    }
+
+    // TransData Management Namespace
+    window.TransData = (function() {
+        let initialized = false;
+        let currentPage = 1;
+        let totalItems = 0;
+        let itemsPerPage = 10;
+        let sortBy = null;
+        let sortDirection = null;
+        let currentData = [];
+
+        // 현재 선택된 행 데이터 (모달용)
+        let currentRowData = null;
+
+        // 모달 전용 페이지네이션 상태
+        let modalCurrentPage = 1;
+        let modalTotalItems = 0;
+        let modalItemsPerPage = 10;
+        let currentTranSeq = null;
+
+        // 모달 전용 정렬 상태
+        let modalSortBy = null;
+        let modalSortDirection = null;
+
+        // Initialize
+        function init() {
+            if (initialized) return;
+            initialized = true;
+
+            console.log('TransData initialized');
+
+            // Initialize page size selector
+            const limitRows = document.getElementById('limitRows');
+            if (limitRows) {
+                limitRows.value = itemsPerPage;
+                limitRows.addEventListener('change', function() {
+                    itemsPerPage = parseInt(this.value);
+                    currentPage = 1;
+                    search();
+                });
+            }
+
+            // Initialize refresh button
+            const btnRefresh = document.getElementById('btnRefresh');
+            if (btnRefresh) {
+                btnRefresh.addEventListener('click', search);
+            }
+
+            // Initialize Excel export button
+            const btnExcel = document.getElementById('btnExcel');
+            if (btnExcel) {
+                btnExcel.addEventListener('click', function() {
+                    const params = new URLSearchParams();
+                    const userId = document.getElementById('searchUserId').value;
+                    const tranResult = document.getElementById('searchTranResult').value;
+                    if (userId) params.append('userId', userId);
+                    if (tranResult) params.append('tranResult', tranResult);
+                    if (sortBy) params.append('sortBy', sortBy);
+                    if (sortDirection) params.append('sortDirection', sortDirection);
+                    window.location.href = '/api/trans/export' + (params.toString() ? '?' + params.toString() : '');
+                });
+            }
+
+            // Initialize Print button
+            const btnPrint = document.getElementById('btnPrint');
+            if (btnPrint) {
+                btnPrint.addEventListener('click', function() {
+                    const columns = [
+                        { key: 'userId', label: '이행요청자' },
+                        { key: 'tranReason', label: '이행사유' },
+                        { key: 'tranTime', label: '이행시각' },
+                        { key: 'tranResultName', label: '이행결과' },
+                        { key: 'totalCount', label: '총이행건수' },
+                        { key: 'failCount', label: '실패' },
+                        { key: 'successCount', label: '성공' }
+                    ];
+                    PrintUtil.print({ title: '이행 데이터 반영 이력', columns: columns, data: currentData });
+                });
+            }
+
+            // Initialize sortable headers
+            initSortHandlers();
+
+            // Initialize modal sortable headers
+            initModalSortHandlers();
+
+            // Initialize btnUpload → open upload modal
+            const btnUpload = document.getElementById('btnUpload');
+            if (btnUpload) {
+                btnUpload.addEventListener('click', openUploadModal);
+            }
+
+            // Initialize btnTransData → open run modal
+            const btnTransData = document.getElementById('btnTransData');
+            if (btnTransData) {
+                btnTransData.addEventListener('click', openRunModal);
+            }
+
+            // Upload modal: wire browse/upload buttons and scroll
+            initUploadModalHandlers();
+
+            // Run modal: 데이터 이행 버튼 핸들러를 init 시점에 바인딩 (show.bs.modal 이벤트 의존 제거)
+            initBtnRunExec();
+
+            // Run modal: initialize on first show
+            const transDataRunModal = document.getElementById('transDataRunModal');
+            if (transDataRunModal) {
+                transDataRunModal.addEventListener('show.bs.modal', function() {
+                    initRunModal();
+                });
+            }
+
+            // 초기 검색
+            search();
+        }
+
+        function initSortHandlers() {
+            const table = document.getElementById('transDataTable');
+            if (!table) return;
+            const headers = table.querySelectorAll('th[data-sort]');
+            headers.forEach(th => {
+                th.addEventListener('click', function() {
+                    const key = this.getAttribute('data-sort');
+                    cycleSort(key);
+                });
+            });
+            updateSortIndicators();
+        }
+
+        function cycleSort(key) {
+            if (sortBy !== key) {
+                sortBy = key;
+                sortDirection = 'ASC';
+            } else if (sortDirection === 'ASC') {
+                sortDirection = 'DESC';
+            } else if (sortDirection === 'DESC') {
+                sortBy = null;
+                sortDirection = null;
+            } else {
+                sortDirection = 'ASC';
+            }
+
+            currentPage = 1;
+            updateSortIndicators();
+            search();
+        }
+
+        function updateSortIndicators() {
+            const indicators = document.querySelectorAll('[data-sort-indicator]');
+            indicators.forEach(el => {
+                const key = el.getAttribute('data-sort-indicator');
+                if (sortBy === key) {
+                    el.textContent = sortDirection === 'DESC' ? '\u25BC' : '\u25B2';
+                } else {
+                    el.textContent = '';
+                }
+            });
+        }
+
+        // Modal sort handlers
+        function initModalSortHandlers() {
+            const table = document.getElementById('transDataHisTable');
+            if (!table) return;
+            const headers = table.querySelectorAll('th[data-modal-sort]');
+            headers.forEach(th => {
+                th.addEventListener('click', function() {
+                    const key = this.getAttribute('data-modal-sort');
+                    cycleModalSort(key);
+                });
+            });
+            updateModalSortIndicators();
+        }
+
+        function cycleModalSort(key) {
+            if (modalSortBy !== key) {
+                modalSortBy = key;
+                modalSortDirection = 'ASC';
+            } else if (modalSortDirection === 'ASC') {
+                modalSortDirection = 'DESC';
+            } else if (modalSortDirection === 'DESC') {
+                modalSortBy = null;
+                modalSortDirection = null;
+            } else {
+                modalSortDirection = 'ASC';
+            }
+
+            modalCurrentPage = 1;
+            updateModalSortIndicators();
+            searchHis();
+        }
+
+        function updateModalSortIndicators() {
+            const indicators = document.querySelectorAll('[data-modal-sort-indicator]');
+            indicators.forEach(el => {
+                const key = el.getAttribute('data-modal-sort-indicator');
+                if (modalSortBy === key) {
+                    el.textContent = modalSortDirection === 'DESC' ? '\u25BC' : '\u25B2';
+                } else {
+                    el.textContent = '';
+                }
+            });
+        }
+
+        // Search with pagination
+        function search() {
+            const searchParams = new URLSearchParams({
+                page: currentPage,
+                size: itemsPerPage
+            });
+
+            const userId = document.getElementById('searchUserId').value;
+            const tranResult = document.getElementById('searchTranResult').value;
+
+            if (userId) searchParams.append('userId', userId);
+            if (tranResult) searchParams.append('tranResult', tranResult);
+            if (sortBy) searchParams.append('sortBy', sortBy);
+            if (sortDirection) searchParams.append('sortDirection', sortDirection);
+
+            fetch(`/api/trans/page?${searchParams.toString()}`)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    if (data.success) {
+                        const pageData = data.data;
+                        const items = pageData.content || [];
+                        totalItems = pageData.totalElements || 0;
+                        currentData = items;
+                        renderTable(items);
+                        renderPagination();
+                    } else {
+                        Toast.error(data.message || '검색 실패');
+                        currentData = [];
+                        renderTable([]);
+                        totalItems = 0;
+                        renderPagination();
+                    }
+                })
+                .catch(error => {
+                    console.error('Error searching trans data:', error);
+                    Toast.error('검색 중 오류가 발생했습니다: ' + error.message);
+                    currentData = [];
+                    renderTable([]);
+                    totalItems = 0;
+                    renderPagination();
+                });
+        }
+
+        // Render table
+        function renderTable(items) {
+            const tbody = document.getElementById('transDataTableBody');
+            if (!tbody) return;
+            tbody.innerHTML = '';
+
+            if (!items || items.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="7" class="text-center py-4 text-body-secondary">
+                            조회된 데이터가 없습니다.
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+
+            items.forEach((item) => {
+                const row = document.createElement('tr');
+                row.classList.add('cursor-pointer');
+                row.onclick = function() {
+                    openDetail(item);
+                };
+                row.innerHTML = `
+                    <td>${HtmlUtils.escape(item.userId || '-')}</td>
+                    <td title="${HtmlUtils.escape(item.tranReason)}">${HtmlUtils.escape(truncateText(item.tranReason, 50))}</td>
+                    <td class="text-center">${formatDateTime(item.tranTime)}</td>
+                    <td class="text-center">${formatTranResult(item.tranResult, item.tranResultName)}</td>
+                    <td class="text-center">${HtmlUtils.escape(String(item.totalCount ?? 0))}</td>
+                    <td class="text-center">${HtmlUtils.escape(String(item.failCount ?? 0))}</td>
+                    <td class="text-center">${HtmlUtils.escape(String(item.successCount ?? 0))}</td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
+        // Open detail modal
+        function openDetail(item) {
+            currentRowData = item;
+            currentTranSeq = item.tranSeq;
+
+            // 모달 상단 요약 정보 초기화
+            document.getElementById('modalTranSeq').value = item.tranSeq || '';
+            document.getElementById('modalTranResult').value = '';
+            document.getElementById('modalTranReason').value = '';
+
+            // 모달 페이지네이션 초기화
+            modalCurrentPage = 1;
+
+            // 모달 정렬 초기화
+            modalSortBy = null;
+            modalSortDirection = null;
+            updateModalSortIndicators();
+
+            // 검색 필터 초기화
+            document.getElementById('modalSearchTranResult').value = '';
+            document.getElementById('modalSearchTranType').value = '';
+            document.getElementById('modalLimitRows').value = '10';
+            modalItemsPerPage = 10;
+
+            // 모달 페이지 크기 변경 이벤트
+            const modalLimitRows = document.getElementById('modalLimitRows');
+            // 기존 이벤트 제거 후 재등록
+            const newModalLimitRows = modalLimitRows.cloneNode(true);
+            modalLimitRows.parentNode.replaceChild(newModalLimitRows, modalLimitRows);
+            newModalLimitRows.addEventListener('change', function() {
+                modalItemsPerPage = parseInt(this.value);
+                modalCurrentPage = 1;
+                searchHis();
+            });
+
+            // 상세 이력 테이블 초기화
+            const hisBody = document.getElementById('transDataHisTableBody');
+            hisBody.innerHTML = `
+                <tr>
+                    <td colspan="5" class="text-center py-3 text-body-secondary">
+                        <i class="bi bi-arrow-repeat sp-spin"></i> 로딩 중...
+                    </td>
+                </tr>
+            `;
+
+            // 모달 열기
+            $('#transDataModal').modal('show');
+
+            // 요약 정보 조회
+            loadSummary(item.tranSeq);
+
+            // HIS 테이블 조회
+            searchHis();
+        }
+
+        // Load summary info (이행 실행 정보)
+        function loadSummary(tranSeq) {
+            fetch(`/api/trans/${encodeURIComponent(tranSeq)}/details`)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    if (data.success) {
+                        const detail = data.data || {};
+                        document.getElementById('modalTranSeq').value = detail.tranSeq || '';
+                        document.getElementById('modalTranResult').value = detail.tranResultName || detail.tranResult || '';
+                        document.getElementById('modalTranReason').value = detail.tranReason || '';
+                    }
+                })
+                .catch(error => {
+                    console.error('Error loading summary:', error);
+                });
+        }
+
+        // Search HIS with pagination
+        function searchHis() {
+            if (!currentTranSeq) return;
+
+            const searchParams = new URLSearchParams({
+                page: modalCurrentPage,
+                size: modalItemsPerPage
+            });
+
+            const tranResult = document.getElementById('modalSearchTranResult').value;
+            const tranType = document.getElementById('modalSearchTranType').value;
+
+            if (tranResult) searchParams.append('tranResult', tranResult);
+            if (tranType) searchParams.append('tranType', tranType);
+            if (modalSortBy) searchParams.append('sortBy', modalSortBy);
+            if (modalSortDirection) searchParams.append('sortDirection', modalSortDirection);
+
+            fetch(`/api/trans/${encodeURIComponent(currentTranSeq)}/details/page?${searchParams.toString()}`)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    if (data.success) {
+                        const pageData = data.data;
+                        const items = pageData.content || [];
+                        modalTotalItems = pageData.totalElements || 0;
+                        renderHisTable(items);
+                        renderModalPagination();
+                    } else {
+                        renderHisTable([]);
+                        modalTotalItems = 0;
+                        renderModalPagination();
+                    }
+                })
+                .catch(error => {
+                    console.error('Error searching his data:', error);
+                    const hisBody = document.getElementById('transDataHisTableBody');
+                    hisBody.innerHTML = `
+                        <tr>
+                            <td colspan="5" class="text-center py-3 text-danger">
+                                상세 이력을 불러오는데 실패했습니다.
+                            </td>
+                        </tr>
+                    `;
+                    modalTotalItems = 0;
+                    renderModalPagination();
+                });
+        }
+
+        // Render HIS detail table
+        function renderHisTable(items) {
+            const tbody = document.getElementById('transDataHisTableBody');
+            if (!tbody) return;
+            tbody.innerHTML = '';
+
+            if (!items || items.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="5" class="text-center py-3 text-body-secondary">
+                            상세 이력 데이터가 없습니다.
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+
+            items.forEach((item) => {
+                const row = document.createElement('tr');
+                row.classList.add('cursor-pointer');
+                row.onclick = function() {
+                    openHisDetail(item);
+                };
+                row.innerHTML = `
+                    <td class="text-center">${HtmlUtils.escape(item.tranTypeName || item.tranType || '-')}</td>
+                    <td>${HtmlUtils.escape(item.tranId || '-')}</td>
+                    <td title="${HtmlUtils.escape(item.tranName)}">${HtmlUtils.escape(truncateText(item.tranName, 40))}</td>
+                    <td class="text-center">${formatDateTime(item.tranTime)}</td>
+                    <td class="text-center">${formatTranResult(item.tranResult, item.tranResultName)}</td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
+        // Open HIS detail (실패 상세 또는 성공 알림)
+        function openHisDetail(item) {
+            if (item.tranResult === 'S') {
+                Toast.success('성공한 데이터 이행입니다.');
+                return;
+            }
+
+            if (item.tranResult === 'F') {
+                const searchParams = new URLSearchParams({
+                    tranId: item.tranId,
+                    tranType: item.tranType
+                });
+
+                fetch(`/api/trans/${encodeURIComponent(currentTranSeq)}/details/fail?${searchParams.toString()}`)
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error(`HTTP error! status: ${response.status}`);
+                        }
+                        return response.json();
+                    })
+                    .then(data => {
+                        if (data.success) {
+                            const detail = data.data || {};
+                            document.getElementById('failModalTranFailReason').value = detail.tranFailReason || '';
+                            document.getElementById('failModalTranFailSql').value = detail.tranFailSql || '';
+
+                            // 실패 상세 모달 표시
+                            bootstrap.Modal.getOrCreateInstance(document.getElementById('transFailModal')).show();
+                        } else {
+                            Toast.warning('실패 상세 정보를 불러올 수 없습니다.');
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error loading fail detail:', error);
+                        Toast.error('실패 상세 정보 조회 중 오류가 발생했습니다.');
+                    });
+            }
+        }
+
+        // UID 생성 (YYMMDDHHmmssS = 13자리)
+        function generateUid() {
+            const now = new Date();
+            const yy = String(now.getFullYear()).slice(2);
+            const MM = String(now.getMonth() + 1).padStart(2, '0');
+            const dd = String(now.getDate()).padStart(2, '0');
+            const HH = String(now.getHours()).padStart(2, '0');
+            const mm = String(now.getMinutes()).padStart(2, '0');
+            const ss = String(now.getSeconds()).padStart(2, '0');
+            const ms = String(now.getMilliseconds()).charAt(0);
+            return yy + MM + dd + HH + mm + ss + ms;
+        }
+
+        // Open UID Generator
+        function openUidGenerator() {
+            document.getElementById('uidGeneratorValue').value = generateUid();
+            bootstrap.Modal.getOrCreateInstance(document.getElementById('uidGeneratorModal')).show();
+        }
+
+        // Close UID Generator
+        function closeUidGenerator() {
+            bootstrap.Modal.getInstance(document.getElementById('uidGeneratorModal'))?.hide();
+        }
+
+        // Refresh UID
+        function refreshUid() {
+            document.getElementById('uidGeneratorValue').value = generateUid();
+        }
+
+        // Copy UID
+        function copyUid() {
+            const value = document.getElementById('uidGeneratorValue').value;
+            navigator.clipboard.writeText(value).then(() => {
+                Toast.success('복사되었습니다: ' + value);
+            });
+        }
+
+        // Close fail detail modal
+        function closeFailModal() {
+            bootstrap.Modal.getInstance(document.getElementById('transFailModal'))?.hide();
+        }
+
+        // Render modal pagination controls
+        function renderModalPagination() {
+            const totalPages = Math.ceil(modalTotalItems / modalItemsPerPage);
+            const pagination = document.getElementById('modalPagination');
+            if (!pagination) return;
+
+            let paginationHtml = '';
+
+            // First page button
+            paginationHtml += `
+                <li class="page-item ${modalCurrentPage === 1 ? 'disabled' : ''}">
+                    <a class="page-link" href="#" onclick="window.TransData.changeModalPage(1); return false;">
+                        <i class="bi bi-chevron-double-left"></i>
+                    </a>
+                </li>
+            `;
+
+            // Previous page button
+            paginationHtml += `
+                <li class="page-item ${modalCurrentPage === 1 ? 'disabled' : ''}">
+                    <a class="page-link" href="#" onclick="window.TransData.changeModalPage(${modalCurrentPage - 1}); return false;">
+                        <i class="bi bi-chevron-left"></i>
+                    </a>
+                </li>
+            `;
+
+            // Page numbers
+            const maxButtons = 5;
+            let startPage = Math.max(1, modalCurrentPage - Math.floor(maxButtons / 2));
+            let endPage = Math.min(totalPages, startPage + maxButtons - 1);
+
+            if (endPage - startPage + 1 < maxButtons) {
+                startPage = Math.max(1, endPage - maxButtons + 1);
+            }
+
+            for (let i = startPage; i <= endPage; i++) {
+                paginationHtml += `
+                    <li class="page-item ${i === modalCurrentPage ? 'active' : ''}">
+                        <a class="page-link" href="#" onclick="window.TransData.changeModalPage(${i}); return false;">${i}</a>
+                    </li>
+                `;
+            }
+
+            // Next page button
+            paginationHtml += `
+                <li class="page-item ${modalCurrentPage === totalPages || totalPages === 0 ? 'disabled' : ''}">
+                    <a class="page-link" href="#" onclick="window.TransData.changeModalPage(${modalCurrentPage + 1}); return false;">
+                        <i class="bi bi-chevron-right"></i>
+                    </a>
+                </li>
+            `;
+
+            // Last page button
+            paginationHtml += `
+                <li class="page-item ${modalCurrentPage === totalPages || totalPages === 0 ? 'disabled' : ''}">
+                    <a class="page-link" href="#" onclick="window.TransData.changeModalPage(${totalPages}); return false;">
+                        <i class="bi bi-chevron-double-right"></i>
+                    </a>
+                </li>
+            `;
+
+            pagination.innerHTML = paginationHtml;
+
+            // Update page info
+            const start = modalTotalItems === 0 ? 0 : (modalCurrentPage - 1) * modalItemsPerPage + 1;
+            const end = Math.min(modalCurrentPage * modalItemsPerPage, modalTotalItems);
+            const pageInfo = document.getElementById('modalPageInfo');
+            if (pageInfo) {
+                pageInfo.textContent = `${start} - ${end} of ${modalTotalItems} items`;
+            }
+        }
+
+        // Change modal page
+        function changeModalPage(page) {
+            const totalPages = Math.ceil(modalTotalItems / modalItemsPerPage);
+            if (page < 1 || page > totalPages) return;
+            modalCurrentPage = page;
+            searchHis();
+        }
+
+        // Render pagination controls
+        function renderPagination() {
+            const totalPages = Math.ceil(totalItems / itemsPerPage);
+            const pagination = document.getElementById('pagination');
+            if (!pagination) return;
+
+            let paginationHtml = '';
+
+            // First page button
+            paginationHtml += `
+                <li class="page-item ${currentPage === 1 ? 'disabled' : ''}">
+                    <a class="page-link" href="#" onclick="window.TransData.changePage(1); return false;">
+                        <i class="bi bi-chevron-double-left"></i>
+                    </a>
+                </li>
+            `;
+
+            // Previous page button
+            paginationHtml += `
+                <li class="page-item ${currentPage === 1 ? 'disabled' : ''}">
+                    <a class="page-link" href="#" onclick="window.TransData.changePage(${currentPage - 1}); return false;">
+                        <i class="bi bi-chevron-left"></i>
+                    </a>
+                </li>
+            `;
+
+            // Page numbers
+            const maxButtons = 5;
+            let startPage = Math.max(1, currentPage - Math.floor(maxButtons / 2));
+            let endPage = Math.min(totalPages, startPage + maxButtons - 1);
+
+            if (endPage - startPage + 1 < maxButtons) {
+                startPage = Math.max(1, endPage - maxButtons + 1);
+            }
+
+            for (let i = startPage; i <= endPage; i++) {
+                paginationHtml += `
+                    <li class="page-item ${i === currentPage ? 'active' : ''}">
+                        <a class="page-link" href="#" onclick="window.TransData.changePage(${i}); return false;">${i}</a>
+                    </li>
+                `;
+            }
+
+            // Next page button
+            paginationHtml += `
+                <li class="page-item ${currentPage === totalPages || totalPages === 0 ? 'disabled' : ''}">
+                    <a class="page-link" href="#" onclick="window.TransData.changePage(${currentPage + 1}); return false;">
+                        <i class="bi bi-chevron-right"></i>
+                    </a>
+                </li>
+            `;
+
+            // Last page button
+            paginationHtml += `
+                <li class="page-item ${currentPage === totalPages || totalPages === 0 ? 'disabled' : ''}">
+                    <a class="page-link" href="#" onclick="window.TransData.changePage(${totalPages}); return false;">
+                        <i class="bi bi-chevron-double-right"></i>
+                    </a>
+                </li>
+            `;
+
+            pagination.innerHTML = paginationHtml;
+
+            // Update page info
+            const start = totalItems === 0 ? 0 : (currentPage - 1) * itemsPerPage + 1;
+            const end = Math.min(currentPage * itemsPerPage, totalItems);
+            const pageInfo = document.getElementById('pageInfo');
+            if (pageInfo) {
+                pageInfo.textContent = `${start} - ${end} of ${totalItems} items`;
+            }
+        }
+
+        // Change page
+        function changePage(page) {
+            const totalPages = Math.ceil(totalItems / itemsPerPage);
+            if (page < 1 || page > totalPages) return;
+            currentPage = page;
+            search();
+        }
+
+        // ==================== Run Modal ====================
+        let runCurrentPage = 1;
+        let runTotalItems = 0;
+        let runItemsPerPage = 20;
+        let runSortBy = null;
+        let runSortDirection = null;
+        let runFileTypeMap = {};
+        let runFpFrom, runFpTo;
+        let runModalInitialized = false;
+
+        function openUploadModal() {
+            $('#transDataUploadModal').modal('show');
+        }
+
+        // ==================== Upload Modal ====================
+        let uploadSelectedFiles = [];
+        let uploadModalHandlersInitialized = false;
+
+        function initUploadModalHandlers() {
+            if (uploadModalHandlersInitialized) return;
+
+            const fileInput  = document.getElementById('uploadFileInput');
+            const btnBrowse  = document.getElementById('btnBrowseFile');
+            const btnUpload  = document.getElementById('btnUploadFile');
+            const wrapper    = document.getElementById('uploadFileListWrapper');
+            const btnScrollUp   = document.getElementById('btnScrollUp');
+            const btnScrollDown = document.getElementById('btnScrollDown');
+
+            if (btnBrowse && fileInput && !btnBrowse.dataset.boundBrowseClick) {
+                btnBrowse.dataset.boundBrowseClick = 'true';
+                btnBrowse.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    fileInput.value = '';
+                    // Open after click propagation completes to avoid duplicate picker open.
+                    setTimeout(function() { fileInput.click(); }, 0);
+                });
+            }
+
+            if (fileInput && !fileInput.dataset.boundFileChange) {
+                fileInput.dataset.boundFileChange = 'true';
+                fileInput.addEventListener('change', function() {
+                    if (!this.files || this.files.length === 0) return;
+
+                    // Extra validation in addition to input accept attribute.
+                    const valid = Array.from(this.files).filter(f => f.name.toLowerCase().endsWith('.sql'));
+                    const invalid = Array.from(this.files).filter(f => !f.name.toLowerCase().endsWith('.sql'));
+
+                    if (invalid.length > 0) {
+                        Toast.info('SQL 파일(.sql)만 선택할 수 있습니다.\n제외된 파일: ' + invalid.map(f => f.name).join(', '));
+                    }
+
+                    if (valid.length > 0) {
+                        uploadSelectedFiles = valid;
+                        renderUploadTable(uploadSelectedFiles.map(f => ({
+                            fileName: f.name,
+                            size: f.size,
+                            status: '대기중',
+                            message: ''
+                        })));
+                    }
+                });
+            }
+
+            if (btnUpload && !btnUpload.dataset.boundUploadClick) {
+                btnUpload.dataset.boundUploadClick = 'true';
+                btnUpload.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    if (uploadSelectedFiles.length === 0) {
+                        Toast.warning('업로드할 파일을 먼저 선택해 주세요.');
+                        return;
+                    }
+                    executeUpload();
+                });
+            }
+
+            if (wrapper && btnScrollUp && btnScrollDown) {
+                btnScrollUp.onclick   = function() { wrapper.scrollBy({ top: -60, behavior: 'smooth' }); };
+                btnScrollDown.onclick = function() { wrapper.scrollBy({ top: 60, behavior: 'smooth' }); };
+            }
+
+            // Reset state when modal closes.
+            const uploadModal = document.getElementById('transDataUploadModal');
+            if (uploadModal && !uploadModal.dataset.boundUploadModalHidden) {
+                uploadModal.dataset.boundUploadModalHidden = 'true';
+                uploadModal.addEventListener('hidden.bs.modal', function() {
+                    uploadSelectedFiles = [];
+                    renderUploadTable([]);
+                });
+            }
+
+            uploadModalHandlersInitialized = true;
+        }
+
+        function renderUploadTable(rows) {
+            const tbody = document.getElementById('uploadFileTableBody');
+            if (!tbody) return;
+
+            if (!rows || rows.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="4" class="sp-upload-empty-cell"></td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = rows.map(row => {
+                let statusHtml;
+                if (row.status === 'SUCCESS' || row.status === '성공') {
+                    statusHtml = '<span class="sp-status-success">성공</span>';
+                } else if (row.status === 'FAIL' || row.status === '실패') {
+                    statusHtml = '<span class="sp-status-fail" title="' + HtmlUtils.escape(row.message) + '">실패</span>';
+                } else {
+                    statusHtml = '<span class="sp-status-default">' + HtmlUtils.escape(row.status) + '</span>';
+                }
+                return `<tr>
+                    <td class="sp-upload-file-cell"
+                        title="${HtmlUtils.escape(row.fileName)}">${HtmlUtils.escape(row.fileName)}</td>
+                    <td class="sp-upload-file-cell-bordered">SQL</td>
+                    <td class="sp-upload-file-cell-bordered">${formatFileSize(row.size)}</td>
+                    <td class="sp-upload-file-cell-bordered">${statusHtml}</td>
+                </tr>`;
+            }).join('');
+        }
+
+        function executeUpload() {
+            const formData = new FormData();
+            uploadSelectedFiles.forEach(f => formData.append('files', f));
+
+            // Disable button while uploading.
+            const btnUpload = document.getElementById('btnUploadFile');
+            if (btnUpload) { btnUpload.disabled = true; btnUpload.textContent = '업로드 중...'; }
+
+            // Update table status to "uploading".
+            renderUploadTable(uploadSelectedFiles.map(f => ({
+                fileName: f.name, size: f.size, status: '업로드 중...', message: ''
+            })));
+
+            fetch('/api/trans/trans-data-inqlist/upload', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => {
+                if (!response.ok) throw new Error('HTTP ' + response.status);
+                return response.json();
+            })
+            .then(data => {
+                if (data.success && Array.isArray(data.data)) {
+                    renderUploadTable(data.data.map(r => ({
+                        fileName: r.fileName,
+                        size: r.size,
+                        status: r.status === 'SUCCESS' ? '성공' : '실패',
+                        message: r.message
+                    })));
+                } else {
+                    Toast.error(data.message || '업로드 처리 중 오류가 발생했습니다.');
+                }
+            })
+            .catch(error => {
+                console.error('Upload error:', error);
+                Toast.error('업로드 중 오류가 발생했습니다: ' + error.message);
+                renderUploadTable(uploadSelectedFiles.map(f => ({
+                    fileName: f.name, size: f.size, status: '실패', message: '서버 오류'
+                })));
+            })
+            .finally(() => {
+                if (btnUpload) { btnUpload.disabled = false; btnUpload.textContent = 'Upload'; }
+                uploadSelectedFiles = [];
+            });
+        }
+
+        function openRunModal() {
+            $('#transDataRunModal').modal('show');
+        }
+
+        function initRunModal() {
+            if (runModalInitialized) return;
+            runModalInitialized = true;
+
+            loadRunFileTypes();
+            initRunDatePickers();
+            initRunSortHandlers();
+            initBtnRunExec();
+
+            const runLimitRows = document.getElementById('runModalLimitRows');
+            if (runLimitRows) {
+                runLimitRows.addEventListener('change', function() {
+                    runItemsPerPage = parseInt(this.value);
+                    runCurrentPage = 1;
+                    runSearch();
+                });
+            }
+        }
+
+        function loadRunFileTypes() {
+            fetch('/api/trans/trans-data-inqlist/file-types')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        const select = document.getElementById('runModalSearchFileType');
+                        select.length = 1;
+                        runFileTypeMap = {};
+                        (data.data || []).forEach(type => {
+                            runFileTypeMap[type.code] = type.description;
+                            const option = document.createElement('option');
+                            option.value = type.code;
+                            option.textContent = type.description;
+                            select.appendChild(option);
+                        });
+                    }
+                })
+                .catch(error => console.error('Error loading run modal file types:', error));
+        }
+
+        function initRunDatePickers() {
+            function setup() {
+                const today = new Date();
+                const oneMonthAgo = new Date(today);
+                oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
+
+                runFpFrom = flatpickr('#runModalSearchDateFrom', {
+                    dateFormat: 'Y/m/d',
+                    defaultDate: oneMonthAgo,
+                    allowInput: false,
+                    onChange: function(selectedDates) {
+                        if (selectedDates[0] && runFpTo) runFpTo.set('minDate', selectedDates[0]);
+                    }
+                });
+
+                runFpTo = flatpickr('#runModalSearchDateTo', {
+                    dateFormat: 'Y/m/d',
+                    defaultDate: today,
+                    allowInput: false,
+                    onChange: function(selectedDates) {
+                        if (selectedDates[0] && runFpFrom) runFpFrom.set('maxDate', selectedDates[0]);
+                    }
+                });
+
+                runFpTo.set('minDate', oneMonthAgo);
+                runFpFrom.set('maxDate', today);
+
+                document.getElementById('runModalBtnDateFrom').addEventListener('click', function() { runFpFrom.open(); });
+                document.getElementById('runModalBtnDateTo').addEventListener('click', function() { runFpTo.open(); });
+
+                runSearch();
+            }
+
+            if (typeof flatpickr !== 'undefined') {
+                setup();
+            } else {
+                const script = document.createElement('script');
+                script.src = '/vendor/flatpickr/flatpickr.min.js';
+                script.onload = setup;
+                document.head.appendChild(script);
+            }
+        }
+
+        function initRunSortHandlers() {
+            const table = document.getElementById('transDataRunTable');
+            if (!table) return;
+            table.querySelectorAll('th[data-run-sort]').forEach(th => {
+                th.addEventListener('click', function() {
+                    cycleRunSort(this.getAttribute('data-run-sort'));
+                });
+            });
+            updateRunSortIndicators();
+        }
+
+        function cycleRunSort(key) {
+            if (runSortBy !== key) {
+                runSortBy = key;
+                runSortDirection = 'ASC';
+            } else if (runSortDirection === 'ASC') {
+                runSortDirection = 'DESC';
+            } else if (runSortDirection === 'DESC') {
+                runSortBy = null;
+                runSortDirection = null;
+            } else {
+                runSortDirection = 'ASC';
+            }
+            runCurrentPage = 1;
+            updateRunSortIndicators();
+            runSearch();
+        }
+
+        function updateRunSortIndicators() {
+            document.querySelectorAll('[data-run-sort-indicator]').forEach(el => {
+                const key = el.getAttribute('data-run-sort-indicator');
+                el.textContent = (runSortBy === key) ? (runSortDirection === 'DESC' ? '\u25BC' : '\u25B2') : '';
+            });
+        }
+
+        function runSearch() {
+            const searchParams = new URLSearchParams({ page: runCurrentPage, size: runItemsPerPage });
+
+            const fileName = document.getElementById('runModalSearchFileName').value;
+            const fileType = document.getElementById('runModalSearchFileType').value;
+            const dateFrom = document.getElementById('runModalSearchDateFrom').value.replace(/\//g, '');
+            const dateTo   = document.getElementById('runModalSearchDateTo').value.replace(/\//g, '');
+
+            if (fileName)   searchParams.append('fileName', fileName);
+            if (fileType)   searchParams.append('fileType', fileType);
+            if (dateFrom)   searchParams.append('dateFrom', dateFrom);
+            if (dateTo)     searchParams.append('dateTo', dateTo);
+            if (runSortBy)  searchParams.append('sortBy', runSortBy);
+            if (runSortDirection) searchParams.append('sortDirection', runSortDirection);
+
+            fetch(`/api/trans/trans-data-inqlist/page?${searchParams.toString()}`)
+                .then(response => {
+                    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                    return response.json();
+                })
+                .then(data => {
+                    if (data.success) {
+                        const pageData = data.data;
+                        runTotalItems = pageData.totalElements || 0;
+                        runRenderTable(pageData.content || []);
+                        runRenderPagination();
+                    } else {
+                        Toast.error(data.message || '검색 실패');
+                        runRenderTable([]);
+                        runTotalItems = 0;
+                        runRenderPagination();
+                    }
+                })
+                .catch(error => {
+                    console.error('Error searching run modal data:', error);
+                    runRenderTable([]);
+                    runTotalItems = 0;
+                    runRenderPagination();
+                });
+        }
+
+        function runRenderTable(items) {
+            const tbody = document.getElementById('transDataRunTableBody');
+            if (!tbody) return;
+            tbody.innerHTML = '';
+
+            // 테이블 재렌더링 시 선택 상태 초기화
+            const selectedFileInput = document.getElementById('runSelectedFileName');
+            if (selectedFileInput) selectedFileInput.value = '';
+
+            if (!items || items.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="4" class="text-center py-4 text-body-secondary">
+                            조회된 데이터가 없습니다.
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+
+            items.forEach(item => {
+                const row = document.createElement('tr');
+                row.classList.add('cursor-pointer');
+                row.dataset.filepath = item.filePath || (item.fileType + '/' + item.fileName);
+                row.innerHTML = `
+                    <td>${HtmlUtils.escape(runFileTypeMap[item.fileType] || item.fileType || '-')}</td>
+                    <td title="${HtmlUtils.escape(item.filePath)}">${HtmlUtils.escape(item.fileName || '-')}</td>
+                    <td class="text-center">${formatFileSize(item.fileSize)}</td>
+                    <td class="text-center">${HtmlUtils.escape(item.createDate || '-')}</td>
+                `;
+                row.addEventListener('click', function() {
+                    tbody.querySelectorAll('tr.run-selected').forEach(r => r.classList.remove('run-selected'));
+                    row.classList.add('run-selected');
+                    const input = document.getElementById('runSelectedFileName');
+                    if (input) input.value = item.fileName || '';
+                });
+                tbody.appendChild(row);
+            });
+        }
+
+        function runRenderPagination() {
+            const totalPages = Math.ceil(runTotalItems / runItemsPerPage);
+            const pagination = document.getElementById('runModalPagination');
+            if (!pagination) return;
+
+            let html = `
+                <li class="page-item ${runCurrentPage === 1 ? 'disabled' : ''}">
+                    <a class="page-link" href="#" onclick="window.TransData.runChangePage(1); return false;"><i class="bi bi-chevron-double-left"></i></a>
+                </li>
+                <li class="page-item ${runCurrentPage === 1 ? 'disabled' : ''}">
+                    <a class="page-link" href="#" onclick="window.TransData.runChangePage(${runCurrentPage - 1}); return false;"><i class="bi bi-chevron-left"></i></a>
+                </li>
+            `;
+
+            const maxButtons = 5;
+            let startPage = Math.max(1, runCurrentPage - Math.floor(maxButtons / 2));
+            let endPage = Math.min(totalPages, startPage + maxButtons - 1);
+            if (endPage - startPage + 1 < maxButtons) startPage = Math.max(1, endPage - maxButtons + 1);
+
+            for (let i = startPage; i <= endPage; i++) {
+                html += `
+                    <li class="page-item ${i === runCurrentPage ? 'active' : ''}">
+                        <a class="page-link" href="#" onclick="window.TransData.runChangePage(${i}); return false;">${i}</a>
+                    </li>
+                `;
+            }
+
+            html += `
+                <li class="page-item ${runCurrentPage === totalPages || totalPages === 0 ? 'disabled' : ''}">
+                    <a class="page-link" href="#" onclick="window.TransData.runChangePage(${runCurrentPage + 1}); return false;"><i class="bi bi-chevron-right"></i></a>
+                </li>
+                <li class="page-item ${runCurrentPage === totalPages || totalPages === 0 ? 'disabled' : ''}">
+                    <a class="page-link" href="#" onclick="window.TransData.runChangePage(${totalPages}); return false;"><i class="bi bi-chevron-double-right"></i></a>
+                </li>
+            `;
+
+            pagination.innerHTML = html;
+
+            const start = runTotalItems === 0 ? 0 : (runCurrentPage - 1) * runItemsPerPage + 1;
+            const end = Math.min(runCurrentPage * runItemsPerPage, runTotalItems);
+            const pageInfo = document.getElementById('runModalPageInfo');
+            if (pageInfo) pageInfo.textContent = `${start} - ${end} of ${runTotalItems} items`;
+        }
+
+        function runChangePage(page) {
+            const totalPages = Math.ceil(runTotalItems / runItemsPerPage);
+            if (page < 1 || page > totalPages) return;
+            runCurrentPage = page;
+            runSearch();
+        }
+
+        function initBtnRunExec() {
+            const btn = document.getElementById('btnRunExec');
+            if (!btn || btn.dataset.boundRunExec) return;
+            btn.dataset.boundRunExec = 'true';
+            btn.addEventListener('click', function() {
+                // 클로저 변수 대신 DOM에서 직접 선택된 행을 찾아 filepath를 읽음
+                const selectedRow = document.querySelector('#transDataRunTable tbody tr.run-selected');
+                const filePath = selectedRow ? selectedRow.dataset.filepath : null;
+                if (!filePath) {
+                    Toast.warning('이행할 파일을 테이블에서 먼저 선택해 주세요.');
+                    return;
+                }
+                const fileName = document.getElementById('runSelectedFileName').value;
+                Toast.confirm(`선택한 파일의 SQL을 실행합니다.\n\n파일: ${fileName}\n\n계속 진행하시겠습니까?`, function() {
+                    executeRunSql(filePath);
+                });
+            });
+        }
+
+        function executeRunSql(filePath) {
+            const btn = document.getElementById('btnRunExec');
+            if (btn) { btn.disabled = true; btn.innerHTML = '<i class="bi bi-arrow-repeat sp-spin"></i> 실행 중...'; }
+
+            fetch('/api/trans/trans-data-inqlist/execute-sql', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ filePath: filePath })
+            })
+            .then(response => {
+                if (!response.ok) throw new Error('HTTP ' + response.status);
+                return response.json();
+            })
+            .then(data => {
+                if (data.success) {
+                    const r = data.data;
+                    let msg = `SQL 실행 완료\n전체: ${r.totalCount}건 / 성공: ${r.successCount}건 / 실패: ${r.failCount}건`;
+                    if (r.errors && r.errors.length > 0) {
+                        msg += '\n\n[실패 내용]\n' + r.errors.slice(0, 5).join('\n');
+                        if (r.errors.length > 5) msg += `\n... 외 ${r.errors.length - 5}건`;
+                    }
+                    Toast.info(msg);
+                } else {
+                    Toast.error(data.message || 'SQL 실행 중 오류가 발생했습니다.');
+                }
+            })
+            .catch(error => {
+                console.error('SQL execute error:', error);
+                Toast.error('SQL 실행 중 오류가 발생했습니다: ' + error.message);
+            })
+            .finally(() => {
+                if (btn) { btn.disabled = false; btn.innerHTML = '<i class="bi bi-database"></i> 데이터 이행'; }
+            });
+        }
+
+        // Public API
+        return {
+            init: init,
+            search: search,
+            changePage: changePage,
+            searchHis: searchHis,
+            changeModalPage: changeModalPage,
+            closeFailModal: closeFailModal,
+            openUidGenerator: openUidGenerator,
+            closeUidGenerator: closeUidGenerator,
+            refreshUid: refreshUid,
+            copyUid: copyUid,
+            runSearch: runSearch,
+            runChangePage: runChangePage
+        };
+    })();
+
+    // ==================== Initialization ====================
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', function() {
+            TransData.init();
+        });
+    } else {
+        TransData.init();
+    }
+</script>
+</th:block>
+</body>
+</html>

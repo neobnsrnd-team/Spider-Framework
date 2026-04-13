@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<!-- MessageTest Table Fragment -->
+<div th:fragment="table" class="table-responsive">
+    <table class="table table-sm table-hover sp-data-grid" id="messageTestTable">
+        <thead class="table-light">
+            <tr>
+                <th class="col-w-150" data-sort="orgName">기관명</th>
+                <th class="col-w-150" data-sort="trxId">거래ID</th>
+                <th class="col-w-100" data-sort="testSno">일련번호</th>
+                <th class="col-w-200" data-sort="testName">테스트명</th>
+                <th class="col-w-250" data-sort="testDesc">테스트설명</th>
+                <th class="col-w-120" data-sort="userId">등록자</th>
+                <th class="col-w-150">대응답</th>
+            </tr>
+        </thead>
+        <tbody id="messageTestTableBody">
+            <tr>
+                <td colspan="7" class="text-center py-4 text-body-secondary">
+                    조회 버튼을 클릭하여 데이터를 불러오세요.
+                </td>
+            </tr>
+        </tbody>
+    </table>
+</div>
+</body>
+</html>

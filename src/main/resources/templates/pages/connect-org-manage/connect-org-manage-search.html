@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<div th:fragment="search" class="card border p-2 mb-3">
+    <div class="d-flex flex-wrap align-items-center gap-2 mb-1 justify-content-between">
+        <div class="d-flex align-items-center gap-2 flex-grow-1">
+            <label class="form-label mb-0 small fw-medium">검색조건</label>
+            <select id="orgSearchField" class="form-select form-select-sm flex-fixed-120">
+                <option value="orgName" selected>기관명</option>
+                <option value="orgId">기관ID</option>
+            </select>
+            <input id="orgSearchKeyword" type="text" class="form-control form-control-sm col-w-250" placeholder="검색어 입력" />
+        </div>
+
+        <div class="d-flex align-items-center gap-2 flex-shrink-0">
+            <select id="orgPageSize" class="form-select form-select-sm sp-limit-select">
+                <option value="10">10</option>
+                <option value="20" selected>20</option>
+                <option value="50">50</option>
+                <option value="100">100</option>
+            </select>
+            <span class="fs-sm sp-search-label">검색</span>
+            <button type="button" class="btn btn-sm btn-primary" onclick="InterfaceMnt.Orgs.search()">조회</button>
+        </div>
+    </div>
+</div>
+</body>
+</html>

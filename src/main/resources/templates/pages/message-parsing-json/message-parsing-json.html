@@ -1,0 +1,1538 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<div th:fragment="content">
+    <style>
+        .sp-json-split-container {
+            display: flex;
+            gap: 12px;
+            min-height: calc(100vh - 200px);
+        }
+        .sp-json-panel {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            min-width: 0;
+        }
+        .sp-json-panel .panel-body {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+        .sp-json-output-area {
+            flex: 1;
+            min-height: 300px;
+            font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+            font-size: 12px;
+            white-space: pre;
+            resize: vertical;
+            background-color: #f8f9fa;
+        }
+        .sp-telegram-data-area {
+            width: 100%;
+            min-height: 200px;
+            max-height: 400px;
+            font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+            font-size: 12px;
+            padding: 8px;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            resize: vertical;
+        }
+        .sp-parse-result-scroll {
+            max-height: 350px;
+            overflow-y: auto;
+        }
+        .sp-log-search-collapse {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease;
+        }
+        .sp-log-search-collapse.show {
+            max-height: 600px;
+        }
+        .sp-loop-begin-row {
+            background-color: #e8f0fe !important;
+            font-weight: 600;
+        }
+        .sp-loop-end-row {
+            background-color: #f0f0f0 !important;
+        }
+        .sp-loop-field-row td:first-child {
+            padding-left: 24px !important;
+        }
+        .sp-selected-log-info {
+            font-size: 0.8rem;
+            color: #6c757d;
+            margin-left: 8px;
+        }
+    </style>
+
+    <!-- 거래 로그 검색 Section -->
+    <div class="mb-3">
+        <div class="page-header" style="cursor:pointer;" onclick="toggleLogSearch()">
+            <h4 class="page-title">
+                <i class="bi bi-search text-primary"></i>
+                거래 로그 검색
+                <i class="bi bi-chevron-down ms-1" id="logSearchToggleIcon" style="font-size:0.8rem;"></i>
+            </h4>
+        </div>
+        <div class="sp-log-search-collapse" id="logSearchSection">
+            <div class="card border p-2 mb-2">
+                <div class="d-flex flex-wrap align-items-center gap-2 mb-1">
+                    <div class="d-flex align-items-center gap-1">
+                        <label class="form-label mb-0 small fw-medium text-nowrap">사용자ID</label>
+                        <input type="text" id="logSearchUserId" class="form-control form-control-sm" style="width:100px;"
+                               onkeyup="if(event.key==='Enter') searchTransactionLogs()">
+                    </div>
+                    <div class="d-flex align-items-center gap-1">
+                        <label class="form-label mb-0 small fw-medium text-nowrap">거래추적번호</label>
+                        <input type="text" id="logSearchTrxTrackingNo" class="form-control form-control-sm" style="width:140px;"
+                               onkeyup="if(event.key==='Enter') searchTransactionLogs()">
+                    </div>
+                    <div class="d-flex align-items-center gap-1">
+                        <label class="form-label mb-0 small fw-medium text-nowrap">글로벌ID</label>
+                        <input type="text" id="logSearchGlobalId" class="form-control form-control-sm" style="width:120px;"
+                               onkeyup="if(event.key==='Enter') searchTransactionLogs()">
+                    </div>
+                </div>
+                <div class="d-flex flex-wrap align-items-center gap-2 mb-1">
+                    <div class="d-flex align-items-center gap-1">
+                        <label class="form-label mb-0 small fw-medium text-nowrap">기관ID</label>
+                        <input type="text" id="logSearchOrgId" class="form-control form-control-sm" style="width:80px;"
+                               onkeyup="if(event.key==='Enter') searchTransactionLogs()">
+                    </div>
+                    <div class="d-flex align-items-center gap-1">
+                        <label class="form-label mb-0 small fw-medium text-nowrap">기관전문ID</label>
+                        <input type="text" id="logSearchMessageId" class="form-control form-control-sm" style="width:120px;"
+                               onkeyup="if(event.key==='Enter') searchTransactionLogs()">
+                    </div>
+                    <div class="d-flex align-items-center gap-1">
+                        <label class="form-label mb-0 small fw-medium text-nowrap">거래일자</label>
+                        <input type="date" id="logSearchDateFrom" class="form-control form-control-sm" style="width:140px;">
+                        <span class="small">~</span>
+                        <input type="date" id="logSearchDateTo" class="form-control form-control-sm" style="width:140px;">
+                    </div>
+                    <div class="d-flex align-items-center gap-1">
+                        <label class="form-label mb-0 small fw-medium text-nowrap">시간대</label>
+                        <input type="text" id="logSearchTimeFrom" class="form-control form-control-sm" style="width:60px;" placeholder="HHMM" maxlength="4">
+                        <span class="small">~</span>
+                        <input type="text" id="logSearchTimeTo" class="form-control form-control-sm" style="width:60px;" placeholder="HHMM" maxlength="4">
+                    </div>
+                    <div class="d-flex align-items-center gap-1">
+                        <select id="logSearchPageSize" class="form-select form-select-sm" style="width:70px;">
+                            <option value="10">10</option>
+                            <option value="20" selected>20</option>
+                            <option value="50">50</option>
+                            <option value="100">100</option>
+                            <option value="500">500</option>
+                        </select>
+                        <span class="small text-nowrap">건씩</span>
+                    </div>
+                    <button class="btn btn-primary btn-sm" onclick="searchTransactionLogs()">
+                        <i class="bi bi-search"></i> 검색
+                    </button>
+                </div>
+            </div>
+            <div class="table-responsive" style="max-height:250px; overflow-y:auto;">
+                <table class="table table-sm table-hover sp-data-grid">
+                    <thead class="table-light sticky-top">
+                        <tr>
+                            <th>거래추적번호</th>
+                            <th>글로벌ID</th>
+                            <th>거래ID</th>
+                            <th>기관ID</th>
+                            <th>기관전문ID</th>
+                            <th>사용자ID</th>
+                            <th>거래일시</th>
+                            <th>결과코드</th>
+                        </tr>
+                    </thead>
+                    <tbody id="logSearchBody">
+                        <tr><td colspan="8" class="text-center py-3 text-body-secondary">검색 조건을 입력하고 검색하세요.</td></tr>
+                    </tbody>
+                </table>
+            </div>
+            <div class="d-flex justify-content-between align-items-center mt-1">
+                <span class="small text-body-secondary" id="logSearchInfo">0 건</span>
+                <nav>
+                    <ul class="pagination pagination-sm mb-0" id="logSearchPagination"></ul>
+                </nav>
+            </div>
+        </div>
+    </div>
+
+    <!-- Split Screen Layout (ASIS: Left=원본 Fixed-Length, Right=JSON 변환) -->
+    <div class="sp-json-split-container">
+        <!-- Left Panel: 선택된 로그 (Fixed Length Data) -->
+        <div class="sp-json-panel">
+            <div class="page-header">
+                <h4 class="page-title">
+                    <i class="bi bi-exclamation-circle-fill text-danger"></i>
+                    선택된 로그(Fixed Length Data)
+                    <span class="sp-selected-log-info" id="selectedLogInfo"></span>
+                </h4>
+            </div>
+
+            <!-- 원본 기관/전문 정보 -->
+            <div class="card border p-2 mb-2">
+                <div class="d-flex flex-wrap align-items-center gap-2">
+                    <div class="d-flex align-items-center gap-2">
+                        <label class="form-label mb-0 small fw-medium text-nowrap">기관명</label>
+                        <div class="sp-custom-select-container">
+                            <div class="sp-custom-select-trigger" id="orgSelectTrigger" onclick="toggleOrgDropdown()">
+                                <span id="orgSelectText">기관선택</span>
+                                <i class="bi bi-chevron-down"></i>
+                            </div>
+                            <div class="sp-custom-select-dropdown d-hidden" id="orgSelectDropdown">
+                                <div class="sp-custom-select-search">
+                                    <input type="text" id="orgSearchInput" placeholder="검색" oninput="filterOrgList()">
+                                    <i class="bi bi-search"></i>
+                                </div>
+                                <ul class="sp-custom-select-list" id="orgSelectList">
+                                    <li class="sp-custom-select-empty">로딩 중...</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="d-flex align-items-center gap-2">
+                        <label class="form-label mb-0 small fw-medium text-nowrap">전문ID</label>
+                        <input type="text" id="messageIdInput" class="form-control form-control-sm" style="width:150px;" readonly>
+                    </div>
+                    <button class="btn btn-primary btn-sm" onclick="openMessageSearchModal()">
+                        <i class="bi bi-search"></i> 조회
+                    </button>
+                </div>
+            </div>
+
+            <!-- Action Buttons (ASIS: 전문파싱 + 동일 포멧 JSON on left panel) -->
+            <div class="d-flex gap-2 mb-2">
+                <button class="btn btn-primary btn-sm" onclick="parseMessage()">
+                    <i class="bi bi-code-slash"></i> 전문파싱
+                </button>
+                <button class="btn btn-success btn-sm" onclick="doJsonConversion(selectedOrgId, selectedMessageId)">
+                    <i class="bi bi-filetype-json"></i> 동일 포멧 JSON 생성
+                </button>
+            </div>
+
+            <!-- Message Area -->
+            <div id="messageArea"></div>
+
+            <!-- Telegram Data Area -->
+            <div class="mb-2">
+                <textarea id="telegramData" class="sp-telegram-data-area"
+                          placeholder="거래 로그 검색에서 항목을 선택하거나, 전문 검색 후 여기에 파싱할 전문 원본 데이터를 입력하세요"></textarea>
+            </div>
+
+            <!-- Parse Result Section -->
+            <div class="page-header mt-2">
+                <h4 class="page-title">
+                    <i class="bi bi-exclamation-circle-fill text-danger"></i>
+                    파싱 결과
+                </h4>
+                <div class="d-flex gap-1">
+                    <button class="btn btn-outline-secondary btn-sm" onclick="exportToExcel()">
+                        <i class="bi bi-file-earmark-excel"></i> 엑셀
+                    </button>
+                    <button class="btn btn-outline-secondary btn-sm" onclick="printResult()">
+                        <i class="bi bi-printer"></i> 출력
+                    </button>
+                </div>
+            </div>
+            <div class="sp-parse-result-scroll">
+                <table class="table table-sm table-hover sp-data-grid">
+                    <thead class="table-light">
+                        <tr>
+                            <th class="min-w-120">메시지 ID</th>
+                            <th class="min-w-150">전문필드ID</th>
+                            <th class="min-w-200">전문필드명</th>
+                            <th class="min-w-80">길이[Byte]</th>
+                            <th class="min-w-200">원본값</th>
+                            <th class="min-w-200">파싱값</th>
+                        </tr>
+                    </thead>
+                    <tbody id="parsedFieldsBody">
+                        <tr>
+                            <td colspan="6" class="text-center text-muted">전문파싱 버튼을 눌러 결과를 확인하세요</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Right Panel: JSON 변환 (JSON Data) -->
+        <div class="sp-json-panel">
+            <div class="page-header">
+                <h4 class="page-title">
+                    <i class="bi bi-exclamation-circle-fill text-danger"></i>
+                    JSON 변환(JSON Data)
+                </h4>
+                <div class="d-flex gap-1">
+                    <button class="btn btn-outline-secondary btn-sm" onclick="copyJsonToClipboard()">
+                        <i class="bi bi-clipboard"></i> 복사
+                    </button>
+                </div>
+            </div>
+
+            <!-- 지정 포멧 대상 선택 (ASIS: 항상 표시) -->
+            <div class="card border p-2 mb-2">
+                <div class="d-flex flex-wrap align-items-center gap-2 mb-1">
+                    <div class="d-flex align-items-center gap-2">
+                        <label class="form-label mb-0 small fw-medium text-nowrap">기관명</label>
+                        <div class="sp-custom-select-container">
+                            <div class="sp-custom-select-trigger" id="targetOrgSelectTrigger" onclick="toggleTargetOrgDropdown()">
+                                <span id="targetOrgSelectText">기관선택</span>
+                                <i class="bi bi-chevron-down"></i>
+                            </div>
+                            <div class="sp-custom-select-dropdown d-hidden" id="targetOrgSelectDropdown">
+                                <div class="sp-custom-select-search">
+                                    <input type="text" id="targetOrgSearchInput" placeholder="검색" oninput="filterTargetOrgList()">
+                                    <i class="bi bi-search"></i>
+                                </div>
+                                <ul class="sp-custom-select-list" id="targetOrgSelectList">
+                                    <li class="sp-custom-select-empty">로딩 중...</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="d-flex align-items-center gap-2">
+                        <label class="form-label mb-0 small fw-medium text-nowrap">전문ID</label>
+                        <input type="text" id="targetMessageIdInput" class="form-control form-control-sm" style="width:150px;" readonly>
+                    </div>
+                    <button class="btn btn-primary btn-sm" onclick="openTargetMessageSearchModal()">
+                        <i class="bi bi-search"></i> 조회
+                    </button>
+                </div>
+                <div class="d-flex gap-2 mt-1">
+                    <button class="btn btn-success btn-sm" onclick="executeSpecifiedFormatConversion()">
+                        <i class="bi bi-filetype-json"></i> 지정 전문 JSON 생성
+                    </button>
+                </div>
+            </div>
+
+            <!-- JSON Output -->
+            <div class="panel-body">
+                <textarea id="jsonOutput" class="form-control sp-json-output-area" readonly
+                          placeholder="JSON 변환 버튼을 눌러 결과를 확인하세요"></textarea>
+            </div>
+
+            <!-- HTTP Header Setting -->
+            <div class="page-header mt-2">
+                <h4 class="page-title">
+                    <i class="bi bi-exclamation-circle-fill text-danger"></i>
+                    HTTP Header Setting
+                </h4>
+            </div>
+            <div class="card border p-2">
+                <div class="row g-2 mb-1">
+                    <div class="col-6">
+                        <div class="d-flex align-items-center gap-2">
+                            <label class="form-label mb-0 small fw-medium text-nowrap" style="min-width: 100px">Request URL</label>
+                            <input type="text" id="httpRequestUrl" class="form-control form-control-sm" placeholder="http://...">
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="d-flex align-items-center gap-2">
+                            <label class="form-label mb-0 small fw-medium text-nowrap" style="min-width: 120px">Request Method</label>
+                            <input type="text" id="httpRequestMethod" class="form-control form-control-sm">
+                        </div>
+                    </div>
+                </div>
+                <div class="row g-2 mb-1">
+                    <div class="col-6">
+                        <div class="d-flex align-items-center gap-2">
+                            <label class="form-label mb-0 small fw-medium text-nowrap" style="min-width: 100px">Host</label>
+                            <input type="text" id="httpHost" class="form-control form-control-sm" placeholder="Host">
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="d-flex align-items-center gap-2">
+                            <label class="form-label mb-0 small fw-medium text-nowrap" style="min-width: 120px">Content-Type</label>
+                            <input type="text" id="httpContentType" class="form-control form-control-sm" value="application/json" placeholder="Content-Type">
+                        </div>
+                    </div>
+                </div>
+                <div class="row g-2">
+                    <div class="col-6">
+                        <div class="d-flex align-items-center gap-2">
+                            <label class="form-label mb-0 small fw-medium text-nowrap" style="min-width: 100px">Option 1</label>
+                            <input type="text" id="httpOption1" class="form-control form-control-sm" placeholder="Option 1">
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="d-flex align-items-center gap-2">
+                            <label class="form-label mb-0 small fw-medium text-nowrap" style="min-width: 120px">Option 2</label>
+                            <input type="text" id="httpOption2" class="form-control form-control-sm" placeholder="Option 2">
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 전문 검색 모달 (원본) -->
+    <div id="messageSearchModal" class="modal fade" tabindex="-1" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
+        <div class="modal-dialog modal-dialog-centered mw-700">
+        <div class="modal-content resizable-modal" id="messageSearchModalContainer">
+            <div class="modal-header">
+                <h5 class="modal-title">전문 검색</h5>
+                <button class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+
+            <!-- Resize handles -->
+            <div class="resize-handle resize-top"></div>
+            <div class="resize-handle resize-right"></div>
+            <div class="resize-handle resize-bottom"></div>
+            <div class="resize-handle resize-left"></div>
+            <div class="resize-handle resize-corner-nw"></div>
+            <div class="resize-handle resize-corner-ne"></div>
+            <div class="resize-handle resize-corner-sw"></div>
+            <div class="resize-handle resize-corner-se"></div>
+
+            <div class="modal-body">
+                <div class="modal-section">
+                    <div class="section-header">
+                        <i class="bi bi-caret-right-fill"></i>
+                        <span>전문 정보</span>
+                    </div>
+                    <div class="card border p-2 mb-3">
+                        <div class="d-flex flex-wrap align-items-center gap-2 mb-1">
+                            <div class="d-flex align-items-center gap-2 mw-150">
+                                <select id="messageSearchField" class="form-select form-select-sm">
+                                    <option value="messageId">전문ID</option>
+                                    <option value="messageName">전문명</option>
+                                </select>
+                            </div>
+                            <div class="d-flex align-items-center gap-2 mw-250">
+                                <label class="form-label mb-0 small fw-medium">검색어</label>
+                                <input type="text" id="messageSearchValue" class="form-control form-control-sm" placeholder="검색어 입력"
+                                       onkeyup="if(event.key==='Enter') searchMessages()">
+                            </div>
+                            <div class="d-flex align-items-center gap-2 flex-shrink-0">
+                                <button class="btn btn-primary btn-sm" onclick="searchMessages()">
+                                    <i class="bi bi-search"></i> 조회
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="modal-section">
+                    <div class="section-header">
+                        <i class="bi bi-caret-right-fill"></i>
+                        <span>리스트</span>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table table-sm table-hover sp-data-grid">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>전문ID</th>
+                                    <th>전문명</th>
+                                </tr>
+                            </thead>
+                            <tbody id="messageListBody" class="sp-clickable-rows">
+                                <tr>
+                                    <td colspan="2" class="text-center">조회 버튼을 눌러주세요</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Pagination -->
+                    <div class="pagination-container">
+                        <nav>
+                            <ul class="pagination pagination-sm" id="messagePagination">
+                            </ul>
+                        </nav>
+                        <div class="pagination-info">
+                            <span id="messagePageInfo">0 - 0 of 0 items</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        </div>
+    </div>
+
+    <!-- 지정 포멧 전문 검색 모달 (대상) -->
+    <div id="targetMessageSearchModal" class="modal fade" tabindex="-1" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
+        <div class="modal-dialog modal-dialog-centered mw-700">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">변환 대상 전문 검색</h5>
+                <button class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="card border p-2 mb-3">
+                    <div class="d-flex flex-wrap align-items-center gap-2">
+                        <div class="d-flex align-items-center gap-2 mw-150">
+                            <select id="targetMessageSearchField" class="form-select form-select-sm">
+                                <option value="messageId">전문ID</option>
+                                <option value="messageName">전문명</option>
+                            </select>
+                        </div>
+                        <div class="d-flex align-items-center gap-2 mw-250">
+                            <label class="form-label mb-0 small fw-medium">검색어</label>
+                            <input type="text" id="targetMessageSearchValue" class="form-control form-control-sm" placeholder="검색어 입력"
+                                   onkeyup="if(event.key==='Enter') searchTargetMessages()">
+                        </div>
+                        <button class="btn btn-primary btn-sm" onclick="searchTargetMessages()">
+                            <i class="bi bi-search"></i> 조회
+                        </button>
+                    </div>
+                </div>
+                <div class="table-responsive" style="max-height:300px; overflow-y:auto;">
+                    <table class="table table-sm table-hover sp-data-grid">
+                        <thead class="table-light sticky-top">
+                            <tr>
+                                <th>전문ID</th>
+                                <th>전문명</th>
+                            </tr>
+                        </thead>
+                        <tbody id="targetMessageListBody" class="sp-clickable-rows">
+                            <tr><td colspan="2" class="text-center">조회 버튼을 눌러주세요</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script th:inline="javascript">
+        var selectedOrgId = '';
+        var selectedMessageId = '';
+        var targetOrgId = '';
+        var targetMessageId = '';
+        var orgList = [];
+        var allMessages = [];
+        var targetMessages = [];
+        var currentPage = 1;
+        var itemsPerPage = 10;
+        var logSearchCurrentPage = 1;
+        var selectedTrxTrackingNo = '';
+        var lastParsedFields = [];
+
+        // ── Helper: create DOM elements safely ──
+
+        function createTextTd(text) {
+            var td = document.createElement('td');
+            td.textContent = text;
+            return td;
+        }
+
+        function createPageItem(label, page, disabled, active) {
+            var li = document.createElement('li');
+            li.className = 'page-item' + (disabled ? ' disabled' : '') + (active ? ' active' : '');
+            var a = document.createElement('a');
+            a.className = 'page-link';
+            a.href = '#';
+            if (typeof label === 'string' && (label === 'prev' || label === 'next')) {
+                var icon = document.createElement('i');
+                icon.className = label === 'prev' ? 'bi bi-chevron-left' : 'bi bi-chevron-right';
+                a.appendChild(icon);
+            } else {
+                a.textContent = label;
+            }
+            a.onclick = function(e) {
+                e.preventDefault();
+                if (!disabled) changeMessagePage(page);
+            };
+            li.appendChild(a);
+            return li;
+        }
+
+        // ── 거래 로그 검색 ──
+
+        function toggleLogSearch() {
+            var section = document.getElementById('logSearchSection');
+            var icon = document.getElementById('logSearchToggleIcon');
+            section.classList.toggle('show');
+            icon.className = section.classList.contains('show') ? 'bi bi-chevron-up ms-1' : 'bi bi-chevron-down ms-1';
+        }
+
+        function searchTransactionLogs(page) {
+            logSearchCurrentPage = page || 1;
+            var pageSize = document.getElementById('logSearchPageSize').value;
+            var params = new URLSearchParams();
+            params.append('page', logSearchCurrentPage);
+            params.append('size', pageSize);
+
+            var userId = document.getElementById('logSearchUserId').value.trim();
+            var trxTrackingNo = document.getElementById('logSearchTrxTrackingNo').value.trim();
+            var globalId = document.getElementById('logSearchGlobalId').value.trim();
+            var orgId = document.getElementById('logSearchOrgId').value.trim();
+            var messageId = document.getElementById('logSearchMessageId').value.trim();
+            var dateFrom = document.getElementById('logSearchDateFrom').value;
+            var dateTo = document.getElementById('logSearchDateTo').value;
+            var timeFrom = document.getElementById('logSearchTimeFrom').value.trim();
+            var timeTo = document.getElementById('logSearchTimeTo').value.trim();
+
+            if (userId) params.append('userId', userId);
+            if (trxTrackingNo) params.append('trxTrackingNo', trxTrackingNo);
+            if (globalId) params.append('globalId', globalId);
+            if (orgId) params.append('orgId', orgId);
+            if (messageId) params.append('orgMessageId', messageId);
+            if (dateFrom) params.append('trxDateFrom', dateFrom.replace(/-/g, ''));
+            if (dateTo) params.append('trxDateTo', dateTo.replace(/-/g, ''));
+            if (timeFrom) params.append('trxTimeFrom', timeFrom);
+            if (timeTo) params.append('trxTimeTo', timeTo);
+
+            fetch('/api/message-instances/page?' + params.toString())
+                .then(function(response) { return response.json(); })
+                .then(function(apiResponse) {
+                    if (apiResponse.success) {
+                        displayLogSearchResult(apiResponse.data);
+                    } else {
+                        Toast.error('거래 로그 검색 중 오류가 발생했습니다: ' + (apiResponse.message || ''));
+                    }
+                })
+                .catch(function(error) {
+                    console.error('Error searching logs:', error);
+                    Toast.error('거래 로그 검색 중 오류가 발생했습니다');
+                });
+        }
+
+        function displayLogSearchResult(pageData) {
+            var tbody = document.getElementById('logSearchBody');
+            tbody.textContent = '';
+
+            var items = pageData.content || [];
+            document.getElementById('logSearchInfo').textContent = pageData.totalElements + ' 건';
+
+            if (items.length === 0) {
+                var tr = document.createElement('tr');
+                var td = document.createElement('td');
+                td.colSpan = 8;
+                td.className = 'text-center py-3 text-body-secondary';
+                td.textContent = '검색 결과가 없습니다.';
+                tr.appendChild(td);
+                tbody.appendChild(tr);
+                renderLogPagination(0, 1);
+                return;
+            }
+
+            items.forEach(function(item) {
+                var tr = document.createElement('tr');
+                tr.style.cursor = 'pointer';
+                tr.appendChild(createTextTd(item.trxTrackingNo || ''));
+                tr.appendChild(createTextTd(item.instanceId || ''));
+                tr.appendChild(createTextTd(item.trxId || ''));
+
+                // 기관ID 컬럼 (ASIS: 방향 표시)
+                var orgTd = document.createElement('td');
+                var reqResType = item.reqResType || item.ioType || '';
+                var arrowIcon = document.createElement('i');
+                if (reqResType === 'S' || reqResType === 'I') {
+                    arrowIcon.className = 'bi bi-arrow-left-square text-primary me-1';
+                } else {
+                    arrowIcon.className = 'bi bi-arrow-right-square text-success me-1';
+                }
+                orgTd.appendChild(arrowIcon);
+                orgTd.appendChild(document.createTextNode(item.orgId || ''));
+                tr.appendChild(orgTd);
+
+                tr.appendChild(createTextTd(item.messageId || ''));
+                tr.appendChild(createTextTd(item.userId || ''));
+
+                var dtime = item.trxDtime || '';
+                var formatted = dtime.length >= 14
+                    ? dtime.substring(0,4)+'-'+dtime.substring(4,6)+'-'+dtime.substring(6,8)+' '+dtime.substring(8,10)+':'+dtime.substring(10,12)+':'+dtime.substring(12,14)
+                    : dtime;
+                tr.appendChild(createTextTd(formatted));
+                tr.appendChild(createTextTd(item.lastRtCode || item.successYn || ''));
+
+                tr.onclick = function() { selectLogEntry(item); };
+                tbody.appendChild(tr);
+            });
+
+            renderLogPagination(pageData.totalPages, pageData.currentPage);
+        }
+
+        function renderLogPagination(totalPages, currentPageNum) {
+            var pagination = document.getElementById('logSearchPagination');
+            pagination.textContent = '';
+            if (totalPages <= 1) return;
+
+            // Prev
+            var prevLi = document.createElement('li');
+            prevLi.className = 'page-item' + (currentPageNum <= 1 ? ' disabled' : '');
+            var prevA = document.createElement('a');
+            prevA.className = 'page-link'; prevA.href = '#';
+            prevA.innerHTML = '<i class="bi bi-chevron-left"></i>';
+            prevA.onclick = function(e) { e.preventDefault(); searchTransactionLogs(currentPageNum - 1); };
+            prevLi.appendChild(prevA);
+            pagination.appendChild(prevLi);
+
+            var maxButtons = 5;
+            var startPage = Math.max(1, currentPageNum - Math.floor(maxButtons / 2));
+            var endPage = Math.min(totalPages, startPage + maxButtons - 1);
+            if (endPage - startPage + 1 < maxButtons) startPage = Math.max(1, endPage - maxButtons + 1);
+
+            for (var i = startPage; i <= endPage; i++) {
+                var li = document.createElement('li');
+                li.className = 'page-item' + (i === currentPageNum ? ' active' : '');
+                var a = document.createElement('a');
+                a.className = 'page-link'; a.href = '#'; a.textContent = i;
+                (function(pageNum) {
+                    a.onclick = function(e) { e.preventDefault(); searchTransactionLogs(pageNum); };
+                })(i);
+                li.appendChild(a);
+                pagination.appendChild(li);
+            }
+
+            // Next
+            var nextLi = document.createElement('li');
+            nextLi.className = 'page-item' + (currentPageNum >= totalPages ? ' disabled' : '');
+            var nextA = document.createElement('a');
+            nextA.className = 'page-link'; nextA.href = '#';
+            nextA.innerHTML = '<i class="bi bi-chevron-right"></i>';
+            nextA.onclick = function(e) { e.preventDefault(); searchTransactionLogs(currentPageNum + 1); };
+            nextLi.appendChild(nextA);
+            pagination.appendChild(nextLi);
+        }
+
+        function selectLogEntry(item) {
+            // 거래 로그 선택 시 기관/전문 자동 설정 + messageData 로드
+            selectedTrxTrackingNo = item.trxTrackingNo || '';
+            document.getElementById('selectedLogInfo').textContent =
+                selectedTrxTrackingNo ? '(거래추적번호: ' + selectedTrxTrackingNo + ')' : '';
+
+            if (item.orgId) {
+                selectedOrgId = item.orgId;
+                var org = orgList.find(function(o) { return o.orgId === item.orgId; });
+                document.getElementById('orgSelectText').textContent = org ? org.orgName : item.orgId;
+            }
+            if (item.messageId) {
+                selectedMessageId = item.messageId;
+                document.getElementById('messageIdInput').value = item.messageId;
+            }
+
+            // messageData가 있으면 textarea에 로드
+            if (item.messageData) {
+                document.getElementById('telegramData').value = item.messageData;
+                showMessage('거래 로그 데이터가 로드되었습니다 (추적번호: ' + selectedTrxTrackingNo + ')', 'success');
+            } else {
+                // messageData가 목록 조회에 없을 수 있으므로 상세 조회
+                fetch('/api/message-instances/tracking/' + encodeURIComponent(item.trxTrackingNo))
+                    .then(function(r) { return r.json(); })
+                    .then(function(apiResponse) {
+                        if (apiResponse.success && apiResponse.data && apiResponse.data.length > 0) {
+                            // ASIS: MESSAGE_ID + ORG_ID로 매칭하여 LOG_DATA 추출
+                            var matched = apiResponse.data.find(function(d) {
+                                return d.messageId === item.messageId && d.orgId === item.orgId;
+                            });
+                            var detail = matched || apiResponse.data[0];
+                            var logData = detail.messageData || detail.logData || '';
+                            if (logData) {
+                                document.getElementById('telegramData').value = logData;
+                                showMessage('거래 로그 데이터가 로드되었습니다', 'success');
+                            } else {
+                                showMessage('해당 거래에 전문 데이터가 없습니다', 'error');
+                            }
+                        }
+                    })
+                    .catch(function() {
+                        showMessage('거래 상세 조회 중 오류가 발생했습니다', 'error');
+                    });
+            }
+        }
+
+        // ── 기관 목록 ──
+
+        function loadOrgIdList() {
+            fetch('/api/telegram/orgs')
+                .then(function(response) { return response.json(); })
+                .then(function(apiResponse) {
+                    if (apiResponse.success) {
+                        orgList = apiResponse.data;
+                        renderOrgList(orgList);
+                        renderTargetOrgList(orgList);
+                    }
+                })
+                .catch(function(error) {
+                    console.error('Error loading orgs:', error);
+                    showMessage('기관 목록을 불러오는 중 오류가 발생했습니다', 'error');
+                });
+        }
+
+        function renderOrgList(orgs) {
+            var list = document.getElementById('orgSelectList');
+            list.textContent = '';
+
+            var defaultLi = document.createElement('li');
+            defaultLi.textContent = '기관선택';
+            defaultLi.onclick = function(e) {
+                selectOrg('', '기관선택', e.currentTarget);
+            };
+            list.appendChild(defaultLi);
+
+            if (orgs.length === 0) return;
+
+            orgs.forEach(function(org) {
+                var li = document.createElement('li');
+                li.textContent = org.orgName;
+                li.dataset.orgId = org.orgId;
+                li.dataset.orgName = org.orgName;
+
+                if (selectedOrgId === org.orgId) {
+                    li.classList.add('selected');
+                }
+
+                li.onclick = function(e) {
+                    selectOrg(org.orgId, org.orgName, e.currentTarget);
+                };
+                list.appendChild(li);
+            });
+        }
+
+        function selectOrg(orgId, orgName, element) {
+            selectedOrgId = orgId;
+            document.getElementById('orgSelectText').textContent = orgName;
+
+            if (!orgId) {
+                selectedMessageId = '';
+                document.getElementById('messageIdInput').value = '';
+            }
+
+            document.querySelectorAll('#orgSelectList li').forEach(function(li) {
+                li.classList.remove('selected');
+            });
+            if (element) {
+                element.classList.add('selected');
+            }
+
+            closeOrgDropdown();
+        }
+
+        function toggleOrgDropdown() {
+            var dropdown = document.getElementById('orgSelectDropdown');
+            var isVisible = !dropdown.classList.contains('d-hidden');
+
+            if (isVisible) {
+                closeOrgDropdown();
+            } else {
+                dropdown.classList.remove('d-hidden');
+                document.getElementById('orgSearchInput').value = '';
+                renderOrgList(orgList);
+                document.getElementById('orgSearchInput').focus();
+            }
+        }
+
+        function closeOrgDropdown() {
+            document.getElementById('orgSelectDropdown').classList.add('d-hidden');
+        }
+
+        function filterOrgList() {
+            var keyword = document.getElementById('orgSearchInput').value.toLowerCase();
+
+            if (!keyword) {
+                renderOrgList(orgList);
+                return;
+            }
+
+            var filtered = orgList.filter(function(org) {
+                return org.orgId.toLowerCase().indexOf(keyword) !== -1 ||
+                       org.orgName.toLowerCase().indexOf(keyword) !== -1;
+            });
+            renderOrgList(filtered);
+        }
+
+        // ── 지정 포멧 대상 기관 드롭다운 ──
+
+        function toggleTargetOrgDropdown() {
+            var dropdown = document.getElementById('targetOrgSelectDropdown');
+            var isVisible = !dropdown.classList.contains('d-hidden');
+
+            if (isVisible) {
+                dropdown.classList.add('d-hidden');
+            } else {
+                dropdown.classList.remove('d-hidden');
+                document.getElementById('targetOrgSearchInput').value = '';
+                renderTargetOrgList(orgList);
+                document.getElementById('targetOrgSearchInput').focus();
+            }
+        }
+
+        function renderTargetOrgList(orgs) {
+            var list = document.getElementById('targetOrgSelectList');
+            list.textContent = '';
+
+            orgs.forEach(function(org) {
+                var li = document.createElement('li');
+                li.textContent = org.orgName;
+                li.dataset.orgId = org.orgId;
+                if (targetOrgId === org.orgId) li.classList.add('selected');
+                li.onclick = function() {
+                    targetOrgId = org.orgId;
+                    document.getElementById('targetOrgSelectText').textContent = org.orgName;
+                    document.getElementById('targetOrgSelectDropdown').classList.add('d-hidden');
+                    targetMessageId = '';
+                    document.getElementById('targetMessageIdInput').value = '';
+                };
+                list.appendChild(li);
+            });
+        }
+
+        function filterTargetOrgList() {
+            var keyword = document.getElementById('targetOrgSearchInput').value.toLowerCase();
+            var filtered = keyword
+                ? orgList.filter(function(o) { return o.orgId.toLowerCase().indexOf(keyword) !== -1 || o.orgName.toLowerCase().indexOf(keyword) !== -1; })
+                : orgList;
+            renderTargetOrgList(filtered);
+        }
+
+        // ── 전문 검색 모달 (원본) ──
+
+        function openMessageSearchModal() {
+            if (!selectedOrgId) {
+                Toast.warning('기관명을 먼저 선택해주세요');
+                return;
+            }
+
+            bootstrap.Modal.getOrCreateInstance(document.getElementById('messageSearchModal')).show();
+            document.getElementById('messageSearchValue').value = '';
+            searchMessages();
+        }
+
+        function closeMessageSearchModal() {
+            var modal = bootstrap.Modal.getInstance(document.getElementById('messageSearchModal'));
+            if (modal) modal.hide();
+        }
+
+        function searchMessages() {
+            var searchField = document.getElementById('messageSearchField').value;
+            var keyword = document.getElementById('messageSearchValue').value.trim();
+
+            var url = new URL('/api/telegram/messages', window.location.origin);
+
+            if (selectedOrgId) {
+                url.searchParams.append('orgId', selectedOrgId);
+            }
+
+            if (keyword && searchField) {
+                url.searchParams.append('searchField', searchField);
+                url.searchParams.append('keyword', keyword);
+            }
+
+            fetch(url)
+                .then(function(response) { return response.json(); })
+                .then(function(apiResponse) {
+                    if (apiResponse.success) {
+                        allMessages = apiResponse.data;
+                        currentPage = 1;
+                        displayMessageList();
+                    }
+                })
+                .catch(function(error) {
+                    console.error('Error searching messages:', error);
+                    Toast.error('전문 검색 중 오류가 발생했습니다');
+                });
+        }
+
+        function displayMessageList() {
+            var tbody = document.getElementById('messageListBody');
+            tbody.textContent = '';
+
+            if (allMessages.length === 0) {
+                var tr = document.createElement('tr');
+                var td = document.createElement('td');
+                td.colSpan = 2;
+                td.className = 'text-center';
+                td.textContent = '검색 결과가 없습니다';
+                tr.appendChild(td);
+                tbody.appendChild(tr);
+                updatePagination(0);
+                return;
+            }
+
+            var startIndex = (currentPage - 1) * itemsPerPage;
+            var endIndex = Math.min(startIndex + itemsPerPage, allMessages.length);
+            var pageMessages = allMessages.slice(startIndex, endIndex);
+
+            pageMessages.forEach(function(msg) {
+                var tr = document.createElement('tr');
+                tr.appendChild(createTextTd(msg.messageId));
+                tr.appendChild(createTextTd(msg.messageName || ''));
+                tr.onclick = function() {
+                    selectMessage(msg);
+                };
+                tbody.appendChild(tr);
+            });
+
+            updatePagination(allMessages.length);
+        }
+
+        function updatePagination(totalItems) {
+            var totalPages = Math.ceil(totalItems / itemsPerPage);
+            var pagination = document.getElementById('messagePagination');
+            pagination.textContent = '';
+
+            var start = totalItems === 0 ? 0 : (currentPage - 1) * itemsPerPage + 1;
+            var end = Math.min(currentPage * itemsPerPage, totalItems);
+            document.getElementById('messagePageInfo').textContent = start + ' - ' + end + ' of ' + totalItems + ' items';
+
+            if (totalPages <= 1) {
+                pagination.appendChild(createPageItem('prev', 0, true, false));
+                pagination.appendChild(createPageItem('1', 1, false, true));
+                pagination.appendChild(createPageItem('next', 0, true, false));
+                return;
+            }
+
+            pagination.appendChild(createPageItem('prev', currentPage - 1, currentPage === 1, false));
+
+            var maxButtons = 5;
+            var startPage = Math.max(1, currentPage - Math.floor(maxButtons / 2));
+            var endPage = Math.min(totalPages, startPage + maxButtons - 1);
+
+            if (endPage - startPage + 1 < maxButtons) {
+                startPage = Math.max(1, endPage - maxButtons + 1);
+            }
+
+            for (var i = startPage; i <= endPage; i++) {
+                pagination.appendChild(createPageItem(String(i), i, false, i === currentPage));
+            }
+
+            pagination.appendChild(createPageItem('next', currentPage + 1, currentPage === totalPages, false));
+        }
+
+        function changeMessagePage(page) {
+            var totalPages = Math.ceil(allMessages.length / itemsPerPage);
+            if (page < 1 || page > totalPages) return;
+            currentPage = page;
+            displayMessageList();
+        }
+
+        function selectMessage(message) {
+            selectedOrgId = message.orgId;
+            selectedMessageId = message.messageId;
+
+            var org = orgList.find(function(o) { return o.orgId === message.orgId; });
+            if (org) {
+                document.getElementById('orgSelectText').textContent = org.orgName;
+            }
+
+            document.getElementById('messageIdInput').value = message.messageId;
+            closeMessageSearchModal();
+        }
+
+        // ── 지정 포멧 전문 검색 (대상) ──
+
+        function openTargetMessageSearchModal() {
+            if (!targetOrgId) {
+                Toast.warning('변환 대상 기관을 먼저 선택해주세요');
+                return;
+            }
+            bootstrap.Modal.getOrCreateInstance(document.getElementById('targetMessageSearchModal')).show();
+            document.getElementById('targetMessageSearchValue').value = '';
+            searchTargetMessages();
+        }
+
+        function searchTargetMessages() {
+            var searchField = document.getElementById('targetMessageSearchField').value;
+            var keyword = document.getElementById('targetMessageSearchValue').value.trim();
+
+            var url = new URL('/api/telegram/messages', window.location.origin);
+            url.searchParams.append('orgId', targetOrgId);
+            if (keyword && searchField) {
+                url.searchParams.append('searchField', searchField);
+                url.searchParams.append('keyword', keyword);
+            }
+
+            fetch(url)
+                .then(function(response) { return response.json(); })
+                .then(function(apiResponse) {
+                    if (apiResponse.success) {
+                        targetMessages = apiResponse.data;
+                        displayTargetMessageList();
+                    }
+                })
+                .catch(function() {
+                    Toast.error('전문 검색 중 오류가 발생했습니다');
+                });
+        }
+
+        function displayTargetMessageList() {
+            var tbody = document.getElementById('targetMessageListBody');
+            tbody.textContent = '';
+
+            if (targetMessages.length === 0) {
+                var tr = document.createElement('tr');
+                var td = document.createElement('td');
+                td.colSpan = 2; td.className = 'text-center'; td.textContent = '검색 결과가 없습니다';
+                tr.appendChild(td); tbody.appendChild(tr);
+                return;
+            }
+
+            targetMessages.forEach(function(msg) {
+                var tr = document.createElement('tr');
+                tr.appendChild(createTextTd(msg.messageId));
+                tr.appendChild(createTextTd(msg.messageName || ''));
+                tr.onclick = function() {
+                    targetMessageId = msg.messageId;
+                    document.getElementById('targetMessageIdInput').value = msg.messageId;
+                    var modal = bootstrap.Modal.getInstance(document.getElementById('targetMessageSearchModal'));
+                    if (modal) modal.hide();
+                };
+                tbody.appendChild(tr);
+            });
+        }
+
+        // ── 전문 파싱 ──
+
+        function parseMessage() {
+            var orgId = selectedOrgId;
+            var messageId = selectedMessageId;
+            var rawString = document.getElementById('telegramData').value;
+
+            if (!orgId || !messageId) {
+                showMessage('기관과 전문을 선택해주세요', 'error');
+                return;
+            }
+
+            if (!rawString || rawString.trim() === '') {
+                Toast.warning('전문메시지를 입력해주세요.');
+                return;
+            }
+
+            var request = { orgId: orgId, messageId: messageId, rawString: rawString };
+
+            fetch('/api/telegram/parse', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(request)
+            })
+                .then(function(response) {
+                    if (!response.ok) {
+                        return response.json().then(function(errorData) {
+                            throw new Error(errorData.message || '파싱에 실패했습니다');
+                        });
+                    }
+                    return response.json();
+                })
+                .then(function(apiResponse) {
+                    showMessage('전문 파싱이 완료되었습니다', 'success');
+                    displayParseResult(apiResponse.data);
+                })
+                .catch(function(error) {
+                    console.error('Error parsing message:', error);
+                    showMessage(error.message || '전문 파싱 중 오류가 발생했습니다', 'error');
+                });
+        }
+
+        function displayParseResult(result) {
+            var tbody = document.getElementById('parsedFieldsBody');
+            tbody.textContent = '';
+            lastParsedFields = result.fields || [];
+
+            var inLoop = false;
+
+            result.fields.forEach(function(field) {
+                var tr = document.createElement('tr');
+                var fieldId = field.fieldId || '';
+
+                // Loop 시각화
+                if (fieldId.indexOf('_BeginLoop_') !== -1) {
+                    inLoop = true;
+                    tr.className = 'sp-loop-begin-row';
+                    tr.appendChild(createTextTd(field.messageId || ''));
+                    var loopTd = document.createElement('td');
+                    loopTd.colSpan = 5;
+                    loopTd.textContent = fieldId + (field.parsedValue ? ' [반복 ' + field.parsedValue + '회]' : '');
+                    tr.appendChild(loopTd);
+                    tbody.appendChild(tr);
+                    return;
+                }
+
+                if (fieldId.indexOf('_EndLoop_') !== -1) {
+                    inLoop = false;
+                    tr.className = 'sp-loop-end-row';
+                    tr.appendChild(createTextTd(field.messageId || ''));
+                    var endTd = document.createElement('td');
+                    endTd.colSpan = 5;
+                    endTd.textContent = fieldId;
+                    tr.appendChild(endTd);
+                    tbody.appendChild(tr);
+                    return;
+                }
+
+                if (inLoop) {
+                    tr.className = 'sp-loop-field-row';
+                }
+
+                tr.appendChild(createTextTd(field.messageId || ''));
+                tr.appendChild(createTextTd(fieldId));
+                tr.appendChild(createTextTd(field.fieldName || ''));
+
+                var lengthTd = createTextTd(String(field.dataLength));
+                lengthTd.className = 'text-end';
+                tr.appendChild(lengthTd);
+
+                tr.appendChild(createTextTd(field.rawValue || ''));
+                tr.appendChild(createTextTd(field.parsedValue || field.rawValue || ''));
+                tbody.appendChild(tr);
+            });
+        }
+
+        // ── 엑셀 내보내기 / 출력 ──
+
+        function getDateString() {
+            var now = new Date();
+            var y = now.getFullYear();
+            var m = String(now.getMonth() + 1).padStart(2, '0');
+            var d = String(now.getDate()).padStart(2, '0');
+            return y + m + d;
+        }
+
+        function buildParseResultHtmlTable() {
+            var tableStyle = 'border: 1px solid #444444; border-collapse: collapse; word-break: break-all; width: 100%;';
+            var thStyle = 'background-color: #adc6f4; border: 1px solid #444444; padding: 8px; text-align: center; font-weight: bold;';
+            var tdStyle = 'border: 1px solid #444444; padding: 5px 8px;';
+            var loopBgStyle = 'background-color: #e8f0fe;';
+            var loopFieldBgStyle = 'background-color: #f6f9ff;';
+
+            var html = '<table style="' + tableStyle + '">';
+            html += '<thead><tr>';
+            html += '<th style="' + thStyle + '">메시지ID</th>';
+            html += '<th style="' + thStyle + '">전문필드ID</th>';
+            html += '<th style="' + thStyle + '">전문필드명</th>';
+            html += '<th style="' + thStyle + '">길이[Byte]</th>';
+            html += '<th style="' + thStyle + '">원본값</th>';
+            html += '<th style="' + thStyle + '">파싱값</th>';
+            html += '</tr></thead><tbody>';
+
+            var inLoop = false;
+            for (var i = 0; i < lastParsedFields.length; i++) {
+                var f = lastParsedFields[i];
+                var fieldId = f.fieldId || '';
+                var isBeginLoop = fieldId.indexOf('_BeginLoop_') !== -1;
+                var isEndLoop = fieldId.indexOf('_EndLoop_') !== -1;
+
+                var rowStyle = '';
+                var boldOpen = '';
+                var boldClose = '';
+
+                if (isBeginLoop) {
+                    inLoop = true;
+                    rowStyle = loopBgStyle;
+                    boldOpen = '<b>';
+                    boldClose = '</b>';
+                } else if (isEndLoop) {
+                    rowStyle = loopBgStyle;
+                    boldOpen = '<b>';
+                    boldClose = '</b>';
+                } else if (inLoop) {
+                    rowStyle = loopFieldBgStyle;
+                }
+
+                html += '<tr style="' + rowStyle + '">';
+                html += '<td style="' + tdStyle + '">' + boldOpen + HtmlUtils.escape(f.messageId || '') + boldClose + '</td>';
+                html += '<td style="' + tdStyle + '">' + boldOpen + (inLoop && !isBeginLoop && !isEndLoop ? '&nbsp;&nbsp;&nbsp;&nbsp;' : '') + HtmlUtils.escape(fieldId) + boldClose + '</td>';
+                html += '<td style="' + tdStyle + '">' + boldOpen + HtmlUtils.escape(f.fieldName || '') + boldClose + '</td>';
+                html += '<td style="' + tdStyle + 'text-align: right;">' + HtmlUtils.escape(String(f.dataLength != null ? f.dataLength : '')) + '</td>';
+                html += '<td style="' + tdStyle + '">' + HtmlUtils.escape(f.rawValue || '') + '</td>';
+                html += '<td style="' + tdStyle + '">' + HtmlUtils.escape(f.parsedValue || f.rawValue || '') + '</td>';
+                html += '</tr>';
+
+                if (isEndLoop) {
+                    inLoop = false;
+                }
+            }
+
+            html += '</tbody></table>';
+            return html;
+        }
+
+        function exportToExcel() {
+            if (!lastParsedFields || lastParsedFields.length === 0) {
+                Toast.warning('내보낼 데이터가 없습니다.');
+                return;
+            }
+
+            var tableHtml = buildParseResultHtmlTable();
+            var excelHtml = '<html xmlns:o="urn:schemas-microsoft-com:office:office" '
+                + 'xmlns:x="urn:schemas-microsoft-com:office:excel" '
+                + 'xmlns="http://www.w3.org/TR/REC-html40">'
+                + '<head><meta charset="UTF-8">'
+                + '<!--[if gte mso 9]><xml><x:ExcelWorkbook><x:ExcelWorksheets>'
+                + '<x:ExcelWorksheet><x:Name>파싱결과</x:Name><x:WorksheetOptions>'
+                + '<x:DisplayGridlines/></x:WorksheetOptions></x:ExcelWorksheet>'
+                + '</x:ExcelWorksheets></x:ExcelWorkbook></xml><![endif]-->'
+                + '</head><body>' + tableHtml + '</body></html>';
+
+            var blob = new Blob(['\uFEFF' + excelHtml], { type: 'application/vnd.ms-excel;charset=utf-8;' });
+            var url = URL.createObjectURL(blob);
+            var a = document.createElement('a');
+            a.href = url;
+            a.download = '전문파싱결과_' + getDateString() + '.xls';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+
+        function printResult() {
+            if (!lastParsedFields || lastParsedFields.length === 0) {
+                Toast.warning('출력할 데이터가 없습니다.');
+                return;
+            }
+
+            var tableHtml = buildParseResultHtmlTable();
+            var printWindow = window.open('', '_blank', 'width=1000,height=700');
+            if (!printWindow) {
+                Toast.success('팝업이 차단되었습니다. 브라우저 팝업 차단을 해제해주세요.');
+                return;
+            }
+
+            var doc = printWindow.document;
+            doc.open();
+            doc.write(
+                '<!DOCTYPE html><html><head>'
+                + '<meta charset="UTF-8">'
+                + '<title>전문 파싱 결과</title>'
+                + '<style>'
+                + 'body { font-family: "Malgun Gothic", sans-serif; font-size: 12px; margin: 20px; }'
+                + 'h3 { font-size: 14px; margin-bottom: 10px; }'
+                + '@media print { body { margin: 0; } }'
+                + '</style>'
+                + '</head><body>'
+                + '<h3>전문 파싱 결과</h3>'
+                + tableHtml
+                + '</body></html>'
+            );
+            doc.close();
+            printWindow.focus();
+            printWindow.addEventListener('afterprint', function() {
+                printWindow.close();
+            });
+            printWindow.print();
+        }
+
+        // ── JSON 변환 ──
+
+        function executeSpecifiedFormatConversion() {
+            if (!targetOrgId || !targetMessageId) {
+                Toast.warning('변환 대상 기관과 전문을 선택해주세요');
+                return;
+            }
+            doJsonConversion(targetOrgId, targetMessageId);
+        }
+
+        function doJsonConversion(orgId, messageId) {
+            var rawString = document.getElementById('telegramData').value;
+
+            if (!selectedOrgId || !selectedMessageId) {
+                showMessage('원본 기관과 전문을 선택해주세요', 'error');
+                return;
+            }
+
+            if (!rawString || rawString.trim() === '') {
+                Toast.warning('전문메시지를 입력해주세요.');
+                return;
+            }
+
+            // 원본 전문 정보(파싱용)와 변환 대상 전문 정보를 모두 전달
+            var request = {
+                orgId: selectedOrgId,
+                messageId: selectedMessageId,
+                rawString: rawString,
+                targetOrgId: orgId,
+                targetMessageId: messageId
+            };
+
+            fetch('/api/telegram/to-json', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(request)
+            })
+                .then(function(response) {
+                    if (!response.ok) {
+                        return response.json().then(function(errorData) {
+                            throw new Error(errorData.message || 'JSON 변환에 실패했습니다');
+                        });
+                    }
+                    return response.json();
+                })
+                .then(function(apiResponse) {
+                    showMessage('JSON 변환이 완료되었습니다', 'success');
+                    document.getElementById('jsonOutput').value = JSON.stringify(apiResponse.data, null, 4);
+                })
+                .catch(function(error) {
+                    console.error('Error converting to JSON:', error);
+                    showMessage(error.message || 'JSON 변환 중 오류가 발생했습니다', 'error');
+                });
+        }
+
+        function copyJsonToClipboard() {
+            var jsonOutput = document.getElementById('jsonOutput');
+            var text = jsonOutput.value;
+
+            if (!text || text.trim() === '') {
+                Toast.warning('복사할 JSON 데이터가 없습니다.');
+                return;
+            }
+
+            navigator.clipboard.writeText(text)
+                .then(function() {
+                    showMessage('JSON이 클립보드에 복사되었습니다', 'success');
+                })
+                .catch(function() {
+                    jsonOutput.select();
+                    document.execCommand('copy');
+                    showMessage('JSON이 클립보드에 복사되었습니다', 'success');
+                });
+        }
+
+        // ── 유틸 ──
+
+        function showMessage(message, type) {
+            var messageArea = document.getElementById('messageArea');
+            messageArea.textContent = '';
+            var div = document.createElement('div');
+            div.className = type === 'error' ? 'sp-parse-error-message' : 'sp-parse-success-message';
+            div.textContent = message;
+            messageArea.appendChild(div);
+
+            setTimeout(function() {
+                messageArea.textContent = '';
+            }, 5000);
+        }
+
+        // 드롭다운 외부 클릭 시 닫기
+        window.addEventListener('click', function(event) {
+            var orgDropdown = document.getElementById('orgSelectDropdown');
+            var orgTrigger = document.getElementById('orgSelectTrigger');
+            var targetOrgDropdown = document.getElementById('targetOrgSelectDropdown');
+            var targetOrgTrigger = document.getElementById('targetOrgSelectTrigger');
+
+            if (orgDropdown && orgTrigger &&
+                !orgDropdown.classList.contains('d-hidden') &&
+                !orgTrigger.contains(event.target) &&
+                !orgDropdown.contains(event.target)) {
+                closeOrgDropdown();
+            }
+
+            if (targetOrgDropdown && targetOrgTrigger &&
+                !targetOrgDropdown.classList.contains('d-hidden') &&
+                !targetOrgTrigger.contains(event.target) &&
+                !targetOrgDropdown.contains(event.target)) {
+                targetOrgDropdown.classList.add('d-hidden');
+            }
+        });
+
+        // 모달 크기 조정 기능
+        function initModalResize(modalId) {
+            var modal = document.getElementById(modalId);
+            if (!modal) return;
+
+            var handles = {
+                top: modal.querySelector('.resize-top'),
+                right: modal.querySelector('.resize-right'),
+                bottom: modal.querySelector('.resize-bottom'),
+                left: modal.querySelector('.resize-left'),
+                nw: modal.querySelector('.resize-corner-nw'),
+                ne: modal.querySelector('.resize-corner-ne'),
+                sw: modal.querySelector('.resize-corner-sw'),
+                se: modal.querySelector('.resize-corner-se')
+            };
+
+            var isResizing = false;
+            var resizeType = null;
+            var startX, startY, startWidth, startHeight, startLeft, startTop;
+
+            function startResize(e, type) {
+                isResizing = true;
+                resizeType = type;
+                startX = e.clientX;
+                startY = e.clientY;
+
+                var rect = modal.getBoundingClientRect();
+                startWidth = rect.width;
+                startHeight = rect.height;
+                startLeft = rect.left;
+                startTop = rect.top;
+
+                if (modal.classList.contains('centered')) {
+                    modal.classList.remove('centered');
+                    modal.classList.add('no-transform');
+                    modal.style.top = startTop + 'px';
+                    modal.style.left = startLeft + 'px';
+                }
+
+                e.preventDefault();
+                e.stopPropagation();
+                document.body.classList.add('user-select-none');
+
+                var cursorMap = {
+                    'top': 'ns-resize', 'right': 'ew-resize',
+                    'bottom': 'ns-resize', 'left': 'ew-resize',
+                    'nw': 'nwse-resize', 'ne': 'nesw-resize',
+                    'sw': 'nesw-resize', 'se': 'nwse-resize'
+                };
+                document.body.style.cursor = cursorMap[type];
+            }
+
+            function doResize(e) {
+                if (!isResizing) return;
+
+                var deltaX = e.clientX - startX;
+                var deltaY = e.clientY - startY;
+
+                if (resizeType.indexOf('right') !== -1 || resizeType === 'ne' || resizeType === 'se') {
+                    var newWidth = Math.max(400, startWidth + deltaX);
+                    modal.style.width = newWidth + 'px';
+                    modal.style.maxWidth = newWidth + 'px';
+                }
+
+                if (resizeType.indexOf('left') !== -1 || resizeType === 'nw' || resizeType === 'sw') {
+                    var newWidthL = Math.max(400, startWidth - deltaX);
+                    if (newWidthL > 400) {
+                        modal.style.width = newWidthL + 'px';
+                        modal.style.maxWidth = newWidthL + 'px';
+                        modal.style.left = (startLeft + deltaX) + 'px';
+                    }
+                }
+
+                if (resizeType.indexOf('bottom') !== -1 || resizeType === 'sw' || resizeType === 'se') {
+                    var newHeight = Math.max(300, startHeight + deltaY);
+                    modal.style.height = newHeight + 'px';
+                    modal.style.maxHeight = newHeight + 'px';
+                }
+
+                if (resizeType.indexOf('top') !== -1 || resizeType === 'nw' || resizeType === 'ne') {
+                    var newHeightT = Math.max(300, startHeight - deltaY);
+                    if (newHeightT > 300) {
+                        modal.style.height = newHeightT + 'px';
+                        modal.style.maxHeight = newHeightT + 'px';
+                        modal.style.top = (startTop + deltaY) + 'px';
+                    }
+                }
+            }
+
+            function stopResize() {
+                if (!isResizing) return;
+                isResizing = false;
+                resizeType = null;
+                document.body.classList.remove('user-select-none');
+                document.body.style.cursor = '';
+            }
+
+            Object.entries(handles).forEach(function(entry) {
+                var type = entry[0], handle = entry[1];
+                if (handle) {
+                    handle.addEventListener('mousedown', function(e) { startResize(e, type); });
+                }
+            });
+
+            document.addEventListener('mousemove', doResize);
+            document.addEventListener('mouseup', stopResize);
+        }
+
+        // 초기화
+        initModalResize('messageSearchModalContainer');
+        loadOrgIdList();
+    </script>
+</div>
+</body>
+</html>

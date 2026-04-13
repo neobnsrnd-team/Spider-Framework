@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<!-- Message Instance (거래추적로그) Table Fragment -->
+<div th:fragment="table" class="table-responsive">
+    <table class="table table-sm table-hover sp-data-grid" id="messageInstanceTable">
+        <thead class="table-light">
+            <tr>
+                <th class="col-w-280 sp-sortable" data-sort="trxTrackingNo">거래추적번호</th>
+                <th class="col-w-200 sp-sortable" data-sort="trxId">거래ID</th>
+                <th class="col-w-120 text-center">기관ID<br/>기동/수동</th>
+                <th class="col-w-100">기관전문ID</th>
+                <th class="col-w-80 sp-sortable" data-sort="userId">사용자ID</th>
+                <th class="col-w-140 text-center sp-sortable" data-sort="trxDtime">거래일자</th>
+                <th class="col-w-100 text-center sp-sortable" data-sort="lastRtCode">수행결과코드</th>
+            </tr>
+        </thead>
+        <tbody id="messageInstanceTableBody">
+            <tr>
+                <td colspan="7" class="text-center py-4 text-body-secondary">
+                    조회 버튼을 클릭하여 데이터를 불러오세요.
+                </td>
+            </tr>
+        </tbody>
+    </table>
+</div>
+
+</body>
+</html>

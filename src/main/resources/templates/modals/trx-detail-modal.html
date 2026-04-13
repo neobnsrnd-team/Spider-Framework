@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<div th:fragment="modal">
+
+    <div id="trxDetailModal" class="modal fade" tabindex="-1" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
+        <div class="modal-dialog modal-dialog-centered sp-modal-xl">
+        <div class="modal-content trx-modal-content-scroll">
+        <div class="modal-header">
+            <span class="modal-title">거래수정</span>
+            <button class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+
+        <div class="modal-body p-3">
+            <!-- 거래 정보 -->
+            <div class="page-header mb-1">
+                <h4 class="page-title fs-sm mb-0">
+                    <i class="bi bi-exclamation-circle-fill text-danger"></i>
+                    거래 정보
+                    <button type="button" class="btn btn-outline-secondary btn-sm ms-1 fs-2xs px-1 py-0" onclick="TrxDetailModal.toggleInfoZoom()">확대/축소</button>
+                </h4>
+            </div>
+
+            <!-- Hidden fields -->
+            <input type="hidden" id="trxDetailCurrentIoType" value="" />
+            <input type="hidden" id="trxDetailCurrentOrgId" value="" />
+
+            <table class="trx-info-table" id="trxDetailInfoTable">
+                <colgroup>
+                    <col class="col-w-110">
+                    <col>
+                    <col class="col-w-90">
+                    <col>
+                    <col class="col-w-90">
+                    <col>
+                </colgroup>
+                <tbody>
+                    <!-- Row 1: 거래ID / 거래명 / 거래구분 -->
+                    <tr>
+                        <th scope="row">거래ID</th>
+                        <td><input id="trxDetailTrxId" type="text" class="trx-info-input" readonly></td>
+                        <th scope="row">거래명</th>
+                        <td><input id="trxDetailTrxName" type="text" class="trx-info-input" readonly></td>
+                        <th scope="row">거래구분</th>
+                        <td>
+                            <select id="trxDetailTrxType" class="trx-info-select" disabled>
+                                <option value="">선택</option>
+                                <option value="1">ONLINE</option>
+                                <option value="2">BATCH</option>
+                                <option value="3">ASYNC</option>
+                                <option value="4">ASYNC 비온라인</option>
+                                <option value="5">전문변환</option>
+                                <option value="6">POS</option>
+                                <option value="7">FHM</option>
+                                <option value="8">RETRY</option>
+                            </select>
+                        </td>
+                    </tr>
+                    <!-- Row 2: 거래설명 / 타임아웃 -->
+                    <tr>
+                        <th scope="row">거래설명</th>
+                        <td colspan="3"><textarea id="trxDetailTrxDesc" class="trx-info-textarea" rows="2" readonly></textarea></td>
+                        <th scope="row" class="trx-msg-field">타임아웃</th>
+                        <td class="trx-msg-field">
+                            <select id="trxDetailTimeout" class="trx-info-select">
+                                <option value="30">30</option>
+                                <option value="60">60</option>
+                                <option value="90">90</option>
+                                <option value="120">120</option>
+                                <option value="150">150</option>
+                                <option value="180">180</option>
+                                <option value="210" selected>210</option>
+                                <option value="240">240</option>
+                                <option value="270">270</option>
+                                <option value="300">300</option>
+                            </select>
+                            <span class="fs-xs text-body-secondary">(초)</span>
+                        </td>
+                    </tr>
+                    <!-- Row 3: 기동수동구분 / 기관명 / 헥사로그여부 (trx-message 전용) -->
+                    <tr class="trx-msg-row">
+                        <th scope="row">기동수동구분</th>
+                        <td>
+                            <select id="trxDetailAutoManual" class="trx-info-select" disabled>
+                                <option value="Y">기동</option>
+                                <option value="N">수동</option>
+                            </select>
+                        </td>
+                        <th scope="row">기관명</th>
+                        <td>
+                            <select id="trxDetailOrgId" class="trx-info-select" disabled>
+                                <option value="">선택</option>
+                            </select>
+                        </td>
+                        <th scope="row">헥사로그여부</th>
+                        <td>
+                            <select id="trxDetailHexLogYn" class="trx-info-select">
+                                <option value="">선택</option>
+                                <option value="Y">Y</option>
+                                <option value="N">N</option>
+                            </select>
+                        </td>
+                    </tr>
+                    <!-- Row 4: 업무분류 / 응답포맷 다수여부 / 응답전문구분필드ID -->
+                    <tr>
+                        <th scope="row">업무분류</th>
+                        <td>
+                            <select id="trxDetailBizGroupId" class="trx-info-select">
+                                <option value="">선택 안 함</option>
+                            </select>
+                        </td>
+                        <th scope="row" class="trx-msg-field">응답포맷 다수여부</th>
+                        <td class="trx-msg-field">
+                            <select id="trxDetailMultiResType" class="trx-info-select">
+                                <option value="">선택</option>
+                                <option value="1">단일포맷</option>
+                                <option value="M">다수포맷</option>
+                            </select>
+                        </td>
+                        <th scope="row" colspan="2" class="p-0 trx-msg-field">
+                            <div class="d-flex align-items-center">
+                                <span class="trx-msg-card-label">응답전문구분필드ID</span>
+                                <input id="trxDetailResTypeFieldId" type="text" class="trx-info-input editable flex-grow-1" maxlength="50" placeholder="필드ID 입력">
+                            </div>
+                        </th>
+                    </tr>
+                </tbody>
+            </table>
+
+            <!-- 거래시간설정 -->
+            <table id="trxDetailTimeTable" class="trx-info-table mb-2">
+                <colgroup>
+                    <col class="col-w-110">
+                    <col>
+                </colgroup>
+                <tbody>
+                    <tr>
+                        <th scope="row" rowspan="2" class="align-middle">거래시간설정</th>
+                        <td class="trx-time-cell">
+                            <div class="d-flex align-items-center gap-3">
+                                <label class="d-flex align-items-center gap-1 fs-sm cursor-pointer">
+                                    <input type="radio" name="trxDetailTrxTimeType" id="trxDetailBizdayOnly" value="bizday"> 영업일만 가능
+                                </label>
+                                <span class="fs-sm">영업일 거래시작시간</span>
+                                <input id="trxDetailBizdayStart" type="text" class="trx-info-input editable trx-time-input" maxlength="4" placeholder="">
+                                <span class="fs-sm">영업일 거래마감시간</span>
+                                <input id="trxDetailBizdayEnd" type="text" class="trx-info-input editable trx-time-input" maxlength="4" placeholder="">
+                            </div>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td class="trx-time-cell">
+                            <div class="d-flex align-items-center gap-3">
+                                <label class="d-flex align-items-center gap-1 fs-sm cursor-pointer">
+                                    <input type="radio" name="trxDetailTrxTimeType" id="trxDetailHolidayAlso" value="holiday"> 휴일도 가능
+                                </label>
+                                <span class="fs-sm ms-3">휴일 거래시작시간</span>
+                                <input id="trxDetailHolidayStart" type="text" class="trx-info-input editable trx-time-input" maxlength="4" placeholder="">
+                                <span class="fs-sm">휴일 거래마감시간</span>
+                                <input id="trxDetailHolidayEnd" type="text" class="trx-info-input editable trx-time-input" maxlength="4" placeholder="">
+                            </div>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <!-- 거래 전문흐름 -->
+            <div id="trxDetailFlowSection">
+                <div class="page-header mb-1 d-flex justify-content-between align-items-center">
+                    <h4 class="page-title fs-sm mb-0 d-flex align-items-center gap-1">
+                        <i class="bi bi-exclamation-circle-fill text-danger"></i>
+                        거래 전문흐름
+                        <button type="button" class="btn btn-outline-secondary btn-sm fs-2xs px-1 py-0" onclick="TrxDetailModal.toggleFlowZoom()">확대/축소</button>
+                        <button type="button" class="btn btn-primary btn-sm fs-2xs px-1 py-0" onclick="TrxDetailModal.reloadAllMessages()">
+                            <i class="bi bi-arrow-clockwise"></i> 수동 전문 전체 Reload
+                        </button>
+                    </h4>
+                </div>
+
+                <div id="trxDetailMessagesContainer" class="trx-flow-container">
+                    <!-- JavaScript로 동적 렌더링 -->
+                </div>
+
+                <div id="trxDetailEmptyState" class="text-center py-3 text-body-secondary d-hidden">
+                    전문 정보가 없습니다.
+                </div>
+            </div>
+
+            <!-- 액션 버튼 (상세/등록 모드 공용) -->
+            <div id="trxDetailActions" class="d-flex justify-content-end gap-1 mt-2">
+                <button type="button" class="btn btn-danger btn-sm" id="btnTrxDetailDelete" onclick="TrxDetailModal.deleteTrx()">
+                    <i class="bi bi-trash"></i> 삭제
+                </button>
+                <button type="button" class="btn btn-primary btn-sm" id="btnTrxDetailSave" onclick="TrxDetailModal.saveMessageInfo()">
+                    <i class="bi bi-floppy"></i> 저장
+                </button>
+                <button type="button" class="btn btn-primary btn-sm d-hidden" id="btnTrxDetailCreate" onclick="TrxDetailModal.createTrx()">
+                    <i class="bi bi-plus-lg"></i> 등록
+                </button>
+                <button type="button" class="btn btn-outline-secondary btn-sm" onclick="TrxDetailModal.close()">
+                    <i class="bi bi-x-lg"></i> 닫기
+                </button>
+            </div>
+        </div>
+
+        </div>
+        </div>
+    </div>
+
+</div>
+</body>
+</html>

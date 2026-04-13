@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<!-- Message Instance (거래추적로그) Page Scripts -->
+<th:block th:fragment="script">
+<script>
+    /**
+     * 일시 포맷 함수 (YYYYMMDDHH24MISS -> YYYY/MM/DD HH:MM:SS)
+     */
+    function formatDateTime(dtimeStr) {
+        if (!dtimeStr || dtimeStr.length < 14) return '';
+        return dtimeStr.substring(0, 4) + '/' +
+               dtimeStr.substring(4, 6) + '/' +
+               dtimeStr.substring(6, 8) + ' ' +
+               dtimeStr.substring(8, 10) + ':' +
+               dtimeStr.substring(10, 12) + ':' +
+               dtimeStr.substring(12, 14);
+    }
+
+    const MessageInstance = {
+        currentPage: 1,
+        totalItems: 0,
+        itemsPerPage: 10,
+        searchExpanded: true,
+        sortBy: null,
+        sortDirection: 'ASC',
+
+        load: function() {
+            // 날짜 값 변환 (YYYY-MM-DD -> YYYYMMDD)
+            const trxDateFromInput = $('#searchTrxDateFrom').val();
+            const trxDateToInput = $('#searchTrxDateTo').val();
+            const trxDateFrom = trxDateFromInput ? trxDateFromInput.replace(/-/g, '') : '';
+            const trxDateTo = trxDateToInput ? trxDateToInput.replace(/-/g, '') : '';
+
+            const searchParams = {
+                userId: $('#searchUserId').val(),
+                trxTrackingNo: $('#searchTrxTrackingNo').val(),
+                globalId: $('#searchGlobalId').val(),
+                orgId: $('#searchOrgId').val(),
+                orgMessageId: $('#searchOrgMessageId').val(),
+                trxDateFrom: trxDateFrom,
+                trxDateTo: trxDateTo,
+                trxTimeFrom: $('#searchTrxTimeFrom').val(),
+                trxTimeTo: $('#searchTrxTimeTo').val(),
+                sortBy: this.sortBy || '',
+                sortDirection: this.sortDirection,
+                page: this.currentPage,
+                size: this.itemsPerPage
+            };
+
+            $.ajax({
+                url: API_BASE_URL + '/message-instances/page',
+                method: 'GET',
+                data: searchParams,
+                success: (response) => {
+                    console.log('API Response:', response);
+
+                    if (response.success && response.data) {
+                        const pageData = response.data;
+                        const instanceList = pageData.content || [];
+
+                        this.renderTable(instanceList);
+                        this.totalItems = pageData.totalElements || 0;
+                        this.renderPagination();
+                    } else {
+                        this.renderTable([]);
+                        this.totalItems = 0;
+                        this.renderPagination();
+                    }
+                },
+                error: (xhr) => {
+                    console.error('Failed to load message instances:', xhr);
+                    Toast.error('거래추적로그를 불러오는데 실패했습니다.');
+                    this.renderTable([]);
+                    this.totalItems = 0;
+                    this.renderPagination();
+                }
+            });
+        },
+
+        renderTable: function(instanceList) {
+            const tbody = $('#messageInstanceTableBody');
+            tbody.empty();
+
+            if (!instanceList || instanceList.length === 0) {
+                tbody.append(`
+                    <tr>
+                        <td colspan="7" class="text-center py-4 text-body-secondary">
+                            조회된 데이터가 없습니다.
+                        </td>
+                    </tr>
+                `);
+                return;
+            }
+
+            instanceList.forEach((inst) => {
+                // 송수신 방향 표시
+                const ioFlowHtml = this.renderIoFlow(inst.reqResType, inst.orgId);
+
+                // 수행결과코드 표시 (DB 값 그대로)
+                const resultCodeHtml = this.renderResultCode(inst.lastRtCode);
+
+                const row = $(`
+                    <tr data-message-sno="${HtmlUtils.escape(inst.messageSno)}"
+                        data-trx-tracking-no="${HtmlUtils.escape(inst.trxTrackingNo)}"
+                        class="cursor-pointer">
+                        <td>${HtmlUtils.escape(inst.trxTrackingNo)}</td>
+                        <td>${HtmlUtils.escape(inst.trxId)}</td>
+                        <td class="text-center">${ioFlowHtml}</td>
+                        <td>${HtmlUtils.escape(inst.messageId)}</td>
+                        <td>${HtmlUtils.escape(inst.userId)}</td>
+                        <td class="text-center">${formatDateTime(inst.trxDtime)}</td>
+                        <td class="text-center">${resultCodeHtml}</td>
+                    </tr>
+                `);
+
+                // 클릭 이벤트 - 상세 모달 표시
+                row.on('click', function() {
+                    const trxTrackingNo = $(this).data('trxTrackingNo');
+                    console.log('Click - trxTrackingNo:', trxTrackingNo);
+                    if (trxTrackingNo && typeof MessageInstanceDetail !== 'undefined') {
+                        MessageInstanceDetail.show(trxTrackingNo);
+                    }
+                });
+
+                tbody.append(row);
+            });
+        },
+
+        /**
+         * 송수신 방향 표시 (as-is Vue 로직 기준)
+         * S(응답): ORG_ID ▷▷ ■  (기관 → 우리)
+         * 그 외:   ■ ▷▷ ORG_ID  (우리 → 기관)
+         */
+        renderIoFlow: function(reqResType, orgId) {
+            const org = HtmlUtils.escape(orgId) || '';
+            if (reqResType === 'S') {
+                return org + ' ▷▷ ■';
+            } else {
+                return '■ ▷▷ ' + org;
+            }
+        },
+
+        /**
+         * 수행결과코드 렌더링 - DB 값 그대로 표시
+         */
+        renderResultCode: function(lastRtCode) {
+            if (!lastRtCode) return '';
+
+            let badgeClass = 'bg-secondary-subtle text-secondary';
+            if (lastRtCode === '오류') badgeClass = 'bg-danger-subtle text-danger';
+            else if (lastRtCode === '요청') badgeClass = 'bg-primary-subtle text-primary';
+            else if (lastRtCode === '응답') badgeClass = 'bg-success-subtle text-success';
+
+            return `<span class="badge ${badgeClass}">${HtmlUtils.escape(lastRtCode)}</span>`;
+        },
+
+        renderPagination: function() {
+            const totalPages = Math.ceil(this.totalItems / this.itemsPerPage);
+            const pagination = $('#pagination');
+            pagination.empty();
+
+            pagination.append(`
+                <li class="page-item ${this.currentPage === 1 ? 'disabled' : ''}">
+                    <a class="page-link" href="#" onclick="MessageInstance.changePage(1); return false;">
+                        <i class="bi bi-chevron-double-left"></i>
+                    </a>
+                </li>
+                <li class="page-item ${this.currentPage === 1 ? 'disabled' : ''}">
+                    <a class="page-link" href="#" onclick="MessageInstance.changePage(${this.currentPage - 1}); return false;">
+                        <i class="bi bi-chevron-left"></i>
+                    </a>
+                </li>
+            `);
+
+            const maxButtons = 10;
+            let startPage = Math.max(1, this.currentPage - Math.floor(maxButtons / 2));
+            let endPage = Math.min(totalPages, startPage + maxButtons - 1);
+
+            if (endPage - startPage + 1 < maxButtons) {
+                startPage = Math.max(1, endPage - maxButtons + 1);
+            }
+
+            for (let i = startPage; i <= endPage; i++) {
+                pagination.append(`
+                    <li class="page-item ${i === this.currentPage ? 'active' : ''}">
+                        <a class="page-link" href="#" onclick="MessageInstance.changePage(${i}); return false;">${i}</a>
+                    </li>
+                `);
+            }
+
+            pagination.append(`
+                <li class="page-item ${this.currentPage === totalPages || totalPages === 0 ? 'disabled' : ''}">
+                    <a class="page-link" href="#" onclick="MessageInstance.changePage(${this.currentPage + 1}); return false;">
+                        <i class="bi bi-chevron-right"></i>
+                    </a>
+                </li>
+                <li class="page-item ${this.currentPage === totalPages || totalPages === 0 ? 'disabled' : ''}">
+                    <a class="page-link" href="#" onclick="MessageInstance.changePage(${totalPages}); return false;">
+                        <i class="bi bi-chevron-double-right"></i>
+                    </a>
+                </li>
+            `);
+
+            const start = this.totalItems === 0 ? 0 : (this.currentPage - 1) * this.itemsPerPage + 1;
+            const end = Math.min(this.currentPage * this.itemsPerPage, this.totalItems);
+            $('#pageInfo').text(`${start} - ${end} of ${this.totalItems} items`);
+        },
+
+        changePage: function(page) {
+            const totalPages = Math.ceil(this.totalItems / this.itemsPerPage);
+            if (page < 1 || page > totalPages) return;
+            this.currentPage = page;
+            this.load();
+        },
+
+        toggleSearchArea: function() {
+            const searchBox = $('#searchBox');
+
+            if (this.searchExpanded) {
+                searchBox.addClass('collapsed');
+                this.searchExpanded = false;
+            } else {
+                searchBox.removeClass('collapsed');
+                this.searchExpanded = true;
+            }
+        },
+
+        toggleSort: function(column) {
+            if (this.sortBy === column) {
+                if (this.sortDirection === 'ASC') {
+                    this.sortDirection = 'DESC';
+                } else {
+                    // DESC → 정렬 해제
+                    this.sortBy = null;
+                    this.sortDirection = 'ASC';
+                }
+            } else {
+                this.sortBy = column;
+                this.sortDirection = 'ASC';
+            }
+            this.currentPage = 1;
+            this.updateSortIndicators();
+            this.load();
+        },
+
+        updateSortIndicators: function() {
+            $('#messageInstanceTable thead th[data-sort]').each((_, th) => {
+                $(th).removeClass('sort-asc sort-desc');
+                if ($(th).data('sort') === this.sortBy) {
+                    $(th).addClass(this.sortDirection === 'ASC' ? 'sort-asc' : 'sort-desc');
+                }
+            });
+        },
+
+        setDefaultDates: function() {
+            const KEY_FROM = 'msgInst_dateFrom';
+            const KEY_TO = 'msgInst_dateTo';
+            const saved_from = sessionStorage.getItem(KEY_FROM);
+            const saved_to = sessionStorage.getItem(KEY_TO);
+
+            if (saved_from && saved_to) {
+                // 탭 전환 후 복원
+                $('#searchTrxDateFrom').val(saved_from);
+                $('#searchTrxDateTo').val(saved_to);
+            } else {
+                // 최초 진입: 기본 날짜 범위 설정
+                const today = new Date();
+
+                const formatDate = (date) => {
+                    const year = date.getFullYear();
+                    const month = String(date.getMonth() + 1).padStart(2, '0');
+                    const day = String(date.getDate()).padStart(2, '0');
+                    return `${year}-${month}-${day}`;
+                };
+
+                $('#searchTrxDateFrom').val(formatDate(today));
+                $('#searchTrxDateTo').val(formatDate(today));
+            }
+
+            // 날짜 변경 시 sessionStorage 저장
+            $('#searchTrxDateFrom, #searchTrxDateTo').off('change.saveDate').on('change.saveDate', function() {
+                sessionStorage.setItem(KEY_FROM, $('#searchTrxDateFrom').val());
+                sessionStorage.setItem(KEY_TO, $('#searchTrxDateTo').val());
+            });
+        }
+    };
+
+    // ==================== Event Bindings ====================
+
+    // 컬럼 헤더 정렬 (이벤트 위임)
+    $(document).off('click.sortCol').on('click.sortCol', '#messageInstanceTable thead th[data-sort]', function() {
+        MessageInstance.toggleSort($(this).data('sort'));
+    });
+
+    // 축소/확대 버튼 (이벤트 위임 - AJAX 로드 환경 대응)
+    $(document).off('click.toggleSearch').on('click.toggleSearch', '#btnToggleSearch', function() {
+        MessageInstance.toggleSearchArea();
+    });
+
+    // Toolbar buttons
+    $('#btnRefresh').off('click').on('click', function() {
+        MessageInstance.load();
+    });
+
+    // limitRows 변경
+    $('#limitRows').change(function() {
+        MessageInstance.itemsPerPage = parseInt($(this).val()) || 20;
+        MessageInstance.currentPage = 1;
+        MessageInstance.load();
+    });
+
+    // Enter 키로 검색
+    $('#searchUserId, #searchTrxTrackingNo, #searchGlobalId, #searchOrgId, #searchOrgMessageId').keypress(function(e) {
+        if (e.which === 13) {
+            MessageInstance.currentPage = 1;
+            MessageInstance.load();
+        }
+    });
+
+    // ==================== Initialization ====================
+
+    // 기본 날짜 설정
+    MessageInstance.setDefaultDates();
+
+    // 페이지 로드 시 itemsPerPage 동기화
+    MessageInstance.itemsPerPage = parseInt($('#limitRows').val()) || 10;
+    MessageInstance.currentPage = 1;
+
+    // 페이지 로드 시 초기 데이터 조회
+    MessageInstance.load();
+</script>
+</th:block>
+</body>
+</html>

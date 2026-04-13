@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<div th:fragment="similarModal">
+    <!-- 유사 프로퍼티 조회 모달 -->
+    <div class="modal fade" id="similarPropertyModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="bi bi-clipboard"></i> 유사 프로퍼티 조회
+                    </h5>
+                    <button type="button" class="btn-close" onclick="SimilarPropertyModal.close()"></button>
+                </div>
+                <div class="modal-body">
+                    <!-- 그룹 선택 -->
+                    <div class="row mb-2 align-items-center">
+                        <div class="col-auto">
+                            <label class="form-label mb-0">프로퍼티 그룹</label>
+                        </div>
+                        <div class="col-md-4">
+                            <select class="form-select form-select-sm" id="similarGroupSelect" onchange="SimilarPropertyModal.loadProperties()">
+                            </select>
+                        </div>
+                        <div class="col"></div>
+                        <div class="col-auto">
+                            <button type="button" class="btn btn-primary btn-sm" onclick="SimilarPropertyModal.copySelected()">
+                                <i class="bi bi-check-lg"></i> 선택 항목 복사
+                            </button>
+                        </div>
+                    </div>
+                    <!-- 키워드 검색 -->
+                    <div class="row mb-3 align-items-center">
+                        <div class="col-auto">
+                            <select class="form-select form-select-sm w-140" id="similarSearchField">
+                                <option value="propertyId">프로퍼티ID</option>
+                                <option value="propertyName">프로퍼티명</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <input type="text" class="form-control form-control-sm" id="similarSearchValue"
+                                   placeholder="검색어 입력" onkeyup="SimilarPropertyModal.filterProperties()">
+                        </div>
+                    </div>
+                    <!-- 프로퍼티 목록 -->
+                    <div class="table-responsive sp-scrollable">
+                        <table class="table table-sm table-hover sp-data-grid min-w-750">
+                            <thead class="table-light">
+                                <tr>
+                                    <th class="col-w-40 text-center">
+                                        <input type="checkbox" id="similarSelectAll" onchange="SimilarPropertyModal.toggleSelectAll(this)">
+                                    </th>
+                                    <th class="col-w-150">프로퍼티ID</th>
+                                    <th class="col-w-130">프로퍼티명</th>
+                                    <th class="col-w-200">프로퍼티 설명</th>
+                                    <th class="col-w-100">초기값</th>
+                                    <th class="col-w-100">유효값</th>
+                                    <th class="col-w-80">DATA 타입</th>
+                                </tr>
+                            </thead>
+                            <tbody id="similarPropertyTableBody">
+                                <tr>
+                                    <td colspan="7" class="text-center text-muted py-3">데이터를 불러오는 중입니다...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary btn-sm" onclick="SimilarPropertyModal.close()">
+                        닫기
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+</body>
+</html>

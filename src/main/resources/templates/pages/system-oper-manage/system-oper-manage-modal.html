@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<div th:fragment="modal">
+    <div class="modal fade" id="reloadErrorModal" tabindex="-1" aria-hidden="true"
+         data-bs-backdrop="static" data-bs-keyboard="false">
+        <div class="modal-dialog modal-dialog-centered sp-modal-lg">
+        <div class="modal-content">
+            <div class="modal-header py-2">
+                <h6 class="modal-title">Reload 에러 상세</h6>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close" id="btnCloseErrorModal"></button>
+            </div>
+            <div class="modal-body">
+                <table>
+                    <thead>
+                    <tr>
+                        <th class="col-w-120">WAS_ID</th>
+                        <th>WAS_RELOAD_ERR</th>
+                    </tr>
+                    </thead>
+                    <tbody id="errorDetailBody">
+                    <!-- JS로 동적 렌더링 -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        </div>
+    </div>
+</div>
+</body>
+</html>

@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<div th:fragment="content">
+    <div class="page-header">
+        <h4 class="page-title">
+            <i class="bi bi-exclamation-circle-fill text-danger"></i>
+            검색조건
+        </h4>
+    </div>
+
+    <div th:replace="~{pages/msg-handle-manage/msg-handle-manage-search :: search}"></div>
+
+    <div class="page-header mt-3">
+        <h4 class="page-title">
+            <i class="bi bi-exclamation-circle-fill text-danger"></i>
+            리스트
+        </h4>
+        <div class="page-header-actions">
+            <button class="btn btn-outline-secondary btn-sm" id="btnExcel">
+                <i class="bi bi-file-earmark-excel"></i> 엑셀
+            </button>
+            <button class="btn btn-outline-secondary btn-sm" id="btnPrint">
+                <i class="bi bi-file-earmark-text"></i> 출력
+            </button>
+        </div>
+    </div>
+
+    <div th:replace="~{pages/msg-handle-manage/msg-handle-manage-table :: table}"></div>
+
+    <div th:replace="~{fragments/page-content-layout :: pagination}"></div>
+
+    <div th:replace="~{pages/msg-handle-manage/msg-handle-manage-buttons :: buttons}"></div>
+
+    <div th:replace="~{pages/msg-handle-manage/msg-handle-manage-modal :: handlerModal}"></div>
+
+    <!-- WAS 선택 Reload 모달 (공용 컴포넌트) -->
+    <div th:replace="~{modals/was-reload-modal :: modal}"></div>
+
+    <th:block th:replace="~{pages/msg-handle-manage/msg-handle-manage-script :: script}" />
+</div>
+</body>
+</html>

@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<div th:fragment="search" class="card border p-2 mb-3">
+    <div class="d-flex flex-wrap align-items-center gap-2 mb-1 justify-content-between">
+        <div class="d-flex align-items-center gap-2 flex-grow-1">
+            <label class="form-label mb-0 small fw-medium">기관명</label>
+            <select id="handlerOrgId" class="form-select form-select-sm mw-220">
+                <option value="">전체</option>
+            </select>
+
+            <label class="form-label mb-0 small fw-medium">거래유형</label>
+            <select id="handlerTrxType" class="form-select form-select-sm mw-160">
+                <option value="">전체</option>
+            </select>
+        </div>
+
+        <div class="d-flex align-items-center gap-2 flex-shrink-0 gap-8px">
+            <select id="handlerPageSize" class="form-select form-select-sm w-80">
+                <option value="10" selected>10</option>
+                <option value="20">20</option>
+                <option value="50">50</option>
+                <option value="100">100</option>
+            </select>
+            <span class="sp-search-label">건씩</span>
+            <button type="button" class="btn btn-sm btn-primary" onclick="HandlerList.load(1)">조회</button>
+        </div>
+    </div>
+</div>
+</body>
+</html>

@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<div th:fragment="search" class="card border p-2 mb-3">
+    <div class="d-flex flex-wrap align-items-center gap-2 mb-1 sp-search-row">
+        <div class="d-flex align-items-center gap-2 flex-wrap flex-grow-1">
+            <label class="form-label mb-0 small fw-medium">INSTANCE</label>
+            <select id="gwStatusInstanceId" class="form-select form-select-sm sp-search-filter-sm">
+                <option value="">전체</option>
+            </select>
+
+            <label class="form-label mb-0 small fw-medium">GATEWAY</label>
+            <select id="gwStatusGwId" class="form-select form-select-sm sp-search-filter-sm">
+                <option value="">전체</option>
+            </select>
+
+            <label class="form-label mb-0 small fw-medium">운영모드구분</label>
+            <select id="gwStatusOperMode" class="form-select form-select-sm sp-search-filter-sm">
+                <option value="">전체</option>
+                <option value="R">운영</option>
+                <option value="T">테스트</option>
+                <option value="D">개발</option>
+            </select>
+        </div>
+
+        <div class="d-flex align-items-center gap-2 sp-search-actions">
+            <select id="gwStatusPageSize" class="form-select form-select-sm sp-limit-select">
+                <option value="10" selected>10</option>
+                <option value="20">20</option>
+                <option value="50">50</option>
+                <option value="100">100</option>
+            </select>
+            <span class="form-label mb-0 small fw-medium">건씩</span>
+            <button type="button" class="btn btn-sm btn-primary" id="gwStatusSearchBtn">조회</button>
+        </div>
+    </div>
+</div>
+</body>
+</html>

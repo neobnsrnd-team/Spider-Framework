@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<div th:fragment="table" class="table-responsive" id="gwStatusTableWrapper">
+    <table class="table table-sm table-hover sp-data-grid wrap-head sp-was-status-table" id="gwStatusTable">
+        <colgroup>
+            <col class="col-w-120"><!-- 인스턴스명 -->
+            <col class="col-w-60"><!-- 유형 -->
+            <col class="col-w-110"><!-- 인스턴스 IP -->
+            <col class="col-w-80"><!-- 인스턴스 PORT -->
+            <col class="col-w-140"><!-- G/W명 -->
+            <col class="col-w-200"><!-- G/W 속성 -->
+            <col class="col-w-70"><!-- G/W THREAD -->
+            <col class="col-w-70"><!-- 기능수행 -->
+            <col class="col-w-80"><!-- 운영모드 -->
+            <col class="col-w-110"><!-- SYSTEM IP -->
+            <col class="col-w-80"><!-- SYSTEM PORT -->
+            <col class="col-w-60"><!-- 정지여부 -->
+            <col class="col-w-140"><!-- SYSTEM 설명 -->
+            <col class="col-w-80"><!-- 연결테스트 -->
+        </colgroup>
+        <thead class="table-light">
+        <tr>
+            <th class="sortable" data-sort="instanceName">인스턴스명</th>
+            <th class="sortable" data-sort="instanceType">유형</th>
+            <th class="sortable" data-sort="instanceIp">인스턴스<br>IP</th>
+            <th class="sortable" data-sort="instancePort">인스턴스<br>PORT</th>
+            <th class="sortable" data-sort="gwName">G/W명</th>
+            <th class="sortable" data-sort="gwProperties">G/W<br>속성</th>
+            <th class="sortable" data-sort="threadCount">G/W<br>THREAD</th>
+            <th class="sortable" data-sort="ioType">기능<br>수행</th>
+            <th class="sortable" data-sort="operModeType">운영모드</th>
+            <th class="sortable" data-sort="systemIp">SYSTEM<br>IP</th>
+            <th class="sortable" data-sort="systemPort">SYSTEM<br>PORT</th>
+            <th class="sortable" data-sort="stopYn">정지<br>여부</th>
+            <th class="sortable" data-sort="systemDesc">SYSTEM<br>설명</th>
+            <th>연결<br>테스트</th>
+        </tr>
+        </thead>
+        <tbody id="gwStatusTableBody">
+        <tr>
+            <td colspan="14" class="text-center text-muted py-4">
+                조회 버튼을 클릭하여 데이터를 불러오세요.
+            </td>
+        </tr>
+        </tbody>
+    </table>
+</div>
+</body>
+</html>

@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<!-- TransDataFile Search Fragment -->
+<div th:fragment="search" class="card border p-2 mb-3">
+    <div class="d-flex flex-wrap align-items-center gap-2 mb-1">
+        <!-- Left Side Components -->
+        <label class="form-label mb-0 small fw-medium fs-xs">파일 이름</label>
+        <input type="text" id="searchFileName" class="form-control form-control-sm flex-fixed-150"
+               placeholder="파일명 입력"
+               onkeypress="if(event.key === 'Enter') TransDataFile.search()">
+
+        <label class="form-label mb-0 small fw-medium ms-2 fs-xs">항목</label>
+        <select id="searchFileType" class="form-select form-select-sm flex-fixed-120">
+            <option value="">전체</option>
+        </select>
+
+        <label class="form-label mb-0 small fw-medium ms-2 fs-xs"></label>
+        <div class="sp-datepicker-wrapper flex-fixed-100">
+            <input type="text" id="searchDateFrom" class="form-control form-control-sm pe-4"
+                   placeholder="yyyy/mm/dd" readonly>
+            <i class="bi bi-calendar3 sp-datepicker-icon" id="btnDateFrom"></i>
+        </div>
+        <span class="mx-1 text-body-secondary">~</span>
+        <div class="sp-datepicker-wrapper flex-fixed-100">
+            <input type="text" id="searchDateTo" class="form-control form-control-sm pe-4"
+                   placeholder="yyyy/mm/dd" readonly>
+            <i class="bi bi-calendar3 sp-datepicker-icon" id="btnDateTo"></i>
+        </div>
+
+        <!-- Spacer to push right side to the end -->
+        <div class="flex-grow-1"></div>
+
+        <!-- Right Side Components -->
+        <select id="limitRows" class="form-select form-select-sm sp-limit-select">
+            <option value="10" selected>10</option>
+            <option value="20">20</option>
+            <option value="50">50</option>
+            <option value="100">100</option>
+            <option value="200">200</option>
+            <option value="1000">1000</option>
+        </select>
+        <label class="form-label mb-0 small fw-medium ms-1 me-2 fs-xs">건씩</label>
+
+        <button class="btn btn-primary btn-sm" onclick="TransDataFile.search()">
+            <i class="bi bi-search"></i> 조회
+        </button>
+    </div>
+</div>
+</body>
+</html>

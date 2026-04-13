@@ -1,0 +1,2107 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<!-- MessageTest Page Scripts -->
+<th:block th:fragment="script">
+    <script th:inline="javascript">
+        (function() {
+        var HAS_WRITE = /*[[${userAuthorities != null && userAuthorities.contains('PROXY_TESTDATA:W')}]]*/ false;
+
+        // ==================== Security Utilities ====================
+
+        function getUserFriendlyErrorMessage(error) {
+            let message = '요청 처리 중 오류가 발생했습니다.';
+
+            if (!error) return message;
+
+            if (error.response && error.response.data) {
+                const data = error.response.data;
+                if (data.message) {
+                    message = data.message;
+                }
+                if (data.errors && Array.isArray(data.errors)) {
+                    message = data.errors.map(e => e.message || e).join('\n');
+                }
+            } else if (error.responseJSON) {
+                if (error.responseJSON.message) {
+                    message = error.responseJSON.message;
+                }
+            } else if (error.message) {
+                if (error.message.includes('Network Error')) {
+                    message = '네트워크 연결을 확인해주세요.';
+                } else if (error.message.includes('timeout')) {
+                    message = '요청 시간이 초과되었습니다.';
+                }
+            }
+
+            message = message.replace(/<[^>]*>/g, '');
+            return message;
+        }
+
+        // ==================== MessageTests Object ====================
+
+        var PAGE_CONFIG = {
+            search: {
+                fields: [
+                    {
+                        type: 'select',
+                        id: 'orgIdFilter',
+                        label: '기관',
+                        labelStyle: 'min-width: auto;',
+                        width: '150px',
+                        placeholder: '전체',
+                        options: []
+                    },
+                    {
+                        type: 'text',
+                        id: 'trxIdFilter',
+                        label: '거래ID',
+                        labelStyle: 'min-width: auto; margin-left: 10px;',
+                        width: '120px',
+                        placeholder: '거래ID'
+                    },
+                    {
+                        type: 'text',
+                        id: 'testNameFilter',
+                        label: '테스트명',
+                        labelStyle: 'min-width: auto; margin-left: 10px;',
+                        width: '150px',
+                        placeholder: '테스트명'
+                    },
+                    {
+                        type: 'text',
+                        id: 'userIdFilter',
+                        label: '등록자',
+                        labelStyle: 'min-width: auto; margin-left: 10px;',
+                        width: '120px',
+                        placeholder: '등록자'
+                    }
+                ],
+                limit: { default: 10, showLarge: true }
+            }
+        };
+
+        window.MessageTests = window.MessageTests || {
+            currentPage: 1,
+            totalItems: 0,
+            itemsPerPage: 10,
+            sortBy: null,
+            sortDirection: null,
+            messageTestsData: [],
+            orgs: [],
+
+            init: function() {
+                // SearchForm 초기화 (loadOrgs보다 먼저 실행)
+                SearchForm.render('#searchContainer', PAGE_CONFIG.search, () => {
+                    window.MessageTests.currentPage = 1;
+                    window.MessageTests.load();
+                });
+
+                this.loadOrgs();
+                this.bindEvents();
+            },
+
+            loadOrgs: function() {
+                $.ajax({
+                    url: API_BASE_URL + '/orgs/list',
+                    method: 'GET',
+                    success: (response) => {
+                        if (response.success && response.data) {
+                            this.orgs = response.data;
+                            this.renderOrgOptions();
+                        }
+                    },
+                    error: (xhr) => {
+                        console.error('Failed to load orgs:', xhr);
+                    }
+                });
+            },
+
+            renderOrgOptions: function() {
+                const options = this.orgs.map(org => ({
+                    value: HtmlUtils.escape(org.orgId),
+                    label: `${HtmlUtils.escape(org.orgName)} (${HtmlUtils.escape(org.orgId)})`
+                }));
+                SearchForm.setOptions('#searchContainer', 'orgIdFilter', options);
+            },
+
+            bindEvents: function() {
+                $('#messageTestTable thead th[data-sort]').off('click').on('click', function() {
+                    const sortKey = $(this).data('sort');
+                    if (!sortKey) return;
+
+                    if (window.MessageTests.sortBy === sortKey) {
+                        if (window.MessageTests.sortDirection === 'ASC') {
+                            window.MessageTests.sortDirection = 'DESC';
+                        } else {
+                            window.MessageTests.sortBy = null;
+                            window.MessageTests.sortDirection = null;
+                        }
+                    } else {
+                        window.MessageTests.sortBy = sortKey;
+                        window.MessageTests.sortDirection = 'ASC';
+                    }
+                    window.MessageTests.currentPage = 1;
+                    window.MessageTests.updateSortIndicators();
+                    window.MessageTests.load();
+                });
+
+            },
+
+            load: function() {
+                const params = SearchForm.getParams('#searchContainer');
+                this.itemsPerPage = params.size || 10;
+                const searchParams = {
+                    orgIdFilter: params.orgIdFilter || '',
+                    trxIdFilter: params.trxIdFilter || '',
+                    testNameFilter: params.testNameFilter || '',
+                    userIdFilter: params.userIdFilter || '',
+                    page: this.currentPage,
+                    size: this.itemsPerPage,
+                    sortBy: this.sortBy || null,
+                    sortDirection: this.sortDirection || null
+                };
+
+                $.ajax({
+                    url: API_BASE_URL + '/proxy-testdata/page',
+                    method: 'GET',
+                    data: searchParams,
+                    success: (response) => {
+                        const pageData = response.data;
+                        const messageTests = pageData.content;
+
+                        this.messageTestsData = messageTests;
+                        this.renderTable(messageTests);
+                        this.totalItems = pageData.totalElements;
+                        this.renderPagination();
+                    },
+                    error: (xhr) => {
+                        console.error('Failed to load message tests:', xhr);
+                        const errorMsg = getUserFriendlyErrorMessage(xhr);
+                        Toast.error(errorMsg);
+                    }
+                });
+            },
+
+            renderTable: function(messageTests) {
+                const tbody = $('#messageTestTableBody');
+                tbody.empty();
+
+                var colCount = 7;
+                if (!messageTests || messageTests.length === 0) {
+                    tbody.append(`
+                        <tr>
+                            <td colspan="${colCount}" class="text-center py-4 text-body-secondary">
+                                조회된 데이터가 없습니다.
+                            </td>
+                        </tr>
+                    `);
+                    return;
+                }
+
+                messageTests.forEach((test, index) => {
+                    const row = $(`
+                        <tr data-test-index="${index}" data-test-sno="${test.testSno}" class="cursor-pointer">
+                            <td>${HtmlUtils.escape(test.orgName)}</td>
+                            <td>${HtmlUtils.escape(test.trxId)}</td>
+                            <td>${test.testSno}</td>
+                            <td>${HtmlUtils.escape(test.testName)}</td>
+                            <td>${HtmlUtils.escape(test.testDesc) || '-'}</td>
+                            <td>${HtmlUtils.escape(test.userId) || '-'}</td>
+                            <td><button class="btn btn-primary btn-sm" onclick="ProxySettingModal.open('${HtmlUtils.escape(test.orgId)}', '${HtmlUtils.escape(test.orgName)}', '${HtmlUtils.escape(test.trxId)}')">설정</button></td>
+                        </tr>
+                    `);
+
+                    // 행 클릭 시 상세 모달 오픈 (체크박스, 버튼 클릭 제외)
+                    row.on('click', function(e) {
+                        if ($(e.target).is('button')) return;
+                        MessageTestModal.openDetail(test.testSno);
+                    });
+
+                    tbody.append(row);
+                });
+            },
+
+            renderPagination: function() {
+                const totalPages = Math.ceil(this.totalItems / this.itemsPerPage);
+                const pagination = $('#pagination');
+                pagination.empty();
+
+                pagination.append(`
+                    <li class="page-item ${this.currentPage === 1 ? 'disabled' : ''}">
+                        <a class="page-link" href="#" onclick="window.MessageTests.changePage(1); return false;">
+                            <i class="bi bi-chevron-double-left"></i>
+                        </a>
+                    </li>
+                    <li class="page-item ${this.currentPage === 1 ? 'disabled' : ''}">
+                        <a class="page-link" href="#" onclick="window.MessageTests.changePage(${this.currentPage - 1}); return false;">
+                            <i class="bi bi-chevron-left"></i>
+                        </a>
+                    </li>
+                `);
+
+                const maxButtons = 5;
+                let startPage = Math.max(1, this.currentPage - Math.floor(maxButtons / 2));
+                let endPage = Math.min(totalPages, startPage + maxButtons - 1);
+
+                if (endPage - startPage + 1 < maxButtons) {
+                    startPage = Math.max(1, endPage - maxButtons + 1);
+                }
+
+                for (let i = startPage; i <= endPage; i++) {
+                    pagination.append(`
+                        <li class="page-item ${i === this.currentPage ? 'active' : ''}">
+                            <a class="page-link" href="#" onclick="window.MessageTests.changePage(${i}); return false;">${i}</a>
+                        </li>
+                    `);
+                }
+
+                pagination.append(`
+                    <li class="page-item ${this.currentPage === totalPages || totalPages === 0 ? 'disabled' : ''}">
+                        <a class="page-link" href="#" onclick="window.MessageTests.changePage(${this.currentPage + 1}); return false;">
+                            <i class="bi bi-chevron-right"></i>
+                        </a>
+                    </li>
+                    <li class="page-item ${this.currentPage === totalPages || totalPages === 0 ? 'disabled' : ''}">
+                        <a class="page-link" href="#" onclick="window.MessageTests.changePage(${totalPages}); return false;">
+                            <i class="bi bi-chevron-double-right"></i>
+                        </a>
+                    </li>
+                `);
+
+                const start = this.totalItems === 0 ? 0 : (this.currentPage - 1) * this.itemsPerPage + 1;
+                const end = Math.min(this.currentPage * this.itemsPerPage, this.totalItems);
+                $('#pageInfo').text(`${start} - ${end} of ${this.totalItems} items`);
+            },
+
+            changePage: function(page) {
+                const totalPages = Math.ceil(this.totalItems / this.itemsPerPage);
+                if (page < 1 || page > totalPages) return;
+                this.currentPage = page;
+                this.load();
+            },
+
+            updateSortIndicators: function() {
+                const headers = $('#messageTestTable thead th[data-sort]');
+                headers.removeClass('sort-asc sort-desc');
+
+                if (!this.sortBy || !this.sortDirection) {
+                    return;
+                }
+
+                headers.filter(`[data-sort="${this.sortBy}"]`)
+                    .addClass(this.sortDirection === 'ASC' ? 'sort-asc' : 'sort-desc');
+            },
+
+            resetSearch: function() {
+                SearchForm.reset('#searchContainer');
+                this.currentPage = 1;
+                this.sortBy = null;
+                this.sortDirection = null;
+                this.updateSortIndicators();
+                this.load();
+            }
+        };
+
+        // ==================== TrxSearchModal Object ====================
+
+        window.TrxSearchModal = {
+            onSelectCallback: null,
+
+            open: function(onSelect) {
+                this.onSelectCallback = onSelect;
+                this.renderOrgOptions();
+                this.resetSearch();
+                bootstrap.Modal.getOrCreateInstance(document.getElementById('trxSearchModal')).show();
+                this.loadAll();
+            },
+
+            close: function() {
+                bootstrap.Modal.getInstance(document.getElementById('trxSearchModal')).hide();
+                this.onSelectCallback = null;
+            },
+
+            renderOrgOptions: function() {
+                const orgSelect = $('#trxSearchOrgId');
+                orgSelect.find('option:not(:first)').remove();
+
+                var orgs = window.MessageTests.orgs || [];
+                orgs.forEach(function(org) {
+                    var orgId = HtmlUtils.escape(org.orgId);
+                    var orgName = HtmlUtils.escape(org.orgName);
+                    orgSelect.append('<option value="' + orgId + '">' + orgName + ' (' + orgId + ')</option>');
+                });
+            },
+
+            resetSearch: function() {
+                $('#trxSearchOrgId').val('');
+                $('#trxSearchTrxId').val('');
+                $('#trxSearchTrxName').val('');
+            },
+
+            loadAll: function() {
+                this.doSearch({});
+            },
+
+            search: function() {
+                var params = {
+                    orgId: $('#trxSearchOrgId').val(),
+                    trxId: $('#trxSearchTrxId').val(),
+                    trxName: $('#trxSearchTrxName').val()
+                };
+                this.doSearch(params);
+            },
+
+            doSearch: function(params) {
+                var self = this;
+                $.ajax({
+                    url: API_BASE_URL + '/proxy-testdata/trx-messages/search',
+                    method: 'GET',
+                    data: params,
+                    success: function(response) {
+                        if (response.success && response.data) {
+                            self.renderTable(response.data);
+                        } else {
+                            self.renderTable([]);
+                        }
+                    },
+                    error: function(xhr) {
+                        console.error('Failed to search trx messages:', xhr);
+                        var errorMsg = getUserFriendlyErrorMessage(xhr);
+                        Toast.error(errorMsg);
+                        self.renderTable([]);
+                    }
+                });
+            },
+
+            renderTable: function(data) {
+                var tbody = $('#trxSearchTableBody');
+                tbody.empty();
+
+                if (!data || data.length === 0) {
+                    tbody.append('<tr><td colspan="5" class="sp-empty-state">조회된 데이터가 없습니다.</td></tr>');
+                    return;
+                }
+
+                var self = this;
+                data.forEach(function(item) {
+                    var row = $('<tr></tr>');
+                    row.append('<td>' + HtmlUtils.escape(item.orgName) + '</td>');
+                    row.append('<td>' + HtmlUtils.escape(item.trxId) + '</td>');
+                    row.append('<td>' + HtmlUtils.escape(item.trxName) + '</td>');
+                    row.append('<td>' + HtmlUtils.escape(item.ioType) + '</td>');
+                    row.append('<td>' + HtmlUtils.escape(item.messageId) + '</td>');
+
+                    row.on('click', function() {
+                        if (self.onSelectCallback) {
+                            self.onSelectCallback(item);
+                        }
+                        self.close();
+                    });
+
+                    tbody.append(row);
+                });
+            }
+        };
+
+        // ==================== MessageTestModal Object (통합 모달) ====================
+
+        window.MessageTestModal = {
+            mode: 'register',   // 'register' 또는 'detail'
+            fieldData: [],
+            parentMessageId: null,
+            currentTestData: null,
+
+            // ==================== 모달 열기/닫기 ====================
+
+            openRegister: function() {
+                this.mode = 'register';
+                this.resetForm();
+                this._applyMode();
+                bootstrap.Modal.getOrCreateInstance(document.getElementById('messageTestModal')).show();
+            },
+
+            openDetail: function(testSno) {
+                this.mode = 'detail';
+                this.resetForm();
+                this._applyMode();
+                bootstrap.Modal.getOrCreateInstance(document.getElementById('messageTestModal')).show();
+                this.loadDetail(testSno);
+            },
+
+            close: function() {
+                bootstrap.Modal.getInstance(document.getElementById('messageTestModal')).hide();
+            },
+
+            /**
+             * 모드에 따라 버튼, 타이틀 등을 표시/숨김 처리합니다.
+             */
+            _applyMode: function() {
+                if (this.mode === 'register') {
+                    $('#mtModalTitle').text('당발 대응답 등록');
+                    $('#mtTrxSearchBtn').removeClass('d-hidden');
+                    $('#mtSaveBtn').addClass('d-hidden');
+                    $('#mtSaveAsNewBtn').addClass('d-hidden');
+                    $('#mtUpdateBtn').addClass('d-hidden');
+                    $('#mtDeleteBtn').addClass('d-hidden');
+                    $('#mtTestGroupId').prop('disabled', false);
+                    $('#mtTestGroupIdCustom').prop('disabled', false);
+                } else {
+                    $('#mtModalTitle').text('당발 대응답 상세');
+                    $('#mtTrxSearchBtn').addClass('d-hidden');
+                    $('#mtSaveBtn').addClass('d-hidden');
+                    $('#mtSaveAsNewBtn').toggleClass('d-hidden', !HAS_WRITE);
+                    $('#mtUpdateBtn').toggleClass('d-hidden', !HAS_WRITE);
+                    $('#mtDeleteBtn').toggleClass('d-hidden', !HAS_WRITE);
+                    $('#mtTestGroupId').prop('disabled', true);
+                    $('#mtTestGroupIdCustom').prop('disabled', true);
+                }
+            },
+
+            // ==================== 폼 초기화 ====================
+
+            resetForm: function() {
+                this.fieldData = [];
+                this.parentMessageId = null;
+                this.currentTestData = null;
+                this.originalTestGroupId = null;
+                this.originalTestName = null;
+
+                $('#mtOrgId').val('');
+                $('#mtOrgName').val('');
+                $('#mtTrxId').val('');
+                $('#mtTrxName').val('');
+                $('#mtIoType').val('');
+                $('#mtMessageId').val('');
+                $('#mtTestSno').val('');
+                $('#mtTestGroupId').find('option').remove();
+                $('#mtTestGroupId').append('<option value="DEFAULT">DEFAULT</option>');
+                $('#mtTestGroupIdCustom').addClass('d-hidden').val('');
+                $('#mtTestName').val('');
+                $('#mtTestDesc').val('');
+                $('#mtRawMessage').val('');
+                $('#mtFieldTableBody').html('<tr><td colspan="6" class="sp-empty-state">거래를 선택하면 전문 필드가 표시됩니다.</td></tr>');
+
+                $('#mtMiddleSection').addClass('d-hidden');
+                $('#mtBottomSection').addClass('d-hidden');
+                $('#mtSaveBtn').addClass('d-hidden');
+
+                this.switchTab('parse');
+            },
+
+            // ==================== 등록 모드: 거래 조회 ====================
+
+            openTrxSearch: function() {
+                var self = this;
+                TrxSearchModal.open(function(selected) {
+                    self.onTrxSelected(selected);
+                });
+            },
+
+            onTrxSelected: function(data) {
+                $('#mtOrgId').val(data.orgId);
+                $('#mtOrgName').val(data.orgName);
+                $('#mtTrxId').val(data.trxId);
+                $('#mtTrxName').val(data.trxName);
+                $('#mtIoType').val(data.ioType);
+                $('#mtMessageId').val(data.messageId);
+
+                $('#mtMiddleSection').removeClass('d-hidden');
+                $('#mtBottomSection').removeClass('d-hidden');
+                $('#mtSaveBtn').removeClass('d-hidden');
+
+                this.loadGroupIds(data.orgId, data.trxId, 'DEFAULT');
+
+                this.loadTestFields(data.orgId, data.trxId);
+            },
+
+            // ==================== 그룹 ID 목록 로드 ====================
+
+            loadGroupIds: function(orgId, trxId, selectedValue) {
+                var select = $('#mtTestGroupId');
+                var customInput = $('#mtTestGroupIdCustom');
+                select.find('option').remove();
+                select.append('<option value="DEFAULT">DEFAULT</option>');
+                customInput.addClass('d-hidden').val('');
+
+                $.ajax({
+                    url: API_BASE_URL + '/proxy-testdata/group-ids',
+                    method: 'GET',
+                    data: { orgId: orgId, trxId: trxId },
+                    success: function(response) {
+                        if (response.success && response.data) {
+                            var addedValues = new Set(['DEFAULT']);
+                            response.data.forEach(function(groupId) {
+                                if (groupId && !addedValues.has(groupId)) {
+                                    addedValues.add(groupId);
+                                    select.append('<option value="' + HtmlUtils.escape(groupId) + '">' + HtmlUtils.escape(groupId) + '</option>');
+                                }
+                            });
+                        }
+                        // 직접입력 옵션 추가
+                        select.append('<option value="__CUSTOM__">직접입력</option>');
+
+                        // 선택값 설정
+                        if (selectedValue && selectedValue !== '__CUSTOM__') {
+                            if (select.find('option[value="' + selectedValue + '"]').length > 0) {
+                                select.val(selectedValue);
+                            } else {
+                                // DB에 있지만 목록에 없는 경우 옵션 추가 후 선택
+                                select.find('option[value="__CUSTOM__"]').before(
+                                    '<option value="' + HtmlUtils.escape(selectedValue) + '">' + HtmlUtils.escape(selectedValue) + '</option>'
+                                );
+                                select.val(selectedValue);
+                            }
+                        }
+                    },
+                    error: function(xhr) {
+                        console.error('Failed to load group IDs:', xhr);
+                        select.append('<option value="__CUSTOM__">직접입력</option>');
+                    }
+                });
+
+                // 직접입력 선택 시 text input 표시
+                select.off('change.groupId').on('change.groupId', function() {
+                    if ($(this).val() === '__CUSTOM__') {
+                        customInput.removeClass('d-hidden').focus();
+                    } else {
+                        customInput.addClass('d-hidden').val('');
+                    }
+                });
+            },
+
+            getTestGroupIdValue: function() {
+                var selectVal = $('#mtTestGroupId').val();
+                if (selectVal === '__CUSTOM__') {
+                    return $('#mtTestGroupIdCustom').val().trim() || 'DEFAULT';
+                }
+                return selectVal || 'DEFAULT';
+            },
+
+            // ==================== 상세 모드: 데이터 로드 ====================
+
+            loadDetail: function(testSno) {
+                var self = this;
+                $.ajax({
+                    url: API_BASE_URL + '/proxy-testdata/' + testSno,
+                    method: 'GET',
+                    success: function(response) {
+                        if (response.success && response.data) {
+                            self.populateDetail(response.data);
+                        } else {
+                            Toast.error('데이터를 불러올 수 없습니다.');
+                            self.close();
+                        }
+                    },
+                    error: function(xhr) {
+                        console.error('Failed to load message test detail:', xhr);
+                        var errorMsg = getUserFriendlyErrorMessage(xhr);
+                        Toast.error(errorMsg);
+                        self.close();
+                    }
+                });
+            },
+
+            populateDetail: function(data) {
+                $('#mtTestSno').val(data.testSno);
+                $('#mtOrgId').val(data.orgId);
+                $('#mtOrgName').val(data.orgName);
+                $('#mtTrxId').val(data.trxId);
+                $('#mtTrxName').val(data.trxName);
+                $('#mtMessageId').val(data.messageId);
+
+                this.originalTestGroupId = data.testGroupId || 'DEFAULT';
+                this.originalTestName = data.testName || '';
+
+                this.loadGroupIds(data.orgId, data.trxId, data.testGroupId || 'DEFAULT');
+                $('#mtTestName').val(data.testName || '');
+                $('#mtTestDesc').val(data.testDesc || '');
+
+                this.currentTestData = data.testData || '';
+
+                $('#mtMiddleSection').removeClass('d-hidden');
+                $('#mtBottomSection').removeClass('d-hidden');
+
+                if (data.orgId && data.trxId) {
+                    this.loadTestFields(data.orgId, data.trxId, this.currentTestData);
+                } else {
+                    $('#mtFieldTableBody').html('<tr><td colspan="6" class="sp-empty-state">전문 정보가 없습니다.</td></tr>');
+                }
+            },
+
+            // ==================== 필드 로드 (등록/상세 공용) ====================
+
+            loadTestFields: function(orgId, trxId, testData) {
+                var self = this;
+                var tbody = $('#mtFieldTableBody');
+                tbody.html('<tr><td colspan="6" class="sp-empty-state">전문 필드를 불러오는 중...</td></tr>');
+                self.fieldData = [];
+
+                $.ajax({
+                    url: API_BASE_URL + '/proxy-testdata/test-fields',
+                    method: 'GET',
+                    data: { orgId: orgId, trxId: trxId },
+                    success: function(response) {
+                        if (response.success && response.data && response.data.length > 0) {
+                            response.data.forEach(function(field) {
+                                self.fieldData.push({
+                                    messageId: field.messageId,
+                                    messageFieldId: field.messageFieldId,
+                                    messageFieldName: field.messageFieldName,
+                                    dataLength: field.dataLength,
+                                    requiredYn: field.requiredYn,
+                                    dataType: field.dataType,
+                                    dataAlign: field.align,
+                                    fieldType: field.fieldType,
+                                    sortOrder: field.sortOrder,
+                                    scale: field.scale || 0,
+                                    realValue: field.realValue || '',
+                                    readOnly: field.readOnly || false,
+                                    hidden: field.hidden || false,
+                                    valueComment: field.valueComment || '',
+                                    savedValue: ''
+                                });
+                            });
+                            self.renderFieldTable();
+
+                            // 상세 모드: 통전문을 parse API로 파싱하여 필드에 매핑
+                            if (self.mode === 'detail' && testData) {
+                                $('#mtRawMessage').val(testData);
+                                self._parseRawToFields(testData);
+                            }
+                        } else {
+                            tbody.html('<tr><td colspan="6" class="sp-empty-state">전문 필드 정보가 없습니다.</td></tr>');
+                        }
+                    },
+                    error: function(xhr) {
+                        console.error('Failed to load test fields:', xhr);
+                        var errorMsg = getUserFriendlyErrorMessage(xhr);
+                        tbody.html('<tr><td colspan="6" class="sp-empty-state">전문 필드 조회 실패: ' + HtmlUtils.escape(errorMsg) + '</td></tr>');
+                    }
+                });
+            },
+
+            // ==================== 필드 테이블 렌더링 ====================
+
+            renderFieldTable: function() {
+                var tbody = $('#mtFieldTableBody');
+                tbody.empty();
+
+                if (!this.fieldData || this.fieldData.length === 0) {
+                    tbody.html('<tr><td colspan="6" class="sp-empty-state">전문 필드 정보가 없습니다.</td></tr>');
+                    return;
+                }
+
+                var isDetail = (this.mode === 'detail');
+                var loopArray = [];
+                this.fieldData.forEach(function(field, index) {
+                    var isLoop = false;
+                    if(field.messageFieldId.indexOf("_BeginLoop_") >= 0){
+                        loopArray.push(field.messageFieldId);
+                        isLoop = true;
+                    } else if(field.messageFieldId.indexOf("_EndLoop_") >= 0){
+                        var tempStr = field.messageFieldId.replace("_EndLoop_", "_BeginLoop_");
+                        loopArray = loopArray.filter(i => i != tempStr);
+                        isLoop = true;
+                    }
+
+                    var rowStyle = '';
+                    var initValue = isDetail ? (field.savedValue || field.realValue) : field.realValue;
+                    var _name = field.realValue && field.realValue.indexOf("_$MAP") > -1 ? field.realValue.replace("_$MAP", "").trim() : field.messageFieldId;
+                    var readOnlyAttr = field.readOnly || field.hidden ? ' readonly class="mt-field-readonly"' : '';
+                    var _underTxt = field.valueComment ? ' <span class="mt-field-comment">' + HtmlUtils.escape(field.valueComment) + '</span>' : '';
+
+                    var valueCell = '';
+                    if (isLoop) {
+                        rowStyle = ' class="mt-loop-header"';
+                        if (field.messageFieldId.indexOf('_BeginLoop_') >= 0) {
+                            valueCell = '<td class="mt-flex-cell">' +
+                                '<input class="testValue mt-loop-input" type="text" data-field-index="' + index + '" name="' + _name + '" value="' + HtmlUtils.escape(initValue) + '" readonly>' +
+                                '<button type="button" onclick="LoopFieldHandler.addLoopField(this); return false;" class="mt-loop-btn mt-loop-btn-add">+</button>' +
+                                '</td>';
+                        } else {
+                            valueCell = '<td class="mt-flex-cell">' +
+                                '<input class="testValue mt-loop-input" type="text" data-field-index="' + index + '" name="' + _name + '" value="' + HtmlUtils.escape(initValue) + '" readonly>' +
+                                '<button type="button" onclick="LoopFieldHandler.removeLoopField(this); return false;" class="mt-loop-btn mt-loop-btn-remove">-</button>' +
+                                '</td>';
+                        }
+                    } else {
+                        valueCell = '<td><input class="testValue" type="text" data-field-index="' + index + '" name="' + _name + '" value="' + HtmlUtils.escape(initValue) + '"' + readOnlyAttr + '>' + _underTxt + '</td>';
+                    }
+
+                    var requiredDisplay = field.requiredYn === 'Y' ? '<span class="mt-required-y">Y</span>' : (field.requiredYn || '-');
+                    var lengthDisplay = field.dataLength != null ? field.dataLength : '-';
+
+                    var row = '<tr' + rowStyle + '>' +
+                        '<td class="messageId">' + HtmlUtils.escape(field.messageId) + '</td>' +
+                        '<td class="messageFieldId">' + HtmlUtils.escape(field.messageFieldId) + '</td>' +
+                        '<td class="messageFieldName">' + HtmlUtils.escape(field.messageFieldName) + '</td>' +
+                        '<td class="dataLength text-center">' + lengthDisplay + '</td>' +
+                        '<td class="requiredYn text-center">' + requiredDisplay + '</td>' +
+                        '<input class="dataType" type="hidden" value="' + (field.dataType || '') + '">' +
+                        '<input class="dataAlign" type="hidden" value="' + (field.dataAlign || '') + '">' +
+                        '<input class="dataScale" type="hidden" value="' + (field.scale || 0) + '">' +
+                        valueCell +
+                        '</tr>';
+
+                    tbody.append(row);
+                });
+
+                // 반복부 초기 표시 처리 (_BeginLoop_ 값에 따라 행 숨김/복제)
+                this._initLoopDisplay();
+            },
+
+            // ==================== 반복부 초기 표시 ====================
+
+            /**
+             * _BeginLoop_ 필드의 값(count)에 따라 반복부 행을 숨기거나 복제합니다.
+             * - count = 0 또는 빈값: 반복부 본문 행 숨김
+             * - count = 1: 1세트 그대로 표시
+             * - count > 1: (count - 1)세트 추가 복제
+             */
+            _initLoopDisplay: function() {
+                var tbody = $('#mtFieldTableBody');
+
+                // BeginLoop 필드 ID 목록 수집 (DOM 변경 전에 미리)
+                var beginLoopIds = [];
+                tbody.find('tr').each(function() {
+                    var fieldId = $(this).find('.messageFieldId').text().trim();
+                    if (fieldId.indexOf('_BeginLoop_') >= 0) {
+                        beginLoopIds.push(fieldId);
+                    }
+                });
+
+                beginLoopIds.forEach(function(beginFieldId) {
+                    var endFieldId = beginFieldId.replace('_BeginLoop_', '_EndLoop_');
+                    var allTrs = tbody.find('tr'); // DOM 변경 후 재조회
+
+                    var beginTr = null, beginIdx = -1, endIdx = -1;
+                    allTrs.each(function(idx) {
+                        var fid = $(this).find('.messageFieldId').text().trim();
+                        if (fid === beginFieldId && !beginTr) {
+                            beginTr = $(this);
+                            beginIdx = idx;
+                        }
+                        if (fid === endFieldId) {
+                            endIdx = idx;
+                        }
+                    });
+
+                    if (!beginTr || endIdx < 0) return;
+
+                    var countInput = beginTr.find('input.testValue');
+                    var count = parseInt(countInput.val()) || 0;
+
+                    if (count <= 0) {
+                        // 반복부 본문 행 숨김
+                        for (var i = beginIdx + 1; i < endIdx; i++) {
+                            allTrs.eq(i).attr('hidden', 'hidden').hide();
+                        }
+                        countInput.val(0);
+                    } else if (count > 1) {
+                        // 1세트는 이미 렌더링됨 → count를 1로 설정 후 addLoopField로 추가 복제
+                        countInput.val(1);
+                        for (var c = 1; c < count; c++) {
+                            LoopFieldHandler.addLoopField(beginTr.find('button')[0]);
+                        }
+                    }
+                    // count === 1: 이미 1세트 표시 중이므로 아무 작업 불필요
+                });
+            },
+
+            // ==================== 반복부 DOM 리셋 ====================
+
+            /**
+             * 반복부 복제 행을 제거하고 숨김을 해제하여 DOM을 원본 1세트 상태로 복원합니다.
+             * _initLoopDisplay() 재호출 전에 반드시 호출해야 합니다.
+             */
+            _resetLoopDisplay: function() {
+                var tbody = $('#mtFieldTableBody');
+                var seen = {};
+
+                // data-field-index 기준으로 원본(첫 번째)은 유지, 복제본(중복)은 제거
+                tbody.find('tr').each(function() {
+                    var input = $(this).find('input[data-field-index]');
+                    if (!input.length) return;
+
+                    var idx = input.attr('data-field-index');
+                    if (seen[idx]) {
+                        $(this).remove();
+                    } else {
+                        seen[idx] = true;
+                        $(this).removeAttr('hidden').show();
+                    }
+                });
+            },
+
+            // ==================== 필드 초기화 ====================
+
+            resetFieldValues: function() {
+                var self = this;
+                var isDetail = (this.mode === 'detail');
+                this.fieldData.forEach(function(field, index) {
+                    if (field.readOnly) return;
+                    var initValue = isDetail ? (field.savedValue || field.realValue) : field.realValue;
+                    var input = $('#mtFieldTableBody input[data-field-index="' + index + '"]');
+                    if (input.length) {
+                        input.val(initValue);
+                    }
+                });
+            },
+
+            // ==================== 탭 전환 ====================
+
+            switchTab: function(tab) {
+                var currentTab = $('.mt-tab-btn.active').data('tab');
+
+                // 통전문 → 전문파싱 전환 시 파싱 처리
+                if (currentTab === 'raw' && tab === 'parse') {
+                    var rawMessage = $('#mtRawMessage').val();
+                    if (rawMessage && rawMessage.trim() !== '') {
+                        Toast.info('통전문을 파싱합니다. 통전문과 파싱된 값은 상이할 수 있습니다.');
+                        this._parseRawToFields(rawMessage);
+                    }
+                }
+
+                // 탭 버튼 활성화
+                $('.mt-tab-btn').removeClass('active');
+                $('.mt-tab-btn[data-tab="' + tab + '"]').addClass('active');
+
+                if (tab === 'parse') {
+                    $('#mtTabParse').show();
+                    $('#mtTabRaw').addClass('d-hidden');
+                } else {
+                    // 전문파싱 → 통전문 전환 시: 필드 값으로 통전문 생성
+                    this._buildRawMessageFromFields();
+                    $('#mtTabParse').hide();
+                    $('#mtTabRaw').removeClass('d-hidden');
+                }
+            },
+
+            // ==================== 통전문 파싱 (부모 체인 포함 전체 필드) ====================
+
+            /**
+             * 통전문(raw string)을 파싱 API를 통해 각 필드에 값을 매핑합니다.
+             * /api/proxy-testdata/parse-raw 엔드포인트를 사용하여 부모 체인 포함 전체 필드를 대상으로 파싱합니다.
+             */
+            _parseRawToFields: function(rawMessage, onComplete) {
+                var self = this;
+                var orgId = $('#mtOrgId').val();
+                var messageId = $('#mtMessageId').val();
+
+                if (!orgId || !messageId) {
+                    if (onComplete) onComplete();
+                    return;
+                }
+
+                $.ajax({
+                    url: API_BASE_URL + '/proxy-testdata/parse-raw',
+                    method: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify({
+                        orgId: orgId,
+                        messageId: messageId,
+                        rawString: rawMessage
+                    }),
+                    success: function(response) {
+                        if (response.success && response.data && response.data.fields) {
+                            var parsedFields = response.data.fields;
+
+                            // Step 1: _BeginLoop_ 필드의 count 값 세팅
+                            parsedFields.forEach(function(parsed) {
+                                if (parsed.fieldId && parsed.fieldId.indexOf('_BeginLoop_') >= 0) {
+                                    for (var idx = 0; idx < self.fieldData.length; idx++) {
+                                        if (self.fieldData[idx].messageFieldId === parsed.fieldId) {
+                                            var input = $('#mtFieldTableBody input[data-field-index="' + idx + '"]');
+                                            if (input.length) {
+                                                input.val(parsed.parsedValue || '0');
+                                            }
+                                            break;
+                                        }
+                                    }
+                                }
+                            });
+
+                            // Step 2: 반복부 DOM 리셋 후 행 복제/숨김 처리
+                            self._resetLoopDisplay();
+                            self._initLoopDisplay();
+
+                            // Step 3: 반복부 본문 필드 식별 및 값 수집
+                            var loopBodyFieldValues = {}; // { fieldId: [val1, val2, ...] }
+                            var loopBodyFieldIds = {};     // 반복부 본문 fieldId 집합
+                            var inLoop = false;
+
+                            parsedFields.forEach(function(parsed) {
+                                if (parsed.fieldId && parsed.fieldId.indexOf('_BeginLoop_') >= 0) {
+                                    inLoop = true;
+                                    return;
+                                }
+                                if (parsed.fieldId && parsed.fieldId.indexOf('_EndLoop_') >= 0) {
+                                    inLoop = false;
+                                    return;
+                                }
+                                if (inLoop) {
+                                    loopBodyFieldIds[parsed.fieldId] = true;
+                                    if (!loopBodyFieldValues[parsed.fieldId]) {
+                                        loopBodyFieldValues[parsed.fieldId] = [];
+                                    }
+                                    loopBodyFieldValues[parsed.fieldId].push(parsed.parsedValue || '');
+                                }
+                            });
+
+                            // Step 4: 반복부 본문 값 분배 (DOM에서 보이는 행 순서대로 매칭)
+                            var loopFieldIds = Object.keys(loopBodyFieldValues);
+                            for (var li = 0; li < loopFieldIds.length; li++) {
+                                var lfId = loopFieldIds[li];
+                                var values = loopBodyFieldValues[lfId];
+                                var matchingRows = $('#mtFieldTableBody tr:visible').filter(function() {
+                                    return $(this).find('.messageFieldId').text().trim() === lfId;
+                                });
+                                matchingRows.each(function(i) {
+                                    if (i < values.length) {
+                                        $(this).find('input.testValue').val(values[i]);
+                                    }
+                                });
+                            }
+
+                            // Step 5: 일반 필드 값 세팅 (반복부/마커 제외)
+                            parsedFields.forEach(function(parsed) {
+                                if (!parsed.fieldId) return;
+                                if (parsed.fieldId.indexOf('_BeginLoop_') >= 0) return;
+                                if (parsed.fieldId.indexOf('_EndLoop_') >= 0) return;
+                                if (loopBodyFieldIds[parsed.fieldId]) return;
+
+                                for (var idx = 0; idx < self.fieldData.length; idx++) {
+                                    if (self.fieldData[idx].messageFieldId === parsed.fieldId) {
+                                        var input = $('#mtFieldTableBody input[data-field-index="' + idx + '"]');
+                                        if (input.length) {
+                                            input.val(parsed.parsedValue || '');
+                                        }
+                                        break;
+                                    }
+                                }
+                            });
+
+                            // Step 6: readOnly/hidden 필드 원본 값 복원 (통전문에서 변경되더라도 무시)
+                            self.fieldData.forEach(function(field, idx) {
+                                if (!field.readOnly && !field.hidden) return;
+                                var input = $('#mtFieldTableBody input[data-field-index="' + idx + '"]');
+                                if (input.length) {
+                                    input.val(field.realValue || '');
+                                }
+                            });
+                        }
+                        if (onComplete) onComplete();
+                    },
+                    error: function(xhr) {
+                        console.error('Failed to parse raw message:', xhr);
+                        if (onComplete) onComplete();
+                    }
+                });
+            },
+
+            // ==================== 통전문 생성 ====================
+
+            /**
+             * 전문파싱 필드 값을 패딩 처리하여 통전문 textarea에 채웁니다.
+             */
+            _buildRawMessageFromFields: function() {
+                var rows = $('#mtFieldTableBody tr');
+                var result = '';
+
+                rows.each(function() {
+                    var row = $(this);
+
+                    // 숨겨진 행(반복부 count=0)은 건너뜀 — attr('hidden')만 체크하여 부모 컨테이너 숨김에 영향받지 않음
+                    if (row.attr('hidden')) return;
+
+                    var fieldId = row.find('.messageFieldId').text().trim();
+                    if (!fieldId) return;
+
+                    // Loop 마커는 건너뜀
+                    if (fieldId.indexOf('_BeginLoop_') >= 0 || fieldId.indexOf('_EndLoop_') >= 0) return;
+
+                    var input = row.find('input.testValue');
+                    if (!input.length) return;
+
+                    var rawValue = input.val() || '';
+                    var dataType = row.find('.dataType').val() || 'C';
+                    var dataAlign = row.find('.dataAlign').val() || 'L';
+                    var dataLength = parseInt(row.find('.dataLength').text().trim()) || 0;
+                    var dataScale = parseInt(row.find('.dataScale').val()) || 0;
+
+                    // SCALE 역변환: 소수점 제거 (예: "123.45" scale=2 → "12345")
+                    if (dataScale > 0 && rawValue.indexOf('.') >= 0) {
+                        rawValue = rawValue.replace('.', '');
+                    }
+
+                    // 헥사 타입(H): 16진수 → ASCII 변환
+                    if (dataType === 'H' && rawValue) {
+                        rawValue = MessageTestModal._hexToAscii(rawValue);
+                    }
+
+                    if (dataLength > 0) {
+                        rawValue = MessageTestModal._applyPadding(rawValue, dataLength, dataType, dataAlign);
+                    }
+
+                    result += rawValue;
+                });
+
+                $('#mtRawMessage').val(result);
+            },
+
+            // ==================== 반복부 복원 ====================
+
+            /**
+             * 저장된 반복부 데이터의 @|@ 값을 각 복제된 세트 행에 분배합니다.
+             * _initLoopDisplay()가 행 복제를 이미 처리한 후 호출되어야 합니다.
+             */
+            _restoreLoopFields: function(savedValues) {
+                var tbody = $('#mtFieldTableBody');
+
+                // BeginLoop 필드 목록 수집
+                var beginLoopIds = [];
+                tbody.find('tr').each(function() {
+                    var fieldId = $(this).find('.messageFieldId').text().trim();
+                    if (fieldId.indexOf('_BeginLoop_') >= 0) {
+                        beginLoopIds.push(fieldId);
+                    }
+                });
+
+                beginLoopIds.forEach(function(beginFieldId) {
+                    var endFieldId = beginFieldId.replace('_BeginLoop_', '_EndLoop_');
+                    var loopCount = parseInt(savedValues[beginFieldId]) || 0;
+                    if (loopCount <= 0) return;
+
+                    var allTrs = tbody.find('tr');
+                    var beginIdx = -1, endIdx = -1;
+                    allTrs.each(function(idx) {
+                        var fid = $(this).find('.messageFieldId').text().trim();
+                        if (fid === beginFieldId && beginIdx < 0) beginIdx = idx;
+                        if (fid === endFieldId) endIdx = idx;
+                    });
+
+                    if (beginIdx < 0 || endIdx < 0) return;
+
+                    // 반복부 본문 행 수집
+                    var loopBodyTrs = [];
+                    for (var j = beginIdx + 1; j < endIdx; j++) {
+                        loopBodyTrs.push(allTrs.eq(j));
+                    }
+                    if (loopBodyTrs.length === 0) return;
+
+                    // 1세트 크기 계산
+                    var firstFieldId = loopBodyTrs[0].find('.messageFieldId').text().trim();
+                    var oneSetSize = loopBodyTrs.length;
+                    for (var k = 1; k < loopBodyTrs.length; k++) {
+                        if (loopBodyTrs[k].find('.messageFieldId').text().trim() === firstFieldId) {
+                            oneSetSize = k;
+                            break;
+                        }
+                    }
+
+                    // 각 세트의 각 행에 값 분배
+                    for (var s = 0; s < loopBodyTrs.length; s++) {
+                        var loopRow = loopBodyTrs[s];
+                        var loopFieldId = loopRow.find('.messageFieldId').text().trim();
+                        var setIndex = Math.floor(s / oneSetSize);
+
+                        var loopSavedValue = savedValues[loopFieldId];
+                        if (Array.isArray(loopSavedValue) && setIndex < loopSavedValue.length) {
+                            loopRow.find('input.testValue').val(loopSavedValue[setIndex]);
+                        } else if (typeof loopSavedValue === 'string' && loopCount === 1) {
+                            // 1건만 저장된 경우 배열이 아닌 문자열
+                            loopRow.find('input.testValue').val(loopSavedValue);
+                        }
+                    }
+                });
+            },
+
+            // ==================== field=value 파싱/생성 ====================
+
+            /**
+             * field1=value1;field2=value2 형식의 testData를 파싱하여 맵으로 반환합니다.
+             * 반복부(Loop) 형식: _BeginLoop_GROUP=count;FIELD=val1@|@val2@|@val3;_EndLoop_GROUP=;
+             * 반복부 필드 값은 @|@ 구분자로 분리된 배열로 저장됩니다.
+             */
+            _parseFieldValuePairs: function(testData) {
+                var savedValues = {};
+                if (!testData || testData.trim() === '') return savedValues;
+
+                var pairs = testData.split(';');
+                var inLoop = false;
+
+                pairs.forEach(function(pair) {
+                    var eqIdx = pair.indexOf('=');
+                    if (eqIdx > 0) {
+                        var key = pair.substring(0, eqIdx);
+                        var val = pair.substring(eqIdx + 1);
+
+                        if (key.indexOf('_BeginLoop_') >= 0) {
+                            inLoop = true;
+                            savedValues[key] = val;
+                        } else if (key.indexOf('_EndLoop_') >= 0) {
+                            inLoop = false;
+                            savedValues[key] = val;
+                        } else if (inLoop) {
+                            // 반복부 필드: @|@ 구분자로 분리하여 배열로 저장 (1건이어도 배열)
+                            savedValues[key] = val.indexOf('@|@') >= 0 ? val.split('@|@') : [val];
+                        } else {
+                            savedValues[key] = val;
+                        }
+                    }
+                });
+                return savedValues;
+            },
+
+            /**
+             * 전문파싱 탭의 필드 데이터를 기반으로 field1=value1;field2=value2 형식 문자열을 생성합니다.
+             * 반복부는 _BeginLoop_GROUP=count;FIELD=val1@|@val2@|@val3;_EndLoop_GROUP=; 형식으로 저장합니다.
+             */
+            buildFieldValuePairs: function() {
+                var rows = $('#mtFieldTableBody tr');
+                var pairs = [];
+                var i = 0;
+                var totalRows = rows.length;
+
+                while (i < totalRows) {
+                    var row = $(rows[i]);
+                    var fieldId = row.find('.messageFieldId').text().trim();
+
+                    if (!fieldId) {
+                        i++;
+                        continue;
+                    }
+
+                    // _BeginLoop_ 발견: 반복부 처리
+                    if (fieldId.indexOf('_BeginLoop_') >= 0) {
+                        var endFieldId = fieldId.replace('_BeginLoop_', '_EndLoop_');
+
+                        // 반복부 본문 수집 (BeginLoop 다음 ~ EndLoop 이전, 보이는 행만)
+                        var loopStartIdx = i + 1;
+                        var loopEndIdx = -1;
+
+                        for (var j = loopStartIdx; j < totalRows; j++) {
+                            var jFieldId = $(rows[j]).find('.messageFieldId').text().trim();
+                            if (jFieldId === endFieldId) {
+                                loopEndIdx = j;
+                                break;
+                            }
+                        }
+
+                        if (loopEndIdx < 0) {
+                            i++;
+                            continue;
+                        }
+
+                        // 보이는 반복부 본문 행만 수집 (hidden 제외)
+                        var loopBodyRows = [];
+                        for (var k = loopStartIdx; k < loopEndIdx; k++) {
+                            var bodyRow = $(rows[k]);
+                            if (!bodyRow.is(':hidden') && !bodyRow.attr('hidden')) {
+                                loopBodyRows.push(bodyRow);
+                            }
+                        }
+
+                        if (loopBodyRows.length === 0) {
+                            // 반복부 0건: count=0으로 저장
+                            pairs.push(fieldId + '=0');
+                            pairs.push(endFieldId + '=');
+                            i = loopEndIdx + 1;
+                            continue;
+                        }
+
+                        // 1세트 크기 계산
+                        var firstLoopFieldId = loopBodyRows[0].find('.messageFieldId').text().trim();
+                        var oneSetSize = loopBodyRows.length;
+                        for (var m = 1; m < loopBodyRows.length; m++) {
+                            if (loopBodyRows[m].find('.messageFieldId').text().trim() === firstLoopFieldId) {
+                                oneSetSize = m;
+                                break;
+                            }
+                        }
+
+                        // 실제 세트 수 자동 계산
+                        var calculatedCount = Math.floor(loopBodyRows.length / oneSetSize);
+
+                        // BeginLoop 마커: 실제 세트 수 저장
+                        pairs.push(fieldId + '=' + calculatedCount);
+
+                        // 각 필드별 값을 @|@ 로 묶기
+                        var fieldValuesMap = {};
+                        var fieldOrder = [];
+
+                        for (var n = 0; n < oneSetSize; n++) {
+                            var fid = loopBodyRows[n].find('.messageFieldId').text().trim();
+                            fieldOrder.push(fid);
+                            fieldValuesMap[fid] = [];
+                        }
+
+                        for (var s = 0; s < loopBodyRows.length; s++) {
+                            var fid = loopBodyRows[s].find('.messageFieldId').text().trim();
+                            var input = loopBodyRows[s].find('input.testValue');
+                            var val = input.length ? (input.val() || '') : '';
+                            if (!fieldValuesMap[fid]) {
+                                fieldValuesMap[fid] = [];
+                            }
+                            fieldValuesMap[fid].push(val);
+                        }
+
+                        fieldOrder.forEach(function(fid) {
+                            var values = fieldValuesMap[fid];
+                            if (values && values.length > 0) {
+                                pairs.push(fid + '=' + values.join('@|@'));
+                            }
+                        });
+
+                        // EndLoop 마커 추가
+                        pairs.push(endFieldId + '=');
+
+                        // _BeginLoop_ input 값도 실제 count로 동기화
+                        $(rows[i]).find('input.testValue').val(calculatedCount);
+
+                        i = loopEndIdx + 1;
+                        continue;
+                    }
+
+                    // _EndLoop_은 위에서 처리되므로 스킵
+                    if (fieldId.indexOf('_EndLoop_') >= 0) {
+                        i++;
+                        continue;
+                    }
+
+                    // 일반 필드
+                    var input = row.find('input.testValue');
+                    if (input.length) {
+                        var rawValue = (input.val() || '').trim();
+                        if (rawValue !== '') {
+                            pairs.push(fieldId + '=' + rawValue);
+                        }
+                    }
+                    i++;
+                }
+
+                return pairs.join(';');
+            },
+
+            // ==================== 통전문 준비 (readOnly 강제 적용) ====================
+
+            /**
+             * 저장/수정 전 통전문을 준비합니다.
+             * - 전문파싱 탭: 필드에서 통전문 생성 (readOnly 필드는 input이 readonly이므로 원본 유지)
+             * - 통전문 탭: 파싱 → readOnly 원본 복원 → 통전문 재생성
+             */
+            _prepareTestData: function(callback) {
+                var self = this;
+                var activeTab = $('.mt-tab-btn.active').data('tab');
+
+                if (activeTab === 'raw') {
+                    var rawMessage = $('#mtRawMessage').val();
+                    this._parseRawToFields(rawMessage, function() {
+                        self._buildRawMessageFromFields();
+                        callback($('#mtRawMessage').val());
+                    });
+                } else {
+                    this._buildRawMessageFromFields();
+                    callback($('#mtRawMessage').val());
+                }
+            },
+
+            /**
+             * 필드값 리스트를 수집합니다 (서버 검증용).
+             * Loop 마커와 숨겨진 필드는 제외하고, 보이는 필드의 ID와 값을 수집합니다.
+             */
+            _collectFieldValues: function() {
+                var fieldValues = [];
+                $('#mtFieldTableBody tr').each(function() {
+                    // 숨겨진 행(반복부 count=0) 제외
+                    if ($(this).attr('hidden')) return;
+
+                    var fieldId = $(this).find('.messageFieldId').text().trim();
+                    if (!fieldId) return;
+
+                    // Loop 마커 제외
+                    if (fieldId.indexOf('_BeginLoop_') >= 0 || fieldId.indexOf('_EndLoop_') >= 0) return;
+
+                    var input = $(this).find('input.testValue');
+                    if (input.length) {
+                        fieldValues.push({
+                            fieldId: fieldId,
+                            value: input.val() || ''
+                        });
+                    }
+                });
+                return fieldValues;
+            },
+
+            // ==================== 저장 (등록 모드) ====================
+
+            save: function() {
+                var testName = $('#mtTestName').val().trim();
+                var testDesc = $('#mtTestDesc').val().trim();
+
+                if (!testName) {
+                    Toast.warning('테스트명을 입력해주세요.');
+                    $('#mtTestName').focus();
+                    return;
+                }
+                if (!testDesc) {
+                    Toast.warning('테스트설명을 입력해주세요.');
+                    $('#mtTestDesc').focus();
+                    return;
+                }
+
+                var self = this;
+                this._prepareTestData(function(testData) {
+                    $.ajax({
+                        url: API_BASE_URL + '/proxy-testdata',
+                        method: 'POST',
+                        contentType: 'application/json',
+                        data: JSON.stringify({
+                            orgId: $('#mtOrgId').val(),
+                            trxId: $('#mtTrxId').val(),
+                            messageId: $('#mtMessageId').val(),
+                            testName: testName,
+                            testDesc: testDesc,
+                            testData: testData,
+                            testGroupId: self.getTestGroupIdValue(),
+                            fieldValues: self._collectFieldValues()
+                        }),
+                        success: function(response) {
+                            Toast.success('저장되었습니다.');
+                            self.close();
+                            window.MessageTests.load();
+                        },
+                        error: function(xhr) {
+                            console.error('Failed to save message test:', xhr);
+                            var errorMsg = getUserFriendlyErrorMessage(xhr);
+                            Toast.error(errorMsg);
+                        }
+                    });
+                });
+            },
+
+            // ==================== 신규저장 (상세 모드) ====================
+
+            saveAsNew: function() {
+                var testName = $('#mtTestName').val().trim();
+                var testDesc = $('#mtTestDesc').val().trim();
+
+                if (!testName) {
+                    Toast.warning('테스트명을 입력해주세요.');
+                    $('#mtTestName').focus();
+                    return;
+                }
+                if (!testDesc) {
+                    Toast.warning('테스트설명을 입력해주세요.');
+                    $('#mtTestDesc').focus();
+                    return;
+                }
+
+                if (this.originalTestName && testName === this.originalTestName) {
+                    Toast.warning('테스트명을 변경해주세요.');
+                    $('#mtTestName').focus();
+                    return;
+                }
+
+                var self = this;
+                Toast.confirm('현재 데이터를 새로운 테스트로 저장하시겠습니까?', function() {
+                    self._prepareTestData(function(testData) {
+                        $.ajax({
+                            url: API_BASE_URL + '/proxy-testdata',
+                            method: 'POST',
+                            contentType: 'application/json',
+                            data: JSON.stringify({
+                                orgId: $('#mtOrgId').val(),
+                                trxId: $('#mtTrxId').val(),
+                                messageId: $('#mtMessageId').val(),
+                                testName: testName,
+                                testDesc: testDesc,
+                                testData: testData,
+                                testGroupId: self.getTestGroupIdValue(),
+                                fieldValues: self._collectFieldValues()
+                            }),
+                            success: function(response) {
+                                Toast.success('신규저장되었습니다.');
+                                self.close();
+                                window.MessageTests.load();
+                            },
+                            error: function(xhr) {
+                                console.error('Failed to save as new:', xhr);
+                                var errorMsg = getUserFriendlyErrorMessage(xhr);
+                                Toast.error(errorMsg);
+                            }
+                        });
+                    });
+                });
+            },
+
+            // ==================== 수정 (상세 모드) ====================
+
+            update: function() {
+                var testSno = $('#mtTestSno').val();
+                var testName = $('#mtTestName').val().trim();
+                var testDesc = $('#mtTestDesc').val().trim();
+
+                if (!testSno) {
+                    Toast.warning('수정 대상을 찾을 수 없습니다.');
+                    return;
+                }
+                if (!testName) {
+                    Toast.warning('테스트명을 입력해주세요.');
+                    $('#mtTestName').focus();
+                    return;
+                }
+                if (!testDesc) {
+                    Toast.warning('테스트설명을 입력해주세요.');
+                    $('#mtTestDesc').focus();
+                    return;
+                }
+
+                var currentGroupId = this.getTestGroupIdValue();
+                if (this.originalTestGroupId && currentGroupId !== this.originalTestGroupId) {
+                    Toast.warning('수정시 테스트그룹ID는 변경할 수 없습니다.');
+                    return;
+                }
+
+                var self = this;
+                Toast.confirm('수정하시겠습니까?', function() {
+                    self._prepareTestData(function(testData) {
+                        $.ajax({
+                            url: API_BASE_URL + '/proxy-testdata/' + testSno,
+                            method: 'PUT',
+                            contentType: 'application/json',
+                            data: JSON.stringify({
+                                testSno: testSno,
+                                testName: testName,
+                                testDesc: testDesc,
+                                testData: testData,
+                                testGroupId: self.getTestGroupIdValue(),
+                                fieldValues: self._collectFieldValues()
+                            }),
+                            success: function(response) {
+                                Toast.success('수정되었습니다.');
+                                self.close();
+                                window.MessageTests.load();
+                            },
+                            error: function(xhr) {
+                                console.error('Failed to update:', xhr);
+                                var errorMsg = getUserFriendlyErrorMessage(xhr);
+                                Toast.error(errorMsg);
+                            }
+                        });
+                    });
+                });
+            },
+
+            // ==================== 삭제 (상세 모드) ====================
+
+            deleteTest: function() {
+                var testSno = $('#mtTestSno').val();
+                var testGroupId = this.getTestGroupIdValue();
+
+                if (!testSno) {
+                    Toast.warning('삭제 대상을 찾을 수 없습니다.');
+                    return;
+                }
+
+                var self = this;
+                Toast.confirm('삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.', function() {
+                    $.ajax({
+                        url: API_BASE_URL + '/proxy-testdata/' + testSno + '?testGroupId=' + encodeURIComponent(testGroupId),
+                        method: 'DELETE',
+                        success: function(response) {
+                            Toast.success('삭제되었습니다.');
+                            self.close();
+                            window.MessageTests.load();
+                        },
+                        error: function(xhr) {
+                            console.error('Failed to delete:', xhr);
+                            var errorMsg = getUserFriendlyErrorMessage(xhr);
+                            Toast.error(errorMsg);
+                        }
+                    });
+                });
+            },
+
+            // ==================== 유틸리티 ====================
+
+            _hexToAscii: function(hex) {
+                var str = '';
+                var cleanHex = hex.replace(/\s/g, '');
+                for (var i = 0; i < cleanHex.length; i += 2) {
+                    var charCode = parseInt(cleanHex.substr(i, 2), 16);
+                    if (!isNaN(charCode)) {
+                        str += String.fromCharCode(charCode);
+                    }
+                }
+                return str;
+            },
+
+            _applyPadding: function(value, length, dataType, dataAlign) {
+                var fillChar;
+                switch (dataType) {
+                    case 'N':
+                    case 'B':
+                        fillChar = '0';
+                        break;
+                    case 'C':
+                    case 'H':
+                    case 'V':
+                    case 'F':
+                    default:
+                        fillChar = ' ';
+                        break;
+                }
+
+                var currentByteLen = this._getByteLength(value);
+
+                if (currentByteLen >= length) {
+                    return value;
+                }
+
+                var padCount = length - currentByteLen;
+                var padding = '';
+                for (var i = 0; i < padCount; i++) {
+                    padding += fillChar;
+                }
+
+                if (dataAlign === 'R') {
+                    return padding + value;
+                } else {
+                    return value + padding;
+                }
+            },
+
+            /**
+             * EUC-KR 기준 바이트 길이를 계산합니다.
+             * 백엔드 MessageParser가 EUC-KR로 파싱하므로 동일 인코딩 기준 사용.
+             * ASCII: 1바이트, 한글/CJK 등 멀티바이트: 2바이트
+             */
+            _getByteLength: function(str) {
+                var byteLen = 0;
+                for (var i = 0; i < str.length; i++) {
+                    var charCode = str.charCodeAt(i);
+                    if (charCode <= 0x7F) {
+                        byteLen += 1;
+                    } else {
+                        byteLen += 2;
+                    }
+                }
+                return byteLen;
+            }
+        };
+
+        // ==================== LoopFieldHandler (반복부 +/- 버튼) ====================
+
+        window.LoopFieldHandler = {
+            addChk: false,
+            removeChk: false,
+
+            addLoopField: function(btnObj) {
+                if (this.addChk) return;
+                this.addChk = true;
+
+                var beginTr = $(btnObj).closest('tr');
+                var tbody = beginTr.closest('tbody');
+                var allTrs = tbody.find('tr');
+                var beginFieldId = beginTr.find('.messageFieldId').text().trim();
+                var endFieldId = beginFieldId.replace('_BeginLoop_', '_EndLoop_');
+
+                var endTr = null;
+                allTrs.each(function() {
+                    if ($(this).find('.messageFieldId').text().trim() === endFieldId) {
+                        endTr = $(this);
+                        return false;
+                    }
+                });
+
+                if (!endTr) {
+                    this.addChk = false;
+                    return;
+                }
+
+                var beginIdx = allTrs.index(beginTr);
+                var endIdx = allTrs.index(endTr);
+                var countInput = beginTr.find('input.testValue');
+                var currentCount = parseInt(countInput.val()) || 0;
+
+                var loopBodyTrs = [];
+                for (var i = beginIdx + 1; i < endIdx; i++) {
+                    loopBodyTrs.push(allTrs.eq(i));
+                }
+
+                if (loopBodyTrs.length === 0) {
+                    this.addChk = false;
+                    return;
+                }
+
+                if (currentCount === 0) {
+                    loopBodyTrs.forEach(function(tr) {
+                        tr.removeAttr('hidden').show();
+                    });
+                    countInput.val(1);
+                    this.addChk = false;
+                    return;
+                }
+
+                var firstFieldId = loopBodyTrs[0].find('.messageFieldId').text().trim();
+                var oneSetSize = loopBodyTrs.length;
+                for (var j = 1; j < loopBodyTrs.length; j++) {
+                    if (loopBodyTrs[j].find('.messageFieldId').text().trim() === firstFieldId) {
+                        oneSetSize = j;
+                        break;
+                    }
+                }
+
+                for (var k = 0; k < oneSetSize; k++) {
+                    var clonedRow = allTrs.eq(beginIdx + 1 + k).clone();
+                    clonedRow.find('input.testValue').val('');
+                    endTr.before(clonedRow);
+                }
+
+                countInput.val(currentCount + 1);
+                this.addChk = false;
+            },
+
+            removeLoopField: function(btnObj) {
+                if (this.removeChk) return;
+                this.removeChk = true;
+
+                var endTr = $(btnObj).closest('tr');
+                var tbody = endTr.closest('tbody');
+                var allTrs = tbody.find('tr');
+                var endFieldId = endTr.find('.messageFieldId').text().trim();
+                var beginFieldId = endFieldId.replace('_EndLoop_', '_BeginLoop_');
+
+                var beginTr = null;
+                allTrs.each(function() {
+                    if ($(this).find('.messageFieldId').text().trim() === beginFieldId) {
+                        beginTr = $(this);
+                        return false;
+                    }
+                });
+
+                if (!beginTr) {
+                    this.removeChk = false;
+                    return;
+                }
+
+                var beginIdx = allTrs.index(beginTr);
+                var endIdx = allTrs.index(endTr);
+                var countInput = beginTr.find('input.testValue');
+                var currentCount = parseInt(countInput.val()) || 0;
+
+                if (currentCount <= 0) {
+                    this.removeChk = false;
+                    return;
+                }
+
+                var loopBodyTrs = [];
+                for (var i = beginIdx + 1; i < endIdx; i++) {
+                    loopBodyTrs.push(allTrs.eq(i));
+                }
+
+                var firstFieldId = loopBodyTrs[0].find('.messageFieldId').text().trim();
+                var oneSetSize = loopBodyTrs.length;
+                for (var j = 1; j < loopBodyTrs.length; j++) {
+                    if (loopBodyTrs[j].find('.messageFieldId').text().trim() === firstFieldId) {
+                        oneSetSize = j;
+                        break;
+                    }
+                }
+
+                if (currentCount <= 1) {
+                    loopBodyTrs.forEach(function(tr) {
+                        tr.attr('hidden', 'hidden').hide();
+                    });
+                    countInput.val(0);
+                    this.removeChk = false;
+                    return;
+                }
+
+                if (loopBodyTrs.length <= oneSetSize) {
+                    Toast.warning('반복부 필드를 전부 제거할 수 없습니다.');
+                    this.removeChk = false;
+                    return;
+                }
+
+                for (var k = 1; k <= oneSetSize; k++) {
+                    allTrs.eq(endIdx - k).remove();
+                }
+
+                countInput.val(currentCount - 1);
+                this.removeChk = false;
+            }
+        };
+
+        // ==================== ProxySettingModal Object ====================
+
+        window.ProxySettingModal = {
+            currentOrgId: null,
+            currentOrgName: null,
+            currentTrxId: null,
+            currentProxyField: null,  // 첫번째 데이터의 PROXY_FIELD 값
+
+            open: function(orgId, orgName, trxId) {
+                this.currentOrgId = orgId;
+                this.currentOrgName = orgName;
+                this.currentTrxId = trxId;
+                this.currentProxyField = null;
+
+                $('#psOrgId').val(orgId);
+                $('#psOrgName').val(orgName);
+                $('#psTrxId').val(trxId);
+                $('#psTestName').val('');
+                $('#psUserId').val('');
+
+                bootstrap.Modal.getOrCreateInstance(document.getElementById('proxySettingModal')).show();
+
+                this.load();
+                this.loadDefault();
+            },
+
+            close: function() {
+                bootstrap.Modal.getInstance(document.getElementById('proxySettingModal')).hide();
+            },
+
+            search: function() {
+                this.load();
+                this.loadDefault();
+            },
+
+            load: function() {
+                var self = this;
+                var params = {
+                    orgId: this.currentOrgId,
+                    trxId: this.currentTrxId,
+                    testName: $('#psTestName').val() || '',
+                    userId: $('#psUserId').val() || ''
+                };
+
+                $.ajax({
+                    url: API_BASE_URL + '/proxy-testdata/proxy-settings',
+                    method: 'GET',
+                    data: params,
+                    success: function(response) {
+                        if (response.success && response.data) {
+                            self.renderTable(response.data);
+                            // 첫번째 데이터의 PROXY_FIELD 값으로 동적 대응답 필드ID 영역 갱신
+                            self.updateProxyFieldArea(response.data);
+                        } else {
+                            self.renderTable([]);
+                            self.updateProxyFieldArea([]);
+                        }
+                    },
+                    error: function(xhr) {
+                        console.error('Failed to load proxy settings:', xhr);
+                        var errorMsg = getUserFriendlyErrorMessage(xhr);
+                        Toast.error(errorMsg);
+                        self.renderTable([]);
+                        self.updateProxyFieldArea([]);
+                    }
+                });
+            },
+
+            /**
+             * 첫번째 데이터의 PROXY_FIELD 값을 기준으로 동적 대응답 필드ID 영역을 갱신합니다.
+             */
+            updateProxyFieldArea: function(data) {
+                var proxyField = (data && data.length > 0) ? (data[0].proxyField || '') : '';
+                this.currentProxyField = proxyField || null;
+
+                $('#psProxyFieldId').val(proxyField);
+                if (proxyField) {
+                    $('#psProxyFieldBtn').text('수정');
+                } else {
+                    $('#psProxyFieldBtn').text('등록');
+                }
+            },
+
+            loadDefault: function() {
+                var params = {
+                    orgId: this.currentOrgId,
+                    trxId: this.currentTrxId
+                };
+
+                $.ajax({
+                    url: API_BASE_URL + '/proxy-testdata/proxy-settings/default',
+                    method: 'GET',
+                    data: params,
+                    success: function(response) {
+                        var tbody = $('#psDefaultTestInfoBody');
+                        tbody.empty();
+                        if (response.success && response.data) {
+                            var d = response.data;
+                            tbody.append('<tr><td>' + d.testSno + '</td><td>' + HtmlUtils.escape(d.testName) + '</td></tr>');
+                        } else {
+                            tbody.append('<tr><td colspan="2" class="text-center text-body-secondary">미설정</td></tr>');
+                        }
+                    },
+                    error: function(xhr) {
+                        console.error('Failed to load default proxy:', xhr);
+                        var tbody = $('#psDefaultTestInfoBody');
+                        tbody.empty();
+                        tbody.append('<tr><td colspan="2" class="text-center text-body-secondary">미설정</td></tr>');
+                    }
+                });
+            },
+
+            // ==================== 동적 대응답 필드ID 등록/수정 ====================
+
+            saveProxyField: function() {
+                var proxyField = $('#psProxyFieldId').val().trim();
+
+                var isUpdate = this.currentProxyField != null && this.currentProxyField !== '';
+                var actionLabel = isUpdate ? '수정' : '등록';
+
+                var self = this;
+                Toast.confirm('필드 구분값을 ' + actionLabel + '하시겠습니까?', function() {
+                    $.ajax({
+                        url: API_BASE_URL + '/proxy-testdata/proxy-settings/proxy-field',
+                        method: 'PUT',
+                        data: {
+                            orgId: self.currentOrgId,
+                            trxId: self.currentTrxId,
+                            proxyField: proxyField
+                        },
+                        success: function(response) {
+                            if (response.success) {
+                                Toast.success('필드 구분값이 ' + actionLabel + '되었습니다.');
+                                self.currentProxyField = proxyField || null;
+                                $('#psProxyFieldBtn').text(proxyField ? '수정' : '등록');
+                                self.reload();
+                            }
+                        },
+                        error: function(xhr) {
+                            console.error('Failed to update proxy field:', xhr);
+                            var errorMsg = getUserFriendlyErrorMessage(xhr);
+                            Toast.error(errorMsg);
+                        }
+                    });
+                });
+            },
+
+            // ==================== 대응답 값 등록/수정 ====================
+
+            saveProxyValue: function(testSno, inputEl) {
+                var proxyValue = $(inputEl).val().trim();
+
+                var btnEl = $(inputEl).siblings('button');
+                var isUpdate = btnEl.text().trim() === '수정';
+                var actionLabel = isUpdate ? '수정' : '등록';
+
+                var self = this;
+                Toast.confirm('대응답 값을 ' + actionLabel + '하시겠습니까?', function() {
+                    if (!proxyValue) {
+                        self._doUpdateProxyValue(testSno, proxyValue, actionLabel);
+                        return;
+                    }
+                    // 중복 체크
+                    $.ajax({
+                        url: API_BASE_URL + '/proxy-testdata/proxy-settings/proxy-value/count',
+                        method: 'GET',
+                        data: {
+                            orgId: self.currentOrgId,
+                            trxId: self.currentTrxId,
+                            proxyValue: proxyValue
+                        },
+                        success: function(response) {
+                            if (response.success && response.data > 0) {
+                                Toast.confirm('동일한 대응답 값이 존재합니다. 계속 진행할 경우 기존에 저장되어 있던 값은 사라집니다. ' + actionLabel + ' 하시겠습니까?', function() {
+                                    self._doUpdateProxyValue(testSno, proxyValue, actionLabel);
+                                });
+                            } else {
+                                self._doUpdateProxyValue(testSno, proxyValue, actionLabel);
+                            }
+                        },
+                        error: function(xhr) {
+                            console.error('Failed to check proxy value count:', xhr);
+                            var errorMsg = getUserFriendlyErrorMessage(xhr);
+                            Toast.error(errorMsg);
+                        }
+                    });
+                });
+            },
+
+            _doUpdateProxyValue: function(testSno, proxyValue, actionLabel) {
+                var self = this;
+                var params = {
+                    orgId: this.currentOrgId,
+                    trxId: this.currentTrxId,
+                    testSno: testSno,
+                    proxyValue: proxyValue,
+                    userId: $('#psUserId').val() || '',
+                    testName: $('#psTestName').val() || ''
+                };
+
+                $.ajax({
+                    url: API_BASE_URL + '/proxy-testdata/proxy-settings/proxy-value',
+                    method: 'PUT',
+                    contentType: 'application/json',
+                    data: JSON.stringify(params),
+                    success: function(response) {
+                        if (response.success) {
+                            Toast.success('대응답 값이 ' + actionLabel + '되었습니다.');
+                            self.reload();
+                        }
+                    },
+                    error: function(xhr) {
+                        console.error('Failed to update proxy value:', xhr);
+                        var errorMsg = getUserFriendlyErrorMessage(xhr);
+                        Toast.error(errorMsg);
+                    }
+                });
+            },
+
+            // ==================== 기본 대응답 설정/해제 ====================
+
+            setDefaultProxy: function(testSno) {
+                var self = this;
+                Toast.confirm('기본 대응답 값을 설정하시겠습니까?', function() {
+                    $.ajax({
+                        url: API_BASE_URL + '/proxy-testdata/proxy-settings/default-proxy/set',
+                        method: 'PUT',
+                        data: {
+                            orgId: self.currentOrgId,
+                            trxId: self.currentTrxId,
+                            testSno: testSno
+                        },
+                        success: function(response) {
+                            if (response.success) {
+                                Toast.success('기본 대응답 값이 설정되었습니다.');
+                                self.reload();
+                            }
+                        },
+                        error: function(xhr) {
+                            console.error('Failed to set default proxy:', xhr);
+                            var errorMsg = getUserFriendlyErrorMessage(xhr);
+                            Toast.error(errorMsg);
+                        }
+                    });
+                });
+            },
+
+            clearDefaultProxy: function() {
+                var self = this;
+                Toast.confirm('기본 대응답 값을 해제하시겠습니까?', function() {
+                    $.ajax({
+                        url: API_BASE_URL + '/proxy-testdata/proxy-settings/default-proxy/clear',
+                        method: 'PUT',
+                        data: {
+                            orgId: self.currentOrgId,
+                            trxId: self.currentTrxId
+                        },
+                        success: function(response) {
+                            if (response.success) {
+                                Toast.success('기본 대응답 값이 해제되었습니다.');
+                                self.reload();
+                            }
+                        },
+                        error: function(xhr) {
+                            console.error('Failed to clear default proxy:', xhr);
+                            var errorMsg = getUserFriendlyErrorMessage(xhr);
+                            Toast.error(errorMsg);
+                        }
+                    });
+                });
+            },
+
+            // ==================== 재조회 (목록 + 기본 대응답 정보) ====================
+
+            reload: function() {
+                this.load();
+                this.loadDefault();
+            },
+
+            // ==================== 테이블 렌더링 ====================
+
+            renderTable: function(data) {
+                var tbody = $('#psTableBody');
+                tbody.empty();
+
+                if (!data || data.length === 0) {
+                    tbody.append('<tr><td colspan="5" class="sp-empty-state">조회된 데이터가 없습니다.</td></tr>');
+                    return;
+                }
+
+                data.forEach(function(item) {
+                    var proxyValueCell = '';
+                    var escapedValue = item.proxyValue != null ? HtmlUtils.escape(item.proxyValue) : '';
+                    var btnLabel = (item.proxyValue == null || item.proxyValue === '') ? '등록' : '수정';
+                    if (HAS_WRITE) {
+                        proxyValueCell = '<td class="mt-flex-cell">' +
+                            '<input type="text" class="ps-proxy-value-input" value="' + escapedValue + '" data-test-sno="' + item.testSno + '">' +
+                            '<button class="btn btn-primary btn-sm" onclick="ProxySettingModal.saveProxyValue(' + item.testSno + ', $(this).siblings(\'input\')[0])">' + btnLabel + '</button>' +
+                            '</td>';
+                    } else {
+                        proxyValueCell = '<td>' + escapedValue + '</td>';
+                    }
+
+                    var defaultProxyCell = '';
+                    if (HAS_WRITE) {
+                        if (item.defaultProxyYn === 'Y') {
+                            defaultProxyCell = '<td><button class="btn btn-outline-primary btn-sm" onclick="ProxySettingModal.clearDefaultProxy()">해제</button></td>';
+                        } else {
+                            defaultProxyCell = '<td><button class="btn btn-primary btn-sm" onclick="ProxySettingModal.setDefaultProxy(' + item.testSno + ')">설정</button></td>';
+                        }
+                    } else {
+                        defaultProxyCell = '<td>' + (item.defaultProxyYn === 'Y' ? 'Y' : '-') + '</td>';
+                    }
+
+                    var row = '<tr>' +
+                        '<td>' + item.testSno + '</td>' +
+                        '<td>' + HtmlUtils.escape(item.testName) + '</td>' +
+                        proxyValueCell +
+                        defaultProxyCell +
+                        '<td>' + (HtmlUtils.escape(item.userId) || '-') + '</td>' +
+                        '</tr>';
+
+                    tbody.append(row);
+                });
+            }
+        };
+
+        // ==================== Toolbar Event Bindings ====================
+
+        $('#btnExcel').off('click').on('click', function() {
+            const params = SearchForm.getParams('#searchContainer');
+            const queryParams = $.param({
+                orgIdFilter: params.orgIdFilter || '',
+                trxIdFilter: params.trxIdFilter || '',
+                testNameFilter: params.testNameFilter || '',
+                userIdFilter: params.userIdFilter || '',
+                sortBy: window.MessageTests.sortBy || '',
+                sortDirection: window.MessageTests.sortDirection || ''
+            });
+            window.location.href = API_BASE_URL + '/proxy-testdata/export?' + queryParams;
+        });
+
+        $('#btnPrint').off('click').on('click', function() {
+            const columns = [
+                { key: 'orgName', label: '기관명' },
+                { key: 'trxId', label: '거래ID' },
+                { key: 'testSno', label: '테스트순번' },
+                { key: 'testName', label: '테스트명' },
+                { key: 'testDesc', label: '테스트설명' },
+                { key: 'userId', label: '사용자ID' }
+            ];
+            PrintUtil.print({ title: '테스트데이터 목록', columns: columns, data: window.MessageTests.messageTestsData });
+        });
+
+        $('#btnRefresh').off('click').on('click', function() {
+            window.MessageTests.load();
+        });
+
+        // ==================== Initialization ====================
+
+        window.MessageTests.init();
+        window.MessageTests.currentPage = 1;
+        $('#messageTestTable thead th[data-sort]').addClass('sortable');
+        window.MessageTests.updateSortIndicators();
+        window.MessageTests.load();
+        })();
+    </script>
+</th:block>
+</body>
+</html>

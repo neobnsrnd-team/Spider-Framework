@@ -1,0 +1,486 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<div th:fragment="modal">
+    <!-- Modal -->
+    <div class="modal fade" id="codeGroupModal" tabindex="-1" aria-labelledby="codeGroupModalLabel" aria-hidden="true">
+        <div class="modal-dialog sp-modal-xxl">
+            <div class="modal-content">
+                <!-- Modal Header -->
+                <div class="modal-header">
+                    <h5 class="modal-title" id="codeGroupModalLabel">
+                        <i class="bi bi-pencil"></i> 코드 그룹 수정
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+
+                <!-- Modal Body -->
+                <div class="modal-body">
+                    <!-- 코드 그룹 정보 섹션 -->
+                    <div class="card border p-3 mb-3 bg-body-secondary">
+                        <h6 class="section-title">
+                            <i class="bi bi-stack text-danger"></i> 코드 그룹 정보
+                        </h6>
+
+                        <div class="d-flex flex-column gap-2">
+                            <div class="row g-2 align-items-center">
+                                <div class="col-auto"><label class="form-label mb-0 small fw-semibold sp-info-label">코드그룹ID</label></div>
+                                <div class="col"><input type="text" id="modalCodeGroupId" class="form-control form-control-sm" readonly></div>
+                                <div class="col-auto"><label class="form-label mb-0 small fw-semibold sp-info-label">최종수정사용자</label></div>
+                                <div class="col"><input type="text" id="modalLastUpdateUserId" class="form-control form-control-sm" readonly></div>
+                            </div>
+
+                            <div class="row g-2 align-items-center">
+                                <div class="col-auto"><label class="form-label mb-0 small fw-semibold sp-info-label">코드그룹명</label></div>
+                                <div class="col"><input type="text" id="modalCodeGroupName" class="form-control form-control-sm"></div>
+                                <div class="col-auto"><label class="form-label mb-0 small fw-semibold sp-info-label">최종수정일시</label></div>
+                                <div class="col"><input type="text" id="modalLastUpdateDtime" class="form-control form-control-sm" readonly></div>
+                            </div>
+
+                            <div class="row g-2 align-items-center">
+                                <div class="col-auto"><label class="form-label mb-0 small fw-semibold sp-info-label">코드그룹설명</label></div>
+                                <div class="col"><textarea id="modalCodeGroupDesc" class="form-control form-control-sm" rows="3"></textarea></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Excel 복사 안내 -->
+                    <div class="alert alert-warning d-flex justify-content-between align-items-center mb-2">
+                        ※ Excel데이터 Copy는 Excel복사버튼 클릭하세요!
+                        <div class="d-flex gap-2">
+                            <button class="btn btn-success btn-sm" onclick="CodeGroupModal.copyToExcel()">
+                                <i class="bi bi-file-earmark-excel"></i> Excel복사
+                            </button>
+                            <button class="btn btn-secondary btn-sm" onclick="CodeGroupModal.addRow()"
+                                    th:if="${userAuthorities != null and userAuthorities.contains('CODE_GROUP:W')}">
+                                <i class="bi bi-plus-lg"></i> 행 추가
+                            </button>
+                            <button class="btn btn-danger btn-sm" onclick="CodeGroupModal.deleteSelected()"
+                                    th:if="${userAuthorities != null and userAuthorities.contains('CODE_GROUP:W')}">
+                                <i class="bi bi-trash"></i> 선택행 삭제
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- 코드 목록 테이블 -->
+                    <div class="table-responsive border rounded overflow-hidden">
+                        <table class="table table-bordered sp-data-grid mb-0" id="codesTable">
+                            <thead>
+                            <tr>
+                                <th class="col-w-50">
+                                    <input type="checkbox" id="selectAllCodes" onchange="CodeGroupModal.toggleSelectAll(this)">
+                                </th>
+                                <th class="col-w-80">CRUD</th>
+                                <th class="col-w-150">코드</th>
+                                <th class="col-w-200">코드한글명</th>
+                                <th class="col-w-200">코드영문명</th>
+                                <th class="col-w-300">코드설명</th>
+                                <th class="col-w-120">정렬순서</th>
+                                <th class="col-w-100">사용여부</th>
+                            </tr>
+                            </thead>
+                            <tbody id="codesTableBody">
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Modal Footer -->
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-danger" onclick="CodeGroupModal.deleteAll()"
+                            th:if="${userAuthorities != null and userAuthorities.contains('CODE_GROUP:W')}">
+                        <i class="bi bi-trash"></i> 전체삭제
+                    </button>
+                    <button type="button" class="btn btn-success" onclick="CodeGroupModal.save()"
+                            th:if="${userAuthorities != null and userAuthorities.contains('CODE_GROUP:W')}">
+                        <i class="bi bi-floppy"></i> 저장
+                    </button>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="bi bi-x-lg"></i> 닫기
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<th:block th:fragment="script">
+<script>
+    var CodeGroupModal = {
+        currentCodeGroupId: null,
+        codes: [],
+        mode: 'edit',
+
+        openForCreate: function() {
+            this.mode = 'create';
+            this.currentCodeGroupId = null;
+            $('#codeGroupModalLabel').html('<i class="bi bi-plus-lg-circle"></i> 코드 그룹 추가');
+            this.renderEmptyForm();
+            bootstrap.Modal.getOrCreateInstance(document.getElementById('codeGroupModal')).show();
+        },
+
+        openForEdit: function(codeGroupId) {
+            this.mode = 'edit';
+            this.currentCodeGroupId = codeGroupId;
+            $('#codeGroupModalLabel').html('<i class="bi bi-pencil"></i> 코드 그룹 수정');
+            this.loadCodeGroupDetail(codeGroupId);
+            bootstrap.Modal.getOrCreateInstance(document.getElementById('codeGroupModal')).show();
+        },
+
+        renderEmptyForm: function() {
+            $('#modalCodeGroupId').val('').prop('readonly', false);
+            $('#modalCodeGroupName').val('');
+            $('#modalCodeGroupDesc').val('');
+            $('#modalLastUpdateUserId').val('');
+            $('#modalLastUpdateDtime').val('');
+            this.codes = [];
+            const tbody = $('#codesTableBody');
+            tbody.empty();
+            tbody.append(`
+                <tr>
+                    <td colspan="8" class="text-center py-4 text-body-secondary">
+                        "행 추가" 버튼을 클릭하여 코드를 추가하세요.
+                    </td>
+                </tr>
+            `);
+        },
+
+        loadCodeGroupDetail: function(codeGroupId) {
+            $.ajax({
+                url: API_BASE_URL + '/code-groups/' + codeGroupId + '/with-codes',
+                method: 'GET',
+                success: (response) => {
+                    if (response.success && response.data) {
+                        this.renderCodeGroupInfo(response.data);
+                        this.renderCodes(response.data.codes || []);
+                    }
+                },
+                error: (xhr) => {
+                    console.error('Failed to load code group detail:', xhr);
+                    Toast.error('코드 그룹 상세 정보를 불러오는데 실패했습니다.');
+                }
+            });
+        },
+
+        renderCodeGroupInfo: function(codeGroup) {
+            $('#modalCodeGroupId').val(codeGroup.codeGroupId || '').prop('readonly', true);
+            $('#modalCodeGroupName').val(codeGroup.codeGroupName || '');
+            $('#modalCodeGroupDesc').val(codeGroup.codeGroupDesc || '');
+            $('#modalLastUpdateUserId').val(codeGroup.lastUpdateUserId || '');
+            $('#modalLastUpdateDtime').val(this.formatDateTime(codeGroup.lastUpdateDtime) || '');
+        },
+
+        renderCodes: function(codes) {
+            this.codes = codes;
+            const tbody = $('#codesTableBody');
+            tbody.empty();
+
+            if (!codes || codes.length === 0) {
+                tbody.append(`
+                    <tr>
+                        <td colspan="8" class="text-center py-4 text-body-secondary">
+                            등록된 코드가 없습니다.
+                        </td>
+                    </tr>
+                `);
+                return;
+            }
+
+            codes.forEach((code, index) => {
+                tbody.append(this.createCodeRow(code, index));
+            });
+        },
+
+        createCodeRow: function(code, index) {
+            return `
+                <tr data-index="${index}" data-code-group-id="${code.codeGroupId || ''}" data-code="${code.code || ''}">
+                    <td class="text-center">
+                        <input type="checkbox" class="code-checkbox" data-index="${index}">
+                    </td>
+                    <td class="crud-cell">
+                        <span>${code.crud || '-'}</span>
+                    </td>
+                    <td>
+                        <input type="text" class="form-control form-control-sm"
+                               value="${code.code || ''}"
+                               data-field="code" data-index="${index}">
+                    </td>
+                    <td>
+                        <input type="text" class="form-control form-control-sm"
+                               value="${code.codeName || ''}"
+                               data-field="codeName" data-index="${index}">
+                    </td>
+                    <td>
+                        <input type="text" class="form-control form-control-sm"
+                               value="${code.codeEngname || ''}"
+                               data-field="codeEngname" data-index="${index}">
+                    </td>
+                    <td>
+                        <input type="text" class="form-control form-control-sm"
+                               value="${code.codeDesc || ''}"
+                               data-field="codeDesc" data-index="${index}">
+                    </td>
+                    <td>
+                        <input type="number" class="form-control form-control-sm text-center"
+                               value="${code.sortOrder || 0}"
+                               data-field="sortOrder" data-index="${index}">
+                    </td>
+                    <td class="text-center">
+                        <select class="form-select form-select-sm"
+                                data-field="useYn" data-index="${index}">
+                            <option value="Y" ${code.useYn === 'Y' ? 'selected' : ''}>사용</option>
+                            <option value="N" ${code.useYn === 'N' ? 'selected' : ''}>미사용</option>
+                        </select>
+                    </td>
+                </tr>
+            `;
+        },
+
+        formatDateTime: function(datetime) {
+            if (!datetime) return '';
+            if (datetime.length === 14) {
+                return datetime.substring(0, 4) + '/' +
+                    datetime.substring(4, 6) + '/' +
+                    datetime.substring(6, 8) + ' ' +
+                    datetime.substring(8, 10) + ':' +
+                    datetime.substring(10, 12) + ':' +
+                    datetime.substring(12, 14);
+            }
+            return datetime;
+        },
+
+        addRow: function() {
+            const newCode = {
+                codeGroupId: this.currentCodeGroupId,
+                code: '',
+                codeName: '',
+                codeEngname: '',
+                codeDesc: '',
+                sortOrder: 0,
+                useYn: 'Y',
+                crud: 'C'
+            };
+
+            this.codes.push(newCode);
+
+            $('#codesTableBody tr').each(function() {
+                if ($(this).find('td[colspan]').length > 0) {
+                    $(this).remove();
+                }
+            });
+
+            $('#codesTableBody').append(this.createCodeRow(newCode, this.codes.length - 1));
+        },
+
+        toggleSelectAll: function(checkbox) {
+            $('.code-checkbox').prop('checked', checkbox.checked);
+        },
+
+        deleteSelected: function() {
+            var checkedBoxes = $('.code-checkbox:checked');
+
+            if (checkedBoxes.length === 0) {
+                Toast.warning('삭제할 항목을 선택해주세요.');
+                return;
+            }
+
+            var self = this;
+            Toast.confirm('선택한 ' + checkedBoxes.length + '개 항목을 삭제하시겠습니까?', function () {
+                var codeIds = [];
+                checkedBoxes.each(function() {
+                    var row = $(this).closest('tr');
+                    var codeGroupId = row.data('code-group-id');
+                    var code = row.data('code');
+
+                    if (codeGroupId && code) {
+                        codeIds.push({ codeGroupId: codeGroupId, code: code });
+                    }
+                });
+
+                checkedBoxes.each(function() {
+                    $(this).closest('tr').remove();
+                });
+
+                if ($('#codesTableBody tr').length === 0) {
+                    var message = self.mode === 'create'
+                        ? '"행 추가" 버튼을 클릭하여 코드를 추가하세요.'
+                        : '등록된 코드가 없습니다.';
+                    $('#codesTableBody').append(
+                        '<tr><td colspan="8" class="text-center py-4 text-body-secondary">' + message + '</td></tr>'
+                    );
+                }
+
+                if (self.mode === 'edit' && codeIds.length > 0) {
+                    $.ajax({
+                        url: API_BASE_URL + '/codes/batch',
+                        method: 'DELETE',
+                        contentType: 'application/json',
+                        data: JSON.stringify(codeIds),
+                        success: function (response) {
+                            if (response.success) {
+                                Toast.success('선택한 코드가 삭제되었습니다.');
+                            }
+                        },
+                        error: function (xhr) {
+                            console.error('Failed to delete codes:', xhr);
+                            Toast.error('코드 삭제에 실패했습니다.');
+                        }
+                    });
+                }
+            });
+        },
+
+        deleteAll: function() {
+            if (!this.currentCodeGroupId) {
+                Toast.warning('삭제할 코드 그룹이 없습니다.');
+                return;
+            }
+
+            var self = this;
+            Toast.confirm('코드 그룹과 모든 하위 코드를 삭제하시겠습니까?\n이 작업은 되돌릴 수 없습니다.', function () {
+                $.ajax({
+                    url: API_BASE_URL + '/code-groups/' + self.currentCodeGroupId + '/with-codes',
+                    method: 'DELETE',
+                    success: function (response) {
+                        if (response.success) {
+                            Toast.success('코드 그룹과 하위 코드가 모두 삭제되었습니다.');
+                            bootstrap.Modal.getInstance(document.getElementById('codeGroupModal')).hide();
+                            if (typeof CodeGroups !== 'undefined' && typeof CodeGroups.load === 'function') {
+                                CodeGroups.load();
+                            }
+                        } else {
+                            Toast.error('삭제 실패: ' + (response.message || '알 수 없는 오류'));
+                        }
+                    },
+                    error: function (xhr) {
+                        console.error('Failed to delete code group:', xhr);
+                        Toast.error(xhr.responseJSON?.message || '코드 그룹 삭제에 실패했습니다.');
+                    }
+                });
+            });
+        },
+
+        copyToExcel: function() {
+            Toast.info('Excel 복사 기능은 준비 중입니다.');
+        },
+
+        save: function() {
+            if (this.mode === 'create') {
+                this.createCodeGroup();
+            } else if (this.mode === 'edit') {
+                this.updateCodeGroup();
+            }
+        },
+
+        collectFormData: function() {
+            const codeGroupId = $('#modalCodeGroupId').val().trim();
+            const codeGroupName = $('#modalCodeGroupName').val().trim();
+            const codeGroupDesc = $('#modalCodeGroupDesc').val().trim();
+
+            if (!codeGroupId) {
+                Toast.warning('코드그룹ID를 입력해주세요.');
+                $('#modalCodeGroupId').focus();
+                return null;
+            }
+
+            if (!codeGroupName) {
+                Toast.warning('코드그룹명을 입력해주세요.');
+                $('#modalCodeGroupName').focus();
+                return null;
+            }
+
+            const codes = [];
+            $('#codesTableBody tr').each(function() {
+                if ($(this).find('td[colspan]').length > 0) return;
+
+                const code = $(this).find('input[data-field="code"]').val().trim();
+                const codeName = $(this).find('input[data-field="codeName"]').val().trim();
+                const codeEngname = $(this).find('input[data-field="codeEngname"]').val().trim();
+                const codeDesc = $(this).find('input[data-field="codeDesc"]').val().trim();
+                const sortOrder = parseInt($(this).find('input[data-field="sortOrder"]').val()) || 0;
+                const useYn = $(this).find('select[data-field="useYn"]').val();
+
+                if (code && codeName) {
+                    codes.push({
+                        codeGroupId: codeGroupId,
+                        code: code,
+                        codeName: codeName,
+                        codeEngname: codeEngname,
+                        codeDesc: codeDesc,
+                        sortOrder: sortOrder,
+                        useYn: useYn
+                    });
+                }
+            });
+
+            return {
+                codeGroupId: codeGroupId,
+                codeGroupName: codeGroupName,
+                codeGroupDesc: codeGroupDesc,
+                codes: codes
+            };
+        },
+
+        createCodeGroup: function() {
+            const requestData = this.collectFormData();
+            if (!requestData) return;
+
+            $.ajax({
+                url: API_BASE_URL + '/code-groups/with-codes',
+                method: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify(requestData),
+                success: (response) => {
+                    if (response.success) {
+                        Toast.success('코드 그룹이 생성되었습니다.');
+                        bootstrap.Modal.getInstance(document.getElementById('codeGroupModal')).hide();
+                        if (typeof CodeGroups !== 'undefined' && typeof CodeGroups.load === 'function') {
+                            CodeGroups.load();
+                        }
+                    } else {
+                        Toast.error('생성 실패: ' + (response.message || '알 수 없는 오류'));
+                    }
+                },
+                error: (xhr) => {
+                    console.error('Failed to create code group:', xhr);
+                    Toast.error(xhr.responseJSON?.message || '코드 그룹 생성에 실패했습니다.');
+                }
+            });
+        },
+
+        updateCodeGroup: function() {
+            const requestData = this.collectFormData();
+            if (!requestData) return;
+
+            if (!this.currentCodeGroupId) {
+                Toast.warning('수정할 코드 그룹 ID가 없습니다.');
+                return;
+            }
+
+            $.ajax({
+                url: API_BASE_URL + '/code-groups/' + this.currentCodeGroupId + '/with-codes',
+                method: 'PUT',
+                contentType: 'application/json',
+                data: JSON.stringify(requestData),
+                success: (response) => {
+                    if (response.success) {
+                        Toast.success('코드 그룹이 수정되었습니다.');
+                        bootstrap.Modal.getInstance(document.getElementById('codeGroupModal')).hide();
+                        if (typeof CodeGroups !== 'undefined' && typeof CodeGroups.load === 'function') {
+                            CodeGroups.load();
+                        }
+                    } else {
+                        Toast.error('수정 실패: ' + (response.message || '알 수 없는 오류'));
+                    }
+                },
+                error: (xhr) => {
+                    console.error('Failed to update code group:', xhr);
+                    Toast.error(xhr.responseJSON?.message || '코드 그룹 수정에 실패했습니다.');
+                }
+            });
+        }
+    };
+</script>
+</th:block>
+</body>
+</html>

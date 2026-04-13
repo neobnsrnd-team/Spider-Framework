@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<!-- TransDataFile Page Scripts -->
+<th:block th:fragment="script">
+<!-- Flatpickr CSS -->
+<link th:href="@{/vendor/flatpickr/flatpickr.min.css}" rel="stylesheet">
+
+<script>
+    /**
+     * 파일 사이즈 포맷 함수
+     */
+    function formatFileSize(bytes) {
+        if (bytes == null || bytes === 0) return '0 B';
+        const units = ['B', 'KB', 'MB', 'GB'];
+        let i = 0;
+        let size = bytes;
+        while (size >= 1024 && i < units.length - 1) {
+            size /= 1024;
+            i++;
+        }
+        return size.toFixed(i === 0 ? 0 : 1) + ' ' + units[i];
+    }
+
+    // TransDataFile Management Namespace
+    window.TransDataFile = (function() {
+        let currentPage = 1;
+        let totalItems = 0;
+        let itemsPerPage = 10;
+        let sortBy = null;
+        let sortDirection = null;
+        let fileTypeMap = {};
+        let currentData = [];
+
+        // Initialize
+        function init() {
+            console.log('TransDataFile initialized');
+
+            // Initialize file types dropdown
+            loadFileTypes();
+
+            // Initialize date pickers (Flatpickr)
+            initDatePickers();
+
+            // Initialize page size selector
+            const limitRows = document.getElementById('limitRows');
+            if (limitRows) {
+                limitRows.value = itemsPerPage;
+                limitRows.addEventListener('change', function() {
+                    itemsPerPage = parseInt(this.value);
+                    currentPage = 1;
+                    search();
+                });
+            }
+
+            // Initialize refresh button
+            const btnRefresh = document.getElementById('btnRefresh');
+            if (btnRefresh) {
+                btnRefresh.addEventListener('click', search);
+            }
+
+            // Initialize Excel export button
+            const btnExcel = document.getElementById('btnExcel');
+            if (btnExcel) {
+                btnExcel.addEventListener('click', function() {
+                    const params = new URLSearchParams();
+                    const fileName = document.getElementById('searchFileName').value;
+                    const fileType = document.getElementById('searchFileType').value;
+                    const dateFrom = document.getElementById('searchDateFrom').value.replace(/\//g, '');
+                    const dateTo = document.getElementById('searchDateTo').value.replace(/\//g, '');
+                    if (fileName) params.append('fileName', fileName);
+                    if (fileType) params.append('fileType', fileType);
+                    if (dateFrom) params.append('dateFrom', dateFrom);
+                    if (dateTo) params.append('dateTo', dateTo);
+                    if (sortBy) params.append('sortBy', sortBy);
+                    if (sortDirection) params.append('sortDirection', sortDirection);
+                    window.location.href = '/api/trans/trans-data-inqlist/export' + (params.toString() ? '?' + params.toString() : '');
+                });
+            }
+
+            // Initialize Print button
+            const btnPrint = document.getElementById('btnPrint');
+            if (btnPrint) {
+                btnPrint.addEventListener('click', function() {
+                    const columns = [
+                        { key: 'fileType', label: '이행대상 항목' },
+                        { key: 'fileName', label: '이행대상 파일명' },
+                        { key: 'fileSize', label: '파일 사이즈' },
+                        { key: 'createDate', label: '이행파일 생성일' }
+                    ];
+                    // 출력 시 fileType을 한글명으로 변환
+                    const printData = (currentData || []).map(item => ({
+                        ...item,
+                        fileType: fileTypeMap[item.fileType] || item.fileType || '-'
+                    }));
+                    PrintUtil.print({ title: '이행 데이터 파일 목록', columns: columns, data: printData });
+                });
+            }
+
+            // Initialize sortable headers
+            initSortHandlers();
+        }
+
+        // Initialize date pickers
+        let fpFrom, fpTo;
+
+        function initDatePickers() {
+            function setup() {
+                const today = new Date();
+                const oneMonthAgo = new Date(today);
+                oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
+
+                fpFrom = flatpickr('#searchDateFrom', {
+                    dateFormat: 'Y/m/d',
+                    defaultDate: oneMonthAgo,
+                    allowInput: false,
+                    onChange: function(selectedDates) {
+                        if (selectedDates[0] && fpTo) {
+                            fpTo.set('minDate', selectedDates[0]);
+                        }
+                    }
+                });
+
+                fpTo = flatpickr('#searchDateTo', {
+                    dateFormat: 'Y/m/d',
+                    defaultDate: today,
+                    allowInput: false,
+                    onChange: function(selectedDates) {
+                        if (selectedDates[0] && fpFrom) {
+                            fpFrom.set('maxDate', selectedDates[0]);
+                        }
+                    }
+                });
+
+                // 초기 제한 설정
+                fpTo.set('minDate', oneMonthAgo);
+                fpFrom.set('maxDate', today);
+
+                // 캘린더 아이콘 클릭 시 열기
+                document.getElementById('btnDateFrom').addEventListener('click', function() { fpFrom.open(); });
+                document.getElementById('btnDateTo').addEventListener('click', function() { fpTo.open(); });
+
+                // 날짜 세팅 완료 후 초기 검색
+                search();
+            }
+
+            if (typeof flatpickr !== 'undefined') {
+                setup();
+            } else {
+                const script = document.createElement('script');
+                script.src = '/vendor/flatpickr/flatpickr.min.js';
+                script.onload = setup;
+                document.head.appendChild(script);
+            }
+        }
+
+        // Load file types for combo dropdown (TranType enum)
+        function loadFileTypes() {
+            fetch('/api/trans/trans-data-inqlist/file-types')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        const select = document.getElementById('searchFileType');
+                        // 기존 옵션 초기화 (전체 옵션만 유지)
+                        select.length = 1;
+                        fileTypeMap = {};
+                        (data.data || []).forEach(type => {
+                            fileTypeMap[type.code] = type.description;
+                            const option = document.createElement('option');
+                            option.value = type.code;
+                            option.textContent = type.description;
+                            select.appendChild(option);
+                        });
+                    }
+                })
+                .catch(error => {
+                    console.error('Error loading file types:', error);
+                });
+        }
+
+        function initSortHandlers() {
+            const table = document.getElementById('transDataFileTable');
+            if (!table) return;
+            const headers = table.querySelectorAll('th[data-sort]');
+            headers.forEach(th => {
+                th.addEventListener('click', function() {
+                    const key = this.getAttribute('data-sort');
+                    cycleSort(key);
+                });
+            });
+            updateSortIndicators();
+        }
+
+        function cycleSort(key) {
+            if (sortBy !== key) {
+                sortBy = key;
+                sortDirection = 'ASC';
+            } else if (sortDirection === 'ASC') {
+                sortDirection = 'DESC';
+            } else if (sortDirection === 'DESC') {
+                sortBy = null;
+                sortDirection = null;
+            } else {
+                sortDirection = 'ASC';
+            }
+
+            currentPage = 1;
+            updateSortIndicators();
+            search();
+        }
+
+        function updateSortIndicators() {
+            const indicators = document.querySelectorAll('[data-sort-indicator]');
+            indicators.forEach(el => {
+                const key = el.getAttribute('data-sort-indicator');
+                if (sortBy === key) {
+                    el.textContent = sortDirection === 'DESC' ? '▼' : '▲';
+                } else {
+                    el.textContent = '';
+                }
+            });
+        }
+
+        // Search with pagination
+        function search() {
+            const searchParams = new URLSearchParams({
+                page: currentPage,
+                size: itemsPerPage
+            });
+
+            const fileName = document.getElementById('searchFileName').value;
+            const fileType = document.getElementById('searchFileType').value;
+            const dateFrom = document.getElementById('searchDateFrom').value.replace(/\//g, '');
+            const dateTo = document.getElementById('searchDateTo').value.replace(/\//g, '');
+
+            if (fileName) searchParams.append('fileName', fileName);
+            if (fileType) searchParams.append('fileType', fileType);
+            if (dateFrom) searchParams.append('dateFrom', dateFrom);
+            if (dateTo) searchParams.append('dateTo', dateTo);
+            if (sortBy) searchParams.append('sortBy', sortBy);
+            if (sortDirection) searchParams.append('sortDirection', sortDirection);
+
+            fetch(`/api/trans/trans-data-inqlist/page?${searchParams.toString()}`)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    if (data.success) {
+                        const pageData = data.data;
+                        const items = pageData.content || [];
+                        totalItems = pageData.totalElements || 0;
+                        currentData = items;
+                        renderTable(items);
+                        renderPagination();
+                    } else {
+                        Toast.error(data.message || '검색 실패');
+                        currentData = [];
+                        renderTable([]);
+                        totalItems = 0;
+                        renderPagination();
+                    }
+                })
+                .catch(error => {
+                    console.error('Error searching trans data files:', error);
+                    Toast.error('검색 중 오류가 발생했습니다: ' + error.message);
+                    currentData = [];
+                    renderTable([]);
+                    totalItems = 0;
+                    renderPagination();
+                });
+        }
+
+        // Render table
+        function renderTable(items) {
+            const tbody = document.getElementById('transDataFileTableBody');
+            if (!tbody) return;
+            tbody.innerHTML = '';
+
+            if (!items || items.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="4" class="text-center py-4 text-body-secondary">
+                            조회된 데이터가 없습니다.
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+
+            items.forEach((item) => {
+                const row = document.createElement('tr');
+                row.classList.add('cursor-pointer');
+                row.onclick = function() {
+                    openPreview(item);
+                };
+                row.innerHTML = `
+                    <td>${HtmlUtils.escape(fileTypeMap[item.fileType] || item.fileType || '-')}</td>
+                    <td title="${HtmlUtils.escape(item.filePath)}">${HtmlUtils.escape(item.fileName || '-')}</td>
+                    <td class="text-center">${formatFileSize(item.fileSize)}</td>
+                    <td class="text-center">${HtmlUtils.escape(item.createDate || '-')}</td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
+        // Open preview modal
+        function openPreview(item) {
+            // 모달 초기화
+            document.getElementById('modalFileName').value = item.fileName || '';
+            document.getElementById('modalFileSize').value = formatFileSize(item.fileSize);
+            document.getElementById('modalFileContent').textContent = '로딩 중...';
+            document.getElementById('previewTruncatedWarning').classList.add('d-hidden');
+
+            // 모달 열기
+            $('#transDataFileModal').modal('show');
+
+            // 파일 내용 조회
+            const params = new URLSearchParams({ filePath: item.filePath });
+            fetch(`/api/trans/trans-data-inqlist/preview?${params.toString()}`)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    if (data.success) {
+                        const preview = data.data;
+                        document.getElementById('modalFileContent').textContent = preview.content || '(빈 파일)';
+                        if (preview.truncated) {
+                            document.getElementById('previewTruncatedWarning').classList.remove('d-hidden');
+                        }
+                    } else {
+                        document.getElementById('modalFileContent').textContent = '파일 읽기에 실패했습니다.';
+                    }
+                })
+                .catch(error => {
+                    console.error('Error loading file preview:', error);
+                    document.getElementById('modalFileContent').textContent = '파일 읽기 중 오류가 발생했습니다: ' + error.message;
+                });
+        }
+
+        // Render pagination controls
+        function renderPagination() {
+            const totalPages = Math.ceil(totalItems / itemsPerPage);
+            const pagination = document.getElementById('pagination');
+            if (!pagination) return;
+
+            let paginationHtml = '';
+
+            // First page button
+            paginationHtml += `
+                <li class="page-item ${currentPage === 1 ? 'disabled' : ''}">
+                    <a class="page-link" href="#" onclick="window.TransDataFile.changePage(1); return false;">
+                        <i class="bi bi-chevron-double-left"></i>
+                    </a>
+                </li>
+            `;
+
+            // Previous page button
+            paginationHtml += `
+                <li class="page-item ${currentPage === 1 ? 'disabled' : ''}">
+                    <a class="page-link" href="#" onclick="window.TransDataFile.changePage(${currentPage - 1}); return false;">
+                        <i class="bi bi-chevron-left"></i>
+                    </a>
+                </li>
+            `;
+
+            // Page numbers
+            const maxButtons = 5;
+            let startPage = Math.max(1, currentPage - Math.floor(maxButtons / 2));
+            let endPage = Math.min(totalPages, startPage + maxButtons - 1);
+
+            if (endPage - startPage + 1 < maxButtons) {
+                startPage = Math.max(1, endPage - maxButtons + 1);
+            }
+
+            for (let i = startPage; i <= endPage; i++) {
+                paginationHtml += `
+                    <li class="page-item ${i === currentPage ? 'active' : ''}">
+                        <a class="page-link" href="#" onclick="window.TransDataFile.changePage(${i}); return false;">${i}</a>
+                    </li>
+                `;
+            }
+
+            // Next page button
+            paginationHtml += `
+                <li class="page-item ${currentPage === totalPages || totalPages === 0 ? 'disabled' : ''}">
+                    <a class="page-link" href="#" onclick="window.TransDataFile.changePage(${currentPage + 1}); return false;">
+                        <i class="bi bi-chevron-right"></i>
+                    </a>
+                </li>
+            `;
+
+            // Last page button
+            paginationHtml += `
+                <li class="page-item ${currentPage === totalPages || totalPages === 0 ? 'disabled' : ''}">
+                    <a class="page-link" href="#" onclick="window.TransDataFile.changePage(${totalPages}); return false;">
+                        <i class="bi bi-chevron-double-right"></i>
+                    </a>
+                </li>
+            `;
+
+            pagination.innerHTML = paginationHtml;
+
+            // Update page info
+            const start = totalItems === 0 ? 0 : (currentPage - 1) * itemsPerPage + 1;
+            const end = Math.min(currentPage * itemsPerPage, totalItems);
+            const pageInfo = document.getElementById('pageInfo');
+            if (pageInfo) {
+                pageInfo.textContent = `${start} - ${end} of ${totalItems} items`;
+            }
+        }
+
+        // Change page
+        function changePage(page) {
+            const totalPages = Math.ceil(totalItems / itemsPerPage);
+            if (page < 1 || page > totalPages) return;
+            currentPage = page;
+            search();
+        }
+
+        // Public API
+        return {
+            init: init,
+            search: search,
+            changePage: changePage
+        };
+    })();
+
+    // ==================== Initialization ====================
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', function() {
+            TransDataFile.init();
+        });
+    } else {
+        TransDataFile.init();
+    }
+</script>
+</th:block>
+</body>
+</html>

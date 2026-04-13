@@ -1,0 +1,890 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<!--
+    공통 게시판 콘텐츠 Fragment
+    Controller에서 boardId, pageTitle, pageIcon을 model attribute로 전달
+-->
+<div th:fragment="boardContent" th:data-board-id="${boardId}">
+
+    <!-- Search Section Header -->
+    <div class="page-header">
+        <h4 class="page-title">
+            <i class="bi bi-exclamation-circle-fill text-danger"></i>
+            검색조건
+        </h4>
+    </div>
+
+    <!-- Category Buttons (카테고리 있을 때만 표시) -->
+    <div class="card border p-2 mb-2 d-hidden" id="categorySection">
+        <div class="d-flex flex-wrap align-items-center gap-2">
+            <label class="form-label mb-0 small fw-medium"><i class="bi bi-folder"></i> 카테고리</label>
+            <div class="d-flex flex-wrap gap-1" id="categoryButtons"></div>
+        </div>
+    </div>
+
+    <!-- Search Box -->
+    <div class="card border p-2 mb-3" id="searchBox">
+        <div class="d-flex flex-wrap align-items-center gap-2 mb-1">
+            <select id="searchField2" class="form-select form-select-sm flex-fixed-120">
+                <option value="title">제목</option>
+                <option value="author">작성자</option>
+            </select>
+            <input type="text" id="searchValue2" class="form-control form-control-sm flex-fixed-180"
+                   placeholder="검색어 입력" onkeypress="if(event.key === 'Enter') BoardManager.search()">
+
+            <!-- Spacer to push right side to the end -->
+            <div class="flex-grow-1"></div>
+
+            <!-- Right Side Components -->
+            <select id="limitRows" class="form-select form-select-sm sp-limit-select">
+                <option value="10" selected>10</option>
+                <option value="20">20</option>
+                <option value="50">50</option>
+                <option value="100">100</option>
+            </select>
+            <label class="form-label mb-0 small fw-medium ms-1 me-2 fs-2xs">건씩</label>
+
+            <button class="btn btn-primary btn-sm" onclick="BoardManager.search()">
+                <i class="bi bi-search"></i> 조회
+            </button>
+        </div>
+    </div>
+
+    <!-- List Section Header + Toolbar -->
+    <div class="toolbar mt-3">
+        <div class="toolbar-left">
+            <h4 class="page-title">
+                <i class="bi bi-exclamation-circle-fill text-danger"></i>
+                리스트
+            </h4>
+        </div>
+        <div class="toolbar-right">
+            <button class="btn btn-outline-secondary btn-sm" id="btnExcel">
+                <i class="bi bi-file-earmark-excel"></i> 엑셀
+            </button>
+            <button class="btn btn-outline-secondary btn-sm" id="btnPrint">
+                <i class="bi bi-file-earmark-text"></i> 출력
+            </button>
+        </div>
+    </div>
+
+    <!-- Table -->
+    <div class="table-responsive">
+        <table class="table table-sm table-hover sp-data-grid" id="articleTable">
+            <thead class="table-light">
+                <tr>
+                    <th class="col-w-70">No</th>
+                    <th class="col-w-120">카테고리</th>
+                    <th data-sort="title">제목</th>
+                    <th class="col-w-120" data-sort="writerName">작성자</th>
+                    <th class="col-w-90" data-sort="readCnt">조회수</th>
+                    <th class="col-w-130" data-sort="registDtime">작성일</th>
+                </tr>
+            </thead>
+            <tbody id="articleTableBody">
+                <tr><td colspan="6" class="sp-empty-state">데이터를 불러오는 중...</td></tr>
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Pagination -->
+    <div th:replace="~{fragments/page-content-layout :: pagination}"></div>
+
+    <!-- Bottom Action Buttons -->
+    <div class="bottom-actions d-hidden" id="crudButtons">
+        <button class="btn btn-primary btn-sm" onclick="ArticleModal.open('create')">
+            + 새 글 작성
+        </button>
+    </div>
+
+    <!-- Article Modal -->
+    <div id="articleModal" class="modal fade" tabindex="-1" aria-hidden="true"
+         data-bs-backdrop="static" data-bs-keyboard="false">
+        <div class="modal-dialog modal-dialog-centered sp-modal-lg">
+        <div class="modal-content">
+            <div class="modal-header py-2">
+                <h5 class="modal-title" id="modalTitle">게시글 상세</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <!-- Read View -->
+                <div id="articleReadView" class="d-hidden px-2">
+                    <div class="border-bottom border-2 pb-3 mb-3">
+                        <div id="readBadges" class="mb-2"></div>
+                        <h5 class="fw-bold mb-2" id="readTitle"></h5>
+                        <div class="d-flex align-items-center gap-3 flex-wrap text-muted small">
+                            <span class="d-flex align-items-center gap-1"><i class="bi bi-person"></i> <span id="readAuthor"></span></span>
+                            <span class="vr"></span>
+                            <span class="d-flex align-items-center gap-1"><i class="bi bi-calendar3"></i> <span id="readDate"></span></span>
+                            <span class="vr"></span>
+                            <span class="d-flex align-items-center gap-1"><i class="bi bi-eye"></i> <span id="readViews"></span></span>
+                        </div>
+                    </div>
+                    <div class="py-3 sp-article-content" id="readContent"></div>
+                    <div class="border-top pt-3 mt-2 d-hidden" id="readFiles">
+                        <div class="fw-semibold small text-secondary mb-2"><i class="bi bi-paperclip me-1"></i>첨부파일</div>
+                        <div id="readFileList"></div>
+                    </div>
+                </div>
+
+                <!-- Edit Form -->
+                <div id="articleEditForm">
+                <div class="modal-section">
+                    <div class="section-header"><i class="bi bi-caret-right-fill"></i><span>기본정보</span></div>
+                    <div class="mb-3">
+                        <div class="row g-3 mb-2">
+                            <div class="col-md-6">
+                                <label class="form-label small mb-1">카테고리<span class="text-danger">*</span></label>
+                                <select id="modalCategory" class="form-select form-select-sm"></select>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label small mb-1">작성자</label>
+                                <input type="text" id="modalAuthor" class="form-control form-control-sm" disabled />
+                            </div>
+                        </div>
+                        <div class="row g-3 mb-2">
+                            <div class="col-12">
+                                <label class="form-label small mb-1">상단 고정</label>
+                                <div class="form-check ps-0">
+                                    <div class="d-flex align-items-center gap-2 p-2 bg-light border rounded">
+                                        <input type="checkbox" id="modalTopYn" class="form-check-input ms-0" />
+                                        <label for="modalTopYn" class="form-check-label small text-secondary">이 게시글을 상단에 고정합니다 (공지)</label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row g-3 mb-2">
+                            <div class="col-12">
+                                <label class="form-label small mb-1">제목<span class="text-danger">*</span></label>
+                                <input type="text" id="modalTitle2" class="form-control form-control-sm" maxlength="200" />
+                            </div>
+                        </div>
+                        <div class="row g-3 mb-2">
+                            <div class="col-12">
+                                <label class="form-label small mb-1">내용<span class="text-danger">*</span> <span id="contentCharCount" class="sp-char-count">(0 / 10,000)</span></label>
+                                <textarea id="modalContent" class="form-control form-control-sm sp-form-textarea" maxlength="10000" oninput="ArticleModal.updateCharCount()"></textarea>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-section">
+                    <div class="section-header"><i class="bi bi-caret-right-fill"></i><span>첨부파일</span></div>
+                    <div class="mb-3">
+                        <div class="row g-3 mb-2" id="fileUploadRow">
+                            <div class="col-md-6">
+                                <label class="form-label small mb-1">파일 1</label>
+                                <input type="file" id="modalFile1" class="form-control form-control-sm" />
+                                <div id="fileInfo1" class="d-flex align-items-center gap-2 p-2 bg-light border rounded mt-1 d-hidden">
+                                    <a id="fileLink1" href="#" target="_blank" class="text-decoration-none small flex-grow-1"></a>
+                                    <button type="button" class="btn btn-danger btn-sm py-0 px-1" onclick="ArticleModal.deleteFile(1)"><i class="bi bi-x-lg"></i></button>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label small mb-1">파일 2</label>
+                                <input type="file" id="modalFile2" class="form-control form-control-sm" />
+                                <div id="fileInfo2" class="d-flex align-items-center gap-2 p-2 bg-light border rounded mt-1 d-hidden">
+                                    <a id="fileLink2" href="#" target="_blank" class="text-decoration-none small flex-grow-1"></a>
+                                    <button type="button" class="btn btn-danger btn-sm py-0 px-1" onclick="ArticleModal.deleteFile(2)"><i class="bi bi-x-lg"></i></button>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row g-3 mb-2">
+                            <div class="col-md-6">
+                                <label class="form-label small mb-1">파일 3</label>
+                                <input type="file" id="modalFile3" class="form-control form-control-sm" />
+                                <div id="fileInfo3" class="d-flex align-items-center gap-2 p-2 bg-light border rounded mt-1 d-hidden">
+                                    <a id="fileLink3" href="#" target="_blank" class="text-decoration-none small flex-grow-1"></a>
+                                    <button type="button" class="btn btn-danger btn-sm py-0 px-1" onclick="ArticleModal.deleteFile(3)"><i class="bi bi-x-lg"></i></button>
+                                </div>
+                            </div>
+                            <div class="col-md-6"></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-section">
+                    <div class="section-header"><i class="bi bi-caret-right-fill"></i><span>부가정보</span></div>
+                    <div class="mb-3">
+                        <div class="row g-3 mb-2">
+                            <div class="col-md-6">
+                                <label class="form-label small mb-1">조회수</label>
+                                <input type="text" id="modalViewCount" class="form-control form-control-sm" disabled />
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label small mb-1">작성일</label>
+                                <input type="text" id="modalCreatedAt" class="form-control form-control-sm" disabled />
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                </div><!-- /articleEditForm -->
+            </div>
+            <div class="modal-footer py-2">
+                <button class="btn btn-danger btn-sm me-auto d-hidden" id="btnDelete" onclick="ArticleModal.delete()"><i class="bi bi-trash"></i> 삭제</button>
+                <button class="btn btn-secondary btn-sm" data-bs-dismiss="modal"><i class="bi bi-x-lg"></i> 닫기</button>
+                <button class="btn btn-warning btn-sm d-hidden" id="btnEdit" onclick="ArticleModal.switchToEditMode()"><i class="bi bi-pencil"></i> 수정</button>
+                <button class="btn btn-primary btn-sm d-hidden" id="btnSave" onclick="ArticleModal.save()"><i class="bi bi-floppy"></i> 저장</button>
+            </div>
+        </div>
+        </div>
+    </div>
+
+    <!-- Page Script -->
+    <script th:inline="javascript">
+        var BOARD_ID = [[${boardId}]];
+
+        // SPA 탭 전환 시 글로벌 상태 복원을 위한 인스턴스 레지스트리
+        if (!window._boardRegistry) window._boardRegistry = {};
+
+        window.BoardManager = {
+            boardId: BOARD_ID,
+            articles: [],
+            categories: [],
+            selectedCategory: null,
+            currentPage: 1,
+            totalItems: 0,
+            itemsPerPage: 10,
+            _sortBy: null,
+            _sortDirection: null,
+            authCode: null,
+            hasWritePermission: false,
+            hasReadPermission: false,
+
+            init: function() {
+                this.checkPermission().then(() => {
+                    this.loadCategories().then(() => {
+                        this.load();
+                    });
+                });
+            },
+
+            checkPermission: function() {
+                return new Promise((resolve) => {
+                    $.ajax({
+                        url: API_BASE_URL + '/board-auth/my/' + this.boardId,
+                        method: 'GET',
+                        success: (response) => {
+                            const authCode = response.success ? response.data : null;
+                            this.authCode = authCode;
+                            this.hasWritePermission = (authCode === 'W');
+                            this.hasReadPermission = (authCode === 'R' || authCode === 'W');
+                            this.updateCrudButtons();
+                            resolve();
+                        },
+                        error: () => {
+                            this.authCode = null;
+                            this.hasWritePermission = false;
+                            this.hasReadPermission = false;
+                            this.updateCrudButtons();
+                            resolve();
+                        }
+                    });
+                });
+            },
+
+            updateCrudButtons: function() {
+                $('#crudButtons').toggleClass('d-hidden', !this.hasWritePermission);
+            },
+
+            loadCategories: function() {
+                return new Promise((resolve) => {
+                    $.ajax({
+                        url: API_BASE_URL + '/board-categories/board/' + this.boardId,
+                        method: 'GET',
+                        success: (response) => {
+                            if (response.success && response.data && response.data.length > 0) {
+                                this.categories = response.data;
+                                this.renderCategories();
+                                $('#categorySection').removeClass('d-hidden');
+                            } else {
+                                this.categories = [];
+                                $('#categorySection').addClass('d-hidden');
+                            }
+                            resolve();
+                        },
+                        error: () => {
+                            this.categories = [];
+                            $('#categorySection').addClass('d-hidden');
+                            resolve();
+                        }
+                    });
+                });
+            },
+
+            renderCategories: function() {
+                const container = $('#categoryButtons').empty();
+                const allBtn = $('<button class="btn btn-sm btn-primary" data-seq="">전체</button>');
+                allBtn.on('click', () => this.selectCategory(''));
+                container.append(allBtn);
+                this.selectedCategory = '';
+
+                this.categories.forEach((cat) => {
+                    const btn = $(`<button class="btn btn-sm btn-outline-secondary" data-seq="${cat.categorySeq}">${cat.categoryName}</button>`);
+                    btn.on('click', () => this.selectCategory(cat.categorySeq));
+                    container.append(btn);
+                });
+            },
+
+            selectCategory: function(categorySeq) {
+                this.selectedCategory = categorySeq;
+                $('#categoryButtons .btn').removeClass('btn-primary').addClass('btn-outline-secondary');
+                $(`#categoryButtons .btn[data-seq="${categorySeq}"]`).removeClass('btn-outline-secondary').addClass('btn-primary');
+                this.currentPage = 1;
+                this.load();
+            },
+
+            search: function() {
+                this.currentPage = 1;
+                this.load();
+            },
+
+            sortBy: function(field) {
+                if (this._sortBy === field) {
+                    if (this._sortDirection === 'ASC') {
+                        this._sortDirection = 'DESC';
+                    } else {
+                        this._sortBy = null;
+                        this._sortDirection = null;
+                    }
+                } else {
+                    this._sortBy = field;
+                    this._sortDirection = 'ASC';
+                }
+                this.updateSortIcons();
+                this.currentPage = 1;
+                this.load();
+            },
+
+            updateSortIcons: function() {
+                var headers = $('#articleTable thead th.sortable');
+                headers.removeClass('sort-asc sort-desc');
+                if (this._sortBy && this._sortDirection) {
+                    headers.filter('[data-sort="' + this._sortBy + '"]')
+                        .addClass(this._sortDirection === 'ASC' ? 'sort-asc' : 'sort-desc');
+                }
+            },
+
+            exportExcel: function() {
+                if (!this.articles || this.articles.length === 0) {
+                    Toast.warning('다운로드할 데이터가 없습니다.');
+                    return;
+                }
+                var BOM = '\uFEFF';
+                var header = 'No,카테고리,제목,작성자,조회수,작성일\n';
+                var rows = this.articles.map(function(a, idx) {
+                    var cat = BoardManager.sanitizeCsv(BoardManager.getCategoryName(a.categorySeq) || '-');
+                    var title = BoardManager.sanitizeCsv(a.title);
+                    var writer = BoardManager.sanitizeCsv(a.writerName);
+                    var readCnt = a.readCnt || 0;
+                    var date = BoardManager.formatDate(a.registDtime);
+                    return (idx + 1) + ',"' + cat + '","' + title + '","' + writer + '",' + readCnt + ',' + date;
+                }).join('\n');
+                var blob = new Blob([BOM + header + rows], { type: 'text/csv;charset=utf-8;' });
+                var link = document.createElement('a');
+                link.href = URL.createObjectURL(blob);
+                link.download = BoardManager.boardId + '_articles.csv';
+                link.click();
+                URL.revokeObjectURL(link.href);
+            },
+
+            printTable: function() {
+                var columns = [
+                    { key: '_no', label: 'No' },
+                    { key: '_category', label: '카테고리' },
+                    { key: 'title', label: '제목' },
+                    { key: 'writerName', label: '작성자' },
+                    { key: 'readCnt', label: '조회수' },
+                    { key: '_date', label: '작성일' }
+                ];
+                var data = this.articles.map(function(a, idx) {
+                    return {
+                        _no: idx + 1,
+                        _category: BoardManager.getCategoryName(a.categorySeq) || '-',
+                        title: a.title || '',
+                        writerName: a.writerName || '',
+                        readCnt: a.readCnt || 0,
+                        _date: BoardManager.formatDate(a.registDtime)
+                    };
+                });
+                var pageTitle = $('h4.page-title span').text() || '게시글 목록';
+                PrintUtil.print({ title: pageTitle, columns: columns, data: data });
+            },
+
+            load: function() {
+                this.itemsPerPage = parseInt($('#limitRows').val()) || 10;
+                const searchField = $('#searchField2').val();
+                const searchValue = $('#searchValue2').val() || '';
+
+                const params = {
+                    page: this.currentPage,
+                    size: this.itemsPerPage
+                };
+
+                if (this.selectedCategory) {
+                    params.categorySeq = this.selectedCategory;
+                }
+                if (searchValue.trim()) {
+                    params.searchField = searchField;
+                    params.keyword = searchValue.trim();
+                }
+                if (this._sortBy) {
+                    params.sortBy = this._sortBy;
+                    params.sortDirection = this._sortDirection || 'DESC';
+                }
+
+                $.ajax({
+                    url: API_BASE_URL + '/articles/board/' + this.boardId + '/page',
+                    method: 'GET',
+                    data: params,
+                    success: (response) => {
+                        if (response.success && response.data) {
+                            this.articles = response.data.content || response.data;
+                            this.totalItems = response.data.totalElements || this.articles.length;
+                            this.renderTable();
+                            this.renderPagination();
+                        }
+                    },
+                    error: () => {
+                        $('#articleTableBody').html('<tr><td colspan="6" class="sp-empty-state">데이터를 불러오는데 실패했습니다.</td></tr>');
+                    }
+                });
+            },
+
+            renderTable: function() {
+                const tbody = $('#articleTableBody').empty();
+                if (!this.articles || this.articles.length === 0) {
+                    tbody.append('<tr><td colspan="6" class="sp-empty-state">조회된 데이터가 없습니다.</td></tr>');
+                    return;
+                }
+                this.articles.forEach((article, idx) => {
+                    const categoryName = this.getCategoryName(article.categorySeq);
+                    const isTop = article.topYn === 'Y';
+                    const topBadge = isTop ? '<span class="badge bg-danger me-1" style="font-size:.7em">공지</span>' : '';
+                    const row = $(`<tr class="cursor-pointer">
+                        <td class="text-center">${(this.currentPage - 1) * this.itemsPerPage + idx + 1}</td>
+                        <td class="text-center">${this.escapeHtml(categoryName) || '-'}</td>
+                        <td class="text-start">${topBadge}${this.escapeHtml(article.title)}</td>
+                        <td class="text-center">${this.escapeHtml(article.writerName)}</td>
+                        <td class="text-center">${article.readCnt || 0}</td>
+                        <td class="text-center">${this.formatDate(article.registDtime)}</td>
+                    </tr>`);
+                    row.on('click', () => ArticleModal.open('view', article.articleSeq));
+                    tbody.append(row);
+                });
+            },
+
+            getCategoryName: function(categorySeq) {
+                const cat = this.categories.find(c => c.categorySeq === categorySeq);
+                return cat ? cat.categoryName : '';
+            },
+
+            escapeHtml: function(str) {
+                if (!str) return '';
+                return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+            },
+
+            sanitizeCsv: function(val) {
+                var s = String(val || '');
+                if (/^[=+\-@\t\r]/.test(s)) s = "'" + s;
+                return s.replace(/"/g, '""');
+            },
+
+            formatDate: function(dateStr) {
+                if (!dateStr) return '';
+                if (dateStr.length >= 8) {
+                    return dateStr.substring(0, 4) + '/' + dateStr.substring(4, 6) + '/' + dateStr.substring(6, 8);
+                }
+                return dateStr;
+            },
+
+            renderPagination: function() {
+                const totalPages = Math.ceil(this.totalItems / this.itemsPerPage) || 1;
+                const pagination = $('#pagination').empty();
+
+                pagination.append(`<li class="page-item ${this.currentPage === 1 ? 'disabled' : ''}"><a class="page-link" href="#" onclick="BoardManager.changePage(1); return false;"><i class="bi bi-chevron-double-left"></i></a></li>`);
+                pagination.append(`<li class="page-item ${this.currentPage === 1 ? 'disabled' : ''}"><a class="page-link" href="#" onclick="BoardManager.changePage(${this.currentPage - 1}); return false;"><i class="bi bi-chevron-left"></i></a></li>`);
+
+                let startPage = Math.max(1, this.currentPage - 2);
+                let endPage = Math.min(totalPages, startPage + 4);
+                if (endPage - startPage < 4) startPage = Math.max(1, endPage - 4);
+
+                for (let i = startPage; i <= endPage; i++) {
+                    pagination.append(`<li class="page-item ${i === this.currentPage ? 'active' : ''}"><a class="page-link" href="#" onclick="BoardManager.changePage(${i}); return false;">${i}</a></li>`);
+                }
+
+                pagination.append(`<li class="page-item ${this.currentPage >= totalPages ? 'disabled' : ''}"><a class="page-link" href="#" onclick="BoardManager.changePage(${this.currentPage + 1}); return false;"><i class="bi bi-chevron-right"></i></a></li>`);
+                pagination.append(`<li class="page-item ${this.currentPage >= totalPages ? 'disabled' : ''}"><a class="page-link" href="#" onclick="BoardManager.changePage(${totalPages}); return false;"><i class="bi bi-chevron-double-right"></i></a></li>`);
+
+                $('#pageInfo').text(`${this.totalItems === 0 ? 0 : (this.currentPage - 1) * this.itemsPerPage + 1} - ${Math.min(this.currentPage * this.itemsPerPage, this.totalItems)} of ${this.totalItems} items`);
+            },
+
+            changePage: function(page) {
+                const totalPages = Math.ceil(this.totalItems / this.itemsPerPage) || 1;
+                if (page < 1 || page > totalPages) return;
+                this.currentPage = page;
+                this.load();
+            }
+        };
+
+        window.ArticleModal = {
+            mode: 'view',
+            currentArticleSeq: null,
+            MAX_CONTENT_LENGTH: 10000,
+
+            updateCharCount: function() {
+                const content = $('#modalContent').val() || '';
+                const currentLength = content.length;
+                const maxLength = ArticleModal.MAX_CONTENT_LENGTH;
+                const countSpan = $('#contentCharCount');
+                countSpan.text('(' + currentLength.toLocaleString() + ' / ' + maxLength.toLocaleString() + ')');
+                countSpan.removeClass('text-danger text-warning text-body-secondary');
+                if (currentLength > maxLength) {
+                    countSpan.addClass('text-danger');
+                } else if (currentLength >= maxLength * 0.9) {
+                    countSpan.addClass('text-warning');
+                } else {
+                    countSpan.addClass('text-body-secondary');
+                }
+            },
+
+            open: function(mode, articleSeq) {
+                if (!BoardManager.hasReadPermission) {
+                    Toast.warning('이 게시판에 대한 접근 권한이 없습니다.');
+                    return;
+                }
+                if (mode === 'create' && !BoardManager.hasWritePermission) {
+                    Toast.warning('게시글 등록 권한이 없습니다.');
+                    return;
+                }
+
+                this.mode = mode;
+                this.loadCategoryOptions();
+
+                if (mode === 'create') {
+                    $('#articleReadView').addClass('d-hidden');
+                    $('#articleEditForm').removeClass('d-hidden');
+                    $('#modalTitle').text('게시글 등록');
+                    $('#btnDelete').addClass('d-hidden');
+                    $('#btnEdit').addClass('d-hidden');
+                    $('#btnSave').removeClass('d-hidden');
+                    this.clearForm();
+                    this.setFormEditable(true);
+                    bootstrap.Modal.getOrCreateInstance(document.getElementById('articleModal')).show();
+                } else {
+                    this.currentArticleSeq = articleSeq;
+                    this.loadArticle(articleSeq);
+                }
+            },
+
+            close: function() {
+                bootstrap.Modal.getInstance(document.getElementById('articleModal'))?.hide();
+            },
+
+            loadCategoryOptions: function() {
+                const select = $('#modalCategory').empty();
+                select.append('<option value="">선택</option>');
+                BoardManager.categories.forEach(cat => {
+                    select.append(`<option value="${cat.categorySeq}">${cat.categoryName}</option>`);
+                });
+            },
+
+            clearForm: function() {
+                $('#modalCategory').val('');
+                $('#modalAuthor').val('');
+                $('#modalTitle2').val('');
+                $('#modalContent').val('');
+                $('#modalViewCount').val('');
+                $('#modalCreatedAt').val('');
+                $('#modalTopYn').prop('checked', false);
+                this.updateCharCount();
+                // 파일 초기화
+                $('#modalFile1, #modalFile2, #modalFile3').val('').removeClass('d-hidden');
+                $('#fileInfo1, #fileInfo2, #fileInfo3').addClass('d-hidden');
+            },
+
+            loadArticle: function(articleSeq) {
+                $.ajax({
+                    url: API_BASE_URL + '/articles/' + articleSeq,
+                    method: 'GET',
+                    success: function(response) {
+                        if (response.success && response.data) {
+                            const article = response.data;
+                            ArticleModal.currentArticleSeq = article.articleSeq;
+                            ArticleModal._currentArticle = article;
+
+                            // 블로그형 읽기 뷰 렌더링
+                            ArticleModal.renderReadView(article);
+
+                            // 읽기 모드 UI
+                            $('#articleReadView').removeClass('d-hidden');
+                            $('#articleEditForm').addClass('d-hidden');
+                            $('#modalTitle').text('게시글 상세');
+                            $('#btnDelete').addClass('d-hidden');
+                            $('#btnSave').addClass('d-hidden');
+                            $('#btnEdit').toggleClass('d-hidden', !BoardManager.hasWritePermission);
+
+                            bootstrap.Modal.getOrCreateInstance(document.getElementById('articleModal')).show();
+                        }
+                    },
+                    error: function() { Toast.error('게시글을 불러오는데 실패했습니다.'); }
+                });
+            },
+
+            renderReadView: function(article) {
+                // 배지 (카테고리 + 공지)
+                var badges = '';
+                if (article.topYn === 'Y') badges += '<span class="badge bg-danger me-1">공지</span>';
+                var catName = BoardManager.getCategoryName(article.categorySeq);
+                if (catName) badges += '<span class="badge bg-primary-subtle text-primary">' + escapeHtml(catName) + '</span>';
+                $('#readBadges').html(badges);
+
+                // 제목, 메타, 본문
+                $('#readTitle').text(article.title || '');
+                $('#readAuthor').text(article.writerName || '');
+                $('#readDate').text(BoardManager.formatDate(article.registDtime));
+                $('#readViews').text(article.readCnt || 0);
+                $('#readContent').text(article.content || '');
+
+                // 첨부파일
+                var files = [];
+                if (article.attachFilePath1) files.push({ no: 1, path: article.attachFilePath1, cnt: article.downloadCnt1 || 0 });
+                if (article.attachFilePath2) files.push({ no: 2, path: article.attachFilePath2, cnt: article.downloadCnt2 || 0 });
+                if (article.attachFilePath3) files.push({ no: 3, path: article.attachFilePath3, cnt: article.downloadCnt3 || 0 });
+
+                if (files.length > 0) {
+                    var html = '';
+                    files.forEach(function(f) {
+                        var fileName = f.path.split('/').pop().replace(/^[a-f0-9-]+_/, '');
+                        html += '<div class="d-flex align-items-center gap-2 p-2 bg-light border rounded mb-1">' +
+                            '<i class="bi bi-file-earmark-arrow-down text-primary"></i>' +
+                            '<a href="' + API_BASE_URL + '/articles/' + ArticleModal.currentArticleSeq + '/files/' + f.no + '" class="text-decoration-none small flex-grow-1">' + escapeHtml(fileName) + '</a>' +
+                            '<span class="text-muted small"><i class="bi bi-download"></i> ' + f.cnt + '</span>' +
+                            '</div>';
+                    });
+                    $('#readFileList').html(html);
+                    $('#readFiles').removeClass('d-hidden');
+                } else {
+                    $('#readFiles').addClass('d-hidden');
+                }
+            },
+
+            displayFileInfo: function(fileNo, filePath) {
+                const fileInput = $(`#modalFile${fileNo}`);
+                const fileInfo = $(`#fileInfo${fileNo}`);
+                const fileLink = $(`#fileLink${fileNo}`);
+
+                if (filePath) {
+                    const fileName = filePath.split('/').pop().replace(/^[a-f0-9-]+_/, '');
+                    fileLink.text(fileName);
+                    fileLink.attr('href', API_BASE_URL + '/articles/' + ArticleModal.currentArticleSeq + '/files/' + fileNo);
+                    fileInfo.removeClass('d-hidden');
+                    fileInput.addClass('d-hidden');
+                } else {
+                    fileInfo.addClass('d-hidden');
+                    fileInput.removeClass('d-hidden').val('');
+                }
+            },
+
+            setFormEditable: function(editable) {
+                $('#modalCategory').prop('disabled', !editable);
+                $('#modalTitle2').prop('readonly', !editable);
+                $('#modalContent').prop('readonly', !editable);
+                $('#modalTopYn').prop('disabled', !editable);
+                if (editable) {
+                    for (var i = 1; i <= 3; i++) {
+                        if (!$('#fileInfo' + i).hasClass('d-hidden')) {
+                            $('#fileInfo' + i).find('.btn-danger').removeClass('d-hidden');
+                        } else {
+                            $('#modalFile' + i).removeClass('d-hidden');
+                        }
+                    }
+                } else {
+                    $('#modalFile1, #modalFile2, #modalFile3').addClass('d-hidden');
+                    $('#fileInfo1, #fileInfo2, #fileInfo3').find('.btn-danger').addClass('d-hidden');
+                }
+            },
+
+            switchToEditMode: function() {
+                this.mode = 'edit';
+                var article = this._currentArticle;
+
+                // 편집 폼에 데이터 채우기
+                this.loadCategoryOptions();
+                $('#modalCategory').val(article.categorySeq || '');
+                $('#modalAuthor').val(article.writerName || '');
+                $('#modalTitle2').val(article.title || '');
+                $('#modalContent').val(article.content || '');
+                $('#modalViewCount').val(article.readCnt || 0);
+                $('#modalCreatedAt').val(BoardManager.formatDate(article.registDtime));
+                $('#modalTopYn').prop('checked', article.topYn === 'Y');
+                this.updateCharCount();
+                this.displayFileInfo(1, article.attachFilePath1);
+                this.displayFileInfo(2, article.attachFilePath2);
+                this.displayFileInfo(3, article.attachFilePath3);
+
+                // 읽기 뷰 → 편집 폼 전환
+                $('#articleReadView').addClass('d-hidden');
+                $('#articleEditForm').removeClass('d-hidden');
+                $('#modalTitle').text('게시글 수정');
+                $('#btnEdit').addClass('d-hidden');
+                $('#btnDelete').removeClass('d-hidden');
+                $('#btnSave').removeClass('d-hidden');
+                this.setFormEditable(true);
+            },
+
+            save: function() {
+                const categorySeq = $('#modalCategory').val();
+                const title = $('#modalTitle2').val().trim();
+                const content = $('#modalContent').val().trim();
+                const topYn = $('#modalTopYn').is(':checked') ? 'Y' : 'N';
+
+                if (!title) { Toast.warning('제목을 입력하세요.'); return; }
+                if (!content) { Toast.warning('내용을 입력하세요.'); return; }
+                if (content.length > ArticleModal.MAX_CONTENT_LENGTH) {
+                    Toast.info('내용은 최대 ' + ArticleModal.MAX_CONTENT_LENGTH.toLocaleString() + '자까지 입력 가능합니다.');
+                    return;
+                }
+
+                const articleData = {
+                    boardId: BoardManager.boardId,
+                    categorySeq: categorySeq || null,
+                    title: title,
+                    content: content,
+                    topYn: topYn
+                };
+
+                const file1 = $('#modalFile1')[0].files[0];
+                const file2 = $('#modalFile2')[0].files[0];
+                const file3 = $('#modalFile3')[0].files[0];
+                const hasFiles = file1 || file2 || file3;
+
+                const isCreate = ArticleModal.mode === 'create';
+
+                if (hasFiles) {
+                    // 파일이 있으면 multipart로 전송
+                    const formData = new FormData();
+                    formData.append('article', new Blob([JSON.stringify(articleData)], { type: 'application/json' }));
+                    if (file1) formData.append('file1', file1);
+                    if (file2) formData.append('file2', file2);
+                    if (file3) formData.append('file3', file3);
+
+                    const url = isCreate
+                        ? API_BASE_URL + '/articles/with-files'
+                        : API_BASE_URL + '/articles/' + ArticleModal.currentArticleSeq + '/with-files';
+
+                    $.ajax({
+                        url: url,
+                        method: isCreate ? 'POST' : 'PUT',
+                        data: formData,
+                        processData: false,
+                        contentType: false,
+                        success: function(response) {
+                            if (response.success) {
+                                Toast.success(isCreate ? '등록되었습니다.' : '수정되었습니다.');
+                                ArticleModal.close();
+                                BoardManager.load();
+                            } else {
+                                Toast.error('저장 실패: ' + (response.message || ''));
+                            }
+                        },
+                        error: function(xhr) { Toast.error(xhr.responseJSON?.message || '저장에 실패했습니다.'); }
+                    });
+                } else {
+                    // 파일이 없으면 JSON으로 전송
+                    const url = isCreate ? API_BASE_URL + '/articles' : API_BASE_URL + '/articles/' + ArticleModal.currentArticleSeq;
+                    $.ajax({
+                        url: url,
+                        method: isCreate ? 'POST' : 'PUT',
+                        contentType: 'application/json',
+                        data: JSON.stringify(articleData),
+                        success: function(response) {
+                            if (response.success) {
+                                Toast.success(isCreate ? '등록되었습니다.' : '수정되었습니다.');
+                                ArticleModal.close();
+                                BoardManager.load();
+                            } else {
+                                Toast.error('저장 실패: ' + (response.message || ''));
+                            }
+                        },
+                        error: function(xhr) { Toast.error(xhr.responseJSON?.message || '저장에 실패했습니다.'); }
+                    });
+                }
+            },
+
+            deleteFile: function(fileNo) {
+                Toast.confirm('이 파일을 삭제하시겠습니까?', function() {
+                    $.ajax({
+                        url: API_BASE_URL + '/articles/' + ArticleModal.currentArticleSeq + '/files/' + fileNo,
+                        method: 'DELETE',
+                        success: function(response) {
+                            if (response.success) {
+                                Toast.success('파일이 삭제되었습니다.');
+                                ArticleModal.displayFileInfo(fileNo, null);
+                            } else {
+                                Toast.error('파일 삭제 실패: ' + (response.message || ''));
+                            }
+                        },
+                        error: function(xhr) { Toast.error(xhr.responseJSON?.message || '파일 삭제에 실패했습니다.'); }
+                    });
+                });
+            },
+
+            delete: function() {
+                Toast.confirm('정말 삭제하시겠습니까?', function() {
+                    $.ajax({
+                        url: API_BASE_URL + '/articles/' + ArticleModal.currentArticleSeq,
+                        method: 'DELETE',
+                        success: function(response) {
+                            if (response.success) {
+                                Toast.success('삭제되었습니다.');
+                                ArticleModal.close();
+                                BoardManager.load();
+                            } else {
+                                Toast.error('삭제 실패: ' + (response.message || ''));
+                            }
+                    },
+                        error: function(xhr) { Toast.error(xhr.responseJSON?.message || '삭제에 실패했습니다.'); }
+                    });
+                });
+            }
+        };
+
+        // 레지스트리에 현재 게시판 인스턴스 저장
+        window._boardRegistry[BOARD_ID] = {
+            boardManager: window.BoardManager,
+            articleModal: window.ArticleModal
+        };
+
+        // SPA 탭 활성화 이벤트 핸들러 (최초 1회만 등록)
+        if (!window._boardTabHandler) {
+            window._boardTabHandler = true;
+            $(document).on('tab:activated', function(e) {
+                var $boardEl = $(e.target).find('[data-board-id]');
+                if (!$boardEl.length) $boardEl = $(e.target).filter('[data-board-id]');
+                if ($boardEl.length && window._boardRegistry) {
+                    var bid = $boardEl.attr('data-board-id');
+                    if (window._boardRegistry[bid]) {
+                        window.BOARD_ID = bid;
+                        window.BoardManager = window._boardRegistry[bid].boardManager;
+                        window.ArticleModal = window._boardRegistry[bid].articleModal;
+                    }
+                }
+            });
+        }
+
+        $(document).ready(function() {
+            // data-sort 속성이 있는 th에 sortable 클래스 추가 + 클릭 핸들러
+            $('#articleTable thead th[data-sort]').addClass('sortable').on('click', function() {
+                var sortKey = $(this).data('sort');
+                if (sortKey) BoardManager.sortBy(sortKey);
+            });
+
+            BoardManager.init();
+            $('#btnRefresh').off('click').on('click', () => BoardManager.load());
+            $('#btnExcel').off('click').on('click', () => BoardManager.exportExcel());
+            $('#btnPrint').off('click').on('click', () => BoardManager.printTable());
+        });
+    </script>
+</div>
+</body>
+</html>

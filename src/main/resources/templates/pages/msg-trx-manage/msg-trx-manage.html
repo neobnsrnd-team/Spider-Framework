@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<div th:fragment="content">
+    <!-- Include Page Content Layout Styles -->
+    <th:block th:replace="~{pages/connect-org-manage/connect-org-manage-modal :: styles}" />
+
+    <!-- Search Section Header -->
+    <div class="page-header">
+        <h4 class="page-title">
+            <i class="bi bi-exclamation-circle-fill text-danger"></i>
+            검색조건
+        </h4>
+    </div>
+
+    <!-- Search Box -->
+    <div th:replace="~{pages/msg-trx-manage/msg-trx-manage-search :: search}"></div>
+
+    <!-- List Section Header + Toolbar -->
+    <div class="d-flex align-items-center justify-content-between mt-3">
+        <div class="page-header m-0">
+            <h4 class="page-title">
+                <i class="bi bi-exclamation-circle-fill text-danger"></i>
+                리스트
+            </h4>
+        </div>
+        <div th:replace="~{fragments/page-content-layout :: toolbar}"></div>
+    </div>
+
+    <!-- Table -->
+    <div th:replace="~{pages/msg-trx-manage/msg-trx-manage-table :: table}"></div>
+
+    <!-- Pagination -->
+    <div th:replace="~{fragments/page-content-layout :: pagination}"></div>
+
+    <!-- Bottom Action Buttons -->
+    <div th:replace="~{pages/msg-trx-manage/msg-trx-manage-buttons :: buttons}"></div>
+
+    <!-- WAS Reload Modal -->
+    <div th:replace="~{modals/was-reload-modal :: modal}"></div>
+
+    <!-- 거래 상세 모달 (공통) -->
+    <div th:replace="~{modals/trx-detail-modal :: modal}"></div>
+
+    <!-- 전문 조회/변경 모달 (공통) -->
+    <div th:replace="~{modals/message-browse-modal :: modal}"></div>
+
+    <!-- Message Detail Modal (전문 상세 조회/수정) -->
+    <div th:replace="~{pages/message-manage/message-manage-detail-modal :: modal}"></div>
+
+    <!-- Scripts -->
+    <script th:src="@{/js/components/TrxDetailModal.js}"></script>
+    <script th:src="@{/js/components/MessageBrowseModal.js}"></script>
+    <th:block th:replace="~{pages/msg-trx-manage/msg-trx-manage-script :: script}" />
+    <!-- Message Detail Modal Scripts (MessageDetailModal + shared utilities) -->
+    <th:block th:replace="~{pages/message-manage/message-manage-script :: script}" />
+</div>
+</body>
+</html>

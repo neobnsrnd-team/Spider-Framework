@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head></head>
+<body>
+<div th:fragment="handlerModal" id="handlerModal" class="modal fade" tabindex="-1">
+    <div class="modal-dialog sp-modal-md">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="handlerModalTitle">핸들러 등록</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="handlerForm">
+                    <input type="hidden" id="formOrgId">
+                    <input type="hidden" id="formTrxType">
+                    <input type="hidden" id="formIoType">
+                    <input type="hidden" id="formOperModeType">
+
+                    <div class="mb-3">
+                        <label class="form-label">기관ID</label>
+                        <input type="text" class="form-control" id="formOrgIdDisplay" disabled>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">거래유형 <span class="text-danger">*</span></label>
+                        <select id="formTrxTypeDisplay" class="form-select" disabled>
+                            <option value="">선택</option>
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">어댑터/리스너 <span class="text-danger">*</span></label>
+                        <select id="formIoTypeDisplay" class="form-select" disabled>
+                            <option value="O">어댑터(송신)</option>
+                            <option value="I">리스너(수신)</option>
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">운영모드 <span class="text-danger">*</span></label>
+                        <select id="formOperModeTypeDisplay" class="form-select" disabled>
+                            <option value="">선택</option>
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">핸들러 <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="formHandler" placeholder="핸들러 클래스명" maxlength="200">
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">설명</label>
+                        <textarea class="form-control" id="formHandlerDesc" rows="3" maxlength="2000" placeholder="핸들러 설명"></textarea>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">상태</label>
+                        <select id="formStopYn" class="form-select">
+                            <option value="N" selected>시작</option>
+                            <option value="Y">중지</option>
+                        </select>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"><i class="bi bi-x-lg"></i> 취소</button>
+                <button type="button" class="btn btn-primary" onclick="HandlerList.save()"><i class="bi bi-floppy"></i> 저장</button>
+            </div>
+        </div>
+    </div>
+</div>
+</body>
+</html>

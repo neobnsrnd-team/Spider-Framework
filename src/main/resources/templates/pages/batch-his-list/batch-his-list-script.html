@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<!-- Batch History Page Scripts -->
+<th:block th:fragment="script">
+<script>
+    /**
+     * 날짜 포맷 함수 (YYYYMMDD -> YYYY/MM/DD)
+     */
+    function formatDate(dateStr) {
+        if (!dateStr || dateStr.length < 8) return '';
+        return dateStr.substring(0, 4) + '/' + dateStr.substring(4, 6) + '/' + dateStr.substring(6, 8);
+    }
+
+    /**
+     * 일시 포맷 함수 (YYYYMMDDHH24MISSFF3 -> YYYY/MM/DD HH:MM:SS)
+     */
+    function formatDateTime(dtimeStr) {
+        if (!dtimeStr || dtimeStr.length < 14) return '';
+        return dtimeStr.substring(0, 4) + '/' +
+               dtimeStr.substring(4, 6) + '/' +
+               dtimeStr.substring(6, 8) + ' ' +
+               dtimeStr.substring(8, 10) + ':' +
+               dtimeStr.substring(10, 12) + ':' +
+               dtimeStr.substring(12, 14);
+    }
+
+    const BatchHistory = {
+        currentPage: 1,
+        totalItems: 0,
+        itemsPerPage: 10,
+        sortBy: null,
+        sortDirection: null,
+        currentData: [],
+        appliedSearch: {},
+
+        search: function() {
+            const batchDateInput = $('#searchBatchDate').val();
+            this.appliedSearch = {
+                batchAppId: $('#searchBatchAppId').val(),
+                instanceId: $('#searchInstanceId').val(),
+                resRtCode: $('#searchResRtCode').val(),
+                batchDate: batchDateInput ? batchDateInput.replace(/-/g, '') : ''
+            };
+            this.currentPage = 1;
+            this.load();
+        },
+
+        load: function() {
+            const searchParams = $.extend({}, this.appliedSearch, {
+                page: this.currentPage,
+                size: this.itemsPerPage,
+                sortBy: this.sortBy || null,
+                sortDirection: this.sortDirection || null
+            });
+
+            $.ajax({
+                url: API_BASE_URL + '/batch/history/page',
+                method: 'GET',
+                data: searchParams,
+                success: (response) => {
+                    console.log('API Response:', response);
+
+                    if (response.success && response.data) {
+                        const pageData = response.data;
+                        const batchHisList = pageData.content || [];
+                        BatchHistory.currentData = batchHisList;
+
+                        this.batchHisData = batchHisList;
+                        this.renderTable(batchHisList);
+                        this.totalItems = pageData.totalElements || 0;
+                        this.renderPagination();
+                    } else {
+                        this.renderTable([]);
+                        this.totalItems = 0;
+                        this.renderPagination();
+                    }
+                },
+                error: (xhr) => {
+                    console.error('Failed to load batch history:', xhr);
+                    Toast.error('배치 수행 내역을 불러오는데 실패했습니다.');
+                    this.renderTable([]);
+                    this.totalItems = 0;
+                    this.renderPagination();
+                }
+            });
+        },
+
+        renderTable: function(batchHisList) {
+            const tbody = $('#batchHisTableBody');
+            tbody.empty();
+
+            if (!batchHisList || batchHisList.length === 0) {
+                tbody.append(`
+                    <tr>
+                        <td colspan="12" class="text-center py-4 text-body-secondary">
+                            조회된 데이터가 없습니다.
+                        </td>
+                    </tr>
+                `);
+                return;
+            }
+
+            // 상태코드 스타일 함수
+            const getStatusBadge = (code) => {
+                switch(code) {
+                    case '1':
+                        return '<span class="badge bg-success">정상 종료</span>';
+                    case '0':
+                        return '<span class="badge bg-primary">시작됨</span>';
+                    case '-1':
+                        return '<span class="badge bg-danger">대상건수 알수없음</span>';
+                    default:
+                        return HtmlUtils.escape(code);
+                }
+            };
+
+            batchHisList.forEach((his) => {
+                const row = $(`
+                    <tr>
+                        <td>${HtmlUtils.escape(his.batchAppId)}</td>
+                        <td>${HtmlUtils.escape(his.instanceId)}</td>
+                        <td class="text-center">${his.batchExecuteSeq || ''}</td>
+                        <td class="text-center">${formatDate(his.batchDate)}</td>
+                        <td class="text-center">${formatDateTime(his.logDtime)}</td>
+                        <td class="text-center">${formatDateTime(his.batchEndDtime)}</td>
+                        <td class="text-center">${getStatusBadge(his.resRtCode)}</td>
+                        <td>${HtmlUtils.escape(his.lastUpdateUserId)}</td>
+                        <td class="text-center">${his.recordCount != null ? his.recordCount : ''}</td>
+                        <td class="text-center">${his.successCount != null ? his.successCount : ''}</td>
+                        <td class="text-center">${his.failCount != null ? his.failCount : ''}</td>
+                        <td>${HtmlUtils.escape(his.errorCode)}</td>
+                    </tr>
+                `);
+
+                tbody.append(row);
+            });
+        },
+
+        renderPagination: function() {
+            const totalPages = Math.ceil(this.totalItems / this.itemsPerPage);
+            const pagination = $('#pagination');
+            pagination.empty();
+
+            pagination.append(`
+                <li class="page-item ${this.currentPage === 1 ? 'disabled' : ''}">
+                    <a class="page-link" href="#" onclick="BatchHistory.changePage(1); return false;">
+                        <i class="bi bi-chevron-double-left"></i>
+                    </a>
+                </li>
+                <li class="page-item ${this.currentPage === 1 ? 'disabled' : ''}">
+                    <a class="page-link" href="#" onclick="BatchHistory.changePage(${this.currentPage - 1}); return false;">
+                        <i class="bi bi-chevron-left"></i>
+                    </a>
+                </li>
+            `);
+
+            const maxButtons = 5;
+            let startPage = Math.max(1, this.currentPage - Math.floor(maxButtons / 2));
+            let endPage = Math.min(totalPages, startPage + maxButtons - 1);
+
+            if (endPage - startPage + 1 < maxButtons) {
+                startPage = Math.max(1, endPage - maxButtons + 1);
+            }
+
+            for (let i = startPage; i <= endPage; i++) {
+                pagination.append(`
+                    <li class="page-item ${i === this.currentPage ? 'active' : ''}">
+                        <a class="page-link" href="#" onclick="BatchHistory.changePage(${i}); return false;">${i}</a>
+                    </li>
+                `);
+            }
+
+            pagination.append(`
+                <li class="page-item ${this.currentPage === totalPages || totalPages === 0 ? 'disabled' : ''}">
+                    <a class="page-link" href="#" onclick="BatchHistory.changePage(${this.currentPage + 1}); return false;">
+                        <i class="bi bi-chevron-right"></i>
+                    </a>
+                </li>
+                <li class="page-item ${this.currentPage === totalPages || totalPages === 0 ? 'disabled' : ''}">
+                    <a class="page-link" href="#" onclick="BatchHistory.changePage(${totalPages}); return false;">
+                        <i class="bi bi-chevron-double-right"></i>
+                    </a>
+                </li>
+            `);
+
+            const start = this.totalItems === 0 ? 0 : (this.currentPage - 1) * this.itemsPerPage + 1;
+            const end = Math.min(this.currentPage * this.itemsPerPage, this.totalItems);
+            $('#pageInfo').text(`${start} - ${end} of ${this.totalItems} items`);
+        },
+
+        changePage: function(page) {
+            const totalPages = Math.ceil(this.totalItems / this.itemsPerPage);
+            if (page < 1 || page > totalPages) return;
+            this.currentPage = page;
+            this.load();
+        },
+
+        loadInstanceFilter: function() {
+            $.ajax({
+                url: API_BASE_URL + '/was/instance',
+                method: 'GET',
+                success: (response) => {
+                    if (response.success && response.data) {
+                        const select = $('#searchInstanceId');
+                        select.find('option:not(:first)').remove();
+
+                        response.data.forEach(inst => {
+                            select.append(`
+                                <option value="${HtmlUtils.escape(inst.instanceId)}">
+                                    ${HtmlUtils.escape(inst.instanceId)} - ${HtmlUtils.escape(inst.instanceName || '')}
+                                </option>
+                            `);
+                        });
+                    }
+                },
+                error: (xhr) => {
+                    console.error('Failed to load instances:', xhr);
+                }
+            });
+        },
+
+        exportExcel: function() {
+            const params = $.extend({}, this.appliedSearch);
+            if (this.sortBy) {
+                params.sortBy = this.sortBy;
+                params.sortDirection = this.sortDirection || 'DESC';
+            }
+            const qs = $.param ? $.param(params) : new URLSearchParams(params).toString();
+            window.location.href = API_BASE_URL + '/batch/history/export' + (qs ? '?' + qs : '');
+        },
+
+        printTable: function() {
+            const columns = [
+                { key: 'batchAppId', label: '배치 APP ID' },
+                { key: 'instanceId', label: '인스턴스ID' },
+                { key: 'batchExecuteSeq', label: '실행횟수' },
+                { key: 'batchDate', label: '기준일' },
+                { key: 'logDtime', label: '시작일' },
+                { key: 'batchEndDtime', label: '종료일' },
+                { key: 'resRtCode', label: '상태코드' },
+                { key: 'lastUpdateUserId', label: '수행자ID' },
+                { key: 'recordCount', label: '총 처리건' },
+                { key: 'successCount', label: '정상 처리건' },
+                { key: 'failCount', label: '오류건수' },
+                { key: 'errorCode', label: '오류코드' }
+            ];
+            PrintUtil.print({ title: '배치 수행내역', columns: columns, data: this.batchHisData || [] });
+        },
+
+        setTodayDate: function() {
+            const today = new Date();
+            const year = today.getFullYear();
+            const month = String(today.getMonth() + 1).padStart(2, '0');
+            const day = String(today.getDate()).padStart(2, '0');
+            $('#searchBatchDate').val(`${year}-${month}-${day}`);
+        }
+    };
+
+    // ==================== Sort Methods ====================
+
+    BatchHistory.updateSortIndicators = function() {
+        const headers = $('#batchHisTable thead th[data-sort]');
+        headers.removeClass('sort-asc sort-desc');
+        if (!this.sortBy || !this.sortDirection) return;
+        headers.filter(`[data-sort="${this.sortBy}"]`)
+            .addClass(this.sortDirection === 'ASC' ? 'sort-asc' : 'sort-desc');
+    };
+
+    // ==================== Event Bindings ====================
+
+    // 정렬 헤더 클릭 (ASC → DESC → 해제)
+    $('#batchHisTable thead th[data-sort]').off('click').on('click', function() {
+        const sortKey = $(this).data('sort');
+        if (!sortKey) return;
+        if (BatchHistory.sortBy === sortKey) {
+            if (BatchHistory.sortDirection === 'ASC') {
+                BatchHistory.sortDirection = 'DESC';
+            } else {
+                BatchHistory.sortBy = null;
+                BatchHistory.sortDirection = null;
+            }
+        } else {
+            BatchHistory.sortBy = sortKey;
+            BatchHistory.sortDirection = 'ASC';
+        }
+        BatchHistory.currentPage = 1;
+        BatchHistory.updateSortIndicators();
+        BatchHistory.load();
+    });
+
+    // Toolbar buttons
+    $('#btnExcel').off('click').on('click', function() {
+        window.location.href = API_BASE_URL + '/batch/history/export';
+    });
+
+    $('#btnPrint').off('click').on('click', function() {
+        const columns = [
+            { key: 'batchAppId', label: '배치APP ID' },
+            { key: 'instanceId', label: '인스턴스ID' },
+            { key: 'batchDate', label: '기준일' },
+            { key: 'logDtime', label: '시작일시' },
+            { key: 'batchEndDtime', label: '종료일시' },
+            { key: 'resRtCode', label: '상태코드' },
+            { key: 'lastUpdateUserId', label: '수행자ID' },
+            { key: 'recordCount', label: '총처리건' },
+            { key: 'successCount', label: '정상처리건' },
+            { key: 'failCount', label: '오류건수' }
+        ];
+        PrintUtil.print({ title: '배치 수행 내역', columns: columns, data: BatchHistory.currentData });
+    });
+
+    $('#btnRefresh').off('click').on('click', function() {
+        BatchHistory.load();
+    });
+
+    $('#btnExcel').off('click').on('click', function() {
+        BatchHistory.exportExcel();
+    });
+
+    $('#btnPrint').off('click').on('click', function() {
+        BatchHistory.printTable();
+    });
+
+    // limitRows 변경
+    $('#limitRows').change(function() {
+        BatchHistory.itemsPerPage = parseInt($(this).val()) || 10;
+    });
+
+    // 검색 영역 Enter 키 검색
+    $('.card.border').on('keydown', 'input, select', function(e) {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            BatchHistory.search();
+        }
+    });
+
+    // ==================== Initialization ====================
+
+    // 페이지 로드 시 인스턴스 필터 초기화
+    BatchHistory.loadInstanceFilter();
+
+    // 오늘 날짜 기본값 설정
+    BatchHistory.setTodayDate();
+
+    // 페이지 로드 시 itemsPerPage 동기화
+    BatchHistory.itemsPerPage = parseInt($('#limitRows').val()) || 10;
+
+    // 페이지 로드 시 초기 검색 조건 저장 + 조회
+    BatchHistory.search();
+</script>
+</th:block>
+</body>
+</html>

@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<div th:fragment="extraModals">
+    <!-- 유사전문복사 Modal -->
+    <div class="modal fade" id="similarMessageModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
+        <div class="modal-dialog modal-dialog-centered modal-xl">
+            <div class="modal-content">
+                <div class="modal-header py-2">
+                    <h6 class="modal-title">유사전문복사</h6>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <!-- ===== 목록 뷰 ===== -->
+                    <div id="similarListView">
+                        <div class="d-flex align-items-center gap-2 mb-2">
+                            <label class="fw-medium text-nowrap">기관명</label>
+                            <select id="similarOrgId" class="form-select form-select-sm" style="width:150px;">
+                                <option value="">전체</option>
+                            </select>
+                            <label class="fw-medium text-nowrap ms-2">전문ID</label>
+                            <input type="text" id="similarSearchMessageId" class="form-control form-control-sm" style="width:200px;"
+                                   placeholder="전문ID 검색" onkeyup="if(event.key==='Enter') MessageDetailModal.searchSimilarMessages()">
+                            <select id="similarPageSize" class="form-select form-select-sm" style="width:80px;">
+                                <option value="20" selected>20</option>
+                                <option value="50">50</option>
+                                <option value="100">100</option>
+                            </select>
+                            <span class="text-nowrap text-body-secondary" style="font-size:0.8rem;">건씩</span>
+                            <button class="btn btn-sm btn-primary text-nowrap" onclick="MessageDetailModal.searchSimilarMessages()">
+                                <i class="bi bi-search"></i> 조회
+                            </button>
+                        </div>
+                        <p class="text-body-secondary mb-2" style="font-size:0.8rem;">※ 전문복사 - 복사버튼, 상세정보 - 리스트 클릭</p>
+                        <div class="table-responsive" style="max-height:350px; overflow-y:auto;">
+                            <table class="table table-sm table-hover sp-data-grid">
+                                <thead class="table-light sticky-top">
+                                    <tr>
+                                        <th>기관명</th>
+                                        <th>전문ID</th>
+                                        <th>전문명</th>
+                                        <th class="col-w-80 text-center">복사</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="similarMsgBody">
+                                    <tr><td colspan="4" class="text-center py-3 text-body-secondary">조회 버튼을 클릭하여 검색하세요.</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <!-- ===== 상세 뷰 (행 클릭 시 전환) ===== -->
+                    <div id="similarDetailView" style="display:none;">
+                        <div class="d-flex align-items-center gap-2 mb-2 p-2 bg-light border rounded">
+                            <label class="fw-medium text-nowrap">기관명</label>
+                            <input type="text" id="similarDetailOrgId" class="form-control form-control-sm" style="width:120px;" readonly disabled>
+                            <label class="fw-medium text-nowrap ms-2">전문명</label>
+                            <input type="text" id="similarDetailMsgName" class="form-control form-control-sm" style="width:200px;" readonly disabled>
+                            <label class="fw-medium text-nowrap ms-2">전문ID</label>
+                            <input type="text" id="similarDetailMsgId" class="form-control form-control-sm" style="width:200px;" readonly disabled>
+                        </div>
+                        <div class="table-responsive" style="max-height:350px; overflow-y:auto;">
+                            <table class="table table-sm table-hover sp-data-grid">
+                                <thead class="table-light sticky-top">
+                                    <tr>
+                                        <th class="col-w-30"><input type="checkbox" id="similarFieldSelectAll" checked></th>
+                                        <th class="text-center col-w-50">순번</th>
+                                        <th>전문필드ID</th>
+                                        <th>전문필드명</th>
+                                        <th class="text-center col-w-80">타입</th>
+                                        <th class="text-center col-w-60">길이</th>
+                                        <th class="text-center col-w-60">정렬</th>
+                                        <th class="text-center col-w-60">필수</th>
+                                        <th>초기값</th>
+                                        <th>remark</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="similarFieldBody"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer py-2">
+                    <button type="button" class="btn btn-primary btn-sm" id="btnSimilarCopySelected" style="display:none;"
+                            onclick="MessageDetailModal.applySimilarSelectedFields()">
+                        <i class="bi bi-clipboard-plus"></i> 선택행 복사
+                    </button>
+                    <button type="button" class="btn btn-outline-secondary btn-sm" id="btnSimilarBackToList" style="display:none;"
+                            onclick="MessageDetailModal.similarBackToList()">
+                        <i class="bi bi-list-ul"></i> 목록
+                    </button>
+                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal"><i class="bi bi-x-lg"></i> 닫기</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 표준전문조회복사 Modal -->
+    <div class="modal fade" id="stdMessageSearchModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
+        <div class="modal-dialog modal-dialog-centered modal-xl">
+            <div class="modal-content">
+                <div class="modal-header py-2">
+                    <h6 class="modal-title">표준전문조회복사</h6>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <!-- ===== 목록 뷰 ===== -->
+                    <div id="stdSearchListView">
+                        <div class="d-flex align-items-center gap-2 mb-2">
+                            <label class="fw-medium text-nowrap">검색기준</label>
+                            <select id="stdSearchField" class="form-select form-select-sm" style="width:120px;">
+                                <option value="trxId">거래ID</option>
+                                <option value="trxName">거래명</option>
+                            </select>
+                            <input type="text" id="stdSearchValue" class="form-control form-control-sm" style="width:220px;"
+                                   placeholder="검색어 입력" onkeyup="if(event.key==='Enter') MessageDetailModal.searchStdMessages()">
+                            <select id="stdSearchPageSize" class="form-select form-select-sm" style="width:80px;">
+                                <option value="20" selected>20</option>
+                                <option value="50">50</option>
+                                <option value="100">100</option>
+                            </select>
+                            <span class="text-nowrap text-body-secondary" style="font-size:0.8rem;">건씩</span>
+                            <button class="btn btn-sm btn-primary text-nowrap" onclick="MessageDetailModal.searchStdMessages()">
+                                <i class="bi bi-search"></i> 조회
+                            </button>
+                        </div>
+                        <p class="text-body-secondary mb-2" style="font-size:0.8rem;">※ 전문복사 - 복사버튼, 상세정보 - 리스트 클릭</p>
+                        <div class="table-responsive" style="max-height:350px; overflow-y:auto;">
+                            <table class="table table-sm table-hover sp-data-grid">
+                                <thead class="table-light sticky-top">
+                                    <tr>
+                                        <th>거래ID</th>
+                                        <th>거래명</th>
+                                        <th>전문ID</th>
+                                        <th class="text-center col-w-80">요청/응답</th>
+                                        <th>전문명</th>
+                                        <th class="col-w-80 text-center">복사</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="stdSearchMsgBody">
+                                    <tr><td colspan="6" class="text-center py-3 text-body-secondary">검색어를 입력하고 조회 버튼을 클릭하세요.</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <!-- ===== 상세 뷰 (행 클릭 시 전환) ===== -->
+                    <div id="stdSearchDetailView" style="display:none;">
+                        <div class="d-flex align-items-center gap-2 mb-2 p-2 bg-light border rounded">
+                            <label class="fw-medium text-nowrap">거래ID</label>
+                            <input type="text" id="stdDetailTrxId" class="form-control form-control-sm" style="width:140px;" readonly disabled>
+                            <label class="fw-medium text-nowrap ms-2">기관</label>
+                            <input type="text" id="stdDetailOrgId" class="form-control form-control-sm" style="width:100px;" readonly disabled>
+                            <label class="fw-medium text-nowrap ms-2">전문ID</label>
+                            <input type="text" id="stdDetailMsgId" class="form-control form-control-sm" style="width:180px;" readonly disabled>
+                            <label class="fw-medium text-nowrap ms-2">전문명</label>
+                            <input type="text" id="stdDetailMsgName" class="form-control form-control-sm" style="width:180px;" readonly disabled>
+                        </div>
+                        <div class="table-responsive" style="max-height:350px; overflow-y:auto;">
+                            <table class="table table-sm table-hover sp-data-grid">
+                                <thead class="table-light sticky-top">
+                                    <tr>
+                                        <th class="col-w-30"><input type="checkbox" id="stdFieldSelectAll" checked></th>
+                                        <th class="text-center col-w-50">순번</th>
+                                        <th>전문필드ID</th>
+                                        <th>전문필드명</th>
+                                        <th class="text-center col-w-80">타입</th>
+                                        <th class="text-center col-w-60">길이</th>
+                                        <th class="text-center col-w-60">정렬</th>
+                                        <th class="text-center col-w-60">필수</th>
+                                        <th>초기값</th>
+                                        <th>remark</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="stdSearchFieldBody"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer py-2">
+                    <button type="button" class="btn btn-primary btn-sm" id="btnStdCopySelected" style="display:none;"
+                            onclick="MessageDetailModal.applyStdSelectedFields()">
+                        <i class="bi bi-clipboard-plus"></i> 선택행 복사
+                    </button>
+                    <button type="button" class="btn btn-outline-secondary btn-sm" id="btnStdBackToList" style="display:none;"
+                            onclick="MessageDetailModal.stdBackToList()">
+                        <i class="bi bi-list-ul"></i> 목록
+                    </button>
+                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal"><i class="bi bi-x-lg"></i> 닫기</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 필드풀 검증 Modal -->
+    <div class="modal fade" id="fieldPoolModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
+        <div class="modal-dialog modal-dialog-centered modal-lg">
+            <div class="modal-content">
+                <div class="modal-header py-2">
+                    <h6 class="modal-title">필드풀 검증</h6>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="table-responsive" style="max-height:400px; overflow-y:auto;">
+                        <table class="table table-sm table-hover sp-data-grid">
+                            <thead class="table-light sticky-top">
+                                <tr>
+                                    <th class="text-center">도메인</th>
+                                    <th class="text-center">등록여부</th>
+                                    <th class="text-center">필드풀</th>
+                                    <th class="text-center">등록여부</th>
+                                </tr>
+                            </thead>
+                            <tbody id="fieldPoolBody">
+                                <tr><td colspan="4" class="text-center py-3 text-body-secondary">검증 결과가 표시됩니다.</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="modal-footer py-2">
+                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal"><i class="bi bi-x-lg"></i> 닫기</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 테이블/컬럼 정보 Modal -->
+    <div class="modal fade" id="tableInfoModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
+        <div class="modal-dialog modal-dialog-centered modal-lg">
+            <div class="modal-content">
+                <div class="modal-header py-2">
+                    <h6 class="modal-title">테이블/컬럼 정보</h6>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="d-flex align-items-center gap-2 mb-2">
+                        <label class="fw-medium text-nowrap">테이블명</label>
+                        <input type="text" id="tableSearchInput" class="form-control form-control-sm" style="width:250px;"
+                               placeholder="테이블명 입력 (예: FWK_MESSAGE)" onkeyup="if(event.key==='Enter') MessageDetailModal.searchTableColumns()">
+                        <button class="btn btn-sm btn-primary text-nowrap" onclick="MessageDetailModal.searchTableColumns()">
+                            <i class="bi bi-search"></i> 조회
+                        </button>
+                    </div>
+                    <div class="table-responsive" style="max-height:350px; overflow-y:auto;">
+                        <table class="table table-sm table-hover sp-data-grid">
+                            <thead class="table-light sticky-top">
+                                <tr>
+                                    <th class="col-w-30"><input type="checkbox" id="tableColSelectAll"></th>
+                                    <th>컬럼명</th>
+                                    <th class="text-center col-w-100">데이터타입</th>
+                                    <th class="text-center col-w-80">길이</th>
+                                    <th>코멘트</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tableColumnBody">
+                                <tr><td colspan="5" class="text-center py-3 text-body-secondary">테이블명을 입력하고 조회하세요.</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="modal-footer py-2">
+                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal"><i class="bi bi-x-lg"></i> 닫기</button>
+                    <button type="button" class="btn btn-primary btn-sm" onclick="MessageDetailModal.applyTableColumns()">
+                        <i class="bi bi-plus-lg"></i> 선택 컬럼 적용
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 헤더전문포함조회 Modal -->
+    <div class="modal fade" id="headerFieldsModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
+        <div class="modal-dialog modal-dialog-centered modal-xl">
+            <div class="modal-content">
+                <div class="modal-header py-2">
+                    <h6 class="modal-title">헤더전문포함조회</h6>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="table-responsive" style="max-height:500px; overflow-y:auto;">
+                        <table class="table table-sm table-hover sp-data-grid">
+                            <thead class="table-light sticky-top">
+                                <tr>
+                                    <th class="text-center col-w-50">순번</th>
+                                    <th>전문ID</th>
+                                    <th>필드ID</th>
+                                    <th>필드명</th>
+                                    <th>설명</th>
+                                    <th class="text-center col-w-80">타입</th>
+                                    <th class="text-center col-w-60">길이</th>
+                                </tr>
+                            </thead>
+                            <tbody id="headerFieldsBody">
+                                <tr><td colspan="7" class="text-center py-3 text-body-secondary">조회 결과가 표시됩니다.</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="modal-footer py-2">
+                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal"><i class="bi bi-x-lg"></i> 닫기</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- 엑셀 업로드 Modal -->
+    <div class="modal fade" id="excelUploadModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header py-2">
+                    <h6 class="modal-title">전문 엑셀 업로드</h6>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label fw-medium">파일 선택</label>
+                        <input type="file" id="excelUploadFile" class="form-control form-control-sm" accept=".xlsx">
+                        <div class="form-text">xlsx 형식의 파일만 업로드 가능합니다. (최대 10MB)</div>
+                    </div>
+                    <div id="excelUploadFileInfo" style="display:none;">
+                        <table class="table table-sm table-bordered mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>파일명</th>
+                                    <th class="col-w-80 text-center">크기</th>
+                                    <th class="col-w-80 text-center">상태</th>
+                                </tr>
+                            </thead>
+                            <tbody id="excelUploadFileInfoBody"></tbody>
+                        </table>
+                    </div>
+                    <div id="excelUploadResult" style="display:none;" class="mt-3">
+                        <div class="alert alert-info py-2 mb-2">
+                            <strong>업로드 결과</strong>
+                        </div>
+                        <table class="table table-sm table-bordered mb-2">
+                            <tbody>
+                                <tr><td class="fw-medium">전체 처리 행</td><td id="resultTotalRows" class="text-end"></td></tr>
+                                <tr><td class="fw-medium">신규 등록</td><td id="resultCreated" class="text-end"></td></tr>
+                                <tr><td class="fw-medium">수정</td><td id="resultUpdated" class="text-end"></td></tr>
+                                <tr><td class="fw-medium">건너뜀</td><td id="resultSkipped" class="text-end"></td></tr>
+                            </tbody>
+                        </table>
+                        <div id="excelUploadErrors" style="display:none;">
+                            <div class="alert alert-warning py-2 mb-1">
+                                <strong>오류 상세</strong>
+                            </div>
+                            <div id="excelUploadErrorList" class="small text-danger" style="max-height:150px; overflow-y:auto;"></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer py-2">
+                    <button type="button" class="btn btn-primary btn-sm" id="btnExcelUploadSubmit">
+                        <i class="bi bi-upload"></i> 업로드
+                    </button>
+                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal"><i class="bi bi-x-lg"></i> 닫기</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+</body>
+</html>

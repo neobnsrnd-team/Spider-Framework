@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<div th:fragment="content">
+
+    <!-- Search Section Header -->
+    <div class="page-header">
+        <h4 class="page-title">
+            <i class="bi bi-search"></i>
+            검색조건
+        </h4>
+    </div>
+
+    <!-- Search Box (기존 검색 UI 재사용) -->
+    <div th:replace="~{pages/was-status/was-status-search :: search}"></div>
+
+    <!-- List Section Header -->
+    <div class="page-header mt-3">
+        <h4 class="page-title">
+            <i class="bi bi-list-ul"></i>
+            리스트
+        </h4>
+    </div>
+
+    <!-- Toolbar -->
+    <div th:replace="~{fragments/page-content-layout :: toolbar}"></div>
+
+    <!-- Table (모니터링 전용) -->
+    <div th:replace="~{pages/was-status-monitor/was-status-monitor-table :: table}"></div>
+
+    <!-- Pagination -->
+    <div th:replace="~{fragments/page-content-layout :: pagination}"></div>
+
+    <!-- Modal -->
+    <div th:replace="~{pages/was-status/was-status-modal :: modal}"></div>
+
+    <!-- 권한 변수 (JS) -->
+    <script th:inline="javascript">
+        var was_gateway_status_write = /*[[${userAuthorities != null and userAuthorities.contains('WAS_GATEWAY_STATUS:W')}]]*/ false;
+    </script>
+
+    <!-- Script (모니터링 전용) -->
+    <th:block th:replace="~{pages/was-status-monitor/was-status-monitor-script :: script}" />
+</div>
+</body>
+</html>

@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<div th:fragment="content">
+    <!-- 권한 플래그 (모달에서 사용) -->
+    <script th:inline="javascript">
+        var hasWasGroupWrite = /*[[${userAuthorities != null and userAuthorities.contains('WAS_GROUP:W')}]]*/ false;
+    </script>
+
+    <!-- Include Page Content Layout Styles -->
+
+    <!-- Search Section Header -->
+    <div class="page-header">
+        <h4 class="page-title">
+            <i class="bi bi-exclamation-circle-fill text-danger"></i>
+            검색조건
+        </h4>
+    </div>
+
+    <!-- Search Box -->
+    <div th:replace="~{pages/was-group-manage/was-group-manage-search :: search}"></div>
+
+    <!-- List Section Header + Toolbar -->
+    <div class="page-header mt-3">
+        <h4 class="page-title">
+            <i class="bi bi-exclamation-circle-fill text-danger"></i>
+            리스트
+        </h4>
+        <div class="d-flex gap-2">
+            <button class="btn btn-outline-secondary btn-sm" onclick="FWKM0190.exportExcel()">
+                <i class="bi bi-file-earmark-excel"></i> 엑셀
+            </button>
+            <button class="btn btn-outline-secondary btn-sm" onclick="FWKM0190.printList()">
+                <i class="bi bi-file-earmark-text"></i> 출력
+            </button>
+        </div>
+    </div>
+
+    <!-- Table -->
+    <div th:replace="~{pages/was-group-manage/was-group-manage-table :: table}"></div>
+
+    <!-- Pagination -->
+    <div th:replace="~{fragments/page-content-layout :: pagination}"></div>
+
+    <!-- Bottom Actions -->
+    <div class="bottom-actions">
+        <div class="bottom-actions-left">
+        </div>
+        <div class="bottom-actions-right">
+            <button class="btn btn-primary btn-sm"
+                    th:if="${userAuthorities != null and userAuthorities.contains('WAS_GROUP:W')}"
+                    onclick="FWKM0190.showCreateGroupModal()">
+                + 등록
+            </button>
+        </div>
+    </div>
+
+    <!-- Modal will be created dynamically by JavaScript -->
+    <div id="wasGroupModalContainer"></div>
+
+    <!-- WAS Group Script -->
+    <th:block th:replace="~{pages/was-group-manage/was-group-manage-script :: script}" />
+</div>
+</body>
+</html>

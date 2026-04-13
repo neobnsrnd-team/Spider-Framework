@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<div th:fragment="buttons" class="bottom-actions">
+    <div class="bottom-actions-left" th:if="${userAuthorities != null and userAuthorities.contains('MESSAGE_HANDLER:W')}">
+        <button class="btn btn-outline-secondary btn-sm" type="button" onclick="HandlerList.addRow()">
+            <i class="bi bi-plus-lg"></i> 행 추가
+        </button>
+        <button class="btn btn-outline-secondary btn-sm" type="button" onclick="HandlerList.deleteSelected()">
+            <i class="bi bi-trash"></i> 선택행 삭제
+        </button>
+    </div>
+    <div class="bottom-actions-right">
+        <button class="btn btn-success btn-sm" type="button" onclick="HandlerList.openReloadModal()"
+                th:if="${userAuthorities != null and userAuthorities.contains('MESSAGE_HANDLER:W')}">
+            <i class="bi bi-arrow-repeat"></i> Reload to WAS
+        </button>
+        <button class="btn btn-primary btn-sm" type="button" onclick="HandlerList.saveAll()"
+                th:if="${userAuthorities != null and userAuthorities.contains('MESSAGE_HANDLER:W')}">
+            <i class="bi bi-floppy"></i> 변경사항 저장
+        </button>
+        <button class="btn btn-outline-secondary btn-sm" type="button" onclick="HandlerList.load(1)">
+            <i class="bi bi-search"></i> 조회
+        </button>
+    </div>
+</div>
+</body>
+</html>

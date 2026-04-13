@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<div th:fragment="content">
+    <!-- Include Page Content Layout Styles -->
+
+    <!-- Search Section Header -->
+    <div class="page-header">
+        <h4 class="page-title">
+            <i class="bi bi-folder2-open text-primary"></i>
+            검색조건
+        </h4>
+    </div>
+
+    <!-- Search Box -->
+    <div th:replace="~{pages/trans-data-list/trans-data-list-search :: search}"></div>
+
+    <!-- List Section Header -->
+    <div class="page-header mt-3">
+        <h4 class="page-title">
+            <i class="bi bi-folder2-open text-primary"></i>
+            이행 데이터 파일 목록
+        </h4>
+    </div>
+
+    <!-- Toolbar -->
+    <div th:replace="~{fragments/page-content-layout :: toolbar}"></div>
+
+    <!-- Table -->
+    <div th:replace="~{pages/trans-data-list/trans-data-list-table :: table}"></div>
+
+    <!-- Pagination -->
+    <div th:replace="~{fragments/page-content-layout :: pagination}"></div>
+
+    <!-- Preview Modal -->
+    <div th:replace="~{pages/trans-data-list/trans-data-list-modal :: modal}"></div>
+
+    <!-- TransDataFile Script -->
+    <th:block th:replace="~{pages/trans-data-list/trans-data-list-script :: script}" />
+</div>
+</body>
+</html>

@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<div th:fragment="content">
+    <!-- Include Page Content Layout Styles -->
+
+    <!-- Search Section Header -->
+    <div class="page-header">
+        <h4 class="page-title">
+            <i class="bi bi-exclamation-circle-fill text-danger"></i>
+            검색조건
+        </h4>
+    </div>
+
+    <!-- Search Container (동적 생성) -->
+    <div id="searchContainer"></div>
+
+    <!-- List Section Header -->
+    <div class="page-header mt-3">
+        <h4 class="page-title">
+            <i class="bi bi-exclamation-circle-fill text-danger"></i>
+            리스트
+        </h4>
+
+        <!-- Toolbar -->
+        <th:block th:replace="~{fragments/page-content-layout :: toolbar}" />
+    </div>
+
+
+    <!-- Table Container (동적 생성) -->
+    <div id="tableContainer"></div>
+
+    <!-- Pagination -->
+    <th:block th:replace="~{fragments/page-content-layout :: pagination}" />
+
+    <!-- Bottom Action Buttons -->
+    <div class="bottom-actions" th:if="${userAuthorities != null and userAuthorities.contains('PROPERTY_DB:W')}">
+        <button class="btn btn-primary btn-sm" id="btnAddPropertyGroup">
+            + 신규 프로퍼티 그룹 생성
+        </button>
+    </div>
+
+    <!-- Similar Property Modal (shared) -->
+    <div th:replace="~{pages/property-db-manage/property-db-manage-similar-modal :: similarModal}"></div>
+    <th:block th:replace="~{pages/property-db-manage/property-db-manage-similar-modal-script :: similarScript}" />
+
+    <!-- Property Detail Modal -->
+    <div th:replace="~{pages/property-db-manage/property-db-manage-detail-modal :: modal}"></div>
+    <th:block th:replace="~{pages/property-db-manage/property-db-manage-detail-modal :: script}" />
+
+    <!-- WAS 일괄적용 Modal (공통) -->
+    <div th:replace="~{pages/property-db-manage/property-db-manage-was-modal :: modal}"></div>
+    <th:block th:replace="~{pages/property-db-manage/property-db-manage-was-modal :: script}" />
+
+    <!-- 프로퍼티 그룹 히스토리 Modal (공통) -->
+    <div th:replace="~{pages/property-db-manage/property-db-manage-history-modal :: modal}"></div>
+    <th:block th:replace="~{pages/property-db-manage/property-db-manage-history-modal :: script}" />
+
+    <!-- WAS 인스턴스 선택 Modal (WAS별 설정 백업용) -->
+    <div th:replace="~{pages/property-db-manage/property-db-manage-was-instance-select-modal :: modal}"></div>
+    <th:block th:replace="~{pages/property-db-manage/property-db-manage-was-instance-select-modal :: script}" />
+
+    <!-- WAS 프로퍼티 히스토리 Modal (WAS별 설정 복원용) -->
+    <div th:replace="~{pages/property-db-manage/property-db-manage-was-history-modal :: modal}"></div>
+    <th:block th:replace="~{pages/property-db-manage/property-db-manage-was-history-modal :: script}" />
+
+    <!-- Property Group Create Modal -->
+    <div th:replace="~{pages/property-db-manage/property-db-manage-group-modal :: modal}"></div>
+    <th:block th:replace="~{pages/property-db-manage/property-db-manage-group-modal :: script}" />
+
+    <!-- WAS Setting Modal -->
+    <div th:replace="~{pages/property-db-manage/property-db-manage-was-setting-modal :: modal}"></div>
+    <th:block th:replace="~{pages/property-db-manage/property-db-manage-was-setting-modal :: script}" />
+
+    <!-- Page Script -->
+    <script th:inline="javascript">
+        // 프로퍼티 DB 관리 페이지 설정
+        var PAGE_CONFIG = {
+            pageId: 'propertyGroups',
+            apiEndpoint: API_BASE_URL + '/properties/groups/page',
+
+            // 검색 폼 설정
+            search: {
+                fields: [
+                    {
+                        type: 'select',
+                        id: 'searchField',
+                        width: '140px',
+                        options: [
+                            { value: 'propertyGroupId', label: '프로퍼티그룹ID' },
+                            { value: 'propertyGroupName', label: '프로퍼티그룹명' }
+                        ]
+                    },
+                    {
+                        type: 'text',
+                        id: 'searchValue',
+                        placeholder: '검색어 입력',
+                        width: '180px'
+                    }
+                ],
+                limit: { default: 10, showLarge: true }
+            },
+
+            // 테이블 설정
+            table: {
+                id: 'propertyGroupTable',
+                columns: [
+                    { key: 'propertyGroupId', label: '프로퍼티그룹ID', width: '200px', sortable: true },
+                    { key: 'propertyGroupName', label: '프로퍼티그룹명', width: '300px', sortable: true, align: 'left' },
+                    { key: 'detail', label: '상세보기', width: '120px', align: 'center',
+                        render: function(value, row, index) {
+                            return '<button class="btn btn-outline-primary btn-sm" onclick="PropertyPage.openDetail(\'' + row.propertyGroupId + '\')">' +
+                                   '<i class="bi bi-search"></i> 상세보기</button>';
+                        }
+                    },
+                    { key: 'wasSetting', label: 'WAS별 설정', width: '130px', align: 'center',
+                        render: function(value, row, index) {
+                            return '<button class="btn btn-outline-info btn-sm" onclick="PropertyPage.openWasSetting(\'' + row.propertyGroupId + '\')">' +
+                                   '<i class="bi bi-hdd-rack"></i> WAS별 설정</button>';
+                        }
+                    },
+                    { key: 'reload', label: 'Reload', width: '110px', align: 'center',
+                        render: function(value, row, index) {
+                            return '<button class="btn btn-outline-secondary btn-sm" onclick="PropertyPage.reload(\'' + row.propertyGroupId + '\')">' +
+                                   '<i class="bi bi-arrow-clockwise"></i> Reload</button>';
+                        }
+                    }
+                ],
+                emptyMessage: '데이터를 불러오는 중입니다...',
+                noDataMessage: '조회된 프로퍼티 그룹이 없습니다.'
+            },
+
+            containers: {
+                search: '#searchContainer',
+                table: '#tableContainer',
+                pagination: '#pagination',
+                pageInfo: '#pageInfo'
+            },
+
+            autoLoad: true
+        };
+
+        // 페이지 상태 관리
+        window.PropertyPage = {
+            currentPage: 1,
+            totalItems: 0,
+            itemsPerPage: 10,
+            sortBy: null,
+            sortDirection: null,
+
+            // 캐시: WAS 인스턴스 / 프로퍼티 그룹 목록
+            cachedInstances: [],
+            cachedPropertyGroups: [],
+
+            init: function() {
+                // 1. 검색 폼 렌더링
+                SearchForm.render('#searchContainer', PAGE_CONFIG.search, () => {
+                    this.currentPage = 1;
+                    this.load();
+                });
+
+                // 2. 테이블 렌더링
+                const tableConfig = {
+                    ...PAGE_CONFIG.table,
+                    onSort: (sortBy, sortDirection) => {
+                        this.sortBy = sortBy;
+                        this.sortDirection = sortDirection;
+                        this.currentPage = 1;
+                        this.load();
+                    }
+                };
+
+                DataTable.render('#tableContainer', tableConfig, null);
+
+                // 3. 페이지네이션 초기화
+                Pagination.init('#pagination', '#pageInfo', (page) => {
+                    this.currentPage = page;
+                    this.load();
+                });
+
+                // 4. 버튼 이벤트 바인딩
+                $('#btnAddPropertyGroup').off('click').on('click', () => {
+                    this.openAddModal();
+                });
+
+                $('#btnRefresh').off('click').on('click', () => {
+                    this.load();
+                });
+
+                $('#btnExcel').off('click').on('click', () => {
+                    this.exportExcel();
+                });
+
+                $('#btnPrint').off('click').on('click', () => {
+                    this.printTable();
+                });
+
+                // 5. WAS 인스턴스 + 프로퍼티 그룹 목록 사전 로드
+                this.preloadSelectData();
+
+                // 6. 자동 로드
+                if (PAGE_CONFIG.autoLoad) {
+                    this.load();
+                }
+            },
+
+            // WAS 인스턴스 + 프로퍼티 그룹 목록 사전 로드
+            preloadSelectData: function() {
+                $.ajax({
+                    url: API_BASE_URL + '/was/instance',
+                    method: 'GET',
+                    success: (response) => {
+                        if (response.success && response.data) {
+                            this.cachedInstances = response.data;
+                        }
+                    }
+                });
+                $.ajax({
+                    url: API_BASE_URL + '/properties/groups',
+                    method: 'GET',
+                    success: (response) => {
+                        if (response.success && response.data) {
+                            this.cachedPropertyGroups = response.data;
+                        }
+                    }
+                });
+            },
+
+            load: function() {
+                const params = SearchForm.getParams('#searchContainer');
+                params.page = this.currentPage;
+                params.size = params.size || this.itemsPerPage;
+
+                if (this.sortBy) {
+                    params.sortBy = this.sortBy;
+                    params.sortDirection = this.sortDirection || 'ASC';
+                }
+
+                $.ajax({
+                    url: PAGE_CONFIG.apiEndpoint,
+                    method: 'GET',
+                    data: params,
+                    success: (response) => {
+                        if (response.success && response.data) {
+                            const pageData = response.data;
+                            DataTable.setData('#tableContainer', pageData.content || []);
+
+                            this.totalItems = pageData.totalElements || 0;
+                            this.itemsPerPage = params.size;
+
+                            Pagination.update('#pagination', {
+                                currentPage: this.currentPage,
+                                totalItems: this.totalItems,
+                                itemsPerPage: this.itemsPerPage
+                            });
+
+                            // 테이블 데이터 변경 시 셀렉트 캐시도 갱신
+                            this.preloadSelectData();
+                        } else {
+                            DataTable.setData('#tableContainer', []);
+                            Pagination.reset('#pagination');
+                        }
+                    },
+                    error: (xhr) => {
+                        console.error('Failed to load property groups:', xhr);
+                        Toast.error('프로퍼티 그룹 목록을 불러오는데 실패했습니다.');
+                        DataTable.setData('#tableContainer', []);
+                        Pagination.reset('#pagination');
+                    }
+                });
+            },
+
+            // 상세보기
+            openDetail: function(propertyGroupId) {
+                PropertyDetailModal.open(propertyGroupId);
+            },
+
+            // WAS별 설정
+            openWasSetting: function(propertyGroupId) {
+                WasSettingModal.open(propertyGroupId);
+            },
+
+            // Reload (미구현)
+            reload: function(propertyGroupId) {
+                Toast.warning('Reload 기능은 추후 구현 예정입니다.\n프로퍼티 그룹 ID: ' + propertyGroupId);
+            },
+
+            // 신규 프로퍼티 그룹 생성
+            openAddModal: function() {
+                PropertyGroupCreateModal.open();
+            },
+
+            printTable: function() {
+                const printColumns = PAGE_CONFIG.table.columns
+                    .filter(col => !col.render)
+                    .map(col => ({ key: col.key, label: col.label }));
+                const data = DataTable.getData('#tableContainer');
+                PrintUtil.print({ title: '프로퍼티 그룹 목록', columns: printColumns, data: data });
+            },
+
+            exportExcel: function() {
+                const params = SearchForm.getParams('#searchContainer');
+                delete params.page;
+                delete params.size;
+                if (this.sortBy) {
+                    params.sortBy = this.sortBy;
+                    params.sortDirection = this.sortDirection || 'ASC';
+                }
+                const qs = $.param(params);
+                window.location.href = API_BASE_URL + '/properties/groups/export' + (qs ? '?' + qs : '');
+            }
+        };
+
+        // 페이지 초기화
+        $(document).ready(function() {
+            PropertyPage.init();
+        });
+    </script>
+</div>
+</body>
+</html>

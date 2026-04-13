@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<div th:fragment="modal">
+    <!-- WAS 일괄적용 Modal -->
+    <div class="modal fade" id="propertyWasModal" tabindex="-1" aria-labelledby="propertyWasModalLabel" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
+        <div class="modal-dialog modal-lg sp-modal-lg">
+            <div class="modal-content">
+                <!-- Modal Header -->
+                <div class="modal-header">
+                    <h5 class="modal-title" id="propertyWasModalLabel">
+                        <i class="bi bi-hdd-rack"></i> WAS 일괄적용
+                    </h5>
+                    <button type="button" class="btn-close" onclick="PropertyWasModal.close()" aria-label="Close"></button>
+                </div>
+
+                <!-- Modal Body -->
+                <div class="modal-body">
+                    <!-- 프로퍼티 정보 섹션 -->
+                    <div class="property-info-section mb-4">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-2">
+                                    <label class="form-label fw-bold mb-1">프로퍼티 그룹 ID</label>
+                                    <input type="text" class="form-control form-control-sm bg-light" id="wasModalPropertyGroupId" readonly>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-2">
+                                    <label class="form-label fw-bold mb-1">프로퍼티 ID</label>
+                                    <input type="text" class="form-control form-control-sm bg-light" id="wasModalPropertyId" readonly>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-2">
+                                    <label class="form-label fw-bold mb-1">유효값</label>
+                                    <input type="text" class="form-control form-control-sm bg-light" id="wasModalValidData" readonly>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-2">
+                                    <label class="form-label fw-bold mb-1">초기값</label>
+                                    <input type="text" class="form-control form-control-sm bg-light" id="wasModalDefaultValue" readonly>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 중간 버튼 영역 -->
+                    <div class="d-flex justify-content-between mb-3">
+                        <div>
+                            <button class="btn btn-outline-success btn-sm" onclick="PropertyWasModal.exportExcel()">
+                                <i class="bi bi-file-earmark-excel"></i> 엑셀
+                            </button>
+                        </div>
+                        <div class="was-action-buttons">
+                            <button class="btn btn-outline-primary btn-sm" onclick="PropertyWasModal.applyDefaultAll()">
+                                <i class="bi bi-check-all"></i> 전체 일괄적용
+                            </button>
+                            <button class="btn btn-outline-warning btn-sm" onclick="PropertyWasModal.applyDefaultIfEmpty()">
+                                <i class="bi bi-plus-lg-circle"></i> 미설정 일괄적용
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- WAS 프로퍼티 테이블 -->
+                    <div class="table-responsive sp-scrollable">
+                        <table class="table table-sm table-hover sp-data-grid" id="wasPropertyTable">
+                            <thead class="table-light">
+                                <tr>
+                                    <th class="col-w-200">인스턴스</th>
+                                    <th class="col-w-300">설정된 값</th>
+                                    <th>특이사항</th>
+                                </tr>
+                            </thead>
+                            <tbody id="wasPropertyTableBody">
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Modal Footer -->
+                <div class="modal-footer justify-content-end">
+                    <span class="was-save-buttons">
+                        <button type="button" class="btn btn-outline-secondary btn-sm" onclick="PropertyWasModal.reload()">
+                            <i class="bi bi-arrow-clockwise"></i> Reload
+                        </button>
+                        <button type="button" class="btn btn-success btn-sm" onclick="PropertyWasModal.save()">
+                            <i class="bi bi-floppy"></i> 저장
+                        </button>
+                    </span>
+                    <button type="button" class="btn btn-secondary btn-sm" onclick="PropertyWasModal.close()">
+                        <i class="bi bi-x-lg"></i> 닫기
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<th:block th:fragment="script">
+<script>
+    const PropertyWasModal = {
+        currentPropertyGroupId: null,
+        currentPropertyId: null,
+        currentValidData: null,
+        currentDefaultValue: null,
+        wasProperties: [],
+        originalWasProperties: [], // 원본 데이터 (변경 감지용)
+
+        viewMode: false, // true: 보기 전용 (WAS별 보기에서 호출 시)
+        _parentModalId: null, // 부모 모달 ID (모달 위 모달 처리용)
+        _modalInstance: null,
+
+        // 모달 열기 (mode: 'edit'(기본) 또는 'view', parentModalId: 부모 모달 ID)
+        open: function(propertyGroupId, propertyId, validData, defaultValue, mode, parentModalId) {
+            this.currentPropertyGroupId = propertyGroupId;
+            this.currentPropertyId = propertyId;
+            this.currentValidData = validData || '';
+            this.currentDefaultValue = defaultValue || '';
+            this.viewMode = (mode === 'view');
+            this._parentModalId = parentModalId || null;
+
+            // 프로퍼티 정보 표시
+            $('#wasModalPropertyGroupId').val(propertyGroupId);
+            $('#wasModalPropertyId').val(propertyId);
+            $('#wasModalValidData').val(this.currentValidData);
+            $('#wasModalDefaultValue').val(this.currentDefaultValue);
+
+            // 모드에 따른 UI 전환
+            if (this.viewMode) {
+                $('#propertyWasModalLabel').html('<i class="bi bi-eye"></i> WAS별 설정값 보기');
+                $('#propertyWasModal .was-action-buttons').hide();
+                $('#propertyWasModal .was-save-buttons').hide();
+            } else {
+                $('#propertyWasModalLabel').html('<i class="bi bi-hdd-rack"></i> WAS 일괄적용');
+                $('#propertyWasModal .was-action-buttons').show();
+                $('#propertyWasModal .was-save-buttons').show();
+            }
+
+            // WAS 프로퍼티 목록 로드
+            this.loadWasProperties();
+
+            var self = this;
+            var wasModalEl = document.getElementById('propertyWasModal');
+
+            if (this._parentModalId) {
+                // 부모 모달 숨기고 → 완전히 닫힌 후 WAS 모달 열기
+                var parentModalEl = document.getElementById(this._parentModalId);
+                parentModalEl.addEventListener('hidden.bs.modal', function onHidden() {
+                    parentModalEl.removeEventListener('hidden.bs.modal', onHidden);
+                    self._modalInstance = bootstrap.Modal.getOrCreateInstance(wasModalEl);
+                    self._modalInstance.show();
+                });
+                bootstrap.Modal.getOrCreateInstance(parentModalEl).hide();
+            } else {
+                // 부모 모달 없으면 바로 열기
+                self._modalInstance = bootstrap.Modal.getOrCreateInstance(wasModalEl);
+                self._modalInstance.show();
+            }
+        },
+
+        // 모달 닫기 (부모 모달 복원)
+        close: function() {
+            var wasModalEl = document.getElementById('propertyWasModal');
+            var parentId = this._parentModalId;
+
+            if (parentId) {
+                wasModalEl.addEventListener('hidden.bs.modal', function onHidden() {
+                    wasModalEl.removeEventListener('hidden.bs.modal', onHidden);
+                    bootstrap.Modal.getOrCreateInstance(document.getElementById(parentId)).show();
+                });
+            }
+
+            var modal = bootstrap.Modal.getInstance(wasModalEl);
+            if (modal) modal.hide();
+            this._modalInstance = null;
+        },
+
+        // WAS 프로퍼티 목록 로드
+        loadWasProperties: function() {
+            $.ajax({
+                url: API_BASE_URL + '/was/property/by-property/' + this.currentPropertyGroupId + '/' + this.currentPropertyId,
+                method: 'GET',
+                success: (response) => {
+                    if (response.success && response.data) {
+                        // 원본 데이터 깊은 복사 저장
+                        this.originalWasProperties = JSON.parse(JSON.stringify(response.data));
+                        this.wasProperties = response.data;
+                        this.renderWasProperties();
+                    } else {
+                        this.originalWasProperties = [];
+                        this.wasProperties = [];
+                        this.renderWasProperties();
+                    }
+                },
+                error: (xhr) => {
+                    console.error('Failed to load WAS properties:', xhr);
+                    Toast.error('WAS 프로퍼티 목록을 불러오는데 실패했습니다.');
+                    this.originalWasProperties = [];
+                    this.wasProperties = [];
+                    this.renderWasProperties();
+                }
+            });
+        },
+
+        // WAS 프로퍼티 목록 렌더링
+        renderWasProperties: function() {
+            const tbody = $('#wasPropertyTableBody');
+            tbody.empty();
+
+            if (!this.wasProperties || this.wasProperties.length === 0) {
+                tbody.append(`
+                    <tr>
+                        <td colspan="3" class="text-center text-muted py-4">
+                            등록된 WAS 인스턴스가 없습니다.
+                        </td>
+                    </tr>
+                `);
+                return;
+            }
+
+            var readonlyAttr = this.viewMode ? ' readonly class="form-control form-control-sm bg-light"' : ' class="form-control form-control-sm was-property-value"';
+            var readonlyDescAttr = this.viewMode ? ' readonly class="form-control form-control-sm bg-light"' : ' class="form-control form-control-sm was-property-desc"';
+
+            this.wasProperties.forEach((prop, index) => {
+                tbody.append(`
+                    <tr data-index="${index}" data-instance-id="${prop.instanceId}">
+                        <td>
+                            <span class="fw-bold">${HtmlUtils.escape(prop.instanceId)}</span>
+                            <br>
+                            <small class="text-muted">${HtmlUtils.escape(prop.instanceName || '')}</small>
+                        </td>
+                        <td>
+                            <input type="text" ${readonlyAttr}
+                                   value="${HtmlUtils.escape(prop.propertyValue || '')}"
+                                   data-index="${index}" data-instance-id="${prop.instanceId}"
+                                   data-field="propertyValue">
+                        </td>
+                        <td>
+                            <input type="text" ${readonlyDescAttr}
+                                   value="${HtmlUtils.escape(prop.propertyDesc || '')}"
+                                   data-index="${index}" data-instance-id="${prop.instanceId}"
+                                   data-field="propertyDesc">
+                        </td>
+                    </tr>
+                `);
+            });
+
+            // 변경 감지 이벤트 바인딩
+            this.bindChangeEvents();
+        },
+
+        // 변경 감지 이벤트 바인딩
+        bindChangeEvents: function() {
+            const self = this;
+
+            $('#wasPropertyTableBody').off('input').on('input', 'input', function() {
+                const $input = $(this);
+                const index = parseInt($input.data('index'));
+                const field = $input.data('field');
+                const newValue = $input.val();
+
+                // 필수값 에러 메시지 제거
+                if (field === 'propertyValue' && newValue.trim() !== '') {
+                    $input.removeClass('is-invalid');
+                    $input.siblings('.sp-field-error').remove();
+                }
+
+                // wasProperties 배열 업데이트
+                if (self.wasProperties[index]) {
+                    self.wasProperties[index][field] = newValue;
+
+                    // 원본값과 비교하여 변경 여부 확인
+                    const original = self.originalWasProperties[index];
+                    if (original) {
+                        const originalValue = original[field] || '';
+                        if (originalValue !== newValue) {
+                            $input.addClass('sp-field-changed');
+                        } else {
+                            $input.removeClass('sp-field-changed');
+                        }
+                    }
+                }
+            });
+        },
+
+        // 값 설정 및 스타일 업데이트
+        setValueAndUpdateStyle: function(index, field, value) {
+            const $input = $(`#wasPropertyTableBody tr[data-index="${index}"] input[data-field="${field}"]`);
+            $input.val(value);
+
+            // wasProperties 배열 업데이트
+            if (this.wasProperties[index]) {
+                this.wasProperties[index][field] = value;
+            }
+
+            // 원본값과 비교하여 변경 스타일 적용
+            const original = this.originalWasProperties[index];
+            if (original) {
+                const originalValue = original[field] || '';
+                if (originalValue !== value) {
+                    $input.addClass('sp-field-changed');
+                } else {
+                    $input.removeClass('sp-field-changed');
+                }
+            }
+        },
+
+        // 엑셀 내보내기 (미구현)
+        exportExcel: function() {
+            Toast.warning('엑셀 내보내기 기능은 추후 구현 예정입니다.');
+        },
+
+        // 전체 일괄적용 - 모든 항목을 초기값으로 변경
+        applyDefaultAll: function() {
+            const defaultValue = this.currentDefaultValue || '';
+            if (!defaultValue) {
+                Toast.warning('초기값이 설정되어 있지 않습니다.');
+                return;
+            }
+
+            Toast.confirm('기존 설정값이 삭제되고 모든 WAS의 설정값이 디폴트값으로 변경됩니다. 실행하시겠습니까?', () => {
+                this.wasProperties.forEach((prop, index) => {
+                    this.setValueAndUpdateStyle(index, 'propertyValue', 'USE_DEFAULT');
+                });
+            });
+        },
+
+        // 미설정 일괄적용 - 값이 없는 항목만 초기값으로 변경
+        applyDefaultIfEmpty: function() {
+            const defaultValue = this.currentDefaultValue || '';
+            if (!defaultValue) {
+                Toast.warning('초기값이 설정되어 있지 않습니다.');
+                return;
+            }
+
+            Toast.confirm('설정값이 없는 WAS들의 설정값이 모두 디폴트값으로 변경됩니다. 실행하시겠습니까?', () => {
+                this.wasProperties.forEach((prop, index) => {
+                    if (!prop.propertyValue || prop.propertyValue === 'NO DATA') {
+                        this.setValueAndUpdateStyle(index, 'propertyValue', 'USE_DEFAULT');
+                    }
+                });
+            });
+        },
+
+        // Reload (미구현)
+        reload: function() {
+            Toast.warning('Reload 기능은 추후 구현 예정입니다.');
+        },
+
+        // 저장
+        save: function() {
+            // 필수값 유효성 검사
+            let hasError = false;
+            this.wasProperties.forEach((prop, index) => {
+                const $input = $(`#wasPropertyTableBody tr[data-index="${index}"] input[data-field="propertyValue"]`);
+                if (!prop.propertyValue || prop.propertyValue.trim() === '') {
+                    $input.addClass('is-invalid');
+                    if ($input.siblings('.sp-field-error').length === 0) {
+                        $input.after('<div class="sp-field-error">필수 항목입니다.</div>');
+                    }
+                    hasError = true;
+                }
+            });
+            if (hasError) return;
+
+            // 변경된 항목 있는지 체크
+            let changed = false;
+            const saveProperties = [];
+
+            this.wasProperties.forEach((prop, index) => {
+                const original = this.originalWasProperties[index];
+                if (!original) return;
+
+                if (!changed) {
+                    const valueChanged = (original.propertyValue || '') !== (prop.propertyValue || '');
+                    const descChanged = (original.propertyDesc || '') !== (prop.propertyDesc || '');
+                    if(valueChanged || descChanged) changed = true;
+                }
+
+                saveProperties.push({
+                    instanceId: prop.instanceId,
+                    propertyGroupId: this.currentPropertyGroupId,
+                    propertyId: this.currentPropertyId,
+                    propertyValue: prop.propertyValue,
+                    propertyDesc: prop.propertyDesc
+                });
+            });
+
+            if (changed === false) {
+                Toast.warning('변경된 항목이 없습니다.');
+                return;
+            }
+
+            // 저장 API 호출
+            $.ajax({
+                url: API_BASE_URL + '/was/property/merge',
+                method: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify(saveProperties),
+                success: (response) => {
+                    if (response.success) {
+                        Toast.success('처리가 완료되었습니다.');
+                        // 데이터 새로고침
+                        this.loadWasProperties();
+                    } else {
+                        Toast.error('저장 중 오류가 발생했습니다: ' + (response.message || ''));
+                    }
+                },
+                error: (xhr) => {
+                    console.error('Failed to save WAS properties:', xhr);
+                    const errorMessage = xhr.responseJSON?.message || '저장 중 오류가 발생했습니다.';
+                    Toast.error(errorMessage);
+                }
+            });
+        }
+    };
+</script>
+</th:block>
+</body>
+</html>

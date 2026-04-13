@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<div th:fragment="modal">
+    <!-- TransDataFile Preview Modal -->
+    <div class="modal fade" id="transDataFileModal" tabindex="-1" aria-labelledby="transDataFileModalLabel" aria-hidden="true"
+         data-bs-backdrop="static" data-bs-keyboard="false">
+        <div class="modal-dialog modal-dialog-centered modal-lg sp-modal-lg">
+            <div class="modal-content">
+                <!-- Modal Header -->
+                <div class="modal-header py-2">
+                    <h5 class="modal-title" id="transDataFileModalLabel">파일 미리보기</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+
+                <!-- Modal Body -->
+                <div class="modal-body sp-scrollable">
+                    <!-- 파일 정보 -->
+                    <div class="modal-section-title">
+                        <i class="bi bi-file-earmark-text text-primary"></i>
+                        <span>파일 정보</span>
+                    </div>
+
+                    <div class="mb-3">
+                        <div class="row g-3 mb-2">
+                            <div class="col-md-6">
+                                <label class="form-label small mb-1">파일명</label>
+                                <input type="text" class="form-control form-control-sm sp-bg-readonly" id="modalFileName" readonly>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label small mb-1">파일 크기</label>
+                                <input type="text" class="form-control form-control-sm sp-bg-readonly" id="modalFileSize" readonly>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 파일 내용 -->
+                    <div class="modal-section-title mt-3">
+                        <i class="bi bi-code-slash text-info"></i>
+                        <span>파일 내용</span>
+                    </div>
+
+                    <div id="previewTruncatedWarning" class="sp-file-preview-warning">
+                        <i class="bi bi-exclamation-triangle-fill"></i> 파일이 1MB를 초과하여 일부만 표시됩니다.
+                    </div>
+
+                    <pre id="modalFileContent" class="sp-code-preview"></pre>
+                </div>
+
+                <!-- Modal Footer -->
+                <div class="modal-footer py-2">
+                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">
+                        <i class="bi bi-x-lg"></i> 닫기
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+</body>
+</html>

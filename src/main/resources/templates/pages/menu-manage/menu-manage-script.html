@@ -1,0 +1,1032 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<!-- Menu Page Scripts -->
+<th:block th:fragment="script">
+<script>
+    // 중복 로드 방지
+    if (typeof window.menusPageInitialized === 'undefined') {
+        window.menusPageInitialized = true;
+
+        // Menus object
+        window.Menus = window.Menus || {
+            currentPage: 1,
+            totalItems: 0,
+            itemsPerPage: 10,
+            sortBy: null,
+            sortDirection: null,
+            menusData: [],
+
+            load: function() {
+                const searchField = $('#searchField').val();
+                const searchValue = $('#searchValue').val();
+
+                const searchParams = {
+                    menuUrl: $('#menuUrl').val(),
+                    parentMenuId: $('#parentMenuId').val(),
+                    page: this.currentPage,
+                    size: this.itemsPerPage,
+                    sortBy: this.sortBy || null,
+                    sortDirection: this.sortDirection || null
+                };
+
+                // 검색 타입에 따라 파라미터 설정
+                if (searchField === 'menuId') {
+                    searchParams.menuId = searchValue;
+                } else {
+                    searchParams.menuName = searchValue;
+                }
+
+                $.ajax({
+                    url: API_BASE_URL + '/menus/page',
+                    method: 'GET',
+                    data: searchParams,
+                    success: (response) => {
+                        const pageData = response.data;
+                        const menus = pageData.content;
+
+                        // 서버에서 검색 및 페이징 처리 완료
+                        this.totalItems = pageData.totalElements;
+                        this.menusData = menus;
+                        this.renderTable(menus);
+                        this.renderPagination();
+                    },
+                    error: (xhr) => {
+                        Toast.error(HtmlUtils.escape(xhr.responseJSON?.message || '메뉴 목록을 불러오는데 실패했습니다.'));
+                    }
+                });
+            },
+
+            renderTable: function(menus) {
+                const tbody = $('#menuTableBody');
+                tbody.empty();
+
+                if (!menus || menus.length === 0) {
+                    tbody.append(`
+                        <tr>
+                            <td colspan="6" class="text-center py-4 text-body-secondary">
+                                조회된 데이터가 없습니다.
+                            </td>
+                        </tr>
+                    `);
+                    return;
+                }
+
+                menus.forEach(menu => {
+                    const displayStatus = menu.displayYn === 'Y' || menu.displayYn === true;
+                    const useStatus = menu.useYn === 'Y' || menu.useYn === true;
+                    const hasChildren = menu.hasChildren || (menu.children && menu.children.length > 0);
+                    const safeMenuId = HtmlUtils.escape(menu.menuId);
+                    const safeMenuName = HtmlUtils.escape(menu.menuName);
+                    const safeMenuUrl = HtmlUtils.escape(menu.menuUrl);
+
+                    tbody.append(`
+                        <tr class="cursor-pointer" onclick="Menus.viewDetail('${safeMenuId}')">
+                            <td>${safeMenuId}</td>
+                            <td>${safeMenuName}</td>
+                            <td class="text-start ps-3">${safeMenuUrl}</td>
+                            <td>
+                                <span class="status-icon ${displayStatus ? 'active' : 'inactive'}"></span>
+                            </td>
+                            <td>
+                                <span class="status-icon ${useStatus ? 'active' : 'inactive'}"></span>
+                            </td>
+                            <td>
+                                <button class="btn btn-primary btn-sm" onclick="event.stopPropagation(); Menus.viewChildren('${safeMenuId}')"
+                                        ${!hasChildren ? 'disabled' : ''}>
+                                    조회
+                                </button>
+                            </td>
+                        </tr>
+                    `);
+                });
+            },
+
+            renderPagination: function() {
+                const totalPages = Math.ceil(this.totalItems / this.itemsPerPage);
+                const pagination = $('#pagination');
+                pagination.empty();
+
+                pagination.append(`
+                    <li class="page-item ${this.currentPage === 1 ? 'disabled' : ''}">
+                        <a class="page-link" href="#" onclick="Menus.changePage(1); return false;">
+                            <i class="bi bi-chevron-double-left"></i>
+                        </a>
+                    </li>
+                    <li class="page-item ${this.currentPage === 1 ? 'disabled' : ''}">
+                        <a class="page-link" href="#" onclick="Menus.changePage(${this.currentPage - 1}); return false;">
+                            <i class="bi bi-chevron-left"></i>
+                        </a>
+                    </li>
+                `);
+
+                const maxButtons = 10;
+                let startPage = Math.max(1, this.currentPage - Math.floor(maxButtons / 2));
+                let endPage = Math.min(totalPages, startPage + maxButtons - 1);
+
+                if (endPage - startPage + 1 < maxButtons) {
+                    startPage = Math.max(1, endPage - maxButtons + 1);
+                }
+
+                for (let i = startPage; i <= endPage; i++) {
+                    pagination.append(`
+                        <li class="page-item ${i === this.currentPage ? 'active' : ''}">
+                            <a class="page-link" href="#" onclick="Menus.changePage(${i}); return false;">${i}</a>
+                        </li>
+                    `);
+                }
+
+                pagination.append(`
+                    <li class="page-item ${this.currentPage === totalPages || totalPages === 0 ? 'disabled' : ''}">
+                        <a class="page-link" href="#" onclick="Menus.changePage(${this.currentPage + 1}); return false;">
+                            <i class="bi bi-chevron-right"></i>
+                        </a>
+                    </li>
+                    <li class="page-item ${this.currentPage === totalPages || totalPages === 0 ? 'disabled' : ''}">
+                        <a class="page-link" href="#" onclick="Menus.changePage(${totalPages}); return false;">
+                            <i class="bi bi-chevron-double-right"></i>
+                        </a>
+                    </li>
+                `);
+
+                const start = this.totalItems === 0 ? 0 : (this.currentPage - 1) * this.itemsPerPage + 1;
+                const end = Math.min(this.currentPage * this.itemsPerPage, this.totalItems);
+                $('#pageInfo').text(`${start} - ${end} of ${this.totalItems} items`);
+            },
+
+            changePage: function(page) {
+                const totalPages = Math.ceil(this.totalItems / this.itemsPerPage);
+                if (page < 1 || page > totalPages) return;
+                this.currentPage = page;
+                this.load();
+            },
+
+            viewDetail: function(menuId) {
+                this.openEditModal(menuId);
+            },
+
+            viewChildren: function(menuId) {
+                // 상위메뉴ID 검색란에 값 설정 후 검색
+                $('#parentMenuId').val(menuId);
+                this.currentPage = 1;
+                this.load();
+            },
+
+            exportExcel: function() {
+                const params = {};
+                const searchField = $('#searchField').val();
+                const searchValue = $('#searchValue').val();
+                const menuUrl = $('#menuUrl').val();
+                const parentMenuId = $('#parentMenuId').val();
+                if (searchField === 'menuId' && searchValue) { params.menuId = searchValue; }
+                else if (searchValue) { params.menuName = searchValue; }
+                if (menuUrl) params.menuUrl = menuUrl;
+                if (parentMenuId) params.parentMenuId = parentMenuId;
+                if (this.sortBy) { params.sortBy = this.sortBy; params.sortDirection = this.sortDirection || 'ASC'; }
+                const qs = $.param(params);
+                window.location.href = API_BASE_URL + '/menus/export' + (qs ? '?' + qs : '');
+            },
+
+            print: function() {
+                const columns = [
+                    { key: 'menuId', label: '메뉴ID' },
+                    { key: 'menuName', label: '메뉴명' },
+                    { key: 'menuUrl', label: '메뉴URL' },
+                    { key: 'displayYn', label: '화면표시' },
+                    { key: 'useYn', label: '사용여부' }
+                ];
+                PrintUtil.print({ title: '메뉴 목록', columns: columns, data: this.menusData });
+            },
+
+            updateSortIndicators: function() {
+                const headers = $('#menuTable thead th.sortable');
+                headers.removeClass('sort-asc sort-desc');
+
+                if (!this.sortBy || !this.sortDirection) {
+                    return;
+                }
+
+                headers.filter(`[data-sort="${this.sortBy}"]`)
+                    .addClass(this.sortDirection === 'ASC' ? 'sort-asc' : 'sort-desc');
+            },
+
+            openAddModal: function() {
+                MenuModal.open('add');
+            },
+
+            openEditModal: function(menuId) {
+                $.ajax({
+                    url: API_BASE_URL + '/menus/' + menuId,
+                    method: 'GET',
+                    success: (response) => {
+                        const menu = response.data || response;
+                        MenuModal.open('edit', menu);
+                    },
+                    error: (xhr) => {
+                        Toast.error(HtmlUtils.escape(xhr.responseJSON?.message || '메뉴 정보를 불러오는데 실패했습니다.'));
+                    }
+                });
+            }
+        };
+
+        // Auto-load on limitRows change
+        $('#limitRows').off('change').on('change', function() {
+            Menus.itemsPerPage = parseInt($(this).val()) || 20;
+            Menus.currentPage = 1;
+            Menus.load();
+        });
+
+        // Toolbar buttons
+        $(document).ready(function() {
+            $('#btnExcel').off('click').on('click', function() {
+                Menus.exportExcel();
+            });
+
+            $('#btnPrint').off('click').on('click', function() {
+                Menus.print();
+            });
+
+            $('#btnRefresh').off('click').on('click', function() {
+                Menus.load();
+            });
+        });
+
+        // Modal events handled by Bootstrap (data-bs-backdrop="static", data-bs-keyboard="false")
+
+        // MenuModal object
+        window.MenuModal = window.MenuModal || {
+            mode: 'add',
+
+            open: function(mode = 'add', menuData = null) {
+                this.mode = mode;
+                const modal = document.getElementById('menuModal');
+                if (!modal) {
+                    console.error('menuModal element not found');
+                    return;
+                }
+
+                const title = modal.querySelector('.modal-title');
+                const menuIdInput = document.getElementById('modalMenuId');
+                const deleteBtn = document.getElementById('btnDelete');
+
+                if (mode === 'add') {
+                    title.textContent = '메뉴 등록';
+                    this.clearForm();
+                    menuIdInput.removeAttribute('disabled');
+                    menuIdInput.classList.remove('sp-bg-readonly');
+                    if (deleteBtn) deleteBtn.classList.add('d-hidden');
+                } else {
+                    title.textContent = '메뉴 수정';
+                    this.loadData(menuData);
+                    menuIdInput.setAttribute('disabled', 'disabled');
+                    menuIdInput.classList.add('sp-bg-readonly');
+                    if (deleteBtn) deleteBtn.classList.remove('d-hidden');
+                }
+
+                bootstrap.Modal.getOrCreateInstance(modal).show();
+            },
+
+            close: function() {
+                const modal = document.getElementById('menuModal');
+                if (modal) {
+                    const bsModal = bootstrap.Modal.getInstance(modal);
+                    if (bsModal) bsModal.hide();
+                    this.clearForm();
+                }
+            },
+
+            clearForm: function() {
+                document.getElementById('modalMenuId').value = '';
+                document.getElementById('modalMenuName').value = '';
+                document.getElementById('modalPriorMenuId').value = '';
+                document.getElementById('modalMenuUrl').value = '';
+                document.getElementById('modalMenuImage').value = '';
+                document.getElementById('modalSortOrder').value = '0';
+                document.getElementById('modalWebAppId').value = '';
+                document.getElementById('modalDisplayYn').value = 'Y';
+                document.getElementById('modalUseYn').value = 'Y';
+            },
+
+            loadData: function(menuData) {
+                if (!menuData) return;
+
+                this._editMenuId = menuData.menuId || '';
+                document.getElementById('modalMenuId').value = menuData.menuId || '';
+                document.getElementById('modalMenuName').value = menuData.menuName || '';
+                document.getElementById('modalPriorMenuId').value = menuData.priorMenuId || '';
+                document.getElementById('modalMenuUrl').value = menuData.menuUrl || '';
+                document.getElementById('modalMenuImage').value = menuData.menuImage || '';
+                document.getElementById('modalSortOrder').value = menuData.sortOrder || '0';
+                document.getElementById('modalWebAppId').value = menuData.webAppId || '';
+                document.getElementById('modalDisplayYn').value = menuData.displayYn || 'Y';
+                document.getElementById('modalUseYn').value = menuData.useYn || 'Y';
+            },
+
+            searchParentMenu: function() {
+                SearchParentMenu.open('modalPriorMenuId');
+            },
+
+            save: function() {
+                const menuId = this.mode === 'edit' ? this._editMenuId : document.getElementById('modalMenuId').value.trim();
+                const menuName = document.getElementById('modalMenuName').value.trim();
+                const menuUrl = document.getElementById('modalMenuUrl').value.trim();
+                const sortOrder = document.getElementById('modalSortOrder').value;
+                const displayYn = document.getElementById('modalDisplayYn').value;
+                const useYn = document.getElementById('modalUseYn').value;
+
+                if (!menuId) {
+                    Toast.error('메뉴ID를 입력해주세요.');
+                    document.getElementById('modalMenuId').focus();
+                    return;
+                }
+
+                if (!menuName) {
+                    Toast.error('메뉴명을 입력해주세요.');
+                    document.getElementById('modalMenuName').focus();
+                    return;
+                }
+
+                if (!menuUrl) {
+                    Toast.error('메뉴URL을 입력해주세요.');
+                    document.getElementById('modalMenuUrl').focus();
+                    return;
+                }
+
+                if (!sortOrder) {
+                    Toast.error('정렬순서를 입력해주세요.');
+                    document.getElementById('modalSortOrder').focus();
+                    return;
+                }
+
+                const parsedSortOrder = parseInt(sortOrder, 10);
+                if (!Number.isInteger(parsedSortOrder) || parsedSortOrder < 0 || parsedSortOrder > 999) {
+                    Toast.error('정렬순서는 0~999 범위의 정수만 입력 가능합니다.');
+                    document.getElementById('modalSortOrder').focus();
+                    return;
+                }
+
+                const menuData = {
+                    menuId: menuId,
+                    menuName: menuName,
+                    menuUrl: menuUrl,
+                    sortOrder: parsedSortOrder,
+                    displayYn: displayYn,
+                    useYn: useYn,
+                    priorMenuId: document.getElementById('modalPriorMenuId').value.trim() || null,
+                    menuImage: document.getElementById('modalMenuImage').value.trim() || null,
+                    webAppId: document.getElementById('modalWebAppId').value.trim() || null
+                };
+
+                if (this.mode === 'add') {
+                    this.createMenu(menuData);
+                } else {
+                    this.updateMenu(menuData);
+                }
+            },
+
+            createMenu: function(menuData) {
+                $.ajax({
+                    url: API_BASE_URL + '/menus',
+                    method: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify(menuData),
+                    success: (response) => {
+                        if (response.success) {
+                            Toast.success('메뉴가 성공적으로 생성되었습니다.');
+                            this.close();
+                            if (typeof Menus !== 'undefined' && Menus.load) {
+                                Menus.load();
+                            }
+                            if (typeof refreshSidebar === 'function') {
+                                refreshSidebar();
+                            }
+                        } else {
+                            Toast.error(HtmlUtils.escape(response.message || '메뉴 생성에 실패했습니다.'));
+                        }
+                    },
+                    error: (xhr) => {
+                        Toast.error(HtmlUtils.escape(xhr.responseJSON?.message || '메뉴 생성에 실패했습니다.'));
+                    }
+                });
+            },
+
+            updateMenu: function(menuData) {
+                $.ajax({
+                    url: API_BASE_URL + '/menus/' + menuData.menuId,
+                    method: 'PUT',
+                    contentType: 'application/json',
+                    data: JSON.stringify(menuData),
+                    success: (response) => {
+                        if (response.success) {
+                            Toast.success('메뉴가 성공적으로 수정되었습니다.');
+                            this.close();
+                            if (typeof Menus !== 'undefined' && Menus.load) {
+                                Menus.load();
+                            }
+                            if (typeof refreshSidebar === 'function') {
+                                refreshSidebar();
+                            }
+                        } else {
+                            Toast.error(HtmlUtils.escape(response.message || '메뉴 수정에 실패했습니다.'));
+                        }
+                    },
+                    error: (xhr) => {
+                        Toast.error(HtmlUtils.escape(xhr.responseJSON?.message || '메뉴 수정에 실패했습니다.'));
+                    }
+                });
+            },
+
+            delete: function() {
+                const menuId = document.getElementById('modalMenuId').value.trim();
+
+                if (!menuId) {
+                    Toast.error('삭제할 메뉴 ID가 없습니다.');
+                    return;
+                }
+
+                Toast.confirm(`정말로 '${menuId}' 메뉴를 삭제하시겠습니까?\n\n이 작업은 되돌릴 수 없습니다.`, () => {
+                    $.ajax({
+                        url: API_BASE_URL + '/menus/' + menuId,
+                        method: 'DELETE',
+                        success: (response) => {
+                            if (response.success) {
+                                Toast.success('메뉴가 성공적으로 삭제되었습니다.');
+                                this.close();
+                                if (typeof Menus !== 'undefined' && Menus.load) {
+                                    Menus.load();
+                                }
+                                if (typeof refreshSidebar === 'function') {
+                                    refreshSidebar();
+                                }
+                            } else {
+                                Toast.error(HtmlUtils.escape(response.message || '메뉴 삭제에 실패했습니다.'));
+                            }
+                        },
+                        error: (xhr) => {
+                            Toast.error(HtmlUtils.escape(xhr.responseJSON?.message || '메뉴 삭제에 실패했습니다.'));
+                        }
+                    });
+                });
+            }
+        };
+
+        // ParentMenuSearch object
+        window.ParentMenuSearch = window.ParentMenuSearch || {
+            open: function() {
+                const modal = document.getElementById('parentMenuSearchModal');
+                if (!modal) {
+                    console.error('parentMenuSearchModal element not found');
+                    return;
+                }
+
+                bootstrap.Modal.getOrCreateInstance(modal).show();
+                this.loadRootMenus();
+            },
+
+            close: function() {
+                const modal = document.getElementById('parentMenuSearchModal');
+                if (modal) {
+                    const bsModal = bootstrap.Modal.getInstance(modal);
+                    if (bsModal) bsModal.hide();
+                }
+            },
+
+            loadRootMenus: function() {
+                const listContainer = document.getElementById('parentMenuList');
+
+                listContainer.innerHTML = `
+                    <div class="loading-message">
+                        <i class="bi bi-arrow-repeat sp-spin"></i> 로딩 중...
+                    </div>
+                `;
+
+                $.ajax({
+                    url: API_BASE_URL + '/menus/root',
+                    method: 'GET',
+                    success: (response) => {
+                        const menus = response.data || response;
+                        this.renderMenuList(menus);
+                    },
+                    error: (xhr) => {
+                        console.error('Failed to load root menus:', xhr);
+                        listContainer.innerHTML = `
+                            <div class="sp-empty-state">
+                                <i class="bi bi-exclamation-triangle-fill"></i><br>
+                                메뉴 목록을 불러오는데 실패했습니다.
+                            </div>
+                        `;
+                    }
+                });
+            },
+
+            renderMenuList: function(menus) {
+                const listContainer = document.getElementById('parentMenuList');
+
+                if (!menus || menus.length === 0) {
+                    listContainer.innerHTML = `
+                        <div class="sp-empty-state">
+                            <i class="bi bi-inbox"></i><br>
+                            조회된 상위 메뉴가 없습니다.
+                        </div>
+                    `;
+                    return;
+                }
+
+                listContainer.innerHTML = '';
+
+                menus.forEach(menu => {
+                    const menuItem = document.createElement('div');
+                    menuItem.className = 'parent-menu-item';
+
+                    const nameSpan = document.createElement('span');
+                    nameSpan.className = 'parent-menu-item-name';
+                    nameSpan.textContent = menu.menuName || '';
+
+                    const idSpan = document.createElement('span');
+                    idSpan.className = 'parent-menu-item-id';
+                    idSpan.textContent = menu.menuId || '';
+
+                    menuItem.appendChild(nameSpan);
+                    menuItem.appendChild(idSpan);
+                    menuItem.onclick = () => this.selectMenu(menu);
+
+                    listContainer.appendChild(menuItem);
+                });
+            },
+
+            selectMenu: function(menu) {
+                document.getElementById('modalPriorMenuId').value = menu.menuId || '';
+                const currentSortOrder = menu.sortOrder || 0;
+                document.getElementById('modalSortOrder').value = currentSortOrder + 1;
+                this.close();
+            },
+
+            selectRootMenu: function() {
+                $('#modalPriorMenuId').val('');
+                this.close();
+            }
+        };
+
+        // 검색용 상위메뉴 선택 객체 (검색 영역 및 모달에서 공통 사용)
+        window.SearchParentMenu = window.SearchParentMenu || {
+            selectableMenuIds: new Set(),
+            targetFieldId: 'parentMenuId', // 기본 대상 필드
+
+            open: function(targetFieldId) {
+                // 대상 필드 설정 (지정하지 않으면 기본값 사용)
+                this.targetFieldId = targetFieldId || 'parentMenuId';
+
+                const modal = document.getElementById('searchParentMenuModal');
+                if (!modal) {
+                    console.error('searchParentMenuModal element not found');
+                    return;
+                }
+                modal.classList.remove('d-hidden');
+                this.loadMenus();
+            },
+
+            close: function() {
+                const modal = document.getElementById('searchParentMenuModal');
+                if (modal) {
+                    modal.classList.add('d-hidden');
+                }
+            },
+
+            clear: function() {
+                const field = document.getElementById(this.targetFieldId);
+                if (field) field.value = '';
+            },
+
+            loadMenus: function() {
+                const listContainer = document.getElementById('searchParentMenuList');
+                listContainer.innerHTML = `
+                    <div class="loading-message">
+                        <i class="bi bi-arrow-repeat sp-spin"></i>
+                        로딩 중...
+                    </div>
+                `;
+
+                // 선택 가능한 메뉴 ID 목록과 전체 메뉴 데이터를 동시에 로드
+                Promise.all([
+                    $.ajax({ url: API_BASE_URL + '/menus/selectable-parents', method: 'GET' }),
+                    $.ajax({ url: API_BASE_URL + '/menus', method: 'GET' })
+                ]).then(([selectableResponse, allMenusResponse]) => {
+                    const selectableMenus = selectableResponse.data || selectableResponse;
+                    const allMenus = allMenusResponse.data || allMenusResponse;
+
+                    // 선택 가능한 메뉴 ID Set 생성
+                    this.selectableMenuIds = new Set(selectableMenus.map(m => m.menuId));
+
+                    // 전체 메뉴를 트리 구조로 변환
+                    const treeData = this.buildTree(allMenus);
+                    this.renderTree(treeData);
+                }).catch(error => {
+                    console.error('Failed to load menus:', error);
+                    listContainer.innerHTML = `
+                        <div class="sp-empty-state">
+                            <i class="bi bi-exclamation-triangle-fill"></i><br>
+                            메뉴 목록을 불러오는데 실패했습니다.
+                        </div>
+                    `;
+                });
+            },
+
+            // 플랫 메뉴 목록을 트리 구조로 변환
+            buildTree: function(menus) {
+                const menuMap = {};
+                const roots = [];
+
+                // 메뉴 맵 생성
+                menus.forEach(menu => {
+                    menuMap[menu.menuId] = { ...menu, children: [] };
+                });
+
+                // 부모-자식 관계 연결
+                menus.forEach(menu => {
+                    const node = menuMap[menu.menuId];
+                    const parentId = menu.priorMenuId;
+
+                    // 루트 메뉴 조건: priorMenuId가 없거나, 자기 자신이거나, 존재하지 않는 부모
+                    if (!parentId || parentId === menu.menuId || !menuMap[parentId]) {
+                        roots.push(node);
+                    } else {
+                        menuMap[parentId].children.push(node);
+                    }
+                });
+
+                // 정렬
+                const sortByOrder = (a, b) => (a.sortOrder || 0) - (b.sortOrder || 0);
+                roots.sort(sortByOrder);
+                Object.values(menuMap).forEach(node => {
+                    if (node.children.length > 0) {
+                        node.children.sort(sortByOrder);
+                    }
+                });
+
+                return roots;
+            },
+
+            renderTree: function(menus) {
+                const listContainer = document.getElementById('searchParentMenuList');
+
+                // 하위 메뉴가 있는 메뉴만 필터링
+                const foldersOnly = this.filterFoldersOnly(menus);
+
+                if (!foldersOnly || foldersOnly.length === 0) {
+                    listContainer.innerHTML = `
+                        <div class="sp-empty-state">
+                            <i class="bi bi-inbox"></i><br>
+                            메뉴가 없습니다.
+                        </div>
+                    `;
+                    return;
+                }
+
+                listContainer.innerHTML = '';
+                foldersOnly.forEach(menu => {
+                    const node = this.createTreeNode(menu);
+                    if (node) {
+                        listContainer.appendChild(node);
+                    }
+                });
+            },
+
+            // 하위 메뉴가 있는 폴더만 필터링 (재귀)
+            filterFoldersOnly: function(menus) {
+                if (!menus) return [];
+
+                return menus
+                    .filter(menu => menu.children && menu.children.length > 0)
+                    .map(menu => ({
+                        ...menu,
+                        children: this.filterFoldersOnly(menu.children)
+                    }));
+            },
+
+            createTreeNode: function(menu) {
+                const hasChildren = menu.children && menu.children.length > 0;
+                const isSelectable = this.selectableMenuIds.has(menu.menuId);
+
+                const node = document.createElement('div');
+                node.className = 'tree-node';
+
+                // 트리 아이템
+                const item = document.createElement('div');
+                item.className = 'tree-item' + (isSelectable ? ' selectable' : '');
+                item.setAttribute('data-menu-id', menu.menuId);
+
+                // 토글 버튼
+                const toggle = document.createElement('span');
+                toggle.className = 'tree-toggle' + (hasChildren ? '' : ' empty');
+                toggle.innerHTML = hasChildren ? '<i class="bi bi-caret-right-fill"></i>' : '';
+                if (hasChildren) {
+                    toggle.onclick = (e) => {
+                        e.stopPropagation();
+                        this.toggleNode(node);
+                    };
+                }
+
+                // 아이콘 (폴더만 표시하므로 항상 폴더 아이콘)
+                const icon = document.createElement('span');
+                icon.className = 'tree-icon folder';
+                icon.innerHTML = '<i class="bi bi-folder"></i>';
+
+                // 라벨
+                const label = document.createElement('span');
+                label.className = 'tree-label';
+                label.textContent = menu.menuName || '';
+
+                item.appendChild(toggle);
+                item.appendChild(icon);
+                item.appendChild(label);
+
+                // 선택 가능한 경우 클릭 이벤트
+                if (isSelectable) {
+                    item.onclick = () => this.selectMenu(menu);
+                }
+
+                node.appendChild(item);
+
+                // 자식 메뉴 (폴더만)
+                if (hasChildren) {
+                    const childrenContainer = document.createElement('div');
+                    childrenContainer.className = 'tree-children collapsed';
+                    menu.children.forEach(child => {
+                        const childNode = this.createTreeNode(child);
+                        if (childNode) {
+                            childrenContainer.appendChild(childNode);
+                        }
+                    });
+                    node.appendChild(childrenContainer);
+                }
+
+                return node;
+            },
+
+            toggleNode: function(node) {
+                const toggle = node.querySelector(':scope > .tree-item > .tree-toggle');
+                const children = node.querySelector(':scope > .tree-children');
+                const icon = node.querySelector(':scope > .tree-item > .tree-icon');
+
+                if (children) {
+                    const isCollapsed = children.classList.contains('collapsed');
+                    children.classList.toggle('collapsed');
+
+                    // 아이콘 변경
+                    if (toggle) {
+                        toggle.innerHTML = isCollapsed ?
+                            '<i class="bi bi-caret-down-fill"></i>' :
+                            '<i class="bi bi-caret-right-fill"></i>';
+                    }
+                    if (icon && icon.classList.contains('folder')) {
+                        icon.innerHTML = isCollapsed ?
+                            '<i class="bi bi-folder2-open"></i>' :
+                            '<i class="bi bi-folder"></i>';
+                    }
+                }
+            },
+
+            selectMenu: function(menu) {
+                const field = document.getElementById(this.targetFieldId);
+                if (field) field.value = menu.menuId || '';
+                this.close();
+            }
+        };
+
+        // ESC 키로 팝업 닫기
+        $(document).off('keydown.searchParentMenu').on('keydown.searchParentMenu', function(e) {
+            const modal = document.getElementById('searchParentMenuModal');
+            if (modal && !modal.classList.contains('d-hidden') && e.key === 'Escape') {
+                SearchParentMenu.close();
+            }
+        });
+
+        // 팝업 외부 클릭 시 닫기
+        $(document).off('click.searchParentMenu').on('click.searchParentMenu', function(e) {
+            const modal = document.getElementById('searchParentMenuModal');
+            if (modal && e.target === modal) {
+                SearchParentMenu.close();
+            }
+        });
+
+        // 하위 메뉴 조회 모달
+        window.ChildMenuModal = window.ChildMenuModal || {
+            currentChildren: [],
+            currentIndex: 0,
+
+            open: function(menuId) {
+                const modal = document.getElementById('childMenuModal');
+                if (!modal) {
+                    console.error('childMenuModal element not found');
+                    return;
+                }
+
+                // 로딩 표시
+                const container = document.getElementById('childMenuFormContainer');
+                container.innerHTML = `
+                    <div class="sp-empty-state">
+                        <i class="bi bi-arrow-repeat sp-spin"></i> 로딩 중...
+                    </div>
+                `;
+
+                modal.classList.remove('d-hidden');
+
+                // 하위 메뉴 조회
+                $.ajax({
+                    url: API_BASE_URL + '/menus/children/' + menuId,
+                    method: 'GET',
+                    success: (response) => {
+                        const children = response.data || response;
+                        this.currentChildren = children;
+                        this.currentIndex = 0;
+                        this.renderForm(children);
+                    },
+                    error: (xhr) => {
+                        console.error('Failed to load child menus:', xhr);
+                        container.innerHTML = `
+                            <div class="sp-empty-state text-danger">
+                                <i class="bi bi-exclamation-triangle-fill"></i> 하위 메뉴를 불러오는데 실패했습니다.
+                            </div>
+                        `;
+                    }
+                });
+            },
+
+            close: function() {
+                const modal = document.getElementById('childMenuModal');
+                if (modal) {
+                    modal.classList.add('d-hidden');
+                }
+            },
+
+            renderForm: function(children) {
+                const container = document.getElementById('childMenuFormContainer');
+
+                if (!children || children.length === 0) {
+                    container.innerHTML = `
+                        <div class="sp-empty-state">
+                            하위 메뉴가 없습니다.
+                        </div>
+                    `;
+                    return;
+                }
+
+                const menu = children[this.currentIndex];
+                const displayYnIsY = menu.displayYn === 'Y' || menu.displayYn === true;
+                const useYnIsY = menu.useYn === 'Y' || menu.useYn === true;
+
+                // XSS 방지를 위한 이스케이프 처리
+                const safeMenuId = HtmlUtils.escape(menu.menuId);
+                const safeMenuName = HtmlUtils.escape(menu.menuName);
+                const safePriorMenuId = HtmlUtils.escape(menu.priorMenuId);
+                const safeMenuUrl = HtmlUtils.escape(menu.menuUrl);
+                const safeMenuImage = HtmlUtils.escape(menu.menuImage);
+                const safeSortOrder = HtmlUtils.escape(menu.sortOrder);
+                const safeWebAppId = HtmlUtils.escape(menu.webAppId);
+
+                let navHtml = '';
+                if (children.length > 1) {
+                    navHtml = `
+                        <div class="mb-2 d-flex justify-content-between align-items-center">
+                            <span class="sp-result-count">${this.currentIndex + 1} / ${children.length} 건</span>
+                            <div class="d-flex gap-4px">
+                                <button type="button" onclick="ChildMenuModal.prev()" ${this.currentIndex === 0 ? 'disabled' : ''}
+                                    class="fs-xs cursor-pointer">◀ 이전</button>
+                                <button type="button" onclick="ChildMenuModal.next()" ${this.currentIndex >= children.length - 1 ? 'disabled' : ''}
+                                    class="fs-xs cursor-pointer">다음 ▶</button>
+                            </div>
+                        </div>
+                    `;
+                }
+
+                container.innerHTML = navHtml + `
+                    <table class="sp-form-table">
+                        <tr>
+                            <th>메뉴ID<span class="required">*</span></th>
+                            <td><input type="text" value="${safeMenuId}" readonly></td>
+                        </tr>
+                        <tr>
+                            <th>메뉴명<span class="required">*</span></th>
+                            <td><input type="text" value="${safeMenuName}" readonly></td>
+                        </tr>
+                        <tr>
+                            <th>영문메뉴명<span class="required">*</span></th>
+                            <td><input type="text" value="" readonly></td>
+                        </tr>
+                        <tr>
+                            <th>상위메뉴ID</th>
+                            <td>
+                                <div class="d-flex align-items-center gap-4px">
+                                    <input type="text" value="${safePriorMenuId}" readonly class="flex-grow-1">
+                                    <button type="button" class="fs-xs"><i class="bi bi-search"></i></button>
+                                    <span class="hint">(상위메뉴는 검색으로만 등록 가능)</span>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <th>메뉴URL</th>
+                            <td><textarea readonly>${safeMenuUrl}</textarea></td>
+                        </tr>
+                        <tr>
+                            <th>메뉴 IMAGE</th>
+                            <td><input type="text" value="${safeMenuImage}" readonly></td>
+                        </tr>
+                        <tr>
+                            <th>정렬순서<span class="required">*</span></th>
+                            <td><input type="text" value="${safeSortOrder}" readonly class="w-80"></td>
+                        </tr>
+                        <tr>
+                            <th>Web App ID</th>
+                            <td><input type="text" value="${safeWebAppId}" readonly></td>
+                        </tr>
+                        <tr>
+                            <th>출력여부</th>
+                            <td>
+                                <div class="d-flex align-items-center gap-4">
+                                    <select disabled class="w-120">
+                                        <option ${!displayYnIsY ? 'selected' : ''}>미사용</option>
+                                        <option ${displayYnIsY ? 'selected' : ''}>사용</option>
+                                    </select>
+                                    <div class="d-flex align-items-center gap-8px">
+                                        <span class="fw-medium">사용여부</span>
+                                        <select disabled class="w-120">
+                                            <option ${!useYnIsY ? 'selected' : ''}>미사용</option>
+                                            <option ${useYnIsY ? 'selected' : ''}>사용</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </td>
+                        </tr>
+                    </table>
+                `;
+            },
+
+            prev: function() {
+                if (this.currentIndex > 0) {
+                    this.currentIndex--;
+                    this.renderForm(this.currentChildren);
+                }
+            },
+
+            next: function() {
+                if (this.currentIndex < this.currentChildren.length - 1) {
+                    this.currentIndex++;
+                    this.renderForm(this.currentChildren);
+                }
+            }
+        };
+
+        // 하위 메뉴 모달 이벤트
+        $(document).off('click.childMenuModal').on('click.childMenuModal', function(e) {
+            const modal = document.getElementById('childMenuModal');
+            if (modal && e.target === modal) {
+                ChildMenuModal.close();
+            }
+        });
+
+        $(document).off('keydown.childMenuModal').on('keydown.childMenuModal', function(e) {
+            const modal = document.getElementById('childMenuModal');
+            if (modal && !modal.classList.contains('d-hidden') && e.key === 'Escape') {
+                ChildMenuModal.close();
+            }
+        });
+
+    } // end of menusPageInitialized check
+
+    // 정렬 기능 이벤트 핸들러 (3단계 순환: ASC → DESC → DEFAULT)
+    $('#menuTable thead th[data-sort]').addClass('sortable').off('click').on('click', function() {
+        const sortKey = $(this).data('sort');
+        if (!sortKey) {
+            return;
+        }
+
+        if (window.Menus.sortBy === sortKey) {
+            // 같은 컬럼 클릭: ASC → DESC → null (기본 정렬)
+            if (window.Menus.sortDirection === 'ASC') {
+                window.Menus.sortDirection = 'DESC';
+            } else if (window.Menus.sortDirection === 'DESC') {
+                // 기본 정렬로 복귀
+                window.Menus.sortBy = null;
+                window.Menus.sortDirection = null;
+            }
+        } else {
+            // 다른 컬럼 클릭: 새로운 컬럼으로 ASC 시작
+            window.Menus.sortBy = sortKey;
+            window.Menus.sortDirection = 'ASC';
+        }
+        window.Menus.currentPage = 1;
+        window.Menus.updateSortIndicators();
+        window.Menus.load();
+    });
+
+    // 페이지 재진입 시 UI와 상태 동기화
+    window.Menus.itemsPerPage = parseInt($('#limitRows').val()) || 20;
+    window.Menus.currentPage = 1;
+    window.Menus.updateSortIndicators();
+
+    // 페이지 로드 시 초기 데이터 조회 (탭 전환 시에도 항상 실행)
+    Menus.load();
+</script>
+</th:block>
+</body>
+</html>

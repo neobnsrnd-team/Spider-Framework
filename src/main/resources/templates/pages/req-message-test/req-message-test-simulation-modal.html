@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<div th:fragment="modal">
+    <!-- 시뮬레이션 결과 모달 -->
+    <div class="modal fade" id="simulationResultModal" tabindex="-1" aria-labelledby="simulationResultModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-xl">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="simulationResultModalLabel">시뮬레이션 결과</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <!-- 상태 메시지 -->
+                    <div class="alert d-hidden" id="simulationStatus" role="alert">
+                        <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                        <span id="simulationStatusMessage"></span>
+                    </div>
+
+                    <!-- 결과 내용 -->
+                    <div class="row">
+                        <!-- 좌측: 오류 원인 / 요청 데이터 -->
+                        <div class="col-md-6">
+                            <h6 class="mb-3">
+                                <span id="leftSectionTitle">요청 데이터</span>
+                            </h6>
+                            <div class="border rounded p-3 sp-data-panel">
+                                <pre id="simulationRequest" class="sp-pre-code"></pre>
+                            </div>
+                        </div>
+
+                        <!-- 우측: 응답 데이터 / DataMap 내용 -->
+                        <div class="col-md-6">
+                            <h6 class="mb-3">
+                                <span id="rightSectionTitle">응답 데이터</span>
+                            </h6>
+                            <div class="border rounded p-3 sp-data-panel">
+                                <pre id="simulationResponse" class="sp-pre-code"></pre>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer justify-content-end">
+                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal"><i class="bi bi-x-lg"></i> 닫기</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+</body>
+</html>

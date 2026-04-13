@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<!-- Trx Page Scripts -->
+<th:block th:fragment="script">
+    <script th:inline="javascript">
+        const hasReloadAccess = /*[[${userAuthorities != null && userAuthorities.contains('RELOAD:R')}]]*/ false;
+    </script>
+    <script>
+        // ==================== Security Utilities ====================
+
+        function getUserFriendlyErrorMessage(error) {
+            let message = '요청 처리 중 오류가 발생했습니다.';
+            if (!error) return message;
+            if (error.response && error.response.data) {
+                const data = error.response.data;
+                if (data.message) message = data.message;
+                if (data.errors && Array.isArray(data.errors)) {
+                    message = data.errors.map(e => e.message || e).join('\n');
+                }
+            } else if (error.responseJSON) {
+                if (error.responseJSON.message) message = error.responseJSON.message;
+            } else if (error.message) {
+                if (error.message.includes('Network Error')) message = '네트워크 연결을 확인해주세요.';
+                else if (error.message.includes('timeout')) message = '요청 시간이 초과되었습니다.';
+            }
+            return message.replace(/<[^>]*>/g, '');
+        }
+
+        // ==================== TrxPage Object ====================
+
+        window.TrxPage = window.TrxPage || {
+            currentPage: 1,
+            totalItems: 0,
+            itemsPerPage: 20,
+            sortBy: null,
+            sortDirection: null,
+            trxData: [],
+            orgList: [],
+
+            init: function() {
+                this.bindEvents();
+                this.loadOrgList();
+            },
+
+            bindEvents: function() {
+                $('#trxTable thead th[data-sort]').off('click').on('click', function() {
+                    const sortKey = $(this).data('sort');
+                    if (!sortKey) return;
+                    if (window.TrxPage.sortBy === sortKey) {
+                        window.TrxPage.sortDirection = window.TrxPage.sortDirection === 'ASC' ? 'DESC' : 'ASC';
+                    } else {
+                        window.TrxPage.sortBy = sortKey;
+                        window.TrxPage.sortDirection = 'ASC';
+                    }
+                    window.TrxPage.updateSortIndicators();
+                    window.TrxPage.load();
+                });
+
+                $('#limitRows').change(function() {
+                    window.TrxPage.itemsPerPage = parseInt($(this).val()) || 20;
+                });
+            },
+
+            loadOrgList: function() {
+                $.ajax({
+                    url: API_BASE_URL + '/orgs/list',
+                    method: 'GET',
+                    success: (response) => {
+                        if (response.success && response.data) {
+                            this.orgList = response.data;
+                            const select = $('#orgIdFilter');
+                            select.find('option:not(:first)').remove();
+                            response.data.forEach(org => {
+                                select.append(`<option value="${HtmlUtils.escape(org.orgId)}">${HtmlUtils.escape(org.orgName || org.orgId)}</option>`);
+                            });
+                        }
+                    },
+                    error: (xhr) => console.error('Failed to load org list:', xhr)
+                });
+            },
+
+            load: function() {
+                const searchParams = {
+                    searchField: $('#searchField').val(),
+                    searchValue: $('#searchValue').val(),
+                    orgIdFilter: $('#orgIdFilter').val(),
+                    page: this.currentPage,
+                    size: this.itemsPerPage,
+                    sortBy: this.sortBy || null,
+                    sortDirection: this.sortDirection || null
+                };
+
+                $.ajax({
+                    url: API_BASE_URL + '/trx-messages/page',
+                    method: 'GET',
+                    data: searchParams,
+                    success: (response) => {
+                        if (response.success) {
+                            const pageData = response.data;
+                            this.trxData = pageData.content;
+                            this.renderTable(pageData.content);
+                            this.totalItems = pageData.totalElements;
+                            this.renderPagination();
+                        }
+                    },
+                    error: (xhr) => {
+                        console.error('Failed to load trx:', xhr);
+                        Toast.info(getUserFriendlyErrorMessage(xhr));
+                    }
+                });
+            },
+
+            renderTable: function(trxList) {
+                const tbody = $('#trxTableBody');
+                tbody.empty();
+
+                if (!trxList || trxList.length === 0) {
+                    tbody.append(`
+                        <tr>
+                            <td colspan="9" class="text-center py-4 text-body-secondary">
+                                조회된 데이터가 없습니다.
+                            </td>
+                        </tr>
+                    `);
+                    return;
+                }
+
+                const getStatusBadge = (stopYn) => {
+                    if (stopYn === 'Y') {
+                        return '<span class="status-badge status-stopped">중지</span>';
+                    }
+                    return '<span class="status-badge status-normal">정상</span>';
+                };
+
+                const getIoTypeText = (ioType) => {
+                    const map = { 'I': '수동', 'O': '기동', 'Q': '요구', 'S': '응답' };
+                    return map[ioType] || ioType || '-';
+                };
+
+                const getYnBadge = (yn) => {
+                    if (yn === 'Y') {
+                        return '<span class="yn-badge yn-yes">Y</span>';
+                    }
+                    return '<span class="yn-badge yn-no">N</span>';
+                };
+
+                const createMessageCell = (reqId, reqName, resId, resName, orgId, trxIndex) => {
+                    let html = '<div class="message-cell">';
+                    if (reqId) {
+                        html += `<span class="message-link clickable-cell" onclick="TrxPage.openMessageModal('${HtmlUtils.escape(orgId)}', '${HtmlUtils.escape(reqId)}'); event.stopPropagation();" title="${HtmlUtils.escape(reqName || reqId)}">요청: ${HtmlUtils.escape(reqName || reqId)}</span>`;
+                    } else {
+                        html += '<span class="message-link text-body-secondary">요청: -</span>';
+                    }
+                    if (resId) {
+                        html += `<span class="message-link clickable-cell" onclick="TrxPage.openMessageModal('${HtmlUtils.escape(orgId)}', '${HtmlUtils.escape(resId)}'); event.stopPropagation();" title="${HtmlUtils.escape(resName || resId)}">응답: ${HtmlUtils.escape(resName || resId)}</span>`;
+                    } else {
+                        html += '<span class="message-link text-body-secondary">응답: -</span>';
+                    }
+                    html += '</div>';
+                    return html;
+                };
+
+                const createDefaultMessageCell = (stdReqId, stdReqName, stdResId, stdResName, orgId) => {
+                    let html = '<div class="message-cell">';
+                    if (stdReqId) {
+                        html += `<span class="message-link clickable-cell" onclick="TrxPage.openMessageModal('${HtmlUtils.escape(orgId)}', '${HtmlUtils.escape(stdReqId)}'); event.stopPropagation();" title="${HtmlUtils.escape(stdReqName || stdReqId)}">요청: ${HtmlUtils.escape(stdReqName || stdReqId)}</span>`;
+                    } else {
+                        html += '<span class="message-link text-body-secondary">요청: -</span>';
+                    }
+                    if (stdResId) {
+                        html += `<span class="message-link clickable-cell" onclick="TrxPage.openMessageModal('${HtmlUtils.escape(orgId)}', '${HtmlUtils.escape(stdResId)}'); event.stopPropagation();" title="${HtmlUtils.escape(stdResName || stdResId)}">응답: ${HtmlUtils.escape(stdResName || stdResId)}</span>`;
+                    } else {
+                        html += '<span class="message-link text-body-secondary">응답: -</span>';
+                    }
+                    html += '</div>';
+                    return html;
+                };
+
+                trxList.forEach((trx, index) => {
+                    const row = $(`
+                        <tr data-trx-index="${index}" class="cursor-pointer">
+                            <td>${HtmlUtils.escape(trx.trxId)}</td>
+                            <td>${HtmlUtils.escape(trx.trxName) || '-'}</td>
+                            <td>${HtmlUtils.escape(trx.orgId) || '-'}</td>
+                            <td>${getIoTypeText(trx.ioType)}</td>
+                            <td>${createMessageCell(trx.messageId, trx.messageName, trx.resMessageId, trx.resMessageId, trx.orgId, index)}</td>
+                            <td>${createDefaultMessageCell(trx.stdMessageId, trx.stdMessageName, trx.stdResMessageId, trx.stdResMessageId, trx.orgId)}</td>
+                            <td>${getStatusBadge(trx.trxStopYn)}</td>
+                            <td><span class="clickable-cell" onclick="TrxPage.openProxyResModal('${HtmlUtils.escape(trx.trxId)}', '${HtmlUtils.escape(trx.orgId)}'); event.stopPropagation();">관리</span></td>
+                            <td>${getYnBadge(trx.multiResYn)}</td>
+                        </tr>
+                    `);
+
+                    row.on('click', function(e) {
+                        if ($(e.target).hasClass('clickable-cell')) return;
+                        const trxIndex = $(this).data('trx-index');
+                        const trxData = window.TrxPage.trxData[trxIndex];
+                        TrxDetailModal.open(trxData.trxId, trxData.orgId, {
+                            onRefresh: () => window.TrxPage.load()
+                        });
+                    });
+
+                    tbody.append(row);
+                });
+            },
+
+            openMessageModal: function(orgId, messageId) {
+                if (!orgId || !messageId) {
+                    Toast.warning('전문 정보가 없습니다.');
+                    return;
+                }
+                // 전문 상세 모달 열기 (message-detail-modal 재사용)
+                if (typeof window.MessageDetailModal !== 'undefined' && window.MessageDetailModal.open) {
+                    window.MessageDetailModal.open(orgId, messageId);
+                } else {
+                    Toast.warning('전문 상세 모달을 로드할 수 없습니다.');
+                }
+            },
+
+            openProxyResModal: function(trxId, orgId) {
+                // 대응답 관리 모달 열기
+                if (typeof TrxProxyResModal !== 'undefined') {
+                    TrxProxyResModal.open(trxId, orgId);
+                } else {
+                    Toast.info('대응답 관리 기능은 추후 구현 예정입니다.\n거래ID: ' + trxId);
+                }
+            },
+
+            renderPagination: function() {
+                const totalPages = Math.ceil(this.totalItems / this.itemsPerPage);
+                const pagination = $('#pagination');
+                pagination.empty();
+
+                pagination.append(`
+                    <li class="page-item ${this.currentPage === 1 ? 'disabled' : ''}">
+                        <a class="page-link" href="#" onclick="window.TrxPage.changePage(1); return false;"><i class="bi bi-chevron-double-left"></i></a>
+                    </li>
+                    <li class="page-item ${this.currentPage === 1 ? 'disabled' : ''}">
+                        <a class="page-link" href="#" onclick="window.TrxPage.changePage(${this.currentPage - 1}); return false;"><i class="bi bi-chevron-left"></i></a>
+                    </li>
+                `);
+
+                const maxButtons = 5;
+                let startPage = Math.max(1, this.currentPage - Math.floor(maxButtons / 2));
+                let endPage = Math.min(totalPages, startPage + maxButtons - 1);
+                if (endPage - startPage + 1 < maxButtons) {
+                    startPage = Math.max(1, endPage - maxButtons + 1);
+                }
+
+                for (let i = startPage; i <= endPage; i++) {
+                    pagination.append(`
+                        <li class="page-item ${i === this.currentPage ? 'active' : ''}">
+                            <a class="page-link" href="#" onclick="window.TrxPage.changePage(${i}); return false;">${i}</a>
+                        </li>
+                    `);
+                }
+
+                pagination.append(`
+                    <li class="page-item ${this.currentPage === totalPages || totalPages === 0 ? 'disabled' : ''}">
+                        <a class="page-link" href="#" onclick="window.TrxPage.changePage(${this.currentPage + 1}); return false;"><i class="bi bi-chevron-right"></i></a>
+                    </li>
+                    <li class="page-item ${this.currentPage === totalPages || totalPages === 0 ? 'disabled' : ''}">
+                        <a class="page-link" href="#" onclick="window.TrxPage.changePage(${totalPages}); return false;"><i class="bi bi-chevron-double-right"></i></a>
+                    </li>
+                `);
+
+                const start = this.totalItems === 0 ? 0 : (this.currentPage - 1) * this.itemsPerPage + 1;
+                const end = Math.min(this.currentPage * this.itemsPerPage, this.totalItems);
+                $('#pageInfo').text(`${start} - ${end} of ${this.totalItems} items`);
+            },
+
+            changePage: function(page) {
+                const totalPages = Math.ceil(this.totalItems / this.itemsPerPage);
+                if (page < 1 || page > totalPages) return;
+                this.currentPage = page;
+                this.load();
+            },
+
+            updateSortIndicators: function() {
+                const headers = $('#trxTable thead th[data-sort]');
+                headers.removeClass('sort-asc sort-desc');
+                if (!this.sortBy || !this.sortDirection) return;
+                headers.filter(`[data-sort="${this.sortBy}"]`)
+                    .addClass(this.sortDirection === 'ASC' ? 'sort-asc' : 'sort-desc');
+            },
+
+            resetSearch: function() {
+                $('#searchField').val('trxId');
+                $('#searchValue').val('');
+                $('#orgIdFilter').val('');
+                $('#trxStopYnFilter').val('');
+                this.currentPage = 1;
+                this.sortBy = null;
+                this.sortDirection = null;
+                this.updateSortIndicators();
+                this.load();
+            }
+        };
+
+        // ==================== Toolbar Event Bindings ====================
+
+        $('#btnExcel').off('click').on('click', function() {
+            const params = {};
+            const searchField = $('#searchField').val();
+            const searchValue = $('#searchValue').val();
+            const orgIdFilter = $('#orgIdFilter').val();
+            if (searchField && searchValue) { params.searchField = searchField; params.searchValue = searchValue; }
+            if (orgIdFilter) { params.orgIdFilter = orgIdFilter; }
+            if (window.TrxPage.sortBy) { params.sortBy = window.TrxPage.sortBy; params.sortDirection = window.TrxPage.sortDirection || 'ASC'; }
+            const qs = $.param(params);
+            window.location.href = API_BASE_URL + '/trx/export' + (qs ? '?' + qs : '');
+        });
+        $('#btnPrint').off('click').on('click', function() {
+            const columns = [
+                { key: 'trxId', label: '거래ID' },
+                { key: 'trxName', label: '거래명' },
+                { key: 'orgId', label: '기관ID' },
+                { key: 'trxStopYn', label: '중지여부' },
+                { key: 'multiResYn', label: '다중응답' }
+            ];
+            PrintUtil.print({ title: '거래메시지 목록', columns: columns, data: window.TrxPage.trxData });
+        });
+        $('#btnRefresh').off('click').on('click', function() { window.TrxPage.load(); });
+
+        // ==================== Initialization ====================
+
+        if (hasReloadAccess) { WasSelectReloadModal.init(); }
+        window.TrxPage.init();
+        window.TrxPage.itemsPerPage = parseInt($('#limitRows').val()) || 20;
+        window.TrxPage.currentPage = 1;
+        $('#trxTable thead th[data-sort]').addClass('sortable');
+        window.TrxPage.updateSortIndicators();
+        window.TrxPage.load();
+    </script>
+</th:block>
+</body>
+</html>

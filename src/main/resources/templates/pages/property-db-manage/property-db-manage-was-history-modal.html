@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<div th:fragment="modal">
+    <!-- WAS 프로퍼티 히스토리 Modal -->
+    <div class="modal fade" id="wasPropertyHistoryModal" tabindex="-1" aria-labelledby="wasPropertyHistoryModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-xl sp-modal-xxl">
+            <div class="modal-content">
+                <!-- Modal Header -->
+                <div class="modal-header">
+                    <h5 class="modal-title" id="wasPropertyHistoryModalLabel">
+                        <i class="bi bi-clock-history"></i> WAS별 설정 히스토리
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+
+                <!-- Modal Body -->
+                <div class="modal-body">
+                    <!-- 프로퍼티 그룹 정보 -->
+                    <div class="mb-3">
+                        <h6 class="section-title mb-3">
+                            <i class="bi bi-stack text-danger"></i> 프로퍼티 그룹 정보
+                        </h6>
+                        <div class="row align-items-center">
+                            <div class="col-auto">
+                                <label class="form-label mb-0">프로퍼티 그룹 ID</label>
+                            </div>
+                            <div class="col-md-4">
+                                <input type="text" class="form-control form-control-sm bg-light" id="wasHistoryGroupId" readonly>
+                            </div>
+                            <div class="col-auto">
+                                <label class="form-label fw-bold mb-1">WAS 인스턴스</label>
+                            </div>
+                            <div class="col-md-4">
+                                <select class="form-select form-select-sm" id="wasHistoryInstanceSelect" onchange="WasPropertyHistoryModal.onInstanceChange()">
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 프로퍼티 정보 비교 -->
+                    <h6 class="section-title mb-3">
+                        <i class="bi bi-list-ul text-danger"></i> 프로퍼티 정보
+                    </h6>
+
+                    <div class="sp-comparison-section">
+                        <!-- 좌측: 현재 버전 -->
+                        <div class="sp-comparison-panel">
+                            <div class="panel-header">
+                                <strong><i class="bi bi-database"></i> 현재 버전</strong>
+                            </div>
+                            <div class="table-responsive sp-scrollable">
+                                <table class="table table-sm table-hover sp-data-grid" id="wasHistoryCurrentTable">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th class="col-w-120">프로퍼티ID</th>
+                                            <th class="col-w-120">프로퍼티명</th>
+                                            <th class="col-w-120">특이사항</th>
+                                            <th class="col-w-100">설정값</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="wasHistoryCurrentTableBody">
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <!-- 우측: 히스토리 버전 -->
+                        <div class="sp-comparison-panel">
+                            <div class="panel-header">
+                                <strong><i class="bi bi-clock-history"></i> 히스토리 버전</strong>
+                                <select class="form-select form-select-sm w-200" id="wasHistoryVersionSelect" onchange="WasPropertyHistoryModal.onVersionChange()">
+                                </select>
+                            </div>
+                            <div class="table-responsive sp-scrollable">
+                                <table class="table table-sm table-hover sp-data-grid" id="wasHistoryVersionTable">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th class="col-w-120">프로퍼티ID</th>
+                                            <th class="col-w-120">프로퍼티명</th>
+                                            <th class="col-w-120">특이사항</th>
+                                            <th class="col-w-100">설정값</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="wasHistoryVersionTableBody">
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Modal Footer -->
+                <div class="modal-footer justify-content-end">
+                    <button type="button" class="btn btn-warning btn-sm" onclick="WasPropertyHistoryModal.restore()">
+                        <i class="bi bi-arrow-counterclockwise"></i> 복원
+                    </button>
+                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">
+                        <i class="bi bi-x-lg"></i> 닫기
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<th:block th:fragment="script">
+<script>
+    const WasPropertyHistoryModal = {
+        currentPropertyGroupId: null,
+        currentInstanceId: null,
+        selectedVersion: null,
+        wasInstances: [],
+        currentProperties: [],
+        historyVersions: [],
+        historyProperties: [],
+        // FWK_PROPERTY 기준 프로퍼티명 매핑용
+        propertyNameMap: {},
+
+        // 모달 열기
+        open: function(propertyGroupId) {
+            this.currentPropertyGroupId = propertyGroupId;
+            $('#wasHistoryGroupId').val(propertyGroupId);
+
+            // 프로퍼티명 매핑을 위해 FWK_PROPERTY 정보 조회
+            this.loadPropertyNames(propertyGroupId);
+
+            // WAS 인스턴스 목록 로드
+            this.loadInstances();
+
+            const modal = bootstrap.Modal.getOrCreateInstance(document.getElementById('wasPropertyHistoryModal'));
+            modal.show();
+        },
+
+        // 프로퍼티명 매핑 로드
+        loadPropertyNames: function(propertyGroupId) {
+            $.ajax({
+                url: API_BASE_URL + '/properties/groups/' + propertyGroupId + '/properties',
+                method: 'GET',
+                async: false,
+                success: (response) => {
+                    this.propertyNameMap = {};
+                    if (response.success && response.data) {
+                        response.data.forEach(p => {
+                            this.propertyNameMap[p.propertyId] = p.propertyName || '';
+                        });
+                    }
+                }
+            });
+        },
+
+        // WAS 인스턴스 목록 로드
+        loadInstances: function() {
+            $.ajax({
+                url: API_BASE_URL + '/was/property/instances',
+                method: 'GET',
+                success: (response) => {
+                    if (response.success && response.data) {
+                        this.wasInstances = response.data;
+                    } else {
+                        this.wasInstances = [];
+                    }
+                    this.renderInstanceSelect();
+
+                    // 첫번째 인스턴스 자동 선택
+                    if (this.wasInstances.length > 0) {
+                        this.currentInstanceId = this.wasInstances[0].instanceId;
+                        $('#wasHistoryInstanceSelect').val(this.currentInstanceId);
+                        this.loadInstanceData();
+                    }
+                },
+                error: (xhr) => {
+                    console.error('Failed to load WAS instances:', xhr);
+                    this.wasInstances = [];
+                    this.renderInstanceSelect();
+                }
+            });
+        },
+
+        // 인스턴스 콤보박스 렌더링
+        renderInstanceSelect: function() {
+            const select = $('#wasHistoryInstanceSelect');
+            select.empty();
+
+            if (!this.wasInstances || this.wasInstances.length === 0) {
+                select.append('<option value="">인스턴스 없음</option>');
+                return;
+            }
+
+            this.wasInstances.forEach(inst => {
+                select.append(`<option value="${inst.instanceId}">${inst.instanceId} - ${HtmlUtils.escape(inst.instanceName || '')}</option>`);
+            });
+        },
+
+        // 인스턴스 변경 시
+        onInstanceChange: function() {
+            this.currentInstanceId = $('#wasHistoryInstanceSelect').val();
+            if (this.currentInstanceId) {
+                this.loadInstanceData();
+            }
+        },
+
+        // 선택된 인스턴스 데이터 로드 (현재 프로퍼티 + 버전 목록)
+        loadInstanceData: function() {
+            const groupId = this.currentPropertyGroupId;
+            const instanceId = this.currentInstanceId;
+
+            // 현재 WAS 프로퍼티 조회
+            $.ajax({
+                url: API_BASE_URL + '/was/property/groups/' + groupId + '/instances/' + instanceId + '/current',
+                method: 'GET',
+                success: (response) => {
+                    if (response.success && response.data) {
+                        this.currentProperties = response.data;
+                    } else {
+                        this.currentProperties = [];
+                    }
+                    this.renderCurrentProperties();
+                },
+                error: (xhr) => {
+                    console.error('Failed to load current WAS properties:', xhr);
+                    this.currentProperties = [];
+                    this.renderCurrentProperties();
+                }
+            });
+
+            // 버전 목록 조회
+            $.ajax({
+                url: API_BASE_URL + '/was/property/groups/' + groupId + '/instances/' + instanceId + '/history/versions',
+                method: 'GET',
+                success: (response) => {
+                    if (response.success && response.data) {
+                        this.historyVersions = response.data;
+                    } else {
+                        this.historyVersions = [];
+                    }
+                    this.renderVersionSelect();
+
+                    // 버전 1 자동 선택
+                    if (this.historyVersions.length > 0) {
+                        const version1 = this.historyVersions.find(v => v.version === 1);
+                        if (version1) {
+                            this.selectedVersion = 1;
+                            $('#wasHistoryVersionSelect').val(1);
+                        } else {
+                            this.selectedVersion = this.historyVersions[this.historyVersions.length - 1].version;
+                            $('#wasHistoryVersionSelect').val(this.selectedVersion);
+                        }
+                        this.loadHistoryVersion(this.selectedVersion);
+                    } else {
+                        this.historyProperties = [];
+                        this.renderHistoryProperties();
+                    }
+                },
+                error: (xhr) => {
+                    console.error('Failed to load WAS history versions:', xhr);
+                    this.historyVersions = [];
+                    this.renderVersionSelect();
+                    this.historyProperties = [];
+                    this.renderHistoryProperties();
+                }
+            });
+        },
+
+        // 현재 프로퍼티 렌더링
+        renderCurrentProperties: function() {
+            const tbody = $('#wasHistoryCurrentTableBody');
+            tbody.empty();
+
+            if (!this.currentProperties || this.currentProperties.length === 0) {
+                tbody.append(`
+                    <tr>
+                        <td colspan="4" class="text-center text-muted py-3">
+                            WAS 프로퍼티가 없습니다.
+                        </td>
+                    </tr>
+                `);
+                return;
+            }
+
+            this.currentProperties.forEach(prop => {
+                const propertyName = this.propertyNameMap[prop.propertyId] || '';
+                tbody.append(`
+                    <tr data-property-id="${HtmlUtils.escape(prop.propertyId)}">
+                        <td>${HtmlUtils.escape(prop.propertyId)}</td>
+                        <td>${HtmlUtils.escape(propertyName)}</td>
+                        <td>${HtmlUtils.escape(prop.propertyDesc || '')}</td>
+                        <td>${HtmlUtils.escape(prop.propertyValue || '')}</td>
+                    </tr>
+                `);
+            });
+        },
+
+        // 버전 콤보박스 렌더링
+        renderVersionSelect: function() {
+            const select = $('#wasHistoryVersionSelect');
+            select.empty();
+
+            if (!this.historyVersions || this.historyVersions.length === 0) {
+                select.append('<option value="">히스토리 없음</option>');
+                return;
+            }
+
+            this.historyVersions.forEach(v => {
+                const reasonText = v.reason ? ' - ' + v.reason : '';
+                select.append(`<option value="${v.version}">버전 ${v.version}${reasonText} (${this.formatDtime(v.lastUpdateDtime)})</option>`);
+            });
+        },
+
+        // 버전 변경 시
+        onVersionChange: function() {
+            const version = parseInt($('#wasHistoryVersionSelect').val());
+            if (isNaN(version)) return;
+
+            this.selectedVersion = version;
+            this.loadHistoryVersion(version);
+        },
+
+        // 특정 버전 히스토리 로드
+        loadHistoryVersion: function(version) {
+            $.ajax({
+                url: API_BASE_URL + '/was/property/groups/' + this.currentPropertyGroupId + '/instances/' + this.currentInstanceId + '/history/' + version,
+                method: 'GET',
+                success: (response) => {
+                    if (response.success && response.data) {
+                        this.historyProperties = response.data;
+                    } else {
+                        this.historyProperties = [];
+                    }
+                    this.renderHistoryProperties();
+                },
+                error: (xhr) => {
+                    console.error('Failed to load WAS history version:', xhr);
+                    this.historyProperties = [];
+                    this.renderHistoryProperties();
+                }
+            });
+        },
+
+        // 히스토리 프로퍼티 렌더링
+        renderHistoryProperties: function() {
+            const tbody = $('#wasHistoryVersionTableBody');
+            tbody.empty();
+
+            if (!this.historyProperties || this.historyProperties.length === 0) {
+                tbody.append(`
+                    <tr>
+                        <td colspan="4" class="text-center text-muted py-3">
+                            히스토리 데이터가 없습니다.
+                        </td>
+                    </tr>
+                `);
+                return;
+            }
+
+            // 현재 프로퍼티 맵
+            const currentMap = {};
+            this.currentProperties.forEach(p => {
+                currentMap[p.propertyId] = p;
+            });
+
+            this.historyProperties.forEach(prop => {
+                const current = currentMap[prop.propertyId];
+                let rowClass = '';
+                const propertyName = this.propertyNameMap[prop.propertyId] || '';
+
+                if (!current) {
+                    rowClass = 'was-history-diff-removed';
+                } else {
+                    const valueChanged = (current.propertyValue || '') !== (prop.propertyValue || '');
+                    const descChanged = (current.propertyDesc || '') !== (prop.propertyDesc || '');
+                    if (valueChanged || descChanged) {
+                        rowClass = 'was-history-diff-changed';
+                    }
+                }
+
+                tbody.append(`
+                    <tr class="${rowClass}" data-property-id="${HtmlUtils.escape(prop.propertyId)}">
+                        <td>${HtmlUtils.escape(prop.propertyId)}</td>
+                        <td>${HtmlUtils.escape(propertyName)}</td>
+                        <td>${HtmlUtils.escape(prop.propertyDesc || '')}</td>
+                        <td>${HtmlUtils.escape(prop.propertyValue || '')}</td>
+                    </tr>
+                `);
+            });
+
+            // 현재에만 있는 프로퍼티 하이라이트
+            this.highlightCurrentDiff();
+        },
+
+        // 현재 프로퍼티 테이블에 차이 하이라이트
+        highlightCurrentDiff: function() {
+            const historyMap = {};
+            this.historyProperties.forEach(p => {
+                historyMap[p.propertyId] = p;
+            });
+
+            $('#wasHistoryCurrentTableBody tr').each(function() {
+                const $row = $(this);
+                const propertyId = $row.data('property-id');
+                if (!propertyId) return;
+
+                $row.removeClass('was-history-diff-added was-history-diff-changed');
+
+                if (!historyMap[propertyId]) {
+                    $row.addClass('was-history-diff-added');
+                }
+            });
+        },
+
+        // 복원
+        restore: function() {
+            if (!this.currentInstanceId) {
+                Toast.warning('WAS 인스턴스를 선택해주세요.');
+                return;
+            }
+            if (!this.selectedVersion) {
+                Toast.warning('복원할 버전을 선택해주세요.');
+                return;
+            }
+            if (!this.historyProperties || this.historyProperties.length === 0) {
+                Toast.warning('복원할 히스토리 데이터가 없습니다.');
+                return;
+            }
+
+            Toast.confirm('선택한 버전으로 복원 하시겠습니까?', () => {
+                $.ajax({
+                    url: API_BASE_URL + '/was/property/groups/' + this.currentPropertyGroupId + '/instances/' + this.currentInstanceId + '/restore/' + this.selectedVersion,
+                    method: 'POST',
+                    success: (response) => {
+                        if (response.success) {
+                            Toast.success('복원이 완료되었습니다.');
+                            // 데이터 새로고침
+                            this.loadInstanceData();
+                        } else {
+                            Toast.error('복원 중 오류가 발생했습니다: ' + (response.message || ''));
+                        }
+                    },
+                    error: (xhr) => {
+                        console.error('Failed to restore WAS properties:', xhr);
+                        const errorMessage = xhr.responseJSON?.message || '복원 중 오류가 발생했습니다.';
+                        Toast.error(errorMessage);
+                    }
+                });
+            });
+        },
+
+        // 날짜시간 포맷
+        formatDtime: function(dtime) {
+            if (!dtime || dtime.length < 8) return dtime || '';
+            return dtime.substring(0, 4) + '-' + dtime.substring(4, 6) + '-' + dtime.substring(6, 8);
+        }
+    };
+</script>
+</th:block>
+</body>
+</html>

@@ -1,0 +1,823 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head></head>
+<body>
+<script th:fragment="script">
+(function() {
+    const HandlerList = window.HandlerList = {
+        // Constants
+        DEFAULT_IO_TYPE: 'I',
+        DEFAULT_OPER_MODE: 'D',
+        DEFAULT_STOP_YN: 'N',
+
+        // State
+        initialized: false,
+        orgId: '',
+        currentPage: 1,
+        pageSize: 10,
+        orgOptions: [],
+        trxTypeOptions: [],
+        operModeOptions: [],
+        orgMap: {},
+        dirtyRows: new Set(),
+        sortBy: null,
+        sortDirection: null,
+        currentRows: [],
+
+        init: function() {
+            if (this.initialized) {
+                this.load(1);
+                return;
+            }
+            this.initialized = true;
+            this.setupSelectAll();
+            this.bindOrgSelect();
+            this.bindPageSizeChange();
+            this.setupTableEventDelegation();
+            this.bindSortEvents();
+            this.setupRefreshButton();
+            Promise.all([this.loadOrgOptions(), this.loadOptions()])
+                .finally(() => this.load(1));
+        },
+
+        bindPageSizeChange: function() {
+            const pageSizeSelect = document.getElementById('handlerPageSize');
+            if (pageSizeSelect) {
+                pageSizeSelect.addEventListener('change', () => {
+                    this.load(1); // Reset to page 1 when page size changes
+                });
+            }
+        },
+
+        bindSortEvents: function() {
+            const headers = document.querySelectorAll('#handlerTable thead th[data-sort]');
+            headers.forEach(header => {
+                header.classList.add('sortable');
+                header.addEventListener('click', () => {
+                    const sortKey = header.dataset.sort;
+                    if (!sortKey) return;
+                    if (this.sortBy === sortKey) {
+                        this.sortDirection = this.sortDirection === 'ASC' ? 'DESC' : 'ASC';
+                    } else {
+                        this.sortBy = sortKey;
+                        this.sortDirection = 'ASC';
+                    }
+                    this.updateSortIndicators();
+                    this.load(1); // 서버 사이드 정렬
+                });
+            });
+        },
+
+        setupSelectAll: function() {
+            const selectAllEl = document.getElementById('handlerSelectAll');
+            if (selectAllEl) {
+                selectAllEl.addEventListener('change', (e) => {
+                    const checkboxes = document.querySelectorAll('.handler-checkbox');
+                    checkboxes.forEach(cb => cb.checked = e.target.checked);
+                });
+            }
+        },
+
+        bindOrgSelect: function() {
+            const orgSelect = document.getElementById('handlerOrgId');
+            if (orgSelect) {
+                orgSelect.addEventListener('change', (e) => {
+                    this.orgId = e.target.value;
+                    this.load(1);
+                });
+            }
+        },
+
+        loadOrgOptions: function() {
+            // 모든 기관 데이터를 가져옴. 향후 기관 수 증가 시 별도의 non-pagination API 추가 권장
+            return fetch(`/api/orgs?page=1&size=9999`)
+                .then(r => r.json())
+                .then(data => {
+                    const rows = data.data?.content || data.data || [];
+                    this.orgOptions = rows;
+                    this.orgMap = {};
+                    rows.forEach(org => {
+                        this.orgMap[org.orgId] = org.orgName || org.orgId;
+                    });
+                    this.renderOrgOptions();
+                })
+                .catch(() => {
+                    this.renderEmpty('기관 정보를 불러오는데 실패했습니다.');
+                });
+        },
+
+        renderOrgOptions: function() {
+            const select = document.getElementById('handlerOrgId');
+            if (!select) return;
+            select.innerHTML = '<option value="">전체</option>';
+            this.orgOptions.forEach(org => {
+                const option = document.createElement('option');
+                option.value = org.orgId || '';
+                option.textContent = org.orgName || org.orgId || '';
+                select.appendChild(option);
+            });
+            select.value = this.orgId || '';
+        },
+
+        loadOptions: function() {
+            const trxReq = fetch(`/api/transports/options/trx-types`)
+                .then(r => r.json())
+                .then(data => {
+                    this.trxTypeOptions = data.data || [];
+                    this.renderTrxTypeFilter();
+                })
+                .catch(() => { this.trxTypeOptions = []; });
+
+            const operReq = fetch(`/api/transports/options/oper-modes`)
+                .then(r => r.json())
+                .then(data => { this.operModeOptions = data.data || []; })
+                .catch(() => { this.operModeOptions = []; });
+
+            return Promise.all([trxReq, operReq]);
+        },
+
+        renderTrxTypeFilter: function() {
+            const select = document.getElementById('handlerTrxType');
+            if (!select) return;
+            const current = select.value;
+            select.innerHTML = '<option value="">전체</option>';
+            this.trxTypeOptions.forEach(opt => {
+                const option = document.createElement('option');
+                option.value = opt.trxType || '';
+                option.textContent = opt.trxTypeName || opt.trxType || '';
+                select.appendChild(option);
+            });
+            if (current) select.value = current;
+            select.addEventListener('change', () => {
+                this.load(1);
+            });
+        },
+
+        load: function(page) {
+            const trxType = document.getElementById('handlerTrxType')?.value || '';
+            const pageSize = document.getElementById('handlerPageSize')?.value || 10;
+            const selectedOrg = document.getElementById('handlerOrgId')?.value || '';
+            this.pageSize = pageSize;
+            this.orgId = selectedOrg;
+            this.currentPage = page || 1;
+
+            const params = new URLSearchParams();
+            if (selectedOrg) params.append('orgId', selectedOrg);
+            if (trxType) params.append('trxType', trxType);
+            params.append('page', page);
+            params.append('size', pageSize);
+            if (this.sortBy) params.append('sortBy', this.sortBy);
+            if (this.sortDirection) params.append('sortDirection', this.sortDirection);
+
+            const url = `/api/message-handlers`;
+
+            fetch(`${url}?${params}`)
+                .then(r => r.json())
+                .then(data => {
+                    if (data.success) {
+                        this.renderTable(data.data);
+                        this.dirtyRows.clear();
+                    } else {
+                        this.renderEmpty(data.message || '조회에 실패했습니다.');
+                    }
+                })
+                .catch(() => this.renderEmpty('조회 중 오류가 발생했습니다.'));
+        },
+
+        renderTable: function(pageData) {
+            const tbody = document.getElementById('handlerTableBody');
+            if (!tbody) return;
+            if (!pageData || !pageData.content || pageData.content.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="10" class="text-center py-4 text-body-secondary">데이터가 없습니다.</td></tr>';
+                this.renderPagination({ totalPages: 0, number: 0, totalElements: 0 });
+                this.updatePageInfo({ totalElements: 0, number: 0, size: this.pageSize });
+                return;
+            }
+            this.currentRows = pageData.content || [];
+            this.currentTotalPages = pageData.totalPages || 0;
+            this.currentTotalElements = pageData.totalElements || 0;
+            tbody.innerHTML = this.currentRows.map(item => this.buildRow(item, false)).join(''); // 서버에서 정렬된 데이터 사용
+            this.renderPagination(pageData);
+            this.updatePageInfo(pageData);
+            this.updateSortIndicators();
+        },
+
+        updateSortIndicators: function() {
+            const headers = document.querySelectorAll('#handlerTable thead th.sortable');
+            headers.forEach(header => header.classList.remove('sort-asc', 'sort-desc'));
+            if (!this.sortBy || !this.sortDirection) return;
+            const active = document.querySelector(`#handlerTable thead th[data-sort="${this.sortBy}"]`);
+            if (active) {
+                active.classList.add(this.sortDirection === 'ASC' ? 'sort-asc' : 'sort-desc');
+            }
+        },
+
+        renderPagination: function(pageData) {
+            const paginationEl = document.getElementById('pagination');
+            if (!paginationEl) return;
+
+            const totalPages = pageData.totalPages || 0;
+            const currentPage = this.currentPage || 1;
+
+            const maxButtons = 5;
+            let startPage = Math.max(1, currentPage - Math.floor(maxButtons / 2));
+            let endPage = Math.min(totalPages, startPage + maxButtons - 1);
+
+            if (endPage - startPage + 1 < maxButtons) {
+                startPage = Math.max(1, endPage - maxButtons + 1);
+            }
+
+            let html = `
+                <li class="page-item ${currentPage === 1 ? 'disabled' : ''}">
+                    <a class="page-link" href="#" onclick="HandlerList.load(1); return false;">
+                        <i class="bi bi-chevron-double-left"></i>
+                    </a>
+                </li>
+                <li class="page-item ${currentPage === 1 ? 'disabled' : ''}">
+                    <a class="page-link" href="#" onclick="HandlerList.load(${currentPage - 1}); return false;">
+                        <i class="bi bi-chevron-left"></i>
+                    </a>
+                </li>
+            `;
+
+            for (let i = startPage; i <= endPage; i++) {
+                html += `
+                    <li class="page-item ${i === currentPage ? 'active' : ''}">
+                        <a class="page-link" href="#" onclick="HandlerList.load(${i}); return false;">${i}</a>
+                    </li>
+                `;
+            }
+
+            html += `
+                <li class="page-item ${currentPage === totalPages || totalPages === 0 ? 'disabled' : ''}">
+                    <a class="page-link" href="#" onclick="HandlerList.load(${currentPage + 1}); return false;">
+                        <i class="bi bi-chevron-right"></i>
+                    </a>
+                </li>
+                <li class="page-item ${currentPage === totalPages || totalPages === 0 ? 'disabled' : ''}">
+                    <a class="page-link" href="#" onclick="HandlerList.load(${totalPages}); return false;">
+                        <i class="bi bi-chevron-double-right"></i>
+                    </a>
+                </li>
+            `;
+
+            paginationEl.innerHTML = html;
+        },
+
+        updatePageInfo: function(pageData) {
+            const pageInfoEl = document.getElementById('pageInfo');
+            if (!pageInfoEl) return;
+
+            const totalElements = pageData.totalElements || 0;
+            const currentPage = this.currentPage || 1;
+            const size = pageData.size || this.pageSize;
+            const start = totalElements === 0 ? 0 : (currentPage - 1) * size + 1;
+            const end = Math.min(currentPage * size, totalElements);
+
+            pageInfoEl.textContent = `${start} - ${end} of ${totalElements} items`;
+        },
+
+        setupRefreshButton: function() {
+            const btnRefresh = document.getElementById('btnRefresh');
+            if (btnRefresh) {
+                btnRefresh.addEventListener('click', () => {
+                    this.load(this.currentPage);
+                });
+            }
+            document.getElementById('btnExcel')?.addEventListener('click', () => this.exportExcel());
+            document.getElementById('btnPrint')?.addEventListener('click', () => this.printTable());
+        },
+
+        buildRow: function(item, isNew) {
+            const orgOptionsHtml = this.orgOptions.length
+                ? this.orgOptions.map(opt =>
+                    `<option value="${opt.orgId || ''}" ${opt.orgId === item.orgId ? 'selected' : ''}>${opt.orgName || opt.orgId || ''}</option>`
+                ).join('')
+                : `<option value="${item.orgId || ''}" selected>${item.orgId || ''}</option>`;
+
+            const trxOptionsHtml = this.trxTypeOptions.length
+                ? '<option value="">선택</option>' + this.trxTypeOptions.map(opt =>
+                    `<option value="${opt.trxType || ''}" ${opt.trxType === item.trxType ? 'selected' : ''}>${opt.trxTypeName || opt.trxType}</option>`
+                ).join('')
+                : `<option value="">선택</option><option value="${item.trxType || ''}" ${item.trxType ? 'selected' : ''}>${item.trxType || ''}</option>`;
+
+            const operOptionsHtml = this.operModeOptions.length
+                ? this.operModeOptions.map(opt =>
+                    `<option value="${opt.code || ''}" ${opt.code === item.operModeType ? 'selected' : ''}>${opt.description || opt.code}</option>`
+                ).join('')
+                : `<option value="${item.operModeType || ''}" selected>${item.operModeType || '선택'}</option>`;
+
+            const active = (item.stopYn || 'N') === 'N';
+            const statusClass = active ? 'active' : 'inactive';
+            const statusBtnText = active ? '중지' : '시작';
+            const crudIndicator = isNew ? 'I' : '';
+
+            return `
+            <tr data-org="${item.orgId || ''}"
+                data-original-org="${isNew ? '' : (item.orgId || '')}"
+                data-original-trx="${isNew ? '' : (item.trxType || '')}"
+                data-original-io="${isNew ? '' : (item.ioType || '')}"
+                data-original-mode="${isNew ? '' : (item.operModeType || '')}"
+                data-trx="${item.trxType || ''}"
+                data-io="${item.ioType || ''}"
+                data-mode="${item.operModeType || ''}"
+                data-stopyn="${item.stopYn || 'N'}"
+                ${isNew ? 'data-new="true"' : ''}>
+                <td><input type="checkbox" class="handler-checkbox" data-handler='${HtmlUtils.escape(JSON.stringify(item))}'></td>
+                <td class="text-center">${crudIndicator}</td>
+                <td><select class="form-select form-select-sm" data-field="orgId">${orgOptionsHtml}</select></td>
+                <td><select class="form-select form-select-sm" data-field="trxType">${trxOptionsHtml}</select></td>
+                <td><select class="form-select form-select-sm" data-field="ioType">
+                    <option value="O" ${item.ioType === 'O' ? 'selected' : ''}>어댑터(송신)</option>
+                    <option value="I" ${item.ioType === 'I' ? 'selected' : ''}>리스너(수신)</option>
+                </select></td>
+                <td><select class="form-select form-select-sm" data-field="operModeType">${operOptionsHtml}</select></td>
+                <td><input type="text" class="form-control form-control-sm" value="${HtmlUtils.escape(item.handler || '')}" maxlength="200" data-field="handler"></td>
+                <td><input type="text" class="form-control form-control-sm" value="${HtmlUtils.escape(item.handlerDesc || '')}" maxlength="2000" data-field="handlerDesc"></td>
+                <td class="text-center"><span class="status-icon ${statusClass}"></span></td>
+                <td class="text-center"> <button type="button" class="btn btn-xs btn-outline-secondary handler-action-btn">${statusBtnText}</button>
+            </tr>
+            `;
+        },
+
+        getOrgName: function(orgId) {
+            return this.orgMap[orgId] || orgId;
+        },
+
+        renderEmpty: function(message) {
+            const tbody = document.getElementById('handlerTableBody');
+            if (!tbody) return;
+            tbody.innerHTML = `<tr><td colspan="10" class="text-center py-4 text-body-secondary">${message}</td></tr>`;
+        },
+
+        setupTableEventDelegation: function() {
+            const tbody = document.getElementById('handlerTableBody');
+            if (!tbody) return;
+
+            tbody.addEventListener('change', (e) => {
+                const select = e.target.closest('select');
+                const input = e.target.closest('input[type="text"]');
+                if (select || input) {
+                    const fieldElement = select || input;
+                    const field = fieldElement.dataset.field;
+                    if (field) {
+                        const tr = fieldElement.closest('tr');
+                        if (tr) {
+                            this.markRowDirty(tr);
+                        }
+                    }
+                }
+            });
+
+            tbody.addEventListener('click', (e) => {
+                const button = e.target.closest('.handler-action-btn');
+                if (button) {
+                    e.preventDefault();
+                    this.toggleStatus(button);
+                }
+            });
+        },
+
+        markRowDirty: function(tr) {
+            const data = this.collectRowData(tr);
+            const rowId = `${data.orgId || ''}|${data.trxType || ''}|${data.ioType || ''}|${data.operModeType || ''}`;
+            this.dirtyRows.add(rowId);
+            tr.classList.add('sp-modified-row');
+
+            const checkbox = tr.querySelector('.handler-checkbox');
+            if (checkbox) {
+                checkbox.dataset.handler = JSON.stringify(data);
+            }
+
+            tr.dataset.org = data.orgId || '';
+            tr.dataset.trx = data.trxType || '';
+            tr.dataset.io = data.ioType || '';
+            tr.dataset.mode = data.operModeType || '';
+            tr.dataset.stopyn = data.stopYn || this.DEFAULT_STOP_YN;
+        },
+
+        toggleStatus: function(button) {
+            const tr = button.closest('tr');
+            if (!tr) return;
+
+            const current = tr.dataset.stopyn || 'N';
+            const next = current === 'N' ? 'Y' : 'N';
+
+            const orgSelect = tr.querySelector('[data-field="orgId"]');
+            const currentOrgId = orgSelect ? orgSelect.value : '';
+            const orgLabel = this.getOrgName(currentOrgId) || currentOrgId || '해당';
+            const actionLabel = next === 'Y' ? '중지' : '시작';
+
+            Toast.confirm(`${orgLabel} 핸들러를 ${actionLabel}하시겠습니까?`, () => {
+                // Update status icon
+            const icon = tr.querySelector('.status-icon');
+            if (icon) {
+                icon.classList.remove('active', 'inactive');
+                icon.classList.add(next === 'N' ? 'active' : 'inactive');
+            }
+
+            // Update button text (opposite of current status)
+            button.textContent = next === 'N' ? '중지' : '시작';
+
+            // Update dataset
+            tr.dataset.stopyn = next;
+
+            // Mark as dirty
+            this.markRowDirty(tr);
+
+                // Update checkbox data
+                const checkbox = tr.querySelector('.handler-checkbox');
+                if (checkbox) checkbox.dataset.handler = JSON.stringify(this.collectRowData(tr));
+            });
+        },
+
+        addRow: function() {
+            const orgSelect = document.getElementById('handlerOrgId');
+            const orgId = orgSelect?.value || this.orgId || (this.orgOptions[0]?.orgId || '');
+            if (!orgId) {
+                Toast.warning('기관을 선택하세요.');
+                return;
+            }
+            this.orgId = orgId;
+            const newItem = {
+                orgId,
+                trxType: '',
+                ioType: this.DEFAULT_IO_TYPE,
+                operModeType: this.DEFAULT_OPER_MODE,
+                handler: '',
+                handlerDesc: '',
+                stopYn: this.DEFAULT_STOP_YN
+            };
+            const tbody = document.getElementById('handlerTableBody');
+            if (!tbody) return;
+
+            // Remove "no data" row if exists
+            const noDataRow = tbody.querySelector('tr td[colspan]');
+            if (noDataRow) {
+                tbody.innerHTML = '';
+            }
+
+            tbody.insertAdjacentHTML('afterbegin', this.buildRow(newItem, true));
+
+            // Mark new row as dirty automatically
+            const newRow = tbody.querySelector('tr[data-new="true"]');
+            if (newRow) {
+                this.markRowDirty(newRow);
+            }
+        },
+
+        collectRowData: function(tr) {
+            const getVal = (name) => {
+                const node = tr.querySelector(`[data-field="${name}"]`);
+                return node ? node.value : '';
+            };
+            return {
+                orgId: getVal('orgId') || this.orgId || '',
+                trxType: getVal('trxType') || '',
+                ioType: getVal('ioType') || '',
+                operModeType: getVal('operModeType') || '',
+                handler: (getVal('handler') || '').trim(),
+                handlerDesc: (getVal('handlerDesc') || '').trim(),
+                stopYn: tr.dataset.stopyn || this.DEFAULT_STOP_YN
+            };
+        },
+
+        saveAll: function() {
+            const tbody = document.getElementById('handlerTableBody');
+            if (!tbody) return;
+
+            const rows = tbody.querySelectorAll('tr');
+            const batchByOrg = {}; // { orgId: { upserts: [], deletes: [] } }
+            let hasValidationError = false;
+            let validationErrorMessage = '';
+            const seenKeys = new Set();
+
+            rows.forEach(tr => {
+                if (!tr.classList.contains('sp-modified-row') && !tr.dataset.new) return;
+                if (hasValidationError) return;
+
+                const data = this.collectRowData(tr);
+
+                const handler = data.handler || '';
+                const trxType = data.trxType || '';
+                const currentOrgId = data.orgId || '';
+                const ioType = data.ioType || '';
+                const operModeType = data.operModeType || '';
+
+                // Validation
+                if (!currentOrgId) {
+                    hasValidationError = true;
+                    validationErrorMessage = '기관을 선택하세요.';
+                    return;
+                }
+                if (!trxType) {
+                    hasValidationError = true;
+                    validationErrorMessage = '거래유형을 선택하세요.';
+                    return;
+                }
+                if (!handler.trim()) {
+                    hasValidationError = true;
+                    validationErrorMessage = '전문처리핸들러는 필수입니다.';
+                    return;
+                }
+                const compositeKey = `${currentOrgId}|${trxType}|${ioType}|${operModeType}`;
+                if (seenKeys.has(compositeKey)) {
+                    hasValidationError = true;
+                    validationErrorMessage = '동일 기관/거래유형/IO/운영모드 조합은 한 건만 등록 가능합니다.';
+                    return;
+                }
+                seenKeys.add(compositeKey);
+
+                const isNew = tr.dataset.new === 'true';
+
+                const newItem = this.collectRowData(tr);
+
+                if (!batchByOrg[currentOrgId]) {
+                    batchByOrg[currentOrgId] = { upserts: [], deletes: [] };
+                }
+                batchByOrg[currentOrgId].upserts.push(newItem);
+            });
+
+            if (hasValidationError) {
+                Toast.info(validationErrorMessage);
+                return;
+            }
+
+            const requests = Object.entries(batchByOrg).map(([orgId, batch]) =>
+                fetch(`/api/message-handlers/batch?orgId=${encodeURIComponent(orgId)}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        upserts: batch.upserts.length > 0 ? batch.upserts : undefined,
+                        deletes: batch.deletes.length > 0 ? batch.deletes : undefined
+                    })
+                }).then(r => r.json())
+            );
+
+            if (requests.length === 0) {
+                Toast.warning('저장할 변경사항이 없습니다.');
+                return;
+            }
+
+            Promise.all(requests)
+                .then(responses => {
+                    const failed = responses.find(res => !res.success);
+                    if (failed) {
+                        Toast.error('저장 실패: ' + (failed.message || ''));
+                        return;
+                    }
+                    Toast.success('저장되었습니다.');
+                    // Reload data to reflect latest state from server
+                    this.load(this.currentPage);
+                })
+                .catch(e => Toast.error('오류: ' + e.message));
+        },
+
+        deleteSelected: function() {
+            const selected = document.querySelectorAll('.handler-checkbox:checked');
+            if (selected.length === 0) { Toast.warning('선택된 항목이 없습니다.'); return; }
+            Toast.confirm('선택된 항목을 삭제하시겠습니까?', () => {
+                const deletes = [];
+                Array.from(selected).forEach(cb => {
+                    const tr = cb.closest('tr');
+                    if (tr && tr.dataset.new === 'true') {
+                        // 새 행은 서버에 없으므로 바로 제거
+                        tr.remove();
+                        return;
+                    }
+                    try {
+                        const data = JSON.parse(cb.dataset.handler || '{}');
+                        if (data.orgId) {
+                            deletes.push(data);
+                        }
+                    } catch (e) {
+                        // 파싱 실패한 경우 무시
+                    }
+                });
+
+                if (deletes.length === 0) {
+                    // 모두 신규행이거나 유효한 키가 없는 경우 테이블만 갱신
+                    const selectAllEl = document.getElementById('handlerSelectAll');
+                    if (selectAllEl) selectAllEl.checked = false;
+                    this.load(this.currentPage);
+                    return;
+                }
+                const grouped = deletes.reduce((acc, item) => {
+                    if (!item.orgId) return acc;
+                    acc[item.orgId] = acc[item.orgId] || [];
+                    acc[item.orgId].push(item);
+                    return acc;
+                }, {});
+
+                const requests = Object.entries(grouped).map(([orgId, items]) =>
+                    fetch(`/api/message-handlers/batch?orgId=${encodeURIComponent(orgId)}`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ deletes: items })
+                    }).then(r => r.json())
+                );
+
+                Promise.all(requests)
+                    .then(responses => {
+                        const failed = responses.find(res => !res.success);
+                        if (failed) {
+                            Toast.error('삭제 실패: ' + (failed.message || ''));
+                            return;
+                        }
+                        const selectAllEl = document.getElementById('handlerSelectAll');
+                        if (selectAllEl) selectAllEl.checked = false;
+                        this.load(this.currentPage);
+                    })
+                    .catch(e => Toast.error('오류: ' + e.message));
+            });
+        },
+
+        exportExcel: function() {
+            const params = new URLSearchParams();
+            const selectedOrg = document.getElementById('handlerOrgId')?.value || '';
+            const trxType = document.getElementById('handlerTrxType')?.value || '';
+            if (selectedOrg) params.append('orgId', selectedOrg);
+            if (trxType) params.append('trxType', trxType);
+            if (this.sortBy) {
+                params.append('sortBy', this.sortBy);
+                params.append('sortDirection', this.sortDirection || 'ASC');
+            }
+            const qs = params.toString();
+            window.location.href = '/api/message-handlers/export' + (qs ? '?' + qs : '');
+        },
+
+        printTable: function() {
+            const columns = [
+                { key: 'orgId', label: '기관명' },
+                { key: 'trxType', label: '거래유형' },
+                { key: 'ioType', label: '어댑터/리스너' },
+                { key: 'operModeType', label: '운영모드' },
+                { key: 'handler', label: '전문처리핸들러' },
+                { key: 'handlerDesc', label: '전문처리핸들러설명' },
+                { key: 'stopYn', label: '상태' }
+            ];
+            PrintUtil.print({ title: '전문처리핸들러 목록', columns: columns, data: this.currentRows });
+        },
+
+        openReloadModal: function() {
+            WasSelectReloadModal.open({
+                onExecute: function(instanceIds) {
+                    $.ajax({
+                        url: '/api/reload/execute',
+                        method: 'POST',
+                        contentType: 'application/json',
+                        data: JSON.stringify({
+                            reloadType: 'message',
+                            instanceIds: instanceIds
+                        }),
+                        success: function(response) {
+                            if (response.success && response.data) {
+                                WasSelectReloadModal.showResults(response.data.results);
+                            } else {
+                                WasSelectReloadModal.resetButton();
+                                Toast.error(response.message || 'Reload 실행에 실패했습니다.');
+                            }
+                        },
+                        error: function(xhr) {
+                            WasSelectReloadModal.resetButton();
+                            Toast.error(xhr.responseJSON?.message || 'Reload 실행 중 오류가 발생했습니다.');
+                        }
+                    });
+                }
+            });
+        },
+
+        openModal: function(rowData) {
+            const isEdit = !!rowData;
+            const title = isEdit ? '핸들러 수정' : '핸들러 등록';
+            document.getElementById('handlerModalTitle').textContent = title;
+
+            // Populate hidden key fields
+            document.getElementById('formOrgId').value = rowData?.orgId || this.orgId || '';
+            document.getElementById('formTrxType').value = rowData?.trxType || '';
+            document.getElementById('formIoType').value = rowData?.ioType || this.DEFAULT_IO_TYPE;
+            document.getElementById('formOperModeType').value = rowData?.operModeType || this.DEFAULT_OPER_MODE;
+
+            // Populate display fields
+            const orgIdDisplay = document.getElementById('formOrgIdDisplay');
+            orgIdDisplay.value = rowData?.orgId ? (this.getOrgName(rowData.orgId) + ' (' + rowData.orgId + ')') : '';
+            orgIdDisplay.disabled = true;
+
+            // Populate trxType display select using DOM API
+            const trxTypeDisplay = document.getElementById('formTrxTypeDisplay');
+            while (trxTypeDisplay.firstChild) trxTypeDisplay.removeChild(trxTypeDisplay.firstChild);
+            const defaultTrxOpt = document.createElement('option');
+            defaultTrxOpt.value = '';
+            defaultTrxOpt.textContent = '선택';
+            trxTypeDisplay.appendChild(defaultTrxOpt);
+            this.trxTypeOptions.forEach(opt => {
+                const option = document.createElement('option');
+                option.value = opt.trxType || '';
+                option.textContent = opt.trxTypeName || opt.trxType || '';
+                trxTypeDisplay.appendChild(option);
+            });
+            trxTypeDisplay.value = rowData?.trxType || '';
+            trxTypeDisplay.disabled = isEdit;
+
+            // Populate ioType display select
+            const ioTypeDisplay = document.getElementById('formIoTypeDisplay');
+            ioTypeDisplay.value = rowData?.ioType || this.DEFAULT_IO_TYPE;
+            ioTypeDisplay.disabled = isEdit;
+
+            // Populate operModeType display select using DOM API
+            const operModeDisplay = document.getElementById('formOperModeTypeDisplay');
+            while (operModeDisplay.firstChild) operModeDisplay.removeChild(operModeDisplay.firstChild);
+            this.operModeOptions.forEach(opt => {
+                const option = document.createElement('option');
+                option.value = opt.code || '';
+                option.textContent = opt.description || opt.code || '';
+                operModeDisplay.appendChild(option);
+            });
+            operModeDisplay.value = rowData?.operModeType || this.DEFAULT_OPER_MODE;
+            operModeDisplay.disabled = isEdit;
+
+            // Populate editable fields
+            document.getElementById('formHandler').value = rowData?.handler || '';
+            document.getElementById('formHandlerDesc').value = rowData?.handlerDesc || '';
+            document.getElementById('formStopYn').value = rowData?.stopYn || this.DEFAULT_STOP_YN;
+
+            // For create mode: set orgId from filter and enable key field selects
+            if (!isEdit) {
+                const orgSelect = document.getElementById('handlerOrgId');
+                const currentOrg = orgSelect?.value || this.orgId || '';
+                if (!currentOrg) {
+                    Toast.warning('기관을 선택하세요.');
+                    return;
+                }
+                document.getElementById('formOrgId').value = currentOrg;
+                orgIdDisplay.value = this.getOrgName(currentOrg) + ' (' + currentOrg + ')';
+            }
+
+            bootstrap.Modal.getOrCreateInstance(document.getElementById('handlerModal')).show();
+        },
+
+        save: function() {
+            const orgId = document.getElementById('formOrgId').value;
+            const trxTypeDisplay = document.getElementById('formTrxTypeDisplay');
+            const ioTypeDisplay = document.getElementById('formIoTypeDisplay');
+            const operModeDisplay = document.getElementById('formOperModeTypeDisplay');
+
+            // For disabled (edit) selects, use hidden field; for enabled (create) selects, use display value
+            const trxType = trxTypeDisplay.disabled ? document.getElementById('formTrxType').value : trxTypeDisplay.value;
+            const ioType = ioTypeDisplay.disabled ? document.getElementById('formIoType').value : ioTypeDisplay.value;
+            const operModeType = operModeDisplay.disabled ? document.getElementById('formOperModeType').value : operModeDisplay.value;
+            const handler = (document.getElementById('formHandler').value || '').trim();
+            const handlerDesc = (document.getElementById('formHandlerDesc').value || '').trim();
+            const stopYn = document.getElementById('formStopYn').value || this.DEFAULT_STOP_YN;
+
+            // Validation
+            if (!orgId) {
+                Toast.warning('기관ID는 필수입니다.');
+                return;
+            }
+            if (!trxType) {
+                Toast.warning('거래유형을 선택하세요.');
+                document.getElementById('formTrxTypeDisplay').focus();
+                return;
+            }
+            if (!handler) {
+                Toast.warning('전문처리핸들러는 필수입니다.');
+                document.getElementById('formHandler').focus();
+                return;
+            }
+
+            const upsertItem = {
+                orgId: orgId,
+                trxType: trxType,
+                ioType: ioType,
+                operModeType: operModeType,
+                handler: handler,
+                handlerDesc: handlerDesc,
+                stopYn: stopYn
+            };
+
+            fetch(`/api/message-handlers/batch?orgId=${encodeURIComponent(orgId)}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ upserts: [upsertItem] })
+            })
+                .then(r => r.json())
+                .then(res => {
+                    if (res.success) {
+                        Toast.success('저장되었습니다.');
+                        bootstrap.Modal.getInstance(document.getElementById('handlerModal'))?.hide();
+                        this.load(this.currentPage);
+                    } else {
+                        Toast.error('저장 실패: ' + (res.message || '알 수 없는 오류'));
+                    }
+                })
+                .catch(e => Toast.error('오류: ' + e.message));
+        }
+    };
+
+    HandlerList.init();
+    WasSelectReloadModal.init();
+})();
+</script>
+</body>
+</html>

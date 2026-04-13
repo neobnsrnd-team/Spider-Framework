@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<!-- Batch History Search Fragment -->
+<div th:fragment="search" class="card border p-2 mb-3">
+    <div class="d-flex flex-wrap align-items-center gap-2 mb-1">
+        <label class="form-label mb-0 small fw-medium">배치 APP ID</label>
+        <input type="text" id="searchBatchAppId" class="form-control form-control-sm flex-fixed-120" placeholder="">
+
+        <label class="form-label mb-0 small fw-medium ms-2">인스턴스</label>
+        <select id="searchInstanceId" class="form-select form-select-sm flex-fixed-100">
+            <option value="">전체</option>
+            <!-- 동적으로 채워짐 -->
+        </select>
+
+        <label class="form-label mb-0 small fw-medium ms-2">상태</label>
+        <select id="searchResRtCode" class="form-select form-select-sm flex-fixed-130">
+            <option value="">전체</option>
+            <option value="0">0 (시작)</option>
+            <option value="1">1 (정상)</option>
+            <option value="-1">-1 (오류)</option>
+        </select>
+
+        <label class="form-label mb-0 small fw-medium ms-2">기준일</label>
+        <input type="date" id="searchBatchDate" class="form-control form-control-sm flex-fixed-140">
+
+        <div class="flex-grow-1"></div>
+
+        <select id="limitRows" class="form-select form-select-sm sp-limit-select">
+            <option value="10" selected>10</option>
+            <option value="20">20</option>
+            <option value="50">50</option>
+            <option value="100">100</option>
+        </select>
+
+        <label class="form-label mb-0 small fw-medium">건씩</label>
+
+        <button class="btn btn-primary btn-sm" onclick="BatchHistory.search()">
+            <i class="bi bi-search"></i> 조회
+        </button>
+    </div>
+</div>
+</body>
+</html>

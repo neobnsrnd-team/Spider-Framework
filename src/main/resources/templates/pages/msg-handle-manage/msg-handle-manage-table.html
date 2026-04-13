@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<div th:fragment="table" class="table-responsive">
+    <table class="table table-sm table-hover sp-data-grid" id="handlerTable">
+        <thead class="table-light">
+        <tr>
+            <th class="col-w-40"><input type="checkbox" id="handlerSelectAll"></th>
+            <th class="col-w-80">CRUD</th>
+            <th class="col-w-120 sortable" data-sort="orgId">기관명</th>
+            <th class="col-w-140 sortable" data-sort="trxType">거래유형</th>
+            <th class="col-w-140 sortable" data-sort="ioType">어댑터<br/>리스너</th>
+            <th class="col-w-140 sortable" data-sort="operModeType">운영모드</th>
+            <th class="col-w-250 sortable" data-sort="handler">전문처리핸들러</th>
+            <th class="col-w-200 sortable" data-sort="handlerDesc">전문처리핸들러설명</th>
+            <th class="col-w-80 sortable" data-sort="stopYn">상태</th>
+            <th class="col-w-100">상태<br/>변경</th>
+        </tr>
+        </thead>
+        <tbody id="handlerTableBody">
+        <tr>
+            <td colspan="10" class="text-center py-4 text-body-secondary">
+                데이터를 불러오는 중...
+            </td>
+        </tr>
+        </tbody>
+    </table>
+</div>
+</body>
+</html>

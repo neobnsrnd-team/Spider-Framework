@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<!-- TransData Table Fragment -->
+<div th:fragment="table">
+    <div class="table-responsive">
+        <table class="table table-sm table-hover sp-data-grid" id="transDataTable">
+            <colgroup>
+                <col class="col-w-pct-14">
+                <col class="col-w-pct-28">
+                <col class="col-w-pct-18">
+                <col class="col-w-pct-10">
+                <col class="col-w-pct-10">
+                <col class="col-w-pct-10">
+                <col class="col-w-pct-10">
+            </colgroup>
+            <thead class="table-light">
+            <tr>
+                <th class="cursor-pointer" data-sort="userId">
+                    이행 요청자 <span class="sort-indicator" data-sort-indicator="userId"></span>
+                </th>
+                <th class="cursor-pointer" data-sort="tranReason">
+                    이행 사유 <span class="sort-indicator" data-sort-indicator="tranReason"></span>
+                </th>
+                <th class="cursor-pointer" data-sort="tranTime">
+                    이행 시각 <span class="sort-indicator" data-sort-indicator="tranTime"></span>
+                </th>
+                <th class="cursor-pointer" data-sort="tranResult">
+                    이행 결과 <span class="sort-indicator" data-sort-indicator="tranResult"></span>
+                </th>
+                <th class="cursor-pointer" data-sort="totalCount">
+                    총 이행 건수 <span class="sort-indicator" data-sort-indicator="totalCount"></span>
+                </th>
+                <th class="cursor-pointer" data-sort="failCount">
+                    실패 <span class="sort-indicator" data-sort-indicator="failCount"></span>
+                </th>
+                <th class="cursor-pointer" data-sort="successCount">
+                    성공 <span class="sort-indicator" data-sort-indicator="successCount"></span>
+                </th>
+            </tr>
+            </thead>
+            <tbody id="transDataTableBody">
+            <!-- JavaScript로 동적 렌더링 -->
+            </tbody>
+        </table>
+    </div>
+</div>
+</body>
+</html>

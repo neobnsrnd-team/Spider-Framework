@@ -1,0 +1,11 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<!-- Trx Bottom Actions Fragment -->
+<div th:fragment="buttons" class="bottom-actions">
+    <button class="btn btn-primary btn-sm ms-2" onclick="TrxDetailModal.create({ onRefresh: function() { window.TrxPage.load(); } })">
+        + 등록
+    </button>
+</div>
+</body>
+</html>

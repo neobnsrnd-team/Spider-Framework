@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+
+<!-- 당발 대응답 등록/상세 통합 모달 -->
+<div th:fragment="modal" id="messageTestModal" class="modal fade" tabindex="-1" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
+    <div class="modal-dialog modal-dialog-centered sp-modal-lg">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h5 id="mtModalTitle" class="modal-title">당발 대응답 등록</h5>
+            <button class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body sp-scrollable p-3">
+
+            <!-- === 상단: 거래 정보 === -->
+            <div class="mb-3">
+                <div class="section-header mb-2">
+                    <i class="bi bi-caret-right-fill"></i>
+                    <span>거래 정보</span>
+                </div>
+                <div class="sp-form-row">
+                    <label>기관명</label>
+                    <input type="text" id="mtOrgName" class="form-control col-w-150" disabled>
+                    <input type="hidden" id="mtOrgId">
+                    <label>거래ID</label>
+                    <input type="text" id="mtTrxId" class="form-control col-w-150" disabled>
+                    <label>거래명</label>
+                    <input type="text" id="mtTrxName" class="form-control col-w-150" disabled>
+                    <input type="hidden" id="mtIoType">
+                    <input type="hidden" id="mtMessageId">
+                    <input type="hidden" id="mtTestSno">
+                    <!-- 등록 모드에서만 노출 -->
+                    <button id="mtTrxSearchBtn" class="btn btn-sm btn-primary d-hidden" onclick="MessageTestModal.openTrxSearch()">거래조회</button>
+                </div>
+            </div>
+
+            <!-- === 중간: 탭 영역 === -->
+            <div id="mtMiddleSection" class="mb-3 d-hidden">
+                <div class="mt-tab-header">
+                    <button class="mt-tab-btn active" data-tab="parse" onclick="MessageTestModal.switchTab('parse')">전문파싱</button>
+                    <button class="mt-tab-btn" data-tab="raw" onclick="MessageTestModal.switchTab('raw')">통전문</button>
+                </div>
+
+                <!-- 전문파싱 탭 -->
+                <div id="mtTabParse" class="mt-tab-content">
+                    <div class="mt-reset-btn-area">
+                        <button class="btn btn-sm btn-outline-secondary" onclick="MessageTestModal.resetFieldValues()">초기화</button>
+                    </div>
+                    <div class="sp-scrollable-250">
+                        <table class="sp-data-grid">
+                            <thead>
+                            <tr>
+                                <th class="col-w-120">메시지ID</th>
+                                <th class="col-w-120">전문필드ID</th>
+                                <th>전문필드명</th>
+                                <th class="col-w-60">길이</th>
+                                <th class="col-w-60">필수</th>
+                                <th class="col-w-160">값</th>
+                            </tr>
+                            </thead>
+                            <tbody id="mtFieldTableBody">
+                            <tr>
+                                <td colspan="6" class="sp-empty-state">거래를 선택하면 전문 필드가 표시됩니다.</td>
+                            </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- 통전문 탭 -->
+                <div id="mtTabRaw" class="mt-tab-content d-hidden">
+                    <textarea id="mtRawMessage" class="form-control fs-sm mt-raw-textarea"
+                              placeholder="전문 데이터를 입력하세요."></textarea>
+                    <div class="mt-textarea-note">*1건의 로그에서 전문데이터 부분만 입력하세요.</div>
+                </div>
+            </div>
+
+            <!-- === 하단: 테스트 정보 === -->
+            <div id="mtBottomSection" class="mb-3 d-hidden">
+                <div class="section-header mb-2">
+                    <i class="bi bi-caret-right-fill"></i>
+                    <span>테스트 정보</span>
+                </div>
+                <div class="mt-bottom-form">
+                    <label>테스트그룹ID</label>
+                    <select id="mtTestGroupId" class="form-control col-w-150">
+                        <option value="DEFAULT">DEFAULT</option>
+                    </select>
+                    <input type="text" id="mtTestGroupIdCustom" class="form-control col-w-150 d-hidden" placeholder="그룹ID 입력">
+                    <label>테스트명</label>
+                    <input type="text" id="mtTestName" class="form-control col-w-200" maxlength="100">
+                    <label>테스트설명</label>
+                    <input type="text" id="mtTestDesc" class="form-control col-w-200" maxlength="200">
+                </div>
+            </div>
+        </div>
+
+        <!-- === 모달 하단 버튼 === -->
+        <div class="modal-footer">
+            <div class="flex-grow-1"></div>
+            <!-- 등록 모드 버튼 -->
+            <button id="mtSaveBtn" class="btn btn-primary btn-sm d-hidden" onclick="MessageTestModal.save()"><i class="bi bi-floppy"></i> 저장</button>
+            <!-- 상세 모드 버튼 -->
+            <button id="mtSaveAsNewBtn" class="btn btn-primary btn-sm d-hidden" onclick="MessageTestModal.saveAsNew()">신규저장</button>
+            <button id="mtUpdateBtn" class="btn btn-primary btn-sm d-hidden btn-success-custom" onclick="MessageTestModal.update()">수정</button>
+            <button id="mtDeleteBtn" class="btn btn-danger btn-sm me-auto d-hidden btn-danger-custom" onclick="MessageTestModal.deleteTest()"><i class="bi bi-trash"></i> 삭제</button>
+            <!-- 공통 버튼 -->
+            <button class="btn btn-secondary btn-sm" data-bs-dismiss="modal"><i class="bi bi-x-lg"></i> 취소</button>
+        </div>
+    </div>
+    </div>
+</div>
+
+</body>
+</html>

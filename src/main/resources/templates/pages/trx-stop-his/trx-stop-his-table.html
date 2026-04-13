@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<!-- TrxStopHistory Table Fragment -->
+<div th:fragment="table">
+    <div class="table-responsive">
+        <table class="table table-sm table-hover sp-data-grid" id="historyTable">
+            <colgroup>
+                <col class="col-w-pct-10">
+                <col class="col-w-pct-15">
+                <col class="col-w-pct-25">
+                <col class="col-w-pct-25">
+                <col class="col-w-pct-15">
+                <col class="col-w-pct-10">
+            </colgroup>
+            <thead class="table-light">
+            <tr>
+                <th data-sort="gubunType">구분유형</th>
+                <th data-sort="trxId">거래ID</th>
+                <th data-sort="trxName">거래명</th>
+                <th data-sort="trxStopReason">거래중지사유</th>
+                <th data-sort="trxStopUpdateDtime">거래중지일시</th>
+                <th data-sort="lastUpdateUserId">최종수정자</th>
+            </tr>
+            </thead>
+            <tbody id="historyTableBody">
+            <!-- JavaScript로 동적 렌더링 -->
+            </tbody>
+        </table>
+    </div>
+</div>
+</body>
+</html>

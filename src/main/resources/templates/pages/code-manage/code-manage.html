@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<div th:fragment="content">
+    <!-- Include Page Content Layout Styles -->
+
+    <!-- Search Section Header -->
+    <div class="page-header">
+        <h4 class="page-title">
+            <i class="bi bi-exclamation-circle-fill text-danger"></i>
+            검색조건
+        </h4>
+    </div>
+
+    <!-- Search Container (동적 생성) -->
+    <div id="searchContainer"></div>
+
+    <!-- List Section Header -->
+    <div class="page-header mt-3">
+        <h4 class="page-title">
+            <i class="bi bi-exclamation-circle-fill text-danger"></i>
+            리스트
+        </h4>
+    </div>
+
+    <!-- Toolbar -->
+    <th:block th:replace="~{fragments/page-content-layout :: toolbar}" />
+
+    <!-- Table Container (동적 생성) -->
+    <div id="tableContainer"></div>
+
+    <!-- Pagination -->
+    <th:block th:replace="~{fragments/page-content-layout :: pagination}" />
+
+    <!-- Bottom Action Buttons -->
+    <div class="bottom-actions">
+        <button class="btn btn-primary btn-sm" id="btnAdd"
+                th:if="${userAuthorities != null and userAuthorities.contains('CODE_MANAGEMENT:W')}">
+            + 추가
+        </button>
+    </div>
+
+    <!-- Code Modal (기존 유지) -->
+    <div th:replace="~{pages/code-manage/code-manage-modal :: modal}"></div>
+
+    <!-- Page Script -->
+    <script th:inline="javascript">
+        // 코드 관리 페이지 설정
+        var PAGE_CONFIG = {
+            pageId: 'codes',
+            apiEndpoint: API_BASE_URL + '/codes/page-with-group',
+
+            // 검색 폼 설정 (레거시 2행 구조)
+            search: {
+                rows: [
+                    // 1행: 업무그룹별 코드그룹 필터
+                    [
+                        {
+                            type: 'select',
+                            id: 'bizGroupId',
+                            label: '업무그룹별 코드그룹',
+                            labelStyle: 'min-width: 130px;',
+                            width: '180px',
+                            placeholder: '전체',
+                            options: []
+                        },
+                        {
+                            type: 'select',
+                            id: 'codeGroupId',
+                            width: '180px',
+                            placeholder: '선택하세요',
+                            options: [] // 업무그룹 선택 시 동적 로드
+                        }
+                    ],
+                    // 2행: 검색조건
+                    [
+                        {
+                            type: 'select',
+                            id: 'searchField',
+                            width: '120px',
+                            options: [
+                                { value: 'code', label: '코드' },
+                                { value: 'name', label: '코드명' }
+                            ]
+                        },
+                        {
+                            type: 'text',
+                            id: 'searchValue',
+                            placeholder: '검색어 입력',
+                            width: '180px'
+                        }
+                    ]
+                ],
+                limit: { default: 10 }
+            },
+
+            // 테이블 설정
+            table: {
+                id: 'codeTable',
+                columns: [
+                    { key: 'codeGroupId', label: '코드그룹', width: '120px', sortable: true },
+                    { key: 'codeGroupName', label: '코드그룹명', width: '150px', sortable: true, align: 'left' },
+                    { key: 'code', label: '코드', width: '100px', sortable: true },
+                    { key: 'codeName', label: '코드명', width: '200px', sortable: true, align: 'left' },
+                    { key: 'codeDesc', label: '코드설명', width: '200px', sortable: true, align: 'left' },
+                    { key: 'sortOrder', label: '정렬순서', width: '100px', sortable: true },
+                    {
+                        key: 'useYn',
+                        label: '사용',
+                        width: '100px',
+                        sortable: true,
+                        render: (val) => val === 'Y' ? '사용' : ''
+                    }
+                ],
+                emptyMessage: '조회 버튼을 클릭하여 데이터를 불러오세요.',
+                noDataMessage: '조회된 데이터가 없습니다.'
+            },
+
+            containers: {
+                search: '#searchContainer',
+                table: '#tableContainer',
+                pagination: '#pagination',
+                pageInfo: '#pageInfo'
+            },
+
+            autoLoad: true
+        };
+
+        // 페이지 상태 관리
+        window.CodesPage = {
+            currentPage: 1,
+            totalItems: 0,
+            itemsPerPage: 10,
+            sortBy: null,
+            sortDirection: null,
+
+            init: function() {
+                // 1. 검색 폼 렌더링
+                SearchForm.render('#searchContainer', PAGE_CONFIG.search, () => {
+                    this.currentPage = 1;
+                    this.load();
+                });
+
+                // 1-1. 업무그룹 셀렉트박스 로드
+                this.loadBizGroups();
+
+                // 1-2. 업무그룹 변경 시 코드그룹 연동
+                var self = this;
+                $(document).on('change', '[id$="_bizGroupId"]', function() {
+                    var bizGroupId = $(this).val();
+                    self.loadCodeGroupsByBizGroup(bizGroupId);
+                });
+
+                // 2. 테이블 렌더링
+                const tableConfig = {
+                    ...PAGE_CONFIG.table,
+                    onSort: (sortBy, sortDirection) => {
+                        this.sortBy = sortBy;
+                        this.sortDirection = sortDirection;
+                        this.currentPage = 1;
+                        this.load();
+                    }
+                };
+
+                DataTable.render('#tableContainer', tableConfig, (row) => {
+                    // 행 클릭 시 모달 열기
+                    if (window.CodeModal) {
+                        window.CodeModal.openForEdit(row.codeGroupId, row.code);
+                    }
+                });
+
+                // 3. 페이지네이션 초기화
+                Pagination.init('#pagination', '#pageInfo', (page) => {
+                    this.currentPage = page;
+                    this.load();
+                });
+
+                // 4. 버튼 이벤트 바인딩
+                $('#btnAdd').off('click').on('click', () => {
+                    if (window.CodeModal) {
+                        window.CodeModal.openForCreate();
+                    }
+                });
+
+                $('#btnRefresh').off('click').on('click', () => {
+                    this.load();
+                });
+
+                $('#btnExcel').off('click').on('click', () => {
+                    this.exportExcel();
+                });
+
+                $('#btnPrint').off('click').on('click', () => {
+                    this.printTable();
+                });
+
+                // 5. 자동 로드
+                if (PAGE_CONFIG.autoLoad) {
+                    this.load();
+                }
+            },
+
+            load: function() {
+                const params = SearchForm.getParams('#searchContainer');
+                params.page = this.currentPage;
+                params.size = params.size || this.itemsPerPage;
+
+                if (this.sortBy) {
+                    params.sortBy = this.sortBy;
+                    params.sortDirection = this.sortDirection || 'ASC';
+                }
+
+                $.ajax({
+                    url: PAGE_CONFIG.apiEndpoint,
+                    method: 'GET',
+                    data: params,
+                    success: (response) => {
+                        if (response.success && response.data) {
+                            const pageData = response.data;
+                            DataTable.setData('#tableContainer', pageData.content || []);
+
+                            this.totalItems = pageData.totalElements || 0;
+                            this.itemsPerPage = params.size;
+
+                            Pagination.update('#pagination', {
+                                currentPage: this.currentPage,
+                                totalItems: this.totalItems,
+                                itemsPerPage: this.itemsPerPage
+                            });
+                        } else {
+                            DataTable.setData('#tableContainer', []);
+                            Pagination.reset('#pagination');
+                        }
+                    },
+                    error: (xhr) => {
+                        console.error('Failed to load codes:', xhr);
+                        Toast.error('코드 목록을 불러오는데 실패했습니다.');
+                        DataTable.setData('#tableContainer', []);
+                        Pagination.reset('#pagination');
+                    }
+                });
+            },
+
+            loadBizGroups: function() {
+                $.ajax({
+                    url: API_BASE_URL + '/biz-groups',
+                    method: 'GET',
+                    success: (response) => {
+                        if (response.success && response.data) {
+                            var options = response.data.map(item => ({
+                                value: item.bizGroupId,
+                                label: item.bizGroupName
+                            }));
+                            SearchForm.setOptions('#searchContainer', 'bizGroupId', options);
+                        }
+                    }
+                });
+            },
+
+            loadCodeGroupsByBizGroup: function(bizGroupId) {
+                // 업무그룹 미선택 시 코드그룹 초기화
+                if (!bizGroupId) {
+                    SearchForm.setOptions('#searchContainer', 'codeGroupId', []);
+                    return;
+                }
+                $.ajax({
+                    url: API_BASE_URL + '/code-groups/by-biz-group/' + bizGroupId,
+                    method: 'GET',
+                    success: (response) => {
+                        if (response.success && response.data) {
+                            var options = response.data.map(item => ({
+                                value: item.codeGroupId,
+                                label: item.codeGroupName
+                            }));
+                            SearchForm.setOptions('#searchContainer', 'codeGroupId', options);
+                        }
+                    }
+                });
+            },
+
+            printTable: function() {
+                const printColumns = PAGE_CONFIG.table.columns
+                    .filter(col => !col.render)
+                    .map(col => ({ key: col.key, label: col.label }));
+                const data = DataTable.getData('#tableContainer');
+                PrintUtil.print({ title: '코드 목록', columns: printColumns, data: data });
+            },
+
+            exportExcel: function() {
+                const params = SearchForm.getParams('#searchContainer');
+                delete params.page;
+                delete params.size;
+                if (this.sortBy) { params.sortBy = this.sortBy; params.sortDirection = this.sortDirection || 'ASC'; }
+                const qs = $.param(params);
+                window.location.href = API_BASE_URL + '/codes/export' + (qs ? '?' + qs : '');
+            }
+        };
+
+        // 기존 Codes 객체와의 호환성 유지
+        window.Codes = {
+            load: function() { CodesPage.load(); },
+            exportExcel: function() { CodesPage.exportExcel(); },
+            print: function() { CodesPage.printTable(); },
+            openAddModal: function() {
+                if (window.CodeModal) {
+                    window.CodeModal.openForCreate();
+                }
+            }
+        };
+
+        // 페이지 초기화
+        $(document).ready(function() {
+            CodesPage.init();
+        });
+    </script>
+</div>
+</body>
+</html>

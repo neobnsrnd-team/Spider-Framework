@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<div th:fragment="table" class="table-responsive sp-monitor-table-overflow" id="gwMonitorTableWrapper">
+    <table class="table table-sm table-hover sp-data-grid sp-monitor-table-full" id="gwMonitorTable">
+        <colgroup>
+            <col class="col-pct-11"><!-- 인스턴스 명 -->
+            <col class="col-pct-5"><!-- 유형 -->
+            <col class="col-pct-8"><!-- 인스턴스 IP -->
+            <col class="col-pct-7"><!-- 인스턴스 PORT -->
+            <col class="col-pct-6"><!-- 상태 -->
+            <col class="col-pct-7"><!-- 소켓 연결갯수 -->
+            <col class="col-pct-9"><!-- 최근 수정시간 -->
+            <col class="col-pct-8"><!-- G/W 명 -->
+            <col class="col-pct-8"><!-- G/W 속성 -->
+            <col class="col-pct-7"><!-- G/W THREAD -->
+            <col class="col-pct-7"><!-- 기동 수동 -->
+            <col class="col-pct-7"><!-- 운영모드 -->
+            <col class="col-pct-7"><!-- IP -->
+            <col class="col-pct-6"><!-- PORT -->
+            <col class="col-pct-12"><!-- SYSTEM 설명 -->
+        </colgroup>
+        <thead class="table-light">
+        <tr>
+            <th class="sortable" data-sort="instanceName">인스턴스 명</th>
+            <th class="sortable" data-sort="instanceType">유형</th>
+            <th class="sortable" data-sort="instanceIp">인스턴스<br>IP</th>
+            <th class="sortable" data-sort="instancePort">인스턴스<br>PORT</th>
+            <th class="sortable" data-sort="wasInstanceStatus">상태</th>
+            <th class="sortable" data-sort="activeCountIdle">소켓<br>연결갯수</th>
+            <th class="sortable" data-sort="lastUpdateDtime">최근<br>수정시간</th>
+            <th class="sortable" data-sort="gwName">G/W 명</th>
+            <th class="sortable" data-sort="gwProperties">G/W<br>속성</th>
+            <th class="sortable" data-sort="threadCount">G/W<br>THREAD</th>
+            <th class="sortable" data-sort="ioType">기동<br>수동</th>
+            <th class="sortable" data-sort="operModeType">운영모드</th>
+            <th class="sortable" data-sort="systemIp">IP</th>
+            <th class="sortable" data-sort="systemPort">PORT</th>
+            <th class="sortable" data-sort="systemDesc">SYSTEM<br>설명</th>
+        </tr>
+        </thead>
+        <tbody id="gwMonitorTableBody">
+        <tr>
+            <td colspan="15" class="text-center py-4 text-body-secondary">
+                조회 버튼을 클릭하여 데이터를 불러오세요.
+            </td>
+        </tr>
+        </tbody>
+    </table>
+    <div class="table-spinner d-hidden" id="gwMonitorSpinner">
+        <div class="spinner-border spinner-border-sm text-primary" role="status"></div>
+        <span>Loading...</span>
+    </div>
+</div>
+</body>
+</html>

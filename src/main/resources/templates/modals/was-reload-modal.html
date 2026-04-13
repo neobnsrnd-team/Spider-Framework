@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<div th:fragment="modal">
+
+    <!-- WAS 선택 Reload 모달 -->
+    <div class="modal fade" id="wasReloadModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
+        <div class="modal-dialog modal-dialog-centered sp-modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <span class="modal-title" id="wasReloadModalTitle">Reload 대상 WAS 선택</span>
+                <button class="btn-close" id="btnCloseWasReload" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+
+                <!-- 선택 단계 -->
+                <div id="wasReloadSelectPhase">
+                    <div class="was-reload-filter">
+                        <label class="was-reload-filter-label">Was그룹 :</label>
+                        <select id="wasReloadGroupSelect" class="was-reload-filter-select">
+                        </select>
+                    </div>
+                    <div class="was-reload-card-grid" id="wasReloadCardGrid">
+                        <!-- JS로 동적 렌더링 -->
+                    </div>
+                </div>
+
+                <!-- 결과 단계 (초기 hidden) -->
+                <div id="wasReloadResultPhase" class="was-reload-result-phase">
+                    <div class="was-reload-result-title">Reload 결과</div>
+                    <table>
+                        <thead>
+                        <tr>
+                            <th class="was-reload-result-th-left">WAS 인스턴스</th>
+                            <th class="was-reload-result-th-narrow">결과</th>
+                            <th>메시지</th>
+                        </tr>
+                        </thead>
+                        <tbody id="wasReloadResultBody">
+                        <!-- JS로 동적 렌더링 -->
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- 버튼 영역 -->
+                <div class="d-flex justify-content-end gap-2 mt-2">
+                    <button id="btnCancelWasReload" class="btn btn-secondary btn-sm">
+                        취소
+                    </button>
+                    <button id="btnConfirmWasReload" class="btn btn-primary btn-sm">
+                        Reload 실행
+                    </button>
+                </div>
+            </div>
+        </div>
+        </div>
+    </div>
+
+    <!-- 에러 상세 모달 -->
+    <div class="modal fade" id="wasReloadErrorModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
+        <div class="modal-dialog modal-dialog-centered sp-modal-md">
+        <div class="modal-content">
+            <div class="modal-header">
+                <span class="modal-title">Reload 에러 상세</span>
+                <button class="btn-close" id="btnCloseWasReloadError" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <table>
+                    <thead>
+                    <tr>
+                        <th class="col-w-120">WAS_ID</th>
+                        <th>WAS_RELOAD_ERR</th>
+                    </tr>
+                    </thead>
+                    <tbody id="wasReloadErrorBody">
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        </div>
+    </div>
+
+    <script src="/js/components/WasSelectReloadModal.js"></script>
+</div>
+</body>
+</html>

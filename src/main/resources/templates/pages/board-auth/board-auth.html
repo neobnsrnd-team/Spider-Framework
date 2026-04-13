@@ -1,0 +1,651 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<div th:fragment="content">
+    <!-- Include Page Content Layout Styles -->
+
+    <!-- Search Section Header -->
+    <div class="page-header">
+        <h4 class="page-title">
+            <i class="bi bi-exclamation-circle-fill text-danger"></i>
+            검색조건
+        </h4>
+    </div>
+
+    <!-- Search Box -->
+    <div class="card border p-2 mb-3">
+        <div class="d-flex flex-wrap align-items-center gap-2 mb-1">
+            <label class="form-label mb-0 small fw-medium">게시판</label>
+            <select id="boardIdFilter" class="form-select form-select-sm flex-fixed-200">
+                <option value="">전체</option>
+                <!-- 동적으로 채워짐 -->
+            </select>
+
+            <label class="form-label mb-0 small fw-medium ms-3">사용자</label>
+            <select id="searchField" class="form-select form-select-sm flex-fixed-100">
+                <option value="userId">사용자 ID</option>
+                <option value="userName">사용자명</option>
+            </select>
+            <input type="text" id="searchValue" class="form-control form-control-sm flex-fixed-150" placeholder="">
+
+            <label class="form-label mb-0 small fw-medium ms-3">권한</label>
+            <select id="authCodeFilter" class="form-select form-select-sm flex-fixed-100">
+                <option value="">전체</option>
+                <option value="W">쓰기(W)</option>
+                <option value="R">읽기(R)</option>
+            </select>
+
+            <div class="flex-grow-1"></div>
+
+            <select id="limitRows" class="form-select form-select-sm sp-limit-select">
+                <option value="10" selected>10</option>
+                <option value="20">20</option>
+                <option value="50">50</option>
+                <option value="100">100</option>
+            </select>
+
+            <label class="form-label mb-0 small fw-medium">건씩</label>
+
+            <button class="btn btn-primary btn-sm" onclick="BoardAuthMgmt.load()">
+                <i class="bi bi-search"></i> 조회
+            </button>
+        </div>
+    </div>
+
+    <!-- List Section Header + Toolbar -->
+    <div class="toolbar mt-3">
+        <div class="toolbar-left">
+            <h4 class="page-title">
+                <i class="bi bi-exclamation-circle-fill text-danger"></i>
+                리스트
+            </h4>
+        </div>
+        <div class="toolbar-right">
+            <button class="btn btn-outline-secondary btn-sm" id="btnExcel">
+                <i class="bi bi-file-earmark-excel"></i> 엑셀
+            </button>
+            <button class="btn btn-outline-secondary btn-sm" id="btnPrint">
+                <i class="bi bi-file-earmark-text"></i> 출력
+            </button>
+        </div>
+    </div>
+
+    <!-- Table -->
+    <div class="table-responsive">
+        <table class="table table-sm table-hover sp-data-grid" id="boardAuthTable">
+            <thead class="table-light">
+                <tr>
+                    <th class="col-w-50">No</th>
+                    <th class="col-w-120" data-sort="userId">사용자 ID</th>
+                    <th class="col-w-120">사용자명</th>
+                    <th class="col-w-150" data-sort="boardId">게시판 ID</th>
+                    <th class="col-w-150">게시판명</th>
+                    <th class="col-w-80" data-sort="authCode">권한</th>
+                    <th class="col-w-150" data-sort="lastUpdateDtime">최종 수정일</th>
+                    <th class="col-w-120">최종 수정자</th>
+                </tr>
+            </thead>
+            <tbody id="boardAuthTableBody">
+                <tr>
+                    <td colspan="8" class="sp-empty-state">조회 버튼을 클릭하여 데이터를 불러오세요.</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Pagination -->
+    <div th:replace="~{fragments/page-content-layout :: pagination}"></div>
+
+    <!-- Bottom Action Buttons -->
+    <div class="bottom-actions">
+        <button class="btn btn-primary btn-sm" id="btnRegister">
+            + 권한 부여
+        </button>
+    </div>
+
+    <!-- Board Auth Modal -->
+    <div id="boardAuthModal" class="modal fade" tabindex="-1" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
+        <div class="modal-dialog modal-dialog-centered sp-modal-sm">
+        <div class="modal-content">
+            <div class="modal-header py-2">
+                <h5 class="modal-title" id="boardAuthModalTitle">권한 부여</h5>
+                <button class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="modal-section">
+                    <div class="mb-3">
+                        <div class="row g-3 mb-2">
+                            <div class="col-12">
+                                <label class="form-label small mb-1">사용자<span class="text-danger">*</span></label>
+                                <select id="modalUserId" class="form-select form-select-sm">
+                                    <option value="">선택</option>
+                                    <!-- 동적으로 채워짐 -->
+                                </select>
+                            </div>
+                        </div>
+                        <div class="row g-3 mb-2">
+                            <div class="col-12">
+                                <label class="form-label small mb-1">게시판<span class="text-danger">*</span></label>
+                                <select id="modalBoardId" class="form-select form-select-sm">
+                                    <option value="">선택</option>
+                                    <!-- 동적으로 채워짐 -->
+                                </select>
+                            </div>
+                        </div>
+                        <div class="row g-3 mb-2">
+                            <div class="col-12">
+                                <label class="form-label small mb-1">권한<span class="text-danger">*</span></label>
+                                <div class="auth-radio-group">
+                                    <label class="auth-radio-label">
+                                        <input type="radio" name="modalAuthCode" value="W" checked>
+                                        <span class="auth-badge auth-write">W</span>
+                                        <span>쓰기 (읽기 포함)</span>
+                                    </label>
+                                    <label class="auth-radio-label">
+                                        <input type="radio" name="modalAuthCode" value="R">
+                                        <span class="auth-badge auth-read">R</span>
+                                        <span>읽기 전용</span>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer py-2">
+                <button class="btn btn-danger btn-sm me-auto d-hidden" id="btnDeleteAuth" onclick="BoardAuthModal.delete()">
+                    <i class="bi bi-trash"></i> 삭제
+                </button>
+                <button class="btn btn-secondary btn-sm" data-bs-dismiss="modal"><i class="bi bi-x-lg"></i> 닫기</button>
+                <button class="btn btn-primary btn-sm" onclick="BoardAuthModal.save()"><i class="bi bi-floppy"></i> 저장</button>
+            </div>
+        </div>
+        </div>
+    </div>
+
+    <!-- Script -->
+    <script>
+        // 게시판 권한 목록 관리
+        window.BoardAuthMgmt = {
+            currentPage: 1,
+            totalItems: 0,
+            itemsPerPage: 10,
+            authData: [],
+            _sortBy: null,
+            _sortDirection: null,
+            allData: [],  // 레거시 (서버 사이드 필터링으로 대체됨)
+            boards: [],
+            users: [],
+
+            init: function() {
+                this.loadBoards();
+                this.loadUsers();
+            },
+
+            loadBoards: function() {
+                $.ajax({
+                    url: API_BASE_URL + '/boards',
+                    method: 'GET',
+                    success: (response) => {
+                        if (response.success && response.data) {
+                            this.boards = response.data;
+                            this.populateBoardSelect();
+                        }
+                    },
+                    error: (xhr) => {
+                        console.error('Failed to load boards:', xhr);
+                    }
+                });
+            },
+
+            loadUsers: function() {
+                $.ajax({
+                    url: API_BASE_URL + '/users/page?size=9999',
+                    method: 'GET',
+                    success: (response) => {
+                        if (response.success && response.data) {
+                            this.users = response.data.content || response.data;
+                        }
+                    },
+                    error: (xhr) => {
+                        console.error('Failed to load users:', xhr);
+                    }
+                });
+            },
+
+            populateBoardSelect: function() {
+                const select = $('#boardIdFilter');
+                select.find('option:not(:first)').remove();
+
+                this.boards.forEach(board => {
+                    select.append(`<option value="${HtmlUtils.escape(board.boardId)}">${HtmlUtils.escape(board.boardId)} - ${HtmlUtils.escape(board.boardName)}</option>`);
+                });
+            },
+
+            load: function() {
+                this.itemsPerPage = parseInt($('#limitRows').val()) || 10;
+                this.currentPage = 1;
+                this.fetchPage();
+            },
+
+            fetchPage: function() {
+                const boardId = $('#boardIdFilter').val() || '';
+                const userKeyword = $('#searchValue').val().trim() || '';
+                const authCode = $('#authCodeFilter').val() || '';
+
+                // 서버 사이드 필터링 API 호출
+                $.ajax({
+                    url: API_BASE_URL + '/board-auth/page',
+                    method: 'GET',
+                    data: {
+                        boardId: boardId,
+                        userKeyword: userKeyword,
+                        authCode: authCode,
+                        page: this.currentPage - 1,  // 0-based index
+                        size: this.itemsPerPage,
+                        sortBy: this._sortBy || '',
+                        sortDirection: this._sortDirection || ''
+                    },
+                    success: (response) => {
+                        if (response.success && response.data) {
+                            this.authData = response.data.content || [];
+                            this.totalItems = response.data.totalElements || 0;
+                            this.renderTable();
+                            this.renderPagination();
+                        }
+                    },
+                    error: (xhr) => {
+                        console.error('Failed to load board auth:', xhr);
+                        Toast.error('권한 목록을 불러오는데 실패했습니다.');
+                    }
+                });
+            },
+
+            renderTable: function() {
+                const tbody = $('#boardAuthTableBody').empty();
+
+                if (!this.authData || this.authData.length === 0) {
+                    tbody.append(`
+                        <tr>
+                            <td colspan="8" class="sp-empty-state">조회된 데이터가 없습니다.</td>
+                        </tr>
+                    `);
+                    return;
+                }
+
+                this.authData.forEach((auth, idx) => {
+                    const rowNum = (this.currentPage - 1) * this.itemsPerPage + idx + 1;
+
+                    // 사용자명 찾기
+                    const user = this.users.find(u => u.userId === auth.userId);
+                    const userName = user ? user.userName : '-';
+
+                    // 게시판명 찾기
+                    const board = this.boards.find(b => b.boardId === auth.boardId);
+                    const boardName = board ? board.boardName : '-';
+
+                    // 권한 배지
+                    const authBadge = auth.authCode === 'W'
+                        ? '<span class="auth-badge auth-write">W</span>'
+                        : '<span class="auth-badge auth-read">R</span>';
+
+                    const row = $(`
+                        <tr data-user-id="${HtmlUtils.escape(auth.userId)}" data-board-id="${HtmlUtils.escape(auth.boardId)}" class="cursor-pointer">
+                            <td>${rowNum}</td>
+                            <td>${HtmlUtils.escape(auth.userId)}</td>
+                            <td>${HtmlUtils.escape(userName)}</td>
+                            <td>${HtmlUtils.escape(auth.boardId)}</td>
+                            <td>${HtmlUtils.escape(boardName)}</td>
+                            <td>${authBadge}</td>
+                            <td>${this.formatDate(auth.lastUpdateDtime)}</td>
+                            <td>${HtmlUtils.escape(auth.lastUpdateUserId || '-')}</td>
+                        </tr>
+                    `);
+
+                    row.on('click', () => BoardAuthModal.open('edit', auth));
+                    tbody.append(row);
+                });
+            },
+
+            renderPagination: function() {
+                const totalPages = Math.ceil(this.totalItems / this.itemsPerPage) || 1;
+                const pagination = $('#pagination').empty();
+
+                // First
+                pagination.append(`
+                    <li class="page-item ${this.currentPage === 1 ? 'disabled' : ''}">
+                        <a class="page-link" href="#" onclick="BoardAuthMgmt.changePage(1); return false;">
+                            <i class="bi bi-chevron-double-left"></i>
+                        </a>
+                    </li>
+                `);
+
+                // Previous
+                pagination.append(`
+                    <li class="page-item ${this.currentPage === 1 ? 'disabled' : ''}">
+                        <a class="page-link" href="#" onclick="BoardAuthMgmt.changePage(${this.currentPage - 1}); return false;">
+                            <i class="bi bi-chevron-left"></i>
+                        </a>
+                    </li>
+                `);
+
+                // Page numbers
+                const maxButtons = 5;
+                let startPage = Math.max(1, this.currentPage - Math.floor(maxButtons / 2));
+                let endPage = Math.min(totalPages, startPage + maxButtons - 1);
+                if (endPage - startPage + 1 < maxButtons) {
+                    startPage = Math.max(1, endPage - maxButtons + 1);
+                }
+
+                for (let i = startPage; i <= endPage; i++) {
+                    pagination.append(`
+                        <li class="page-item ${i === this.currentPage ? 'active' : ''}">
+                            <a class="page-link" href="#" onclick="BoardAuthMgmt.changePage(${i}); return false;">${i}</a>
+                        </li>
+                    `);
+                }
+
+                // Next
+                pagination.append(`
+                    <li class="page-item ${this.currentPage >= totalPages ? 'disabled' : ''}">
+                        <a class="page-link" href="#" onclick="BoardAuthMgmt.changePage(${this.currentPage + 1}); return false;">
+                            <i class="bi bi-chevron-right"></i>
+                        </a>
+                    </li>
+                `);
+
+                // Last
+                pagination.append(`
+                    <li class="page-item ${this.currentPage >= totalPages ? 'disabled' : ''}">
+                        <a class="page-link" href="#" onclick="BoardAuthMgmt.changePage(${totalPages}); return false;">
+                            <i class="bi bi-chevron-double-right"></i>
+                        </a>
+                    </li>
+                `);
+
+                const start = this.totalItems === 0 ? 0 : (this.currentPage - 1) * this.itemsPerPage + 1;
+                const end = Math.min(this.currentPage * this.itemsPerPage, this.totalItems);
+                $('#pageInfo').text(`${start} - ${end} of ${this.totalItems} items`);
+            },
+
+            changePage: function(page) {
+                const totalPages = Math.ceil(this.totalItems / this.itemsPerPage) || 1;
+                if (page < 1 || page > totalPages) return;
+                this.currentPage = page;
+                this.fetchPage();  // 서버 사이드 페이지네이션
+            },
+
+            formatDate: function(dateStr) {
+                if (!dateStr) return '-';
+                if (dateStr.length >= 8) {
+                    return dateStr.substring(0, 4) + '/' + dateStr.substring(4, 6) + '/' + dateStr.substring(6, 8);
+                }
+                return dateStr;
+            },
+
+            sortBy: function(field) {
+                if (this._sortBy === field) {
+                    if (this._sortDirection === 'ASC') {
+                        this._sortDirection = 'DESC';
+                    } else {
+                        this._sortBy = null;
+                        this._sortDirection = null;
+                    }
+                } else {
+                    this._sortBy = field;
+                    this._sortDirection = 'ASC';
+                }
+                this.updateSortIcons();
+                this.currentPage = 1;
+                this.fetchPage();
+            },
+
+            updateSortIcons: function() {
+                var headers = $('#boardAuthTable thead th.sortable');
+                headers.removeClass('sort-asc sort-desc');
+                if (this._sortBy && this._sortDirection) {
+                    headers.filter('[data-sort="' + this._sortBy + '"]')
+                        .addClass(this._sortDirection === 'ASC' ? 'sort-asc' : 'sort-desc');
+                }
+            },
+
+            sanitizeCsv: function(val) {
+                var s = String(val || '');
+                if (/^[=+\-@\t\r]/.test(s)) s = "'" + s;
+                return s.replace(/"/g, '""');
+            },
+
+            exportExcel: function() {
+                if (!this.authData || this.authData.length === 0) {
+                    Toast.warning('다운로드할 데이터가 없습니다.');
+                    return;
+                }
+                var BOM = '\uFEFF';
+                var header = 'No,사용자 ID,사용자명,게시판 ID,게시판명,권한,최종 수정일,최종 수정자\n';
+                var rows = this.authData.map(function(a, idx) {
+                    var user = BoardAuthMgmt.users.find(function(u) { return u.userId === a.userId; });
+                    var userName = user ? user.userName : '-';
+                    var board = BoardAuthMgmt.boards.find(function(b) { return b.boardId === a.boardId; });
+                    var boardName = board ? board.boardName : '-';
+                    var authLabel = a.authCode === 'W' ? '쓰기(W)' : '읽기(R)';
+                    var date = BoardAuthMgmt.formatDate(a.lastUpdateDtime);
+                    var updater = a.lastUpdateUserId || '-';
+                    return (idx + 1) + ',"' + BoardAuthMgmt.sanitizeCsv(a.userId) + '","' + BoardAuthMgmt.sanitizeCsv(userName) + '","' + BoardAuthMgmt.sanitizeCsv(a.boardId) + '","' + BoardAuthMgmt.sanitizeCsv(boardName) + '","' + authLabel + '",' + date + ',"' + BoardAuthMgmt.sanitizeCsv(updater) + '"';
+                }).join('\n');
+                var blob = new Blob([BOM + header + rows], { type: 'text/csv;charset=utf-8;' });
+                var link = document.createElement('a');
+                link.href = URL.createObjectURL(blob);
+                link.download = 'board_auth.csv';
+                link.click();
+                URL.revokeObjectURL(link.href);
+            },
+
+            printTable: function() {
+                var columns = [
+                    { key: '_no', label: 'No' },
+                    { key: 'userId', label: '사용자 ID' },
+                    { key: '_userName', label: '사용자명' },
+                    { key: 'boardId', label: '게시판 ID' },
+                    { key: '_boardName', label: '게시판명' },
+                    { key: '_auth', label: '권한' },
+                    { key: '_date', label: '최종 수정일' },
+                    { key: '_updater', label: '최종 수정자' }
+                ];
+                var data = this.authData.map(function(a, idx) {
+                    var user = BoardAuthMgmt.users.find(function(u) { return u.userId === a.userId; });
+                    var board = BoardAuthMgmt.boards.find(function(b) { return b.boardId === a.boardId; });
+                    return {
+                        _no: idx + 1,
+                        userId: a.userId || '',
+                        _userName: user ? user.userName : '-',
+                        boardId: a.boardId || '',
+                        _boardName: board ? board.boardName : '-',
+                        _auth: a.authCode === 'W' ? '쓰기(W)' : '읽기(R)',
+                        _date: BoardAuthMgmt.formatDate(a.lastUpdateDtime),
+                        _updater: a.lastUpdateUserId || '-'
+                    };
+                });
+                PrintUtil.print({ title: '게시판 권한 관리', columns: columns, data: data });
+            },
+
+        };
+
+        // 권한 모달 관리
+        window.BoardAuthModal = {
+            mode: 'create',
+            currentUserId: null,
+            currentBoardId: null,
+
+            open: function(mode, authData) {
+                this.mode = mode;
+                this.populateSelects();
+
+                if (mode === 'create') {
+                    $('#boardAuthModalTitle').text('권한 부여');
+                    $('#btnDeleteAuth').addClass('d-hidden');
+                    $('#modalUserId').prop('disabled', false);
+                    $('#modalBoardId').prop('disabled', false);
+                    this.clearForm();
+                } else {
+                    $('#boardAuthModalTitle').text('권한 수정');
+                    $('#btnDeleteAuth').removeClass('d-hidden');
+                    $('#modalUserId').prop('disabled', true);
+                    $('#modalBoardId').prop('disabled', true);
+                    this.loadAuthDetail(authData);
+                }
+
+                bootstrap.Modal.getOrCreateInstance(document.getElementById('boardAuthModal')).show();
+            },
+
+            close: function() {
+                bootstrap.Modal.getInstance(document.getElementById('boardAuthModal'))?.hide();
+            },
+
+            populateSelects: function() {
+                // 사용자 선택
+                const userSelect = $('#modalUserId');
+                userSelect.find('option:not(:first)').remove();
+                BoardAuthMgmt.users.forEach(user => {
+                    userSelect.append(`<option value="${HtmlUtils.escape(user.userId)}">${HtmlUtils.escape(user.userId)} - ${HtmlUtils.escape(user.userName || '')}</option>`);
+                });
+
+                // 게시판 선택
+                const boardSelect = $('#modalBoardId');
+                boardSelect.find('option:not(:first)').remove();
+                BoardAuthMgmt.boards.forEach(board => {
+                    boardSelect.append(`<option value="${HtmlUtils.escape(board.boardId)}">${HtmlUtils.escape(board.boardId)} - ${HtmlUtils.escape(board.boardName)}</option>`);
+                });
+            },
+
+            clearForm: function() {
+                $('#modalUserId').val('');
+                $('#modalBoardId').val('');
+                $('input[name="modalAuthCode"][value="W"]').prop('checked', true);
+            },
+
+            loadAuthDetail: function(authData) {
+                this.currentUserId = authData.userId;
+                this.currentBoardId = authData.boardId;
+
+                $('#modalUserId').val(authData.userId);
+                $('#modalBoardId').val(authData.boardId);
+                $(`input[name="modalAuthCode"][value="${authData.authCode}"]`).prop('checked', true);
+            },
+
+            validateForm: function() {
+                const userId = $('#modalUserId').val();
+                const boardId = $('#modalBoardId').val();
+
+                if (!userId) {
+                    Toast.warning('사용자를 선택하세요.');
+                    $('#modalUserId').focus();
+                    return false;
+                }
+
+                if (!boardId) {
+                    Toast.warning('게시판을 선택하세요.');
+                    $('#modalBoardId').focus();
+                    return false;
+                }
+
+                return true;
+            },
+
+            save: function() {
+                if (!this.validateForm()) return;
+
+                const userId = $('#modalUserId').val();
+                const boardId = $('#modalBoardId').val();
+                const authCode = $('input[name="modalAuthCode"]:checked').val();
+
+                const data = {
+                    userId: userId,
+                    boardId: boardId,
+                    authCode: authCode
+                };
+
+                const method = this.mode === 'create' ? 'POST' : 'PUT';
+                const url = this.mode === 'create'
+                    ? API_BASE_URL + '/board-auth'
+                    : API_BASE_URL + '/board-auth/' + encodeURIComponent(this.currentUserId) + '/' + encodeURIComponent(this.currentBoardId);
+
+                $.ajax({
+                    url: url,
+                    method: method,
+                    contentType: 'application/json',
+                    data: JSON.stringify(data),
+                    success: (response) => {
+                        if (response.success) {
+                            Toast.success(this.mode === 'create' ? '권한이 부여되었습니다.' : '권한이 수정되었습니다.');
+                            this.close();
+                            BoardAuthMgmt.load();
+                        } else {
+                            Toast.error('저장 실패: ' + (response.message || '알 수 없는 오류'));
+                        }
+                    },
+                    error: (xhr) => {
+                        console.error('Failed to save board auth:', xhr);
+                        const errorMsg = xhr.responseJSON?.message || '저장에 실패했습니다.';
+                        Toast.error('저장 실패: ' + errorMsg);
+                    }
+                });
+            },
+
+            delete: function() {
+                Toast.confirm('이 권한을 삭제하시겠습니까?', () => {
+                    $.ajax({
+                        url: API_BASE_URL + '/board-auth/' + encodeURIComponent(this.currentUserId) + '/' + encodeURIComponent(this.currentBoardId),
+                        method: 'DELETE',
+                        success: (response) => {
+                            if (response.success) {
+                                Toast.success('권한이 삭제되었습니다.');
+                                this.close();
+                                BoardAuthMgmt.load();
+                            } else {
+                                Toast.error('삭제 실패: ' + (response.message || '알 수 없는 오류'));
+                            }
+                        },
+                        error: (xhr) => {
+                            console.error('Failed to delete board auth:', xhr);
+                            const errorMsg = xhr.responseJSON?.message || '삭제에 실패했습니다.';
+                            Toast.error('삭제 실패: ' + errorMsg);
+                        }
+                    });
+                });
+            },
+
+        };
+
+        // 초기화
+        $(document).ready(function() {
+            BoardAuthMgmt.init();
+
+            $('#btnRegister').on('click', () => BoardAuthModal.open('create'));
+
+            // Enter 키로 검색
+            $('#searchValue').on('keypress', function(e) {
+                if (e.which === 13) {
+                    BoardAuthMgmt.load();
+                }
+            });
+
+            // Sort click handler
+            $('#boardAuthTable thead th[data-sort]').addClass('sortable').on('click', function() {
+                var sortKey = $(this).data('sort');
+                if (sortKey) BoardAuthMgmt.sortBy(sortKey);
+            });
+
+            // 엑셀/출력 버튼 바인딩
+            $('#btnExcel').off('click').on('click', () => BoardAuthMgmt.exportExcel());
+            $('#btnPrint').off('click').on('click', () => BoardAuthMgmt.printTable());
+
+            // 페이지 로드 시 자동 조회
+            setTimeout(() => {
+                BoardAuthMgmt.load();
+            }, 500);
+        });
+    </script>
+
+</div>
+</body>
+</html>

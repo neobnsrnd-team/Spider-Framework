@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<!-- Batch App Search Fragment -->
+<div th:fragment="search" class="card border p-2 mb-3">
+    <div class="d-flex flex-wrap align-items-center gap-2 mb-1">
+        <select id="searchField" class="form-select form-select-sm flex-fixed-140">
+            <option value="batchAppName">배치 APP명</option>
+            <option value="batchAppId">배치 APP ID</option>
+        </select>
+        <input type="text" id="searchValue" class="form-control form-control-sm flex-fixed-200" placeholder="">
+
+        <label class="form-label mb-0 small fw-medium ms-2">인스턴스ID</label>
+        <select id="instanceIdFilter" class="form-select form-select-sm flex-fixed-150">
+            <option value="">전체</option>
+            <!-- 동적으로 채워짐 -->
+        </select>
+
+        <div class="flex-grow-1"></div>
+
+        <select id="limitRows" class="form-select form-select-sm sp-limit-select">
+            <option value="10" selected>10</option>
+            <option value="20" >20</option>
+            <option value="50">50</option>
+            <option value="100">100</option>
+        </select>
+
+        <label class="form-label mb-0 small fw-medium">건씩</label>
+
+        <button class="btn btn-primary btn-sm" onclick="BatchApps.currentPage = 1; BatchApps.load();">
+            <i class="bi bi-search"></i> 조회
+        </button>
+    </div>
+</div>
+</body>
+</html>

@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<!-- Batch History Table Fragment -->
+<div th:fragment="table" class="table-responsive">
+    <table class="table table-sm table-hover sp-data-grid" id="batchHisTable">
+        <thead class="table-light">
+            <tr>
+                <th class="col-w-180 sortable" data-sort="batchAppId">배치 APP ID</th>
+                <th class="col-w-100 sortable" data-sort="instanceId">인스턴스ID</th>
+                <th class="col-w-60 text-center sortable" data-sort="batchExecuteSeq">실행횟수</th>
+                <th class="col-w-100 text-center sortable" data-sort="batchDate">기준일</th>
+                <th class="col-w-140 text-center sortable" data-sort="logDtime">시작일</th>
+                <th class="col-w-140 text-center sortable" data-sort="batchEndDtime">종료일</th>
+                <th class="col-w-100 text-center sortable" data-sort="resRtCode">상태코드</th>
+                <th class="col-w-100 sortable" data-sort="lastUpdateUserId">수행자ID</th>
+                <th class="col-w-80 text-center sortable" data-sort="recordCount">총 처리건</th>
+                <th class="col-w-80 text-center sortable" data-sort="successCount">정상 처리건</th>
+                <th class="col-w-80 text-center sortable" data-sort="failCount">오류건수</th>
+                <th class="col-w-120 sortable" data-sort="errorCode">오류코드</th>
+            </tr>
+        </thead>
+        <tbody id="batchHisTableBody">
+            <tr>
+                <td colspan="12" class="text-center py-4 text-body-secondary">
+                    조회 버튼을 클릭하여 데이터를 불러오세요.
+                </td>
+            </tr>
+        </tbody>
+    </table>
+</div>
+</body>
+</html>

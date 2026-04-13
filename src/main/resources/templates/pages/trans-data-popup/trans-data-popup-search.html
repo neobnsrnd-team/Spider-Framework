@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<!-- TransDataGeneration Search Fragment -->
+<div th:fragment="search" class="card border p-2 mb-3">
+    <!-- 1행: 탭 버튼 -->
+    <div class="d-flex flex-wrap align-items-center gap-2 mb-1">
+        <div id="genTabButtons" class="d-flex gap-4px flex-wrap">
+            <button class="btn btn-sm btn-primary" data-tab="TRX"      onclick="TransDataGeneration.switchTab('TRX')">거래</button>
+            <button class="btn btn-sm btn-outline-secondary" data-tab="MESSAGE"  onclick="TransDataGeneration.switchTab('MESSAGE')">메세지</button>
+            <button class="btn btn-sm btn-outline-secondary" data-tab="CODE"   onclick="TransDataGeneration.switchTab('CODE')">코드그룹</button>
+            <button class="btn btn-sm btn-outline-secondary" data-tab="WEBAPP" onclick="TransDataGeneration.switchTab('WEBAPP')">WebApp</button>
+            <button class="btn btn-sm btn-outline-secondary" data-tab="ERROR"  onclick="TransDataGeneration.switchTab('ERROR')">오류코드</button>
+            <button class="btn btn-sm btn-outline-secondary" data-tab="SERVICE"   onclick="TransDataGeneration.switchTab('SERVICE')">Service</button>
+            <button class="btn btn-sm btn-outline-secondary" data-tab="COMPONENT" onclick="TransDataGeneration.switchTab('COMPONENT')">Component</button>
+            <button class="btn btn-sm btn-outline-secondary" data-tab="PROPERTY"  onclick="TransDataGeneration.switchTab('PROPERTY')">Property</button>
+        </div>
+    </div>
+
+    <!-- 2행: 검색 조건 + 페이지 크기 + 조회 버튼 -->
+    <div class="d-flex flex-wrap align-items-center gap-2 mb-1">
+        <!-- 검색 필드 선택 -->
+        <select id="genSearchField" class="form-select form-select-sm flex-fixed-120">
+            <option value="trxId">거래ID</option>
+            <option value="trxName">거래명</option>
+        </select>
+
+        <!-- 검색어 입력 -->
+        <input type="text" id="genSearchValue" class="form-control form-control-sm flex-fixed-200"
+               placeholder="검색어 입력"
+               onkeypress="if(event.key === 'Enter') TransDataGeneration.search()">
+
+        <!-- 기관명 필터 (거래/메세지 탭에서만 표시) -->
+        <label id="genOrgLabel" class="form-label mb-0 small fw-medium ms-2 fs-xs">기관명</label>
+        <select id="genOrgFilter" class="form-select form-select-sm flex-fixed-120">
+            <option value="">전체</option>
+        </select>
+
+        <!-- Spacer -->
+        <div class="flex-grow-1"></div>
+
+        <!-- 페이지 크기 -->
+        <select id="genItemsPerPage" class="form-select form-select-sm sp-limit-select"
+                onchange="TransDataGeneration.changeItemsPerPage(this.value)">
+            <option value="10" selected>10</option>
+            <option value="20">20</option>
+            <option value="50">50</option>
+            <option value="100">100</option>
+            <option value="200">200</option>
+        </select>
+        <label class="form-label mb-0 small fw-medium ms-1 me-2 fs-xs">건씩</label>
+
+        <!-- 조회 버튼 -->
+        <button class="btn btn-primary btn-sm" onclick="TransDataGeneration.search()">
+            <i class="bi bi-search"></i> 조회
+        </button>
+    </div>
+</div>
+</body>
+</html>

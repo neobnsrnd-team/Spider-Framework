@@ -1,0 +1,719 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<th:block th:fragment="script">
+    <script>
+        (function() {
+            if (window.AppMappingList && typeof window.AppMappingList.load === 'function') {
+                window.AppMappingList.init();
+                return;
+            }
+
+            const cssEscape = (window.CSS && typeof window.CSS.escape === 'function')
+                ? window.CSS.escape
+                : (value) => String(value).replace(/[^a-zA-Z0-9_\-]/g, '\\$&');
+
+            window.AppMappingList = {
+                currentPage: 1,
+                pageSize: 10,
+                totalElements: 0,
+                gatewayOptions: [],
+                orgOptions: [],
+                selectedKey: null,
+                sortBy: null,
+                sortDirection: null,
+                currentRows: [],
+
+                init() {
+                    this.bindEvents();
+                    Promise.all([this.loadGatewayOptions(), this.loadOrgOptions()])
+                        .finally(() => this.load(1));
+                },
+
+                bindEvents() {
+                    const headers = document.querySelectorAll('#appMappingTable thead th[data-sort]');
+                    headers.forEach(header => {
+                        header.classList.add('sortable');
+                        if (header.dataset.sortBound === 'true') return;
+                        header.dataset.sortBound = 'true';
+                        header.addEventListener('click', () => {
+                            const sortKey = header.dataset.sort;
+                            if (!sortKey) return;
+                            if (this.sortBy === sortKey) {
+                                this.sortDirection = this.sortDirection === 'ASC' ? 'DESC' : 'ASC';
+                            } else {
+                                this.sortBy = sortKey;
+                                this.sortDirection = 'ASC';
+                            }
+                            this.updateSortIndicators();
+                            this.load(1); // 서버 사이드 정렬
+                        });
+                    });
+
+                    const pageSizeSelect = document.getElementById('appMappingPageSize');
+                    if (pageSizeSelect) {
+                        pageSizeSelect.addEventListener('change', (e) => {
+                            this.pageSize = parseInt(e.target.value, 10) || 20;
+                            this.load(1);
+                        });
+                    }
+
+                    const refreshBtn = document.getElementById('btnRefresh');
+                    if (refreshBtn) {
+                        refreshBtn.addEventListener('click', () => this.load(this.currentPage));
+                    }
+
+                    const excelBtn = document.getElementById('btnExcel');
+                    if (excelBtn) {
+                        excelBtn.addEventListener('click', () => this.downloadExcel());
+                    }
+
+                    const printBtn = document.getElementById('btnPrint');
+                    if (printBtn) {
+                        printBtn.addEventListener('click', () => this.printTable());
+                    }
+
+                    const modalOrgId = document.getElementById('modalOrgId');
+                    if (modalOrgId) {
+                        modalOrgId.addEventListener('change', () => {
+                            document.getElementById('modalTrxId').value = '';
+                            document.getElementById('modalTrxName').value = '';
+                        });
+                    }
+
+                    const tbody = document.getElementById('appMappingTableBody');
+                    if (tbody) {
+                        tbody.addEventListener('click', (e) => {
+                            const btn = e.target.closest('button[data-trx-id]');
+                            if (btn) {
+                                const trxId = btn.dataset.trxId || '';
+                                const orgId = btn.dataset.orgId || '';
+                                this.openTrxDetail(trxId, orgId);
+                                e.stopPropagation();
+                                return;
+                            }
+                            const tr = e.target.closest('tr[data-key]');
+                            if (!tr) return;
+                            this.setSelectedRow(tr.dataset.key);
+                            const [gwId, reqIdCode] = tr.dataset.key.split('|');
+                            this.loadAndOpenEditModal(gwId, reqIdCode);
+                        });
+                    }
+                },
+
+                loadGatewayOptions() {
+                    const params = new URLSearchParams({ page: '1', size: '500' });
+                    return fetch(`/api/gateways/page?${params}`, { credentials: 'same-origin' })
+                        .then(res => res.json())
+                        .then(res => {
+                            if (!res.success) throw new Error(res.message || '게이트웨이 조회 실패');
+                            this.gatewayOptions = res.data?.content || [];
+                            this.renderGatewayOptions();
+                        })
+                        .catch(err => {
+                            console.error('[AppMappingList.loadGatewayOptions]', err);
+                            Toast.error('게이트웨이 목록을 불러오지 못했습니다.');
+                        });
+                },
+
+                loadOrgOptions() {
+                    const params = new URLSearchParams({ page: '1', size: '1000' });
+                    return fetch(`/api/orgs?${params}`, { credentials: 'same-origin' })
+                        .then(res => res.json())
+                        .then(res => {
+                            if (!res.success) throw new Error(res.message || '기관 조회 실패');
+                            const data = res.data || {};
+                            this.orgOptions = data.content || [];
+                            this.renderOrgOptions();
+                        })
+                        .catch(err => {
+                            console.error('[AppMappingList.loadOrgOptions]', err);
+                            Toast.error('기관 목록을 불러오지 못했습니다.');
+                        });
+                },
+
+                renderGatewayOptions() {
+                    this.renderSelectOptions('searchGwId', this.gatewayOptions, 'gwId', 'gwName', true);
+                    this.renderSelectOptions('modalGwId', this.gatewayOptions, 'gwId', 'gwName', false);
+                },
+
+                renderOrgOptions() {
+                    this.renderSelectOptions('searchOrgId', this.orgOptions, 'orgId', 'orgName', true);
+                    this.renderSelectOptions('modalOrgId', this.orgOptions, 'orgId', 'orgName', true);
+                },
+
+                renderSelectOptions(selectId, options, valueField, labelField, includeAll) {
+                    const select = document.getElementById(selectId);
+                    if (!select) return;
+                    const currentValue = select.value;
+                    const result = [];
+                    if (includeAll) {
+                        result.push('<option value="">전체</option>');
+                    } else {
+                        result.push('<option value="">선택하세요</option>');
+                    }
+                    options.forEach(item => {
+                        const value = item[valueField];
+                        const label = item[labelField] || value;
+                        result.push(`<option value="${HtmlUtils.escape(value)}" ${value === currentValue ? 'selected' : ''}>${HtmlUtils.escape(label)}</option>`);
+                    });
+                    select.innerHTML = result.join('');
+                },
+
+                _getSearchParams() {
+                    const params = new URLSearchParams();
+                    const gwId = document.getElementById('searchGwId')?.value || '';
+                    const orgId = document.getElementById('searchOrgId')?.value || '';
+                    const reqIdCode = document.getElementById('searchReqIdCode')?.value || '';
+                    const trxKeyword = document.getElementById('searchTrxKeyword')?.value || '';
+                    const bizAppId = document.getElementById('searchBizAppId')?.value || '';
+                    if (gwId) params.set('gwId', gwId);
+                    if (orgId) params.set('orgId', orgId);
+                    if (reqIdCode) params.set('reqIdCode', reqIdCode);
+                    if (trxKeyword) params.set('trxKeyword', trxKeyword);
+                    if (bizAppId) params.set('bizAppId', bizAppId);
+                    return params;
+                },
+
+                load(page) {
+                    this.currentPage = page || 1;
+
+                    const params = this._getSearchParams();
+                    params.set('page', String(this.currentPage));
+                    params.set('size', String(this.pageSize));
+                    if (this.sortBy) params.set('sortBy', this.sortBy);
+                    if (this.sortDirection) params.set('sortDirection', this.sortDirection);
+
+                    fetch(`/api/interface-mnt/app-mappings?${params}`, { credentials: 'same-origin' })
+                        .then(res => res.json())
+                        .then(res => {
+                            if (!res.success) throw new Error(res.message || '조회 실패');
+                            const data = res.data || {};
+                            this.totalElements = data.totalElements || 0;
+                            this.currentRows = data.content || [];
+                            this.renderTable(this.currentRows); // 서버에서 정렬된 데이터 사용
+                            this.updateSortIndicators();
+                            this.renderPagination(data);
+                        })
+                        .catch(err => {
+                            console.error('[AppMappingList.load]', err);
+                            Toast.error('데이터 조회 중 오류가 발생했습니다.');
+                            this.renderTable([]);
+                            this.renderPagination({ totalElements: 0, totalPages: 1, currentPage: 1, size: this.pageSize });
+                        });
+                },
+
+                renderTable(items) {
+                    const tbody = document.getElementById('appMappingTableBody');
+                    if (!tbody) return;
+                    this.selectedKey = null;
+
+                    if (!items || items.length === 0) {
+                        tbody.innerHTML = `
+                            <tr>
+                                <td colspan="6" class="text-center py-4 text-body-secondary">
+                                    조회된 데이터가 없습니다.
+                                </td>
+                            </tr>`;
+                        return;
+                    }
+
+                    console.log('[AppMappingList.renderTable] First item:', items[0]);
+                    const rows = items.map(item => {
+                        const key = `${HtmlUtils.escape(item.gwId)}|${HtmlUtils.escape(item.reqIdCode)}`;
+                        const gwLabel = item.gwName || item.gwId || '';
+                        const orgLabel = item.orgName || item.orgId || '';
+                        const trxLabel = item.trxName || (item.trxId ? '등록없음' : '');
+                        const trxId = item.trxId || '';
+                        return `
+                            <tr data-key="${key}">
+                                <td>${HtmlUtils.escape(gwLabel)}</td>
+                                <td>${HtmlUtils.escape(item.reqIdCode)}</td>
+                                <td>${HtmlUtils.escape(orgLabel)}</td>
+                                <td>${HtmlUtils.escape(trxLabel)}</td>
+                                <td>${HtmlUtils.escape(item.bizAppId || '')}</td>
+                                <td>
+                                    <button type="button" class="btn btn-primary btn-sm" data-trx-id="${HtmlUtils.escape(trxId)}" data-org-id="${HtmlUtils.escape(item.orgId || '')}">거래전문</button>
+                                </td>
+                            </tr>`;
+                    }).join('');
+                    tbody.innerHTML = rows;
+                },
+
+                updateSortIndicators() {
+                    const headers = document.querySelectorAll('#appMappingTable thead th.sortable');
+                    headers.forEach(header => header.classList.remove('sort-asc', 'sort-desc'));
+                    if (!this.sortBy || !this.sortDirection) return;
+                    const active = document.querySelector(`#appMappingTable thead th[data-sort="${this.sortBy}"]`);
+                    if (active) {
+                        active.classList.add(this.sortDirection === 'ASC' ? 'sort-asc' : 'sort-desc');
+                    }
+                },
+
+                renderPagination(pageData) {
+                    const container = document.getElementById('pagination');
+                    if (!container) return;
+
+                    const totalPages = pageData.totalPages || 0;
+                    const currentPage = pageData.currentPage || 1;
+                    const total = pageData.totalElements || 0;
+                    const size = pageData.size || this.pageSize;
+                    const start = total === 0 ? 0 : (currentPage - 1) * size + 1;
+                    const end = Math.min(currentPage * size, total);
+
+                    const pageInfo = document.getElementById('pageInfo');
+                    if (pageInfo) {
+                        pageInfo.textContent = `${start} - ${end} of ${total} items`;
+                    }
+
+                    const maxButtons = 5;
+                    let startPage = Math.max(1, currentPage - Math.floor(maxButtons / 2));
+                    let endPage = Math.min(totalPages, startPage + maxButtons - 1);
+
+                    if (endPage - startPage + 1 < maxButtons) {
+                        startPage = Math.max(1, endPage - maxButtons + 1);
+                    }
+
+                    let html = `
+                        <li class="page-item ${currentPage === 1 ? 'disabled' : ''}">
+                            <a class="page-link" href="#" onclick="AppMappingList.load(1); return false;">
+                                <i class="bi bi-chevron-double-left"></i>
+                            </a>
+                        </li>
+                        <li class="page-item ${currentPage === 1 ? 'disabled' : ''}">
+                            <a class="page-link" href="#" onclick="AppMappingList.load(${currentPage - 1}); return false;">
+                                <i class="bi bi-chevron-left"></i>
+                            </a>
+                        </li>
+                    `;
+
+                    for (let i = startPage; i <= endPage; i++) {
+                        html += `
+                            <li class="page-item ${i === currentPage ? 'active' : ''}">
+                                <a class="page-link" href="#" onclick="AppMappingList.load(${i}); return false;">${i}</a>
+                            </li>
+                        `;
+                    }
+
+                    html += `
+                        <li class="page-item ${currentPage === totalPages || totalPages === 0 ? 'disabled' : ''}">
+                            <a class="page-link" href="#" onclick="AppMappingList.load(${currentPage + 1}); return false;">
+                                <i class="bi bi-chevron-right"></i>
+                            </a>
+                        </li>
+                        <li class="page-item ${currentPage === totalPages || totalPages === 0 ? 'disabled' : ''}">
+                            <a class="page-link" href="#" onclick="AppMappingList.load(${totalPages}); return false;">
+                                <i class="bi bi-chevron-double-right"></i>
+                            </a>
+                        </li>
+                    `;
+
+                    container.innerHTML = html;
+                },
+
+                setSelectedRow(key) {
+                    const tbody = document.getElementById('appMappingTableBody');
+                    if (!tbody) return;
+                    tbody.querySelectorAll('tr').forEach(tr => tr.classList.remove('mapping-row-selected'));
+                    const target = tbody.querySelector(`tr[data-key="${cssEscape(key)}"]`);
+                    if (target) {
+                        target.classList.add('mapping-row-selected');
+                        this.selectedKey = key;
+                    } else {
+                        this.selectedKey = null;
+                    }
+                },
+
+                loadAndOpenEditModal(gwId, reqIdCode) {
+                    const apiUrl = `/api/interface-mnt/app-mappings/${encodeURIComponent(gwId)}/${encodeURIComponent(reqIdCode)}`;
+                    fetch(apiUrl, { credentials: 'same-origin' })
+                        .then(res => res.json())
+                        .then(res => {
+                            if (!res.success) throw new Error(res.message || '조회 실패');
+                            AppMappingModal.openEditModal(res.data);
+                        })
+                        .catch(err => {
+                            console.error('[AppMappingList.loadAndOpenEditModal]', err);
+                            Toast.error('데이터 조회 중 오류가 발생했습니다.');
+                        });
+                },
+
+                openTrxDetail(trxId, orgId) {
+                    console.log('[AppMappingList.openTrxDetail] trxId:', trxId, 'orgId:', orgId);
+                    if (!trxId) {
+                        Toast.warning('거래 정보가 없습니다.');
+                        return;
+                    }
+                    TrxDetailModal.open(trxId, orgId, {
+                        onRefresh: () => AppMappingList.load(AppMappingList.currentPage)
+                    });
+                },
+
+                printTable() {
+                    const rows = document.querySelectorAll('#appMappingTableBody tr');
+                    const data = [];
+                    rows.forEach(tr => {
+                        const cells = tr.querySelectorAll('td');
+                        if (cells.length >= 5) {
+                            data.push({
+                                gwName: cells[0]?.textContent?.trim() || '',
+                                reqIdCode: cells[1]?.textContent?.trim() || '',
+                                orgName: cells[2]?.textContent?.trim() || '',
+                                trxName: cells[3]?.textContent?.trim() || '',
+                                bizAppId: cells[4]?.textContent?.trim() || ''
+                            });
+                        }
+                    });
+                    const columns = [
+                        { key: 'gwName', label: '게이트웨이' },
+                        { key: 'reqIdCode', label: '전문식별자' },
+                        { key: 'orgName', label: '기관' },
+                        { key: 'trxName', label: '거래' },
+                        { key: 'bizAppId', label: '요청처리 App' }
+                    ];
+                    PrintUtil.print({ title: '요청처리 App맵핑 목록', columns: columns, data: data });
+                },
+
+                downloadExcel() {
+                    const params = this._getSearchParams();
+                    if (this.sortBy) {
+                        params.set('sortBy', this.sortBy);
+                        params.set('sortDirection', this.sortDirection || 'ASC');
+                    }
+                    const qs = params.toString();
+                    window.location.href = '/api/interface-mnt/app-mappings/export' + (qs ? '?' + qs : '');
+                }
+            };
+
+            window.AppMappingModal = {
+                openCreateModal() {
+                    document.getElementById('appMappingMode').value = 'create';
+                    document.getElementById('appMappingModalTitle').textContent = '요청처리 App 맵핑관리 등록';
+                    document.getElementById('appMappingDeleteBtn')?.classList.add('d-hidden');
+                    document.getElementById('modalGwId').disabled = false;
+                    document.getElementById('modalReqIdCode').disabled = false;
+
+                    document.getElementById('modalGwId').value = '';
+                    document.getElementById('modalReqIdCode').value = '';
+                    document.getElementById('modalOrgId').value = '';
+                    document.getElementById('modalTrxId').value = '';
+                    document.getElementById('modalTrxName').value = '';
+                    document.getElementById('modalBizAppId').value = '';
+                    document.getElementById('originalGwId').value = '';
+                    document.getElementById('originalReqIdCode').value = '';
+
+                    this.showModal();
+                },
+
+                openEditModal(data) {
+                    document.getElementById('appMappingMode').value = 'edit';
+                    document.getElementById('appMappingModalTitle').textContent = '요청처리 App 맵핑관리 상세조회';
+                    document.getElementById('appMappingDeleteBtn')?.classList.remove('d-hidden');
+
+                    document.getElementById('modalGwId').value = data.gwId || '';
+                    document.getElementById('modalReqIdCode').value = data.reqIdCode || '';
+                    document.getElementById('modalOrgId').value = data.orgId || '';
+                    document.getElementById('modalTrxId').value = data.trxId || '';
+                    document.getElementById('modalTrxName').value = data.trxName || '';
+                    document.getElementById('modalBizAppId').value = data.bizAppId || '';
+                    document.getElementById('originalGwId').value = data.gwId || '';
+                    document.getElementById('originalReqIdCode').value = data.reqIdCode || '';
+
+                    document.getElementById('modalGwId').disabled = true;
+                    document.getElementById('modalReqIdCode').disabled = true;
+
+                    this.showModal();
+                },
+
+                showModal() {
+                    bootstrap.Modal.getOrCreateInstance(document.getElementById('appMappingModal')).show();
+                },
+
+                closeModal() {
+                    bootstrap.Modal.getInstance(document.getElementById('appMappingModal'))?.hide();
+                },
+
+                save() {
+                    const mode = document.getElementById('appMappingMode').value;
+                    const gwId = document.getElementById('modalGwId').value.trim();
+                    const reqIdCode = document.getElementById('modalReqIdCode').value.trim();
+                    const orgId = document.getElementById('modalOrgId').value.trim();
+                    const trxId = document.getElementById('modalTrxId').value.trim();
+                    const bizAppId = document.getElementById('modalBizAppId').value.trim();
+                    const originalGwId = document.getElementById('originalGwId').value.trim();
+                    const originalReqIdCode = document.getElementById('originalReqIdCode').value.trim();
+
+                    if (!gwId || !reqIdCode) {
+                        Toast.error('게이트웨이와 전문식별자는 필수입니다.');
+                        return;
+                    }
+
+                    const payload = {
+                        gwId: gwId,
+                        reqIdCode: reqIdCode,
+                        orgId: orgId || null,
+                        trxId: trxId || null,
+                        ioType: null,
+                        bizAppId: bizAppId || null
+                    };
+
+                    if (mode === 'create') {
+                        this.saveCreate(payload);
+                    } else {
+                        this.saveUpdate(originalGwId, originalReqIdCode, payload);
+                    }
+                },
+
+                saveCreate(payload) {
+                    fetch('/api/interface-mnt/app-mappings', {
+                        method: 'POST',
+                        credentials: 'same-origin',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify(payload)
+                    })
+                        .then(res => res.json())
+                        .then(res => {
+                            if (!res.success) {
+                                Toast.error(res.message || '저장에 실패했습니다.');
+                                return;
+                            }
+                            Toast.success('저장되었습니다.');
+                            this.closeModal();
+                            AppMappingList.load(1);
+                        })
+                        .catch(err => {
+                            console.error('[AppMappingModal.saveCreate]', err);
+                            Toast.error('저장 중 오류가 발생했습니다.');
+                        });
+                },
+
+                saveUpdate(gwId, reqIdCode, payload) {
+                    const apiUrl = `/api/interface-mnt/app-mappings/${encodeURIComponent(gwId)}/${encodeURIComponent(reqIdCode)}`;
+                    fetch(apiUrl, {
+                        method: 'PUT',
+                        credentials: 'same-origin',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify(payload)
+                    })
+                        .then(res => res.json())
+                        .then(res => {
+                            if (!res.success) {
+                                Toast.error(res.message || '저장에 실패했습니다.');
+                                return;
+                            }
+                            Toast.success('저장되었습니다.');
+                            this.closeModal();
+                            AppMappingList.load(AppMappingList.currentPage);
+                        })
+                        .catch(err => {
+                            console.error('[AppMappingModal.saveUpdate]', err);
+                            Toast.error('저장 중 오류가 발생했습니다.');
+                        });
+                },
+
+                deleteCurrent() {
+                    const gwId = document.getElementById('originalGwId').value.trim();
+                    const reqIdCode = document.getElementById('originalReqIdCode').value.trim();
+                    if (!gwId || !reqIdCode) {
+                        Toast.warning('삭제할 대상을 찾을 수 없습니다.');
+                        return;
+                    }
+                    Toast.confirm('현재 매핑을 삭제하시겠습니까?', () => {
+                        const apiUrl = `/api/interface-mnt/app-mappings/${encodeURIComponent(gwId)}/${encodeURIComponent(reqIdCode)}`;
+                        fetch(apiUrl, { method: 'DELETE', credentials: 'same-origin' })
+                            .then(res => res.json())
+                            .then(res => {
+                                if (!res.success) throw new Error(res.message || '삭제 실패');
+                                Toast.success('삭제되었습니다.');
+                                this.closeModal();
+                                AppMappingList.load(AppMappingList.currentPage);
+                            })
+                            .catch(err => {
+                                console.error('[AppMappingModal.deleteCurrent]', err);
+                                Toast.error('삭제 중 오류가 발생했습니다.');
+                            });
+                    });
+                }
+            };
+
+            window.AppMappingTrxModal = {
+                currentPage: 1,
+                pageSize: 10,
+                totalElements: 0,
+                selectedTrx: null,
+                currentOrgId: null,
+
+                openWithOrgFilter() {
+                    const orgId = document.getElementById('modalOrgId')?.value || '';
+                    this.open(orgId);
+                },
+
+                open(orgId = null) {
+                    this.currentPage = 1;
+                    this.pageSize = parseInt(document.getElementById('trxPageSize')?.value, 10) || 20;
+                    this.currentOrgId = orgId;
+                    document.getElementById('trxSearchValue').value = '';
+                    this.show();
+                    this.search();
+                },
+
+                show() {
+                    bootstrap.Modal.getOrCreateInstance(document.getElementById('appMappingTrxModal')).show();
+                },
+
+                close() {
+                    bootstrap.Modal.getInstance(document.getElementById('appMappingTrxModal'))?.hide();
+                    this.selectedTrx = null;
+                },
+
+                search() {
+                    this.currentPage = 1;
+                    this.load(1);
+                },
+
+                load(page) {
+                    this.currentPage = page || 1;
+                    this.pageSize = parseInt(document.getElementById('trxPageSize')?.value, 10) || 20;
+                    const searchField = document.getElementById('trxSearchField')?.value || 'trxId';
+                    const searchValue = document.getElementById('trxSearchValue')?.value || '';
+
+                    const params = new URLSearchParams({
+                        page: String(this.currentPage),
+                        size: String(this.pageSize)
+                    });
+                    if (searchField && searchValue) {
+                        params.set('searchField', searchField);
+                        params.set('searchValue', searchValue);
+                    }
+                    if (this.currentOrgId) {
+                        params.set('orgIdFilter', this.currentOrgId);
+                    }
+
+                    fetch(`/api/trx/page?${params}`, { credentials: 'same-origin' })
+                        .then(res => res.json())
+                        .then(response => {
+                            if (!response.success) {
+                                throw new Error(response.message || '조회 실패');
+                            }
+                            const data = response.data || {};
+                            this.totalElements = data.totalElements || 0;
+                            this.renderTable(data.content || []);
+                            this.renderPagination(data);
+                        })
+                        .catch(err => {
+                            console.error('[AppMappingTrxModal.load]', err);
+                            Toast.error('거래 조회 중 오류가 발생했습니다.');
+                            this.renderTable([]);
+                            this.renderPagination({ totalElements: 0, totalPages: 1, currentPage: 1, size: this.pageSize });
+                        });
+                },
+
+                renderTable(items) {
+                    const tbody = document.getElementById('appMappingTrxTableBody');
+                    if (!tbody) return;
+                    this.selectedTrx = null;
+
+                    if (!items || items.length === 0) {
+                        tbody.innerHTML = `
+                            <tr>
+                                <td colspan="2" class="text-center py-4 text-body-secondary">
+                                    조회된 데이터가 없습니다.
+                                </td>
+                            </tr>`;
+                        return;
+                    }
+
+                    tbody.innerHTML = items.map(item => `
+                        <tr data-trx-id="${HtmlUtils.escape(item.trxId)}" data-trx-name="${HtmlUtils.escape(item.trxName || '')}">
+                            <td>${HtmlUtils.escape(item.trxId)}</td>
+                            <td>${HtmlUtils.escape(item.trxName || '')}</td>
+                        </tr>
+                    `).join('');
+
+                    tbody.querySelectorAll('tr').forEach(tr => {
+                        tr.addEventListener('click', () => {
+                            tbody.querySelectorAll('tr').forEach(row => row.classList.remove('trx-row-selected'));
+                            tr.classList.add('trx-row-selected');
+                            const trxId = tr.dataset.trxId;
+                            const trxName = tr.dataset.trxName;
+                            this.applySelection(trxId, trxName);
+                        });
+                    });
+                },
+
+                applySelection(trxId, trxName) {
+                    document.getElementById('modalTrxId').value = trxId || '';
+                    document.getElementById('modalTrxName').value = trxName || '';
+                    console.log('[AppMappingTrxModal] Selected trxId:', trxId, 'trxName:', trxName);
+                    this.close();
+                },
+
+                renderPagination(pageData) {
+                    const container = document.getElementById('appMappingTrxPagination');
+                    if (!container) return;
+
+                    const totalPages = pageData.totalPages || 0;
+                    const currentPage = pageData.currentPage || 1;
+                    const total = pageData.totalElements || 0;
+                    const size = pageData.size || this.pageSize;
+                    const start = total === 0 ? 0 : (currentPage - 1) * size + 1;
+                    const end = Math.min(currentPage * size, total);
+
+                    const pageInfo = document.getElementById('appMappingTrxPageInfo');
+                    if (pageInfo) {
+                        pageInfo.textContent = `${start} - ${end} of ${total} items`;
+                    }
+
+                    const maxButtons = 5;
+                    let startPage = Math.max(1, currentPage - Math.floor(maxButtons / 2));
+                    let endPage = Math.min(totalPages, startPage + maxButtons - 1);
+
+                    if (endPage - startPage + 1 < maxButtons) {
+                        startPage = Math.max(1, endPage - maxButtons + 1);
+                    }
+
+                    let html = `
+                        <li class="page-item ${currentPage === 1 ? 'disabled' : ''}">
+                            <a class="page-link" href="#" onclick="AppMappingTrxModal.load(1); return false;">
+                                <i class="bi bi-chevron-double-left"></i>
+                            </a>
+                        </li>
+                        <li class="page-item ${currentPage === 1 ? 'disabled' : ''}">
+                            <a class="page-link" href="#" onclick="AppMappingTrxModal.load(${currentPage - 1}); return false;">
+                                <i class="bi bi-chevron-left"></i>
+                            </a>
+                        </li>
+                    `;
+
+                    for (let i = startPage; i <= endPage; i++) {
+                        html += `
+                            <li class="page-item ${i === currentPage ? 'active' : ''}">
+                                <a class="page-link" href="#" onclick="AppMappingTrxModal.load(${i}); return false;">${i}</a>
+                            </li>
+                        `;
+                    }
+
+                    html += `
+                        <li class="page-item ${currentPage === totalPages || totalPages === 0 ? 'disabled' : ''}">
+                            <a class="page-link" href="#" onclick="AppMappingTrxModal.load(${currentPage + 1}); return false;">
+                                <i class="bi bi-chevron-right"></i>
+                            </a>
+                        </li>
+                        <li class="page-item ${currentPage === totalPages || totalPages === 0 ? 'disabled' : ''}">
+                            <a class="page-link" href="#" onclick="AppMappingTrxModal.load(${totalPages}); return false;">
+                                <i class="bi bi-chevron-double-right"></i>
+                            </a>
+                        </li>
+                    `;
+
+                    container.innerHTML = html;
+                }
+            };
+
+            window.AppMappingList.init();
+            WasSelectReloadModal.init();
+        })();
+    </script>
+</th:block>
+</body>
+</html>

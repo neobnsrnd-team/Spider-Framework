@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<!-- ErrorHis Page Scripts -->
+<th:block th:fragment="script">
+<script>
+    /**
+     * 텍스트 truncate 함수
+     */
+    function truncateText(text, maxLength) {
+        if (!text) return '';
+        return text.length > maxLength ? text.substring(0, maxLength) + '...' : text;
+    }
+
+    // ErrorHis Management Namespace
+    window.ErrorHis = (function() {
+        let currentPage = 1;
+        let totalItems = 0;
+        let itemsPerPage = 10;
+        let sortBy = null;
+        let sortDirection = null;
+        let currentData = [];
+
+        // Initialize
+        function init() {
+            attachSortHandlers();
+
+            // Initialize page size selector
+            const limitRows = document.getElementById('limitRows');
+            if (limitRows) {
+                limitRows.value = itemsPerPage;
+                limitRows.addEventListener('change', function() {
+                    itemsPerPage = parseInt(this.value);
+                    currentPage = 1;
+                    search();
+                });
+            }
+
+            // Initialize refresh button
+            const btnRefresh = document.getElementById('btnRefresh');
+            if (btnRefresh) {
+                btnRefresh.addEventListener('click', search);
+            }
+
+            // Initialize excel/print buttons
+            const btnExcel = document.getElementById('btnExcel');
+            if (btnExcel) {
+                btnExcel.addEventListener('click', exportExcel);
+            }
+
+            const btnPrint = document.getElementById('btnPrint');
+            if (btnPrint) {
+                btnPrint.addEventListener('click', printTable);
+            }
+
+            // 기본값: 오늘부터 7일 전
+            const today = new Date();
+            const weekAgo = new Date(today);
+            weekAgo.setDate(weekAgo.getDate() - 7);
+            document.getElementById('searchStartDate').value = weekAgo.toISOString().slice(0, 10);
+            document.getElementById('searchEndDate').value = today.toISOString().slice(0, 10);
+
+            search();
+        }
+
+        // Attach sort handlers
+        function attachSortHandlers() {
+            const headers = document.querySelectorAll('#errorHisTable thead th[data-sort]');
+            headers.forEach(header => {
+                header.classList.add('sortable');
+                header.classList.add('cursor-pointer');
+                header.addEventListener('click', function() {
+                    const sortKey = this.getAttribute('data-sort');
+                    if (!sortKey) return;
+
+                    // 3단계 순환: ASC → DESC → DEFAULT
+                    if (sortBy === sortKey) {
+                        if (sortDirection === 'ASC') {
+                            sortDirection = 'DESC';
+                        } else if (sortDirection === 'DESC') {
+                            sortBy = null;
+                            sortDirection = null;
+                        }
+                    } else {
+                        sortBy = sortKey;
+                        sortDirection = 'ASC';
+                    }
+                    currentPage = 1;
+                    updateSortIndicators();
+                    search();
+                });
+            });
+        }
+
+        // Update sort indicators
+        function updateSortIndicators() {
+            const headers = document.querySelectorAll('#errorHisTable thead th.sortable');
+            headers.forEach(header => {
+                header.classList.remove('sort-asc', 'sort-desc');
+            });
+
+            if (!sortBy || !sortDirection) {
+                return;
+            }
+
+            const activeHeader = document.querySelector(`#errorHisTable thead th[data-sort="${sortBy}"]`);
+            if (activeHeader) {
+                activeHeader.classList.add(sortDirection === 'ASC' ? 'sort-asc' : 'sort-desc');
+            }
+        }
+
+        // 검색 조건 파라미터 수집
+        function _getSearchParams() {
+            const params = new URLSearchParams();
+            const startDate = (document.getElementById('searchStartDate').value || '').replace(/[^0-9]/g, '');
+            const endDate = (document.getElementById('searchEndDate').value || '').replace(/[^0-9]/g, '');
+            const searchErrorCode = document.getElementById('searchErrorCode').value.trim();
+            const searchCustUserId = document.getElementById('searchCustUserId').value.trim();
+            const searchCustPhoneNo = document.getElementById('searchCustPhoneNo').value.trim();
+
+            if (searchErrorCode) params.append('errorCode', searchErrorCode);
+            if (searchCustUserId) params.append('custUserId', searchCustUserId);
+            if (searchCustPhoneNo) params.append('custPhoneNo', searchCustPhoneNo);
+            if (startDate) params.append('startDtime', startDate + '000000');
+            if (endDate) params.append('endDtime', endDate + '235959');
+            if (sortBy) {
+                params.append('sortBy', sortBy);
+                params.append('sortDirection', sortDirection);
+            }
+            return params;
+        }
+
+        // 검색 조건 변경 시 호출 — 1페이지로 초기화 후 조회
+        function search() {
+            currentPage = 1;
+            load();
+        }
+
+        // 페이지네이션 이동 시 호출 — 페이지 유지하며 조회
+        function load() {
+            const searchParams = _getSearchParams();
+            searchParams.set('page', currentPage);
+            searchParams.set('size', itemsPerPage);
+
+            fetch(`/api/error-histories/page?${searchParams.toString()}`)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    if (data.success) {
+                        const pageData = data.data;
+                        const histories = pageData.content || [];
+                        totalItems = pageData.totalElements || 0;
+                        renderTable(histories);
+                        renderPagination();
+                    } else {
+                        Toast.error(HtmlUtils.escape(data.message || '검색 실패'));
+                        renderTable([]);
+                        totalItems = 0;
+                        renderPagination();
+                    }
+                })
+                .catch(error => {
+                    Toast.error(HtmlUtils.escape('검색 중 오류가 발생했습니다: ' + error.message));
+                    renderTable([]);
+                    totalItems = 0;
+                    renderPagination();
+                });
+        }
+
+        // Render table
+        function renderTable(histories) {
+            currentData = histories || [];
+            const tbody = document.getElementById('errorHisTableBody');
+            if (!tbody) {
+                console.error('Table body element not found!');
+                return;
+            }
+            tbody.innerHTML = '';
+
+            if (!histories || histories.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="7" class="text-center py-4 text-body-secondary">
+                            조회된 데이터가 없습니다.
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+
+            histories.forEach((history) => {
+                const row = document.createElement('tr');
+                row.classList.add('cursor-pointer');
+                row.onclick = function() {
+                    ErrorHisModal.open(history.errorCode, history.errorSerNo);
+                };
+                row.innerHTML = `
+                    <td>${HtmlUtils.escape(history.errorCode || '-')}</td>
+                    <td>${HtmlUtils.escape(history.errorSerNo || '-')}</td>
+                    <td>${HtmlUtils.escape(history.custUserId || '-')}</td>
+                    <td>${HtmlUtils.escape(history.custPhoneNo || '-')}</td>
+                    <td title="${HtmlUtils.escape(history.errorMessage)}">${HtmlUtils.escape(truncateText(history.errorMessage, 35))}</td>
+                    <td title="${HtmlUtils.escape(history.errorUrl)}">${HtmlUtils.escape(truncateText(history.errorUrl, 25))}</td>
+                    <td title="${HtmlUtils.escape(history.errorInstanceId)}">${HtmlUtils.escape(truncateText(history.errorInstanceId, 30))}</td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
+        // Render pagination controls
+        function renderPagination() {
+            const totalPages = Math.ceil(totalItems / itemsPerPage);
+            const pagination = document.getElementById('pagination');
+            if (!pagination) return;
+
+
+            let paginationHtml = '';
+
+            // First page button
+            paginationHtml += `
+                <li class="page-item ${currentPage === 1 ? 'disabled' : ''}">
+                    <a class="page-link" href="#" onclick="window.ErrorHis.changePage(1); return false;">
+                        <i class="bi bi-chevron-double-left"></i>
+                    </a>
+                </li>
+            `;
+
+            // Previous page button
+            paginationHtml += `
+                <li class="page-item ${currentPage === 1 ? 'disabled' : ''}">
+                    <a class="page-link" href="#" onclick="window.ErrorHis.changePage(${currentPage - 1}); return false;">
+                        <i class="bi bi-chevron-left"></i>
+                    </a>
+                </li>
+            `;
+
+            // Page numbers
+            const maxButtons = 5;
+            let startPage = Math.max(1, currentPage - Math.floor(maxButtons / 2));
+            let endPage = Math.min(totalPages, startPage + maxButtons - 1);
+
+            if (endPage - startPage + 1 < maxButtons) {
+                startPage = Math.max(1, endPage - maxButtons + 1);
+            }
+
+            for (let i = startPage; i <= endPage; i++) {
+                paginationHtml += `
+                    <li class="page-item ${i === currentPage ? 'active' : ''}">
+                        <a class="page-link" href="#" onclick="window.ErrorHis.changePage(${i}); return false;">${i}</a>
+                    </li>
+                `;
+            }
+
+            // Next page button
+            paginationHtml += `
+                <li class="page-item ${currentPage === totalPages || totalPages === 0 ? 'disabled' : ''}">
+                    <a class="page-link" href="#" onclick="window.ErrorHis.changePage(${currentPage + 1}); return false;">
+                        <i class="bi bi-chevron-right"></i>
+                    </a>
+                </li>
+            `;
+
+            // Last page button
+            paginationHtml += `
+                <li class="page-item ${currentPage === totalPages || totalPages === 0 ? 'disabled' : ''}">
+                    <a class="page-link" href="#" onclick="window.ErrorHis.changePage(${totalPages}); return false;">
+                        <i class="bi bi-chevron-double-right"></i>
+                    </a>
+                </li>
+            `;
+
+            pagination.innerHTML = paginationHtml;
+
+            // Update page info
+            const start = totalItems === 0 ? 0 : (currentPage - 1) * itemsPerPage + 1;
+            const end = Math.min(currentPage * itemsPerPage, totalItems);
+            const pageInfo = document.getElementById('pageInfo');
+            if (pageInfo) {
+                pageInfo.textContent = `${start} - ${end} of ${totalItems} items`;
+            }
+        }
+
+        // Change page
+        function changePage(page) {
+            const totalPages = Math.ceil(totalItems / itemsPerPage);
+            if (page < 1 || page > totalPages) return;
+            currentPage = page;
+            load();
+        }
+
+        // Export to Excel
+        function exportExcel() {
+            const qs = _getSearchParams().toString();
+            window.location.href = '/api/error-histories/export' + (qs ? '?' + qs : '');
+        }
+
+        // Print table using PrintUtil
+        function printTable() {
+            const columns = [
+                { key: 'errorCode', label: '오류코드' },
+                { key: 'errorSerNo', label: '오류일련번호' },
+                { key: 'custUserId', label: '고객ID' },
+                { key: 'custPhoneNo', label: '고객전화번호' },
+                { key: 'errorMessage', label: '오류메시지' },
+                { key: 'errorUrl', label: '오류URL' },
+                { key: 'errorInstanceId', label: '인스턴스ID' }
+            ];
+            PrintUtil.print({ title: '오류발생현황', columns: columns, data: currentData });
+        }
+
+        // Public API
+        return {
+            init: init,
+            search: search,
+            changePage: changePage,
+            printTable: printTable,
+            exportExcel: exportExcel
+        };
+    })();
+
+    // ==================== Initialization ====================
+    // DOM 준비 완료 후 초기화
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', function() {
+            ErrorHis.init();
+        });
+    } else {
+        ErrorHis.init();
+    }
+</script>
+</th:block>
+</body>
+</html>

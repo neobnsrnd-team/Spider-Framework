@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<!-- TransDataGeneration Target Area Fragment -->
+<div th:fragment="target">
+    <div id="genTargetArea" class="sp-target-area">
+        <div class="flex-shrink-0">
+            <table class="table table-sm table-hover sp-data-grid sp-compact-grid" id="genTargetTable">
+                <colgroup>
+                    <col class="col-w-pct-5">
+                    <col class="col-w-pct-25">
+                    <col class="col-w-pct-60">
+                    <col class="col-w-pct-10">
+                </colgroup>
+                <thead class="table-light">
+                <tr>
+                    <th class="col-w-pct-5 text-center">
+                        <input type="checkbox" id="genTargetSelectAll" onclick="TransDataGeneration.toggleTargetSelectAll(this)">
+                    </th>
+                    <th data-sort="id"        class="col-w-pct-25">이행대상 ID</th>
+                    <th data-sort="name"      class="col-w-pct-60">이행대상명</th>
+                    <th data-sort="typeLabel" class="col-w-pct-10">유형</th>
+                </tr>
+                </thead>
+                <tbody id="genTargetTableBody">
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Drop Zone (빈 상태일 때 표시) -->
+        <div id="genDropZone" class="sp-drop-zone">
+            <div class="text-center">
+                <i class="bi bi-arrow-left fs-lg mb-2 text-body-secondary"></i>
+                <p class="m-0">좌측 목록에서 체크 후 ">>" 버튼 클릭<br>또는 드래그 앤 드랍으로 추가</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Target Action Buttons -->
+    <div class="d-flex justify-content-end gap-8px mt-2"
+         th:if="${userAuthorities != null and userAuthorities.contains('TRANS_DATA_POPUP:W')}">
+        <button class="btn btn-primary btn-sm" onclick="TransDataGeneration.removeFromTarget()">
+            <i class="bi bi-trash"></i> 삭제
+        </button>
+        <button class="btn btn-primary btn-sm" onclick="TransDataGeneration.openExecuteModal()">
+            <i class="bi bi-play-fill"></i> 이행실행
+        </button>
+    </div>
+</div>
+</body>
+</html>

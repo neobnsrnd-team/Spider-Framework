@@ -1,0 +1,12 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<!-- Batch App Bottom Actions Fragment -->
+<div th:fragment="buttons" class="bottom-actions"
+     th:if="${userAuthorities != null and userAuthorities.contains('BATCH_APP:W')}">
+    <button class="btn btn-primary btn-sm" id="btnRegister">
+        <i class="bi bi-plus-lg"></i> 등록
+    </button>
+</div>
+</body>
+</html>

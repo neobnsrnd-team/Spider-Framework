@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<div th:fragment="content">
+    <!-- Include Page Content Layout Styles -->
+
+    <!-- Search Section Header -->
+    <div class="page-header">
+        <h4 class="page-title">
+            <i class="bi bi-exclamation-circle-fill text-danger"></i>
+            검색조건
+        </h4>
+    </div>
+
+    <!-- Search Container -->
+    <div id="searchContainer" class="card border p-2 mb-3 sp-select2">
+        <!-- 첫 번째 행: 오류코드/오류제목 검색 + 오류 핸들러 -->
+        <div class="d-flex flex-wrap align-items-center gap-2 mb-1">
+            <select id="searchField" class="form-select form-select-sm flex-fixed-100">
+                <option value="errorCode">오류코드</option>
+                <option value="errorTitle">오류제목</option>
+            </select>
+            <input type="text" id="searchValue" class="form-control form-control-sm w-180">
+
+            <label class="form-label mb-0 small fw-medium ms-3 fs-xs">오류 핸들러</label>
+            <select id="handleAppId" class="form-select form-select-sm w-180 sp-select2-fixed-180">
+                <option value="">전체</option>
+            </select>
+
+            <!-- Spacer -->
+            <div class="flex-grow-1"></div>
+
+            <!-- Right Side Components -->
+            <select id="limitRows" class="form-select form-select-sm sp-limit-select">
+                <option value="10" selected>10</option>
+                <option value="20">20</option>
+                <option value="50">50</option>
+                <option value="100">100</option>
+            </select>
+            <label class="form-label mb-0 small fw-medium ms-1 me-2 fs-xs">건씩</label>
+
+            <button class="btn btn-primary btn-sm" id="btnSearch">
+                <i class="bi bi-search"></i> 조회
+            </button>
+        </div>
+
+        <!-- 두 번째 행: 거래명 -->
+        <div class="d-flex flex-wrap align-items-center gap-2 mb-1 mt-2">
+            <label class="form-label mb-0 small fw-medium fs-xs">거래명</label>
+            <select id="trxId" class="form-select form-select-sm w-180 sp-select2-fixed-180">
+                <option value="">전체</option>
+            </select>
+
+            <!-- Spacer -->
+            <div class="flex-grow-1"></div>
+        </div>
+    </div>
+
+    <!-- List Section Header + Toolbar (한 줄) -->
+    <div class="d-flex align-items-center mt-3">
+        <div class="page-header mb-0">
+            <h4 class="page-title mb-0">
+                <i class="bi bi-exclamation-circle-fill text-danger"></i>
+                리스트
+            </h4>
+        </div>
+        <div class="flex-grow-1" th:insert="~{fragments/page-content-layout :: toolbar}"></div>
+    </div>
+
+    <!-- Table Container (동적 생성) -->
+    <div id="tableContainer"></div>
+
+    <!-- Pagination -->
+    <th:block th:replace="~{fragments/page-content-layout :: pagination}" />
+
+    <!-- Bottom Action Buttons -->
+    <div class="bottom-actions" th:if="${userAuthorities != null and userAuthorities.contains('ERROR_CODE:W')}">
+        <button class="btn btn-primary btn-sm" id="btnAdd">
+            + 추가
+        </button>
+    </div>
+
+    <!-- Error Modal (기존 유지) -->
+    <div th:replace="~{pages/error-code/error-code-modal :: modal}"></div>
+
+    <!-- Handler Modal (기존 유지) -->
+    <div th:replace="~{pages/error-code/error-code-handler-modal :: modal}"></div>
+
+    <!-- Select2 CSS -->
+    <link th:href="@{/webjars/select2/4.1.0-rc.0/dist/css/select2.min.css}" rel="stylesheet" />
+
+    <!-- Select2 JS -->
+    <script th:src="@{/webjars/select2/4.1.0-rc.0/dist/js/select2.min.js}"></script>
+
+    <!-- Page Script -->
+    <script th:inline="javascript">
+        (function() {
+        // 오류코드 관리 페이지 설정
+        var PAGE_CONFIG = {
+            pageId: 'errors',
+            apiEndpoint: API_BASE_URL + '/errors/page',
+
+            // 테이블 설정
+            table: {
+                id: 'errorTable',
+                columns: [
+                    { key: 'errorCode', label: '오류코드', width: '15%', sortable: true },
+                    { key: 'errorTitle', label: '오류제목', width: '28%', sortable: true, align: 'left' },
+                    { key: 'errorCauseDesc', label: '오류 발생원인', width: '28%', sortable: true, align: 'left' },
+                    { key: 'errorCount', label: '발생회수', width: '10%', sortable: true },
+                    {
+                        key: 'handleApps',
+                        label: '오류별 핸들러',
+                        width: '19%',
+                        render: (val, row) => {
+                            const escapedTitle = (row.errorTitle || '').replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/'/g, '&#39;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+                            return `<button class="btn btn-sm btn-outline-primary" onclick="event.stopPropagation(); ErrorsPage.openHandlerModal('${row.errorCode}', '${escapedTitle}')">핸들러</button>`;
+                        }
+                    }
+                ],
+                emptyMessage: '조회 버튼을 클릭하여 데이터를 불러오세요.',
+                noDataMessage: '조회된 데이터가 없습니다.'
+            },
+
+            containers: {
+                search: '#searchContainer',
+                table: '#tableContainer',
+                pagination: '#pagination',
+                pageInfo: '#pageInfo'
+            },
+
+            autoLoad: false // 핸들러 로드 후 수동으로 로드
+        };
+
+        // 페이지 상태 관리
+        window.ErrorsPage = {
+            currentPage: 1,
+            totalItems: 0,
+            itemsPerPage: 10,
+            sortBy: null,
+            sortDirection: null,
+
+            init: function() {
+                // 1. 검색 버튼 이벤트 바인딩
+                $('#btnSearch').off('click').on('click', () => {
+                    this.currentPage = 1;
+                    this.load();
+                });
+
+                // 2. 검색 입력 필드 Enter 키 이벤트
+                $('#searchValue').off('keypress').on('keypress', (e) => {
+                    if (e.key === 'Enter') {
+                        this.currentPage = 1;
+                        this.load();
+                    }
+                });
+
+                // 3. 건수 변경 시 페이지만 초기화 (조회 버튼/Enter로만 조회)
+                $('#limitRows').off('change').on('change', () => {
+                    this.currentPage = 1;
+                });
+
+                // 4. 거래 목록 로드 (드롭다운용)
+                this.loadTrxList();
+
+                // 5. 핸들러 목록 로드 (드롭다운용)
+                this.loadHandleApps();
+
+                // 6. Select2 초기화 (검색 가능한 드롭다운)
+                this.initSearchableSelects();
+
+                // 7. 테이블 렌더링
+                const tableConfig = {
+                    ...PAGE_CONFIG.table,
+                    onSort: (sortBy, sortDirection) => {
+                        this.sortBy = sortBy;
+                        this.sortDirection = sortDirection;
+                        this.currentPage = 1;
+                        this.load();
+                    }
+                };
+
+                DataTable.render('#tableContainer', tableConfig, (row) => {
+                    // 행 클릭 시 모달 열기
+                    if (typeof ErrorModal !== 'undefined') {
+                        ErrorModal.openForEdit(row.errorCode);
+                    }
+                });
+
+                // 8. 페이지네이션 초기화
+                Pagination.init('#pagination', '#pageInfo', (page) => {
+                    this.currentPage = page;
+                    this.load();
+                });
+
+                // 9. 버튼 이벤트 바인딩
+                $('#btnAdd').off('click').on('click', () => {
+                    if (typeof ErrorModal !== 'undefined') {
+                        ErrorModal.openForCreate();
+                    }
+                });
+
+                $('#btnRefresh').off('click').on('click', () => {
+                    this.load();
+                });
+
+                $('#btnExcel').off('click').on('click', () => {
+                    this.exportExcel();
+                });
+
+                $('#btnPrint').off('click').on('click', () => {
+                    this.printTable();
+                });
+            },
+
+            loadTrxList: function() {
+                $.ajax({
+                    url: API_BASE_URL + '/trx/list',
+                    method: 'GET',
+                    success: (response) => {
+                        if (response.success && response.data) {
+                            const $select = $('#trxId');
+                            $select.empty().append('<option value="">전체</option>');
+                            response.data.forEach(trx => {
+                                $select.append(`<option value="${trx.trxId}">${trx.trxName}</option>`);
+                            });
+                            // Select2 재초기화
+                            this.initSearchableSelects();
+                        }
+                    },
+                    error: (xhr) => {
+                        console.error('Failed to load transaction list:', xhr);
+                    }
+                });
+            },
+
+            loadHandleApps: function() {
+                $.ajax({
+                    url: API_BASE_URL + '/handle-apps',
+                    method: 'GET',
+                    success: (response) => {
+                        if (response.success && response.data) {
+                            const $select = $('#handleAppId');
+                            $select.empty().append('<option value="">전체</option>');
+                            response.data.forEach(app => {
+                                $select.append(`<option value="${app.handleAppId}">${app.handleAppName}</option>`);
+                            });
+                            // Select2 재초기화
+                            this.initSearchableSelects();
+                            // 핸들러 로드 후 데이터 조회
+                            this.load();
+                        }
+                    },
+                    error: (xhr) => {
+                        console.error('Failed to load handle apps:', xhr);
+                        this.load();
+                    }
+                });
+            },
+
+            initSearchableSelects: function() {
+                // Select2가 로드될 때까지 대기
+                if (typeof $.fn.select2 === 'undefined') {
+                    console.warn('Select2 library not loaded yet');
+                    return;
+                }
+
+                // Select2 초기화 전 기존 인스턴스 제거
+                try {
+                    $('#trxId, #handleAppId').each(function() {
+                        if ($(this).hasClass('select2-hidden-accessible')) {
+                            $(this).select2('destroy');
+                        }
+                    });
+                } catch (e) {
+                    // 초기화되지 않은 경우 무시
+                }
+
+                // 거래명 드롭다운 (검색 가능)
+                const $trxSelect = $('#trxId');
+                if ($trxSelect.length) {
+                    $trxSelect.select2({
+                        placeholder: '전체',
+                        allowClear: true,
+                        width: 'style',
+                        language: {
+                            noResults: function() {
+                                return '검색 결과가 없습니다.';
+                            },
+                            searching: function() {
+                                return '검색 중...';
+                            },
+                            inputTooShort: function() {
+                                return '검색어를 입력하세요.';
+                            }
+                        }
+                    });
+                }
+
+                // 오류 핸들러 드롭다운 (검색 가능)
+                const $handleAppSelect = $('#handleAppId');
+                if ($handleAppSelect.length) {
+                    $handleAppSelect.select2({
+                        placeholder: '전체',
+                        allowClear: true,
+                        width: 'style',
+                        language: {
+                            noResults: function() {
+                                return '검색 결과가 없습니다.';
+                            },
+                            searching: function() {
+                                return '검색 중...';
+                            },
+                            inputTooShort: function() {
+                                return '검색어를 입력하세요.';
+                            }
+                        }
+                    });
+                }
+            },
+
+            load: function() {
+                const params = {
+                    page: this.currentPage,
+                    size: parseInt($('#limitRows').val()) || this.itemsPerPage
+                };
+
+                // 검색 조건 수집
+                const searchField = $('#searchField').val();
+                const searchValue = $('#searchValue').val();
+                const trxId = $('#trxId').val();
+                const handleAppId = $('#handleAppId').val();
+
+                if (searchField && searchValue) {
+                    params.searchField = searchField;
+                    params.searchValue = searchValue;
+                }
+                if (trxId) params.trxId = trxId;
+                if (handleAppId) params.handleAppId = handleAppId;
+
+                // 정렬 파라미터
+                if (this.sortBy) {
+                    params.sortBy = this.sortBy;
+                    params.sortDirection = this.sortDirection || 'ASC';
+                }
+
+                this.itemsPerPage = params.size;
+
+                $.ajax({
+                    url: PAGE_CONFIG.apiEndpoint,
+                    method: 'GET',
+                    data: params,
+                    success: (response) => {
+                        if (response.success && response.data) {
+                            const pageData = response.data;
+                            DataTable.setData('#tableContainer', pageData.content || []);
+
+                            this.totalItems = pageData.totalElements || 0;
+                            this.itemsPerPage = params.size;
+
+                            Pagination.update('#pagination', {
+                                currentPage: this.currentPage,
+                                totalItems: this.totalItems,
+                                itemsPerPage: this.itemsPerPage
+                            });
+                        } else {
+                            DataTable.setData('#tableContainer', []);
+                            Pagination.reset('#pagination');
+                        }
+                    },
+                    error: (xhr) => {
+                        console.error('Failed to load errors:', xhr);
+                        Toast.error('오류코드 목록을 불러오는데 실패했습니다.');
+                        DataTable.setData('#tableContainer', []);
+                        Pagination.reset('#pagination');
+                    }
+                });
+            },
+
+            openHandlerModal: function(errorCode, errorTitle) {
+                if (typeof HandlerModal !== 'undefined') {
+                    HandlerModal.open(errorCode, errorTitle);
+                }
+            },
+
+            exportExcel: function() {
+                const params = {};
+                const searchField = $('#searchField').val();
+                const searchValue = $('#searchValue').val();
+                const trxId = $('#trxId').val();
+                const handleAppId = $('#handleAppId').val();
+                if (searchField && searchValue) {
+                    params.searchField = searchField;
+                    params.searchValue = searchValue;
+                }
+                if (trxId) params.trxId = trxId;
+                if (handleAppId) params.handleAppId = handleAppId;
+                if (this.sortBy) {
+                    params.sortBy = this.sortBy;
+                    params.sortDirection = this.sortDirection || 'ASC';
+                }
+                const qs = $.param(params);
+                window.location.href = API_BASE_URL + '/errors/export' + (qs ? '?' + qs : '');
+            },
+
+            printTable: function() {
+                const printColumns = PAGE_CONFIG.table.columns
+                    .filter(col => !col.render)
+                    .map(col => ({ key: col.key, label: col.label }));
+                const data = DataTable.getData('#tableContainer');
+                PrintUtil.print({ title: '오류코드 목록', columns: printColumns, data: data });
+            }
+        };
+
+        // 기존 Errors 객체와의 호환성 유지
+        window.Errors = {
+            load: function() { ErrorsPage.load(); },
+            viewDetail: function(errorCode) {
+                if (typeof ErrorModal !== 'undefined') {
+                    ErrorModal.openForEdit(errorCode);
+                }
+            },
+            openHandlerModal: function(errorCode, errorTitle) {
+                ErrorsPage.openHandlerModal(errorCode, errorTitle);
+            },
+            exportExcel: function() { ErrorsPage.exportExcel(); },
+            print: function() { ErrorsPage.printTable(); }
+        };
+
+        // 페이지 초기화
+        $(document).ready(function() {
+            ErrorsPage.init();
+        });
+        })();
+    </script>
+</div>
+</body>
+</html>

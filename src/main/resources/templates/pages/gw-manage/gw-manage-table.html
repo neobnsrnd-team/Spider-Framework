@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<div th:fragment="table" class="table-responsive">
+    <table class="table table-sm table-hover sp-data-grid" id="gatewayTable">
+        <thead class="table-light">
+        <tr>
+            <th class="col-w-180 sortable" data-sort="gwId">GATEWAY</th>
+            <th class="sortable" data-sort="gwDesc">G/W 설명</th>
+            <th class="col-w-280 sortable" data-sort="gwAppName">G/W 구현 APP명</th>
+            <th class="col-w-120 sortable" data-sort="ioType">어댑터/리스너</th>
+            <th class="col-w-80 sortable" data-sort="threadCount">THREAD</th>
+            <th class="col-w-110">관련기관</th>
+        </tr>
+        </thead>
+        <tbody id="gatewayTableBody">
+        <tr>
+            <td colspan="6" class="text-center py-4 text-body-secondary">
+                조회 버튼을 클릭하여 데이터를 불러오세요.
+            </td>
+        </tr>
+        </tbody>
+    </table>
+</div>
+</body>
+</html>

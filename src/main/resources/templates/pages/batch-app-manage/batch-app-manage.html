@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<div th:fragment="content">
+    <!-- 권한 플래그 (모달에서 사용) -->
+    <script th:inline="javascript">
+        var hasBatchAppWrite = /*[[${userAuthorities != null and userAuthorities.contains('BATCH_APP:W')}]]*/ false;
+    </script>
+
+    <!-- Search Section Header -->
+    <div class="page-header">
+        <h4 class="page-title">
+            <i class="bi bi-exclamation-circle-fill text-danger"></i>
+            검색조건
+        </h4>
+    </div>
+
+    <!-- Search Box -->
+    <div th:replace="~{pages/batch-app-manage/batch-app-manage-search :: search}"></div>
+
+    <!-- List Section Header + Toolbar -->
+    <div class="d-flex align-items-center justify-content-between mt-3">
+        <div class="page-header mb-0">
+            <h4 class="page-title mb-0">
+                <i class="bi bi-exclamation-circle-fill text-danger"></i>
+                리스트
+            </h4>
+        </div>
+        <div th:replace="~{fragments/page-content-layout :: toolbar}"></div>
+    </div>
+
+    <!-- Table -->
+    <div th:replace="~{pages/batch-app-manage/batch-app-manage-table :: table}"></div>
+
+    <!-- Pagination -->
+    <div th:replace="~{fragments/page-content-layout :: pagination}"></div>
+
+    <!-- Bottom Action Buttons -->
+    <div th:replace="~{pages/batch-app-manage/batch-app-manage-buttons :: buttons}"></div>
+
+    <!-- Batch App Modal -->
+    <div th:replace="~{pages/batch-app-manage/batch-app-manage-modal :: modal}"></div>
+
+    <!-- Batch App Modal Script -->
+    <th:block th:replace="~{pages/batch-app-manage/batch-app-manage-modal :: script}" />
+
+    <!-- Batch App Exec Modal -->
+    <div th:replace="~{pages/batch-app-manage/batch-app-manage-exec-modal :: modal}"></div>
+
+    <!-- Batch App Exec Modal Script -->
+    <th:block th:replace="~{pages/batch-app-manage/batch-app-manage-exec-modal :: script}" />
+
+    <!-- Batch App Script -->
+    <th:block th:replace="~{pages/batch-app-manage/batch-app-manage-script :: script}" />
+</div>
+</body>
+</html>

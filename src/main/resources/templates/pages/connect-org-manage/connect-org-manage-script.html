@@ -1,0 +1,1771 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<th:block th:fragment="script">
+<script>
+    // 중복 로드 방지
+    if (typeof window.interfaceMntInitialized === 'undefined') {
+        window.interfaceMntInitialized = true;
+
+        function parseIntSafe(value) {
+            const num = parseInt(value, 10);
+            return Number.isNaN(num) ? null : num;
+        }
+
+        function isValidTime(value) {
+            if (!value || value.length !== 4) return false;
+            if (!/^[0-9]{4}$/.test(value)) return false;
+            const hh = parseInt(value.substring(0, 2), 10);
+            const mm = parseInt(value.substring(2, 4), 10);
+            return hh >= 0 && hh <= 23 && mm >= 0 && mm <= 59;
+        }
+
+        function isValidGwId(value) {
+            return /^[A-Za-z0-9_]+$/.test(value || '');
+        }
+
+        function isValidIpv4(value) {
+            if (!value) return false;
+            const parts = value.split('.');
+            if (parts.length !== 4) return false;
+            for (const part of parts) {
+                if (!/^[0-9]{1,3}$/.test(part)) return false;
+                const num = parseInt(part, 10);
+                if (num < 0 || num > 255) return false;
+            }
+            return true;
+        }
+
+        function isValidPort(value) {
+            if (!/^[0-9]+$/.test(value || '')) return false;
+            const port = parseInt(value, 10);
+            return port >= 1 && port <= 65535;
+        }
+
+        const trxTypeOptionState = {
+            options: [],
+            loaded: false,
+            loading: false,
+            callbacks: []
+        };
+
+        function normalizeTrxTypeOptions(rawOptions) {
+            if (!Array.isArray(rawOptions)) {
+                return [];
+            }
+            return rawOptions.map(option => {
+                const trxType = (option.trxType || option.code || '').toString();
+                if (!trxType) {
+                    return null;
+                }
+                const label = option.trxTypeName || option.name || trxTypeLabelFallback(trxType);
+                return {
+                    trxType: trxType,
+                    trxTypeName: label
+                };
+            }).filter(Boolean);
+        }
+
+        function loadTrxTypeOptions(callback) {
+            if (trxTypeOptionState.loaded) {
+                if (typeof callback === 'function') {
+                    callback();
+                }
+                return;
+            }
+
+            if (typeof callback === 'function') {
+                trxTypeOptionState.callbacks.push(callback);
+            }
+
+            if (trxTypeOptionState.loading) {
+                return;
+            }
+
+            trxTypeOptionState.loading = true;
+            $.ajax({
+                url: API_BASE_URL + '/transports/options/trx-types',
+                method: 'GET',
+                success: (res) => {
+                    trxTypeOptionState.options = normalizeTrxTypeOptions(res.data || []);
+                    trxTypeOptionState.loaded = true;
+                    trxTypeOptionState.loading = false;
+                    const callbacks = trxTypeOptionState.callbacks.slice();
+                    trxTypeOptionState.callbacks = [];
+                    callbacks.forEach(cb => cb());
+                },
+                error: (xhr) => {
+                    console.error('Failed to load trx type options:', xhr);
+                    trxTypeOptionState.options = [];
+                    trxTypeOptionState.loaded = true;
+                    trxTypeOptionState.loading = false;
+                    const callbacks = trxTypeOptionState.callbacks.slice();
+                    trxTypeOptionState.callbacks = [];
+                    callbacks.forEach(cb => cb());
+                }
+            });
+        }
+
+        function buildTrxTypeOptions(selectedValue, includeAllOption) {
+            let html = '';
+            if (includeAllOption) {
+                html += '<option value="">전체</option>';
+            }
+            if (!trxTypeOptionState.options.length) {
+                if (!includeAllOption) {
+                    html += '<option value="">선택</option>';
+                }
+                if (selectedValue) {
+                    html += `<option value="${HtmlUtils.escape(selectedValue)}" selected>${HtmlUtils.escape(trxTypeLabel(selectedValue))}</option>`;
+                }
+                return html;
+            }
+            const hasSelected = selectedValue
+                ? trxTypeOptionState.options.some(option => option.trxType === selectedValue)
+                : true;
+            if (selectedValue && !hasSelected) {
+                html += `<option value="${HtmlUtils.escape(selectedValue)}" selected>${HtmlUtils.escape(trxTypeLabel(selectedValue))}</option>`;
+            }
+            trxTypeOptionState.options.forEach(option => {
+                const selected = option.trxType === selectedValue ? 'selected' : '';
+                const label = option.trxTypeName || trxTypeLabelFallback(option.trxType);
+                html += `<option value="${HtmlUtils.escape(option.trxType)}" ${selected}>${HtmlUtils.escape(label)}</option>`;
+            });
+            return html;
+        }
+
+        function populateTrxTypeSelect($select, selectedValue, includeAllOption) {
+            $select.empty();
+            $select.append(buildTrxTypeOptions(selectedValue, includeAllOption));
+            if (selectedValue) {
+                $select.val(selectedValue);
+            }
+        }
+
+        function trxTypeLabelFallback(code) {
+            const map = {
+                '1': 'ONLINE',
+                '2': 'BATCH',
+                '3': 'ASYNC',
+                '4': 'ASYNC 비온라인',
+                '5': '전문변환',
+                '6': 'POS',
+                '7': 'FHM',
+                '8': 'RETRY'
+            };
+            return map[code] || code || '';
+        }
+
+        function trxTypeLabel(code) {
+            if (!code) {
+                return '';
+            }
+            const match = trxTypeOptionState.options.find(option => option.trxType === code);
+            if (match) {
+                return match.trxTypeName || code;
+            }
+            return trxTypeLabelFallback(code);
+        }
+
+        function ioTypeLabel(code) {
+            switch (code) {
+                case 'O': return '어댑터(송신)';
+                case 'I': return '리스너(수신)';
+                case 'Q': return 'REQUEST';
+                case 'S': return 'RESPONSE';
+                default: return code || '';
+            }
+        }
+
+        function reqResLabel(code) {
+            switch (code) {
+                case 'Q': return '요청';
+                case 'S': return '응답';
+                default: return code || '';
+            }
+        }
+
+        function operModeLabel(code) {
+            switch (code) {
+                case 'D': return '개발';
+                case 'T': return '테스트';
+                case 'R': return '운영';
+                default: return code || '';
+            }
+        }
+
+        function markDirty($row) {
+            $row.data('dirty', true);
+        }
+
+        function isRowDirty($row) {
+            return $row.data('dirty') === true;
+        }
+
+        function normalizeValue(value) {
+            if (value === null || value === undefined) {
+                return '';
+            }
+            return String(value).trim();
+        }
+
+        function hasDiff(original, data, fields) {
+            if (!original) {
+                return true;
+            }
+            return fields.some(field => normalizeValue(original[field]) !== normalizeValue(data[field]));
+        }
+
+        function markRowForDelete($row) {
+            $row.addClass('marked-for-deletion');
+            $row.addClass('sp-row-deleted');
+            $row.find('input, select, button').prop('disabled', true);
+        }
+
+        function resetRowDeleteStyle($row) {
+            $row.removeClass('marked-for-deletion');
+            $row.removeClass('sp-row-deleted');
+            $row.find('input, select, button').prop('disabled', false);
+        }
+
+        function makeFieldsClickToEdit(containerSelector) {
+            const $container = $(containerSelector);
+            const setReadonly = ($field) => {
+                if ($field.is('select')) {
+                    $field.prop('disabled', true);
+                } else {
+                    $field.prop('readonly', true);
+                }
+                $field.data('editing', false);
+            };
+            $container.find('.editable-field').each(function() {
+                setReadonly($(this));
+            });
+            $container.off('click', '.editable-field').on('click', '.editable-field', function(e) {
+                const $field = $(this);
+                if ($field.data('editing')) return;
+                if ($field.is('[data-pk]')) return;
+                $container.find('.editable-field').not($field).each(function() {
+                    setReadonly($(this));
+                });
+                if ($field.is('select')) {
+                    $field.prop('disabled', false);
+                } else {
+                    $field.prop('readonly', false);
+                }
+                $field.data('editing', true);
+                setTimeout(() => $field.focus(), 0);
+                e.stopPropagation();
+            });
+            $container.off('blur', '.editable-field').on('blur', '.editable-field', function() {
+                setReadonly($(this));
+            });
+        }
+
+        function focusFirstEditable($row) {
+            const $first = $row.find('.editable-field').first();
+            if (!$first.length) return;
+            if ($first.is('select')) {
+                $first.prop('disabled', false);
+            } else {
+                $first.prop('readonly', false);
+            }
+            $first.data('editing', true);
+            setTimeout(() => $first.focus(), 0);
+        }
+
+        // Namespace
+        window.InterfaceMnt = window.InterfaceMnt || {};
+
+        // ------------------------------
+        // Orgs (Main)
+        // ------------------------------
+        InterfaceMnt.Orgs = {
+            currentPage: 1,
+            totalItems: 0,
+            itemsPerPage: 20,
+            sortBy: null,
+            sortDirection: null,
+            currentRows: [],
+
+            init: function() {
+                this.bind();
+                this.search();
+            },
+
+            bind: function() {
+                $('#btnRefresh').off('click').on('click', () => {
+                    this.load();
+                });
+
+                $('#btnExcel').off('click').on('click', () => {
+                    this.exportExcel();
+                });
+
+                $('#btnPrint').off('click').on('click', () => {
+                    this.printTable();
+                });
+
+                $('#orgPageSize').on('change', () => {
+                    this.itemsPerPage = parseInt($('#orgPageSize').val(), 10) || 20;
+                    this.currentPage = 1;
+                    this.search();
+                });
+
+                $('#orgTable thead th[data-sort]').each((_, th) => {
+                    const $th = $(th);
+                    $th.addClass('sortable');
+                    $th.off('click').on('click', () => {
+                        const sortKey = $th.data('sort');
+                        if (!sortKey) return;
+                        if (this.sortBy === sortKey) {
+                            if (this.sortDirection === 'ASC') {
+                                this.sortDirection = 'DESC';
+                            } else {
+                                this.sortBy = null;
+                                this.sortDirection = null;
+                            }
+                        } else {
+                            this.sortBy = sortKey;
+                            this.sortDirection = 'ASC';
+                        }
+                        this.updateSortIndicators();
+                        this.currentPage = 1;
+                        this.load(); // 서버 사이드 정렬
+                    });
+                });
+
+                $('#orgSelectAll').on('change', function() {
+                    const checked = $(this).is(':checked');
+                    $('#orgTableBody').find('input.row-check').prop('checked', checked);
+                });
+
+                $('#orgTableBody').on('change', '.editable-field', function() {
+                    markDirty($(this).closest('tr'));
+                });
+
+                $('#orgTableBody').on('click', '.gateway-btn', function() {
+                    const $row = $(this).closest('tr');
+                    const orgId = $row.data('org-id') || $row.find('td:eq(2) input').val();
+                    if (orgId) {
+                        InterfaceMnt.Gateway.open(orgId);
+                    }
+                });
+
+                $('#orgTableBody').on('click', '.handler-btn', function() {
+                    const $row = $(this).closest('tr');
+                    const orgId = $row.data('org-id') || $row.find('td:eq(2) input').val();
+                    if (orgId) {
+                        InterfaceMnt.Handler.open(orgId);
+                    }
+                });
+
+                $('#btnExcel').off('click').on('click', () => {
+                    window.location.href = API_BASE_URL + '/orgs/export';
+                });
+
+                $('#btnPrint').off('click').on('click', () => {
+                    const columns = [
+                        { key: 'orgId', label: '기관ID' },
+                        { key: 'orgName', label: '기관명' },
+                        { key: 'orgDesc', label: '기관설명' },
+                        { key: 'startTime', label: '시작시간' },
+                        { key: 'endTime', label: '종료시간' },
+                        { key: 'xmlRootTag', label: 'XML ROOT TAG' }
+                    ];
+                    PrintUtil.print({ title: '연계기관 목록', columns: columns, data: this.currentRows });
+                });
+            },
+
+            search: function() {
+                this.currentPage = 1;
+                this.load();
+            },
+
+            load: function() {
+                const searchField = $('#orgSearchField').val();
+                const searchValue = $('#orgSearchKeyword').val();
+
+                const data = {
+                    page: this.currentPage,
+                    size: this.itemsPerPage,
+                    searchField: searchField,
+                    searchValue: searchValue
+                };
+
+                if (this.sortBy) {
+                    data.sortBy = this.sortBy;
+                }
+                if (this.sortDirection) {
+                    data.sortDirection = this.sortDirection;
+                }
+
+                $.ajax({
+                    url: API_BASE_URL + '/orgs/page',
+                    method: 'GET',
+                    data: data,
+                    success: (res) => {
+                        const pageData = res.data;
+                        this.totalItems = pageData.totalElements || 0;
+                        this.currentRows = pageData.content || [];
+                        this.renderTable(this.currentRows); // 서버에서 정렬된 데이터 사용
+                        this.updateSortIndicators();
+                        this.renderPagination();
+                    },
+                    error: (xhr) => {
+                        console.error('Failed to load orgs:', xhr);
+                        Toast.error('기관 목록을 불러오는데 실패했습니다.');
+                    }
+                });
+            },
+
+            renderTable: function(rows) {
+                const tbody = $('#orgTableBody');
+                tbody.empty();
+
+                const renderRows = rows || [];
+                if (renderRows.length === 0) {
+                    tbody.append(`
+                        <tr>
+                            <td colspan="10" class="text-center py-4 text-body-secondary">조회된 데이터가 없습니다.</td>
+                        </tr>
+                    `);
+                    return;
+                }
+
+                renderRows.forEach(row => {
+                    const tr = this.buildRow(row, false);
+                    tbody.append(tr);
+                });
+
+                makeFieldsClickToEdit('#orgTableBody');
+            },
+
+            getSortedRows: function() {
+                if (!this.sortBy || !this.sortDirection) {
+                    return this.currentRows || [];
+                }
+                const direction = this.sortDirection === 'DESC' ? -1 : 1;
+                const rows = [...(this.currentRows || [])];
+                return rows.sort((a, b) => {
+                    const aVal = this.getSortValue(a, this.sortBy);
+                    const bVal = this.getSortValue(b, this.sortBy);
+                    return this.compareValues(aVal, bVal) * direction;
+                });
+            },
+
+            getSortValue: function(row, key) {
+                if (!row) return '';
+                return row[key] ?? '';
+            },
+
+            compareValues: function(aVal, bVal) {
+                const aEmpty = aVal === null || aVal === undefined || aVal === '';
+                const bEmpty = bVal === null || bVal === undefined || bVal === '';
+                if (aEmpty && bEmpty) return 0;
+                if (aEmpty) return 1;
+                if (bEmpty) return -1;
+                return String(aVal).localeCompare(String(bVal), 'ko', { numeric: true, sensitivity: 'base' });
+            },
+
+            updateSortIndicators: function() {
+                const headers = $('#orgTable thead th.sortable');
+                headers.removeClass('sort-asc sort-desc');
+                if (!this.sortBy || !this.sortDirection) return;
+                headers.filter(`[data-sort="${this.sortBy}"]`)
+                    .addClass(this.sortDirection === 'ASC' ? 'sort-asc' : 'sort-desc');
+            },
+
+            buildRow: function(row, isNew) {
+                const tr = $('<tr></tr>');
+                if (isNew) {
+                    tr.addClass('new-row');
+                    tr.data('is-new', true);
+                } else {
+                    tr.data('original', row);
+                }
+
+                const orgIdValue = HtmlUtils.escape(row.orgId || '');
+                const orgNameValue = HtmlUtils.escape(row.orgName || '');
+                const orgDescValue = HtmlUtils.escape(row.orgDesc || '');
+                const startTimeValue = HtmlUtils.escape(row.startTime || '');
+                const endTimeValue = HtmlUtils.escape(row.endTime || '');
+                const xmlRootValue = HtmlUtils.escape(row.xmlRootTag || '');
+
+                const readonlyAttr = isNew ? '' : 'readonly data-pk';
+                const orgIdInput = `<input type="text" class="editable-field" value="${orgIdValue}" ${readonlyAttr}>`;
+
+                tr.append(`<td><input type="checkbox" class="row-check" value="${orgIdValue}"></td>`);
+                tr.append('<td></td>');
+                tr.append(`<td>${orgIdInput}</td>`);
+                tr.append(`<td><input type="text" class="editable-field" value="${orgNameValue}"></td>`);
+                tr.append(`<td><input type="text" class="editable-field" value="${orgDescValue}"></td>`);
+                tr.append(`<td><input type="text" class="editable-field" value="${startTimeValue}" maxlength="4"></td>`);
+                tr.append(`<td><input type="text" class="editable-field" value="${endTimeValue}" maxlength="4"></td>`);
+                tr.append(`<td><input type="text" class="editable-field" value="${xmlRootValue}"></td>`);
+                tr.append(`
+                    <td>
+                        <button class="btn btn-outline-secondary btn-sm gateway-btn" type="button">GATEWAY</button>
+                    </td>
+                `);
+                tr.append(`
+                    <td>
+                        <button class="btn btn-outline-secondary btn-sm handler-btn" type="button">핸들러</button>
+                    </td>
+                `);
+
+                tr.data('org-id', row.orgId || '');
+
+                return tr;
+            },
+
+            renderPagination: function() {
+                const totalPages = Math.ceil(this.totalItems / this.itemsPerPage);
+                const pagination = $('#pagination');
+                pagination.empty();
+
+                pagination.append(`
+                    <li class="page-item ${this.currentPage === 1 ? 'disabled' : ''}">
+                        <a class="page-link" href="#" onclick="InterfaceMnt.Orgs.changePage(1); return false;">
+                            <i class="bi bi-chevron-double-left"></i>
+                        </a>
+                    </li>
+                    <li class="page-item ${this.currentPage === 1 ? 'disabled' : ''}">
+                        <a class="page-link" href="#" onclick="InterfaceMnt.Orgs.changePage(${this.currentPage - 1}); return false;">
+                            <i class="bi bi-chevron-left"></i>
+                        </a>
+                    </li>
+                `);
+
+                const maxButtons = 5;
+                let startPage = Math.max(1, this.currentPage - Math.floor(maxButtons / 2));
+                let endPage = Math.min(totalPages, startPage + maxButtons - 1);
+
+                if (endPage - startPage + 1 < maxButtons) {
+                    startPage = Math.max(1, endPage - maxButtons + 1);
+                }
+
+                for (let i = startPage; i <= endPage; i++) {
+                    pagination.append(`
+                        <li class="page-item ${i === this.currentPage ? 'active' : ''}">
+                            <a class="page-link" href="#" onclick="InterfaceMnt.Orgs.changePage(${i}); return false;">${i}</a>
+                        </li>
+                    `);
+                }
+
+                pagination.append(`
+                    <li class="page-item ${this.currentPage === totalPages || totalPages === 0 ? 'disabled' : ''}">
+                        <a class="page-link" href="#" onclick="InterfaceMnt.Orgs.changePage(${this.currentPage + 1}); return false;">
+                            <i class="bi bi-chevron-right"></i>
+                        </a>
+                    </li>
+                    <li class="page-item ${this.currentPage === totalPages || totalPages === 0 ? 'disabled' : ''}">
+                        <a class="page-link" href="#" onclick="InterfaceMnt.Orgs.changePage(${totalPages}); return false;">
+                            <i class="bi bi-chevron-double-right"></i>
+                        </a>
+                    </li>
+                `);
+
+                const start = this.totalItems === 0 ? 0 : (this.currentPage - 1) * this.itemsPerPage + 1;
+                const end = Math.min(this.currentPage * this.itemsPerPage, this.totalItems);
+                $('#pageInfo').text(`${start} - ${end} of ${this.totalItems} items`);
+            },
+
+            changePage: function(page) {
+                const totalPages = Math.ceil(this.totalItems / this.itemsPerPage);
+                if (page < 1 || page > totalPages) return;
+                this.currentPage = page;
+                this.load();
+            },
+
+            exportExcel: function() {
+                const params = {
+                    searchField: $('#orgSearchField').val(),
+                    searchValue: $('#orgSearchKeyword').val()
+                };
+                if (this.sortBy) {
+                    params.sortBy = this.sortBy;
+                    params.sortDirection = this.sortDirection || 'ASC';
+                }
+                const qs = $.param ? $.param(params) : new URLSearchParams(params).toString();
+                window.location.href = API_BASE_URL + '/orgs/export' + (qs ? '?' + qs : '');
+            },
+
+            printTable: function() {
+                const columns = [
+                    { key: 'orgId', label: '기관ID' },
+                    { key: 'orgName', label: '기관명' },
+                    { key: 'orgDesc', label: '기관설명' },
+                    { key: 'startTime', label: '시작시간' },
+                    { key: 'endTime', label: '종료시간' },
+                    { key: 'xmlRootTag', label: 'XMLROOT TAG' }
+                ];
+                PrintUtil.print({ title: '연계기관 목록', columns: columns, data: this.currentRows });
+            },
+
+            addRow: function() {
+                const tbody = $('#orgTableBody');
+                const row = this.buildRow({}, true);
+                tbody.prepend(row);
+                makeFieldsClickToEdit('#orgTableBody');
+                focusFirstEditable(tbody.find('tr').first());
+            },
+
+            deleteSelected: function() {
+                const selected = $('#orgTableBody').find('input.row-check:checked');
+                if (selected.length === 0) {
+                    Toast.warning('삭제할 항목을 선택하세요.');
+                    return;
+                }
+
+                Toast.confirm(`선택한 ${selected.length}개 항목을 삭제하시겠습니까?`, () => {
+                    selected.each(function() {
+                        const row = $(this).closest('tr');
+                        if (row.data('is-new')) {
+                            row.remove();
+                        } else {
+                            markRowForDelete(row);
+                        }
+                    });
+
+                    $('#orgSelectAll').prop('checked', false);
+                });
+            },
+
+            collectRowData: function($row) {
+                const values = $row.find('input.editable-field').map(function() {
+                    return $(this).val();
+                }).get();
+
+                return {
+                    orgId: (values[0] || '').trim(),
+                    orgName: (values[1] || '').trim(),
+                    orgDesc: (values[2] || '').trim(),
+                    startTime: (values[3] || '').trim(),
+                    endTime: (values[4] || '').trim(),
+                    xmlRootTag: (values[5] || '').trim()
+                };
+            },
+
+            validateRowData: function(data) {
+                if (!data.orgId) {
+                    Toast.warning('기관ID는 필수입니다.');
+                    return false;
+                }
+                if (data.orgId.length > 10 || /\s/.test(data.orgId)) {
+                    Toast.info('기관ID는 공백 없이 10자 이내여야 합니다.');
+                    return false;
+                }
+                if (!data.orgName || data.orgName.length > 50) {
+                    Toast.warning('기관명은 필수이며 50자 이내여야 합니다.');
+                    return false;
+                }
+                if (data.orgDesc && data.orgDesc.length > 200) {
+                    Toast.info('기관설명은 200자 이내여야 합니다.');
+                    return false;
+                }
+                if (!isValidTime(data.startTime)) {
+                    Toast.info('시작시간은 HHmm 형식이어야 합니다.');
+                    return false;
+                }
+                if (!isValidTime(data.endTime)) {
+                    Toast.info('종료시간은 HHmm 형식이어야 합니다.');
+                    return false;
+                }
+                if (data.xmlRootTag && data.xmlRootTag.length > 20) {
+                    Toast.info('XML ROOT TAG는 20자 이내여야 합니다.');
+                    return false;
+                }
+                return true;
+            },
+
+            saveChanges: function() {
+                const upserts = [];
+                const deleteOrgIds = [];
+                let validationError = false;
+
+                $('#orgTableBody tr').each((_, row) => {
+                    const $row = $(row);
+                    if ($row.hasClass('marked-for-deletion')) {
+                        const orgId = $row.find('input.row-check').val();
+                        if (orgId && !orgId.startsWith('new_')) {
+                            deleteOrgIds.push(orgId);
+                        }
+                        return;
+                    }
+
+                    const rowData = this.collectRowData($row);
+                    const isNew = $row.data('is-new') === true;
+                    const original = $row.data('original');
+                    const isDirty = isNew || isRowDirty($row) || hasDiff(original, rowData, [
+                        'orgId', 'orgName', 'orgDesc', 'startTime', 'endTime', 'xmlRootTag'
+                    ]);
+
+                    if (isDirty) {
+                        if (!this.validateRowData(rowData)) {
+                            validationError = true;
+                            return false;
+                        }
+                        upserts.push(rowData);
+                    }
+                });
+
+                if (validationError) return;
+
+                if (upserts.length === 0 && deleteOrgIds.length === 0) {
+                    Toast.warning('저장할 변경사항이 없습니다.');
+                    return;
+                }
+
+                Toast.confirm('변경사항을 저장하시겠습니까?', () => {
+                    $.ajax({
+                        url: API_BASE_URL + '/orgs/batch',
+                        method: 'POST',
+                        contentType: 'application/json',
+                        data: JSON.stringify({
+                            upserts: upserts,
+                            deleteOrgIds: deleteOrgIds
+                        }),
+                        success: () => {
+                            Toast.success('저장되었습니다.');
+                            this.search();
+                        },
+                        error: (xhr) => {
+                            console.error('Failed to save orgs:', xhr);
+                            Toast.error('저장에 실패했습니다.');
+                        }
+                    });
+                });
+            }
+        };
+
+        // ------------------------------
+        // Gateway Mapping Modal (Transport)
+        // ------------------------------
+        InterfaceMnt.Gateway = {
+            orgId: null,
+            currentPage: 1,
+            itemsPerPage: 20,
+            totalItems: 0,
+            sortBy: null,
+            sortDirection: null,
+            currentRows: [],
+
+            open: function(orgId) {
+                this.orgId = orgId;
+                bootstrap.Modal.getOrCreateInstance(document.getElementById('gatewayModal')).show();
+                this.populateOrgSelect(orgId);
+                this.bind();
+                loadTrxTypeOptions(() => {
+                    this.search();
+                });
+            },
+            close: function() {
+                bootstrap.Modal.getInstance(document.getElementById('gatewayModal'))?.hide();
+                this.orgId = null;
+            },
+            bind: function() {
+                $('#gwSelectAll').off('change').on('change', function() {
+                    const checked = $(this).is(':checked');
+                    $('#gatewayTableBody').find('input.row-check').prop('checked', checked);
+                });
+
+                $('#gatewayTable thead th[data-sort]').each((_, th) => {
+                    const $th = $(th);
+                    $th.addClass('sortable');
+                    $th.off('click').on('click', () => {
+                        const sortKey = $th.data('sort');
+                        if (!sortKey) return;
+                        if (this.sortBy === sortKey) {
+                            if (this.sortDirection === 'ASC') {
+                                this.sortDirection = 'DESC';
+                            } else {
+                                this.sortBy = null;
+                                this.sortDirection = null;
+                            }
+                        } else {
+                            this.sortBy = sortKey;
+                            this.sortDirection = 'ASC';
+                        }
+                        this.updateSortIndicators();
+                        this.currentPage = 1;
+                        this.load(); // 서버 사이드 정렬
+                    });
+                });
+
+                $('#gwPageSize').off('change').on('change', () => {
+                    this.itemsPerPage = parseInt($('#gwPageSize').val(), 10) || 20;
+                    this.currentPage = 1;
+                    this.search();
+                });
+
+                $('#gatewayTableBody').off('change', '.editable-field').on('change', '.editable-field', function() {
+                    markDirty($(this).closest('tr'));
+                });
+            },
+            populateOrgSelect: function(orgId) {
+                const sel = $('#gwOrgId');
+                sel.empty();
+                sel.append('<option value="">전체</option>');
+
+                // 모든 기관 목록 가져오기
+                $.ajax({
+                    url: API_BASE_URL + '/orgs/page',
+                    method: 'GET',
+                    data: { page: 1, size: 1000 }, // 전체 기관 조회
+                    success: (res) => {
+                        const orgs = res.data.content || [];
+                        orgs.forEach(org => {
+                            const selected = org.orgId === orgId ? 'selected' : '';
+                            sel.append(`<option value="${HtmlUtils.escape(org.orgId)}" ${selected}>${HtmlUtils.escape(org.orgId)} - ${HtmlUtils.escape(org.orgName)}</option>`);
+                        });
+                    },
+                    error: (xhr) => {
+                        console.error('Failed to load org list:', xhr);
+                        // 실패시 현재 선택된 기관만 표시
+                        sel.append(`<option value="${HtmlUtils.escape(orgId)}" selected>${HtmlUtils.escape(orgId)}</option>`);
+                    }
+                });
+            },
+            search: function() {
+                this.currentPage = 1;
+                this.load();
+            },
+            load: function() {
+                const selectedOrgId = $('#gwOrgId').val() || this.orgId || '';
+                if (!selectedOrgId) {
+                    Toast.warning('기관을 선택하세요.');
+                    return;
+                }
+
+                const data = {
+                    orgId: selectedOrgId,
+                    ioType: $('#gwIoType').val(),
+                    reqResType: $('#gwReqResType').val(),
+                    page: this.currentPage,
+                    size: this.itemsPerPage
+                };
+
+                if (this.sortBy) {
+                    data.sortBy = this.sortBy;
+                }
+                if (this.sortDirection) {
+                    data.sortDirection = this.sortDirection;
+                }
+
+                $.ajax({
+                    url: API_BASE_URL + '/transports',
+                    method: 'GET',
+                    data: data,
+                    success: (res) => {
+                        const pageData = res.data;
+                        this.totalItems = pageData.totalElements || 0;
+                        this.currentRows = pageData.content || [];
+                        this.renderTable(this.currentRows); // 서버에서 정렬된 데이터 사용
+                        this.updateSortIndicators();
+                    },
+                    error: (xhr) => {
+                        console.error('Failed to load gateways:', xhr);
+                        Toast.error('GATEWAY 맵핑을 불러오는데 실패했습니다.');
+                    }
+                });
+            },
+            renderTable: function(rows) {
+                const tbody = $('#gatewayTableBody');
+                tbody.empty();
+                const renderRows = rows || [];
+                if (renderRows.length === 0) {
+                    tbody.append(`<tr><td colspan="7" class="text-center py-4 text-body-secondary">조회된 데이터가 없습니다.</td></tr>`);
+                    return;
+                }
+                renderRows.forEach(row => {
+                    const tr = this.buildRow(row, false);
+                    tbody.append(tr);
+                });
+
+                makeFieldsClickToEdit('#gatewayTableBody');
+            },
+
+            getSortedRows: function() {
+                if (!this.sortBy || !this.sortDirection) {
+                    return this.currentRows || [];
+                }
+                const direction = this.sortDirection === 'DESC' ? -1 : 1;
+                const rows = [...(this.currentRows || [])];
+                return rows.sort((a, b) => {
+                    const aVal = a?.[this.sortBy] ?? '';
+                    const bVal = b?.[this.sortBy] ?? '';
+                    return this.compareValues(aVal, bVal) * direction;
+                });
+            },
+
+            compareValues: function(aVal, bVal) {
+                const aEmpty = aVal === null || aVal === undefined || aVal === '';
+                const bEmpty = bVal === null || bVal === undefined || bVal === '';
+                if (aEmpty && bEmpty) return 0;
+                if (aEmpty) return 1;
+                if (bEmpty) return -1;
+                return String(aVal).localeCompare(String(bVal), 'ko', { numeric: true, sensitivity: 'base' });
+            },
+
+            updateSortIndicators: function() {
+                const headers = $('#gatewayTable thead th.sortable');
+                headers.removeClass('sort-asc sort-desc');
+                if (!this.sortBy || !this.sortDirection) return;
+                headers.filter(`[data-sort="${this.sortBy}"]`)
+                    .addClass(this.sortDirection === 'ASC' ? 'sort-asc' : 'sort-desc');
+            },
+            buildRow: function(row, isNew) {
+                const tr = $('<tr></tr>');
+                if (isNew) {
+                    tr.addClass('new-row');
+                    tr.data('is-new', true);
+                } else {
+                    tr.data('original', row);
+                }
+
+                const selectedOrgId = $('#gwOrgId').val() || this.orgId || '';
+                const orgId = HtmlUtils.escape(row.orgId || selectedOrgId);
+                const ioType = row.ioType || '';
+                const reqResType = row.reqResType || '';
+                const trxType = row.trxType || '';
+                const gwId = HtmlUtils.escape(row.gwId || '');
+
+                tr.append(`<td><input type="checkbox" class="row-check" value="${orgId}"></td>`);
+                tr.append('<td></td>');
+                tr.append(`<td>${orgId}</td>`);
+
+                if (ioType === 'I' || ioType === 'O' || isNew) {
+                    tr.append(`
+                        <td>
+                            <select class="editable-field" data-field="ioType">
+                                <option value="O" ${ioType === 'O' ? 'selected' : ''}>어댑터(송신)</option>
+                                <option value="I" ${ioType === 'I' ? 'selected' : ''}>리스너(수신)</option>
+                            </select>
+                        </td>
+                    `);
+                } else {
+                    tr.append(`<td data-io-type="${HtmlUtils.escape(ioType)}" data-field="ioType">${HtmlUtils.escape(ioTypeLabel(ioType))}</td>`);
+                }
+
+                tr.append(`
+                    <td>
+                        <select class="editable-field" data-field="reqResType">
+                            <option value="Q" ${reqResType === 'Q' ? 'selected' : ''}>요청</option>
+                            <option value="S" ${reqResType === 'S' ? 'selected' : ''}>응답</option>
+                        </select>
+                    </td>
+                `);
+
+                tr.append(`
+                    <td>
+                        <select class="editable-field" data-field="trxType">
+                            ${buildTrxTypeOptions(trxType, false)}
+                        </select>
+                    </td>
+                `);
+
+                tr.append(`<td><input type="text" class="editable-field" data-field="gwId" value="${gwId}"></td>`);
+
+                return tr;
+            },
+            addRow: function() {
+                const tbody = $('#gatewayTableBody');
+                const row = this.buildRow({ orgId: this.orgId }, true);
+                tbody.prepend(row);
+                makeFieldsClickToEdit('#gatewayTableBody');
+                focusFirstEditable(tbody.find('tr').first());
+            },
+            deleteSelected: function() {
+                const selected = $('#gatewayTableBody').find('input.row-check:checked');
+                if (selected.length === 0) {
+                    Toast.warning('삭제할 항목을 선택하세요.');
+                    return;
+                }
+                Toast.confirm(`선택한 ${selected.length}개 항목을 삭제하시겠습니까?`, () => {
+                    selected.each(function() {
+                        const row = $(this).closest('tr');
+                        if (row.data('is-new')) {
+                            row.remove();
+                        } else {
+                            markRowForDelete(row);
+                        }
+                    });
+
+                    $('#gwSelectAll').prop('checked', false);
+                });
+            },
+            collectRowData: function($row) {
+                let ioType = null;
+                const ioCell = $row.find('[data-field="ioType"]');
+                if (ioCell.is('select')) {
+                    ioType = ioCell.val();
+                } else {
+                    ioType = ioCell.data('io-type');
+                }
+
+                const reqResType = $row.find('[data-field="reqResType"]').val();
+                const trxType = $row.find('[data-field="trxType"]').val();
+                const gwId = $row.find('[data-field="gwId"]').val();
+
+                return {
+                    orgId: this.orgId,
+                    ioType: ioType,
+                    reqResType: reqResType,
+                    trxType: trxType,
+                    gwId: (gwId || '').trim()
+                };
+            },
+            validateRowData: function(data) {
+                if (!data.ioType) {
+                    Toast.warning('어댑터/리스너를 선택하세요.');
+                    return false;
+                }
+                if (!data.reqResType) {
+                    Toast.warning('요청/응답을 선택하세요.');
+                    return false;
+                }
+                if (!data.trxType) {
+                    Toast.warning('거래유형을 선택하세요.');
+                    return false;
+                }
+                if (data.gwId && data.gwId.length > 20) {
+                    Toast.info('GATEWAY ID는 20자 이내여야 합니다.');
+                    return false;
+                }
+                return true;
+            },
+            saveChanges: function() {
+                const upserts = [];
+                const deletes = [];
+
+                $('#gatewayTableBody tr').each((_, row) => {
+                    const $row = $(row);
+                    if ($row.hasClass('marked-for-deletion')) {
+                        const rowData = this.collectRowData($row);
+                        deletes.push(rowData);
+                        return;
+                    }
+
+                    const rowData = this.collectRowData($row);
+                    const isNew = $row.data('is-new') === true;
+                    const original = $row.data('original');
+                    const isDirty = isNew || isRowDirty($row) || hasDiff(original, rowData, [
+                        'orgId', 'ioType', 'reqResType', 'trxType', 'gwId'
+                    ]);
+
+                    if (isDirty) {
+                        if (!this.validateRowData(rowData)) {
+                            return false;
+                        }
+                        upserts.push(rowData);
+                    }
+                });
+
+                if (upserts.length === 0 && deletes.length === 0) {
+                    Toast.warning('저장할 변경사항이 없습니다.');
+                    return;
+                }
+
+                Toast.confirm('변경사항을 저장하시겠습니까?', () => {
+                    $.ajax({
+                        url: API_BASE_URL + '/transports/batch?orgId=' + encodeURIComponent(this.orgId),
+                        method: 'POST',
+                        contentType: 'application/json',
+                        data: JSON.stringify({
+                            upserts: upserts,
+                            deletes: deletes
+                        }),
+                        success: () => {
+                            Toast.success('저장되었습니다.');
+                            this.search();
+                        },
+                        error: (xhr) => {
+                            console.error('Failed to save gateway mappings:', xhr);
+                            Toast.error('저장에 실패했습니다.');
+                        }
+                    });
+                });
+            },
+            register: function() {
+                InterfaceMnt.GatewayManage.open(null, () => {
+                    this.search();
+                    if (window.GatewayList && typeof GatewayList.load === 'function') {
+                        GatewayList.load(1);
+                    }
+                });
+            }
+        };
+
+        // ------------------------------
+        // Handler Modal
+        // ------------------------------
+        InterfaceMnt.Handler = {
+            orgId: null,
+            currentPage: 1,
+            itemsPerPage: 20,
+            totalItems: 0,
+            sortBy: null,
+            sortDirection: null,
+            currentRows: [],
+
+            open: function(orgId) {
+                this.orgId = orgId;
+                bootstrap.Modal.getOrCreateInstance(document.getElementById('handlerModal')).show();
+                this.populateOrgSelect(orgId);
+                this.bind();
+                loadTrxTypeOptions(() => {
+                    populateTrxTypeSelect($('#hdTrxType'), '', true);
+                    this.search();
+                });
+            },
+            close: function() {
+                bootstrap.Modal.getInstance(document.getElementById('handlerModal'))?.hide();
+                this.orgId = null;
+            },
+            bind: function() {
+                $('#hdSelectAll').off('change').on('change', function() {
+                    const checked = $(this).is(':checked');
+                    $('#handlerTableBody').find('input.row-check').prop('checked', checked);
+                });
+
+                $('#handlerTable thead th[data-sort]').each((_, th) => {
+                    const $th = $(th);
+                    $th.addClass('sortable');
+                    $th.off('click').on('click', () => {
+                        const sortKey = $th.data('sort');
+                        if (!sortKey) return;
+                        if (this.sortBy === sortKey) {
+                            if (this.sortDirection === 'ASC') {
+                                this.sortDirection = 'DESC';
+                            } else {
+                                this.sortBy = null;
+                                this.sortDirection = null;
+                            }
+                        } else {
+                            this.sortBy = sortKey;
+                            this.sortDirection = 'ASC';
+                        }
+                        this.updateSortIndicators();
+                        this.currentPage = 1;
+                        this.load(); // 서버 사이드 정렬
+                    });
+                });
+
+                $('#hdPageSize').off('change').on('change', () => {
+                    this.itemsPerPage = parseInt($('#hdPageSize').val(), 10) || 20;
+                    this.currentPage = 1;
+                    this.search();
+                });
+
+                $('#handlerTableBody').off('change', '.editable-field').on('change', '.editable-field', function() {
+                    markDirty($(this).closest('tr'));
+                });
+            },
+            populateOrgSelect: function(orgId) {
+                const sel = $('#hdOrgId');
+                sel.empty();
+                sel.append('<option value="">전체</option>');
+
+                // 모든 기관 목록 가져오기
+                $.ajax({
+                    url: API_BASE_URL + '/orgs/page',
+                    method: 'GET',
+                    data: { page: 1, size: 1000 }, // 전체 기관 조회
+                    success: (res) => {
+                        const orgs = res.data.content || [];
+                        orgs.forEach(org => {
+                            const selected = org.orgId === orgId ? 'selected' : '';
+                            sel.append(`<option value="${HtmlUtils.escape(org.orgId)}" ${selected}>${HtmlUtils.escape(org.orgId)} - ${HtmlUtils.escape(org.orgName)}</option>`);
+                        });
+                    },
+                    error: (xhr) => {
+                        console.error('Failed to load org list:', xhr);
+                        // 실패시 현재 선택된 기관만 표시
+                        sel.append(`<option value="${HtmlUtils.escape(orgId)}" selected>${HtmlUtils.escape(orgId)}</option>`);
+                    }
+                });
+            },
+            search: function() {
+                this.currentPage = 1;
+                this.load();
+            },
+            load: function() {
+                const selectedOrgId = $('#hdOrgId').val() || this.orgId || '';
+                if (!selectedOrgId) {
+                    Toast.warning('기관을 선택하세요.');
+                    return;
+                }
+
+                const data = {
+                    orgId: selectedOrgId,
+                    trxType: $('#hdTrxType').val(),
+                    page: this.currentPage,
+                    size: this.itemsPerPage
+                };
+
+                if (this.sortBy) {
+                    data.sortBy = this.sortBy;
+                }
+                if (this.sortDirection) {
+                    data.sortDirection = this.sortDirection;
+                }
+
+                $.ajax({
+                    url: API_BASE_URL + '/message-handlers',
+                    method: 'GET',
+                    data: data,
+                    success: (res) => {
+                        const pageData = res.data;
+                        this.totalItems = pageData.totalElements || 0;
+                        this.currentRows = pageData.content || [];
+                        this.renderTable(this.currentRows); // 서버에서 정렬된 데이터 사용
+                        this.updateSortIndicators();
+                    },
+                    error: (xhr) => {
+                        console.error('Failed to load handlers:', xhr);
+                        Toast.error('전문처리 핸들러를 불러오는데 실패했습니다.');
+                    }
+                });
+            },
+            renderTable: function(rows) {
+                const tbody = $('#handlerTableBody');
+                tbody.empty();
+                const renderRows = rows || [];
+                if (renderRows.length === 0) {
+                    tbody.append(`<tr><td colspan="10" class="text-center py-4 text-body-secondary">조회된 데이터가 없습니다.</td></tr>`);
+                    return;
+                }
+                renderRows.forEach(row => {
+                    const tr = this.buildRow(row, false);
+                    tbody.append(tr);
+                });
+
+                makeFieldsClickToEdit('#handlerTableBody');
+            },
+
+            getSortedRows: function() {
+                if (!this.sortBy || !this.sortDirection) {
+                    return this.currentRows || [];
+                }
+                const direction = this.sortDirection === 'DESC' ? -1 : 1;
+                const rows = [...(this.currentRows || [])];
+                return rows.sort((a, b) => {
+                    const aVal = this.getSortValue(a, this.sortBy);
+                    const bVal = this.getSortValue(b, this.sortBy);
+                    return this.compareValues(aVal, bVal) * direction;
+                });
+            },
+
+            getSortValue: function(row, key) {
+                if (!row) return '';
+                return row[key] ?? '';
+            },
+
+            compareValues: function(aVal, bVal) {
+                const aEmpty = aVal === null || aVal === undefined || aVal === '';
+                const bEmpty = bVal === null || bVal === undefined || bVal === '';
+                if (aEmpty && bEmpty) return 0;
+                if (aEmpty) return 1;
+                if (bEmpty) return -1;
+                return String(aVal).localeCompare(String(bVal), 'ko', { numeric: true, sensitivity: 'base' });
+            },
+
+            updateSortIndicators: function() {
+                const headers = $('#handlerTable thead th.sortable');
+                headers.removeClass('sort-asc sort-desc');
+                if (!this.sortBy || !this.sortDirection) return;
+                headers.filter(`[data-sort="${this.sortBy}"]`)
+                    .addClass(this.sortDirection === 'ASC' ? 'sort-asc' : 'sort-desc');
+            },
+            buildRow: function(row, isNew) {
+                const tr = $('<tr></tr>');
+                if (isNew) {
+                    tr.addClass('new-row');
+                    tr.data('is-new', true);
+                } else {
+                    tr.data('original', row);
+                }
+
+                const orgId = HtmlUtils.escape(row.orgId || this.orgId || '');
+                tr.data('org-id', row.orgId || this.orgId || '');
+                const trxType = row.trxType || '';
+                const ioType = row.ioType || '';
+                const operModeType = row.operModeType || '';
+                const handler = HtmlUtils.escape(row.handler || '');
+                const handlerDesc = HtmlUtils.escape(row.handlerDesc || '');
+                const stopYn = row.stopYn || 'N';
+                const active = stopYn === 'N';
+
+                tr.append(`<td><input type="checkbox" class="row-check" value="${orgId}"></td>`);
+                tr.append('<td></td>');
+                tr.append(`<td>${orgId}</td>`);
+                tr.append(`
+                    <td>
+                        <select class="editable-field" data-field="trxType">
+                            ${buildTrxTypeOptions(trxType, false)}
+                        </select>
+                    </td>
+                `);
+
+                if (ioType === 'I' || ioType === 'O' || isNew) {
+                    tr.append(`
+                        <td>
+                            <select class="editable-field" data-field="ioType">
+                                <option value="O" ${ioType === 'O' ? 'selected' : ''}>어댑터(송신)</option>
+                                <option value="I" ${ioType === 'I' ? 'selected' : ''}>리스너(수신)</option>
+                            </select>
+                        </td>
+                    `);
+                } else {
+                    tr.append(`<td data-io-type="${HtmlUtils.escape(ioType)}" data-field="ioType">${HtmlUtils.escape(ioTypeLabel(ioType))}</td>`);
+                }
+
+                tr.append(`
+                    <td>
+                        <select class="editable-field" data-field="operModeType">
+                            <option value="D" ${operModeType === 'D' ? 'selected' : ''}>개발</option>
+                            <option value="T" ${operModeType === 'T' ? 'selected' : ''}>테스트</option>
+                            <option value="R" ${operModeType === 'R' ? 'selected' : ''}>운영</option>
+                        </select>
+                    </td>
+                `);
+
+                tr.append(`<td><input type="text" class="editable-field handler-input" data-field="handler" value="${handler}"></td>`);
+                tr.append(`<td><input type="text" class="editable-field" data-field="handlerDesc" value="${handlerDesc}"></td>`);
+                tr.append(`<td><span class="status-icon ${active ? 'active' : 'inactive'}"></span></td>`);
+                tr.append(`
+                    <td>
+                        <button class="btn btn-xs btn-outline-secondary" onclick="InterfaceMnt.Handler.toggleStatus(this); return false;">${active ? '중지' : '해제'}</button>
+                    </td>
+                `);
+                tr.data('stopYn', stopYn);
+
+                return tr;
+            },
+            toggleStatus: function(button) {
+                const row = $(button).closest('tr');
+                const current = row.data('stopYn') || 'N';
+                const next = current === 'N' ? 'Y' : 'N';
+                row.data('stopYn', next);
+                markDirty(row);
+                row.find('.status-icon').removeClass('active inactive')
+                    .addClass(next === 'N' ? 'active' : 'inactive');
+                $(button).text(next === 'N' ? '중지' : '해제');
+            },
+            addRow: function() {
+                const tbody = $('#handlerTableBody');
+                const selectedOrgId = $('#hdOrgId').val() || this.orgId || '';
+                const row = this.buildRow({ orgId: selectedOrgId, stopYn: 'N' }, true);
+                tbody.prepend(row);
+                makeFieldsClickToEdit('#handlerTableBody');
+                focusFirstEditable(tbody.find('tr').first());
+            },
+            deleteSelected: function() {
+                const selected = $('#handlerTableBody').find('input.row-check:checked');
+                if (selected.length === 0) {
+                    Toast.warning('삭제할 항목을 선택하세요.');
+                    return;
+                }
+                Toast.confirm(`선택한 ${selected.length}개 항목을 삭제하시겠습니까?`, () => {
+                    selected.each(function() {
+                        const row = $(this).closest('tr');
+                        if (row.data('is-new')) {
+                            row.remove();
+                        } else {
+                            markRowForDelete(row);
+                        }
+                    });
+
+                    $('#hdSelectAll').prop('checked', false);
+                });
+            },
+            collectRowData: function($row) {
+                const rowOrgId = $row.data('org-id') || this.orgId || '';
+                const trxType = $row.find('[data-field="trxType"]').val();
+                const operModeType = $row.find('[data-field="operModeType"]').val();
+                const handler = $row.find('[data-field="handler"]').val();
+                const handlerDesc = $row.find('[data-field="handlerDesc"]').val();
+
+                let ioType = null;
+                const ioCell = $row.find('[data-field="ioType"]');
+                if (ioCell.is('select')) {
+                    ioType = ioCell.val();
+                } else {
+                    ioType = ioCell.data('io-type');
+                }
+
+                return {
+                    orgId: rowOrgId,
+                    trxType: trxType,
+                    ioType: ioType,
+                    operModeType: operModeType,
+                    handler: (handler || '').trim(),
+                    handlerDesc: (handlerDesc || '').trim(),
+                    stopYn: $row.data('stopYn') || 'N'
+                };
+            },
+            validateRowData: function(data) {
+                if (!data.trxType) {
+                    Toast.warning('거래유형을 선택하세요.');
+                    return false;
+                }
+                if (!data.ioType) {
+                    Toast.warning('어댑터/리스너를 선택하세요.');
+                    return false;
+                }
+                if (!data.operModeType) {
+                    Toast.warning('운영모드를 선택하세요.');
+                    return false;
+                }
+                if (!data.handler) {
+                    Toast.warning('전문처리핸들러는 필수입니다.');
+                    return false;
+                }
+                return true;
+            },
+            saveChanges: function() {
+                const upserts = [];
+                const deletes = [];
+
+                $('#handlerTableBody tr').each((_, row) => {
+                    const $row = $(row);
+                    if ($row.hasClass('marked-for-deletion')) {
+                        const rowData = this.collectRowData($row);
+                        deletes.push(rowData);
+                        return;
+                    }
+
+                    const rowData = this.collectRowData($row);
+                    const isNew = $row.data('is-new') === true;
+                    const original = $row.data('original');
+                    const isDirty = isNew || isRowDirty($row) || hasDiff(original, rowData, [
+                        'orgId', 'trxType', 'ioType', 'operModeType', 'handler', 'handlerDesc', 'stopYn'
+                    ]);
+
+                    if (isDirty) {
+                        if (!this.validateRowData(rowData)) {
+                            return false;
+                        }
+                        upserts.push(rowData);
+                    }
+                });
+
+                if (upserts.length === 0 && deletes.length === 0) {
+                    Toast.warning('저장할 변경사항이 없습니다.');
+                    return;
+                }
+
+                Toast.confirm('변경사항을 저장하시겠습니까?', () => {
+                    $.ajax({
+                        url: API_BASE_URL + '/message-handlers/batch?orgId=' + encodeURIComponent(this.orgId),
+                        method: 'POST',
+                        contentType: 'application/json',
+                        data: JSON.stringify({
+                            upserts: upserts,
+                            deletes: deletes
+                        }),
+                        success: () => {
+                            Toast.success('저장되었습니다.');
+                            this.search();
+                        },
+                        error: (xhr) => {
+                            console.error('Failed to save handlers:', xhr);
+                            Toast.error('저장에 실패했습니다.');
+                        }
+                    });
+                });
+            }
+        };
+
+        // ------------------------------
+        // Gateway Management Modal
+        // ------------------------------
+        InterfaceMnt.GatewayManage = {
+            gwId: null,
+            isNew: true,
+            onSaved: null,
+
+            open: function(gwId, onSaved) {
+                this.gwId = gwId || null;
+                this.isNew = !gwId;
+                this.onSaved = typeof onSaved === 'function' ? onSaved : null;
+
+                bootstrap.Modal.getOrCreateInstance(document.getElementById('gatewayManageModal')).show();
+                this.bind();
+
+                if (this.isNew) {
+                    this.resetForm();
+                    this.renderSystemTable([]);
+                } else {
+                    this.loadGatewayDetail(gwId);
+                }
+            },
+            close: function() {
+                bootstrap.Modal.getInstance(document.getElementById('gatewayManageModal'))?.hide();
+                this.gwId = null;
+                this.onSaved = null;
+            },
+            bind: function() {
+                $('#gwSystemSelectAll').off('change').on('change', function() {
+                    const checked = $(this).is(':checked');
+                    $('#gatewaySystemTableBody').find('input.row-check').prop('checked', checked);
+                });
+
+                $('#gatewaySystemTableBody').off('change', '.editable-field').on('change', '.editable-field', function() {
+                    markDirty($(this).closest('tr'));
+                });
+            },
+            resetForm: function() {
+                $('#gwManageId').val('').prop('readonly', false);
+                $('#gwManageName').val('');
+                $('#gwManageProps').val('');
+                $('#gwManageDesc').val('');
+                $('#gwManageAppName').val('');
+                $('#gwManageIoType').val('O');
+                $('#gwManageThread').val('1');
+            },
+            loadGatewayDetail: function(gwId) {
+                $.ajax({
+                    url: API_BASE_URL + '/gateways/' + encodeURIComponent(gwId),
+                    method: 'GET',
+                    success: (res) => {
+                        const data = res.data;
+                        const gateway = data.gateway || {};
+                        $('#gwManageId').val(gateway.gwId || '').prop('readonly', true);
+                        $('#gwManageName').val(gateway.gwName || '');
+                        $('#gwManageProps').val(gateway.gwProperties || '');
+                        $('#gwManageDesc').val(gateway.gwDesc || '');
+                        $('#gwManageAppName').val(gateway.gwAppName || '');
+                        $('#gwManageIoType').val(gateway.ioType || 'O');
+                        $('#gwManageThread').val(gateway.threadCount || 1);
+                        this.renderSystemTable(data.systems || []);
+                    },
+                    error: (xhr) => {
+                        console.error('Failed to load gateway detail:', xhr);
+                        Toast.error('Gateway 정보를 불러오는데 실패했습니다.');
+                    }
+                });
+            },
+            renderSystemTable: function(rows) {
+                const tbody = $('#gatewaySystemTableBody');
+                tbody.empty();
+                if (!rows || rows.length === 0) {
+                    tbody.append(`<tr><td colspan="10" class="text-center py-4 text-body-secondary">조회된 데이터가 없습니다.</td></tr>`);
+                    return;
+                }
+                rows.forEach(row => {
+                    const tr = this.buildSystemRow(row, false);
+                    tbody.append(tr);
+                });
+
+                makeFieldsClickToEdit('#gatewaySystemTableBody');
+            },
+            buildSystemRow: function(row, isNew) {
+                const tr = $('<tr></tr>');
+                if (isNew) {
+                    tr.addClass('new-row');
+                    tr.data('is-new', true);
+                } else {
+                    tr.data('original', row);
+                }
+
+                const systemId = HtmlUtils.escape(row.systemId || '');
+                const ip = HtmlUtils.escape(row.ip || '');
+                const port = HtmlUtils.escape(row.port || '');
+                const systemDesc = HtmlUtils.escape(row.systemDesc || '');
+                const operModeType = row.operModeType || 'D';
+                const stopYn = row.stopYn || 'N';
+                const was = HtmlUtils.escape(row.appliedWasInstance || '');
+
+                tr.append(`<td><input type="checkbox" class="row-check" value="${systemId}"></td>`);
+                tr.append('<td></td>');
+                tr.append(`<td><input type="text" class="editable-field" data-field="systemId" value="${systemId}"></td>`);
+                tr.append(`<td><input type="text" class="editable-field" data-field="ip" value="${ip}"></td>`);
+                tr.append(`<td><input type="text" class="editable-field" data-field="port" value="${port}"></td>`);
+                tr.append(`<td><input type="text" class="editable-field" data-field="systemDesc" value="${systemDesc}"></td>`);
+                tr.append(`
+                    <td>
+                        <select class="editable-field" data-field="operModeType">
+                            <option value="D" ${operModeType === 'D' ? 'selected' : ''}>개발</option>
+                            <option value="T" ${operModeType === 'T' ? 'selected' : ''}>테스트</option>
+                            <option value="R" ${operModeType === 'R' ? 'selected' : ''}>운영</option>
+                        </select>
+                    </td>
+                `);
+                tr.append(`
+                    <td>
+                        <select class="editable-field" data-field="stopYn">
+                            <option value="N" ${stopYn === 'N' ? 'selected' : ''}>정상</option>
+                            <option value="Y" ${stopYn === 'Y' ? 'selected' : ''}>중지</option>
+                        </select>
+                    </td>
+                `);
+                tr.append('<td><button class="btn btn-xs btn-outline-secondary" disabled>TODO</button></td>');
+                tr.append(`<td><input type="text" class="editable-field" data-field="appliedWasInstance" value="${was}"></td>`);
+
+                return tr;
+            },
+            addRow: function() {
+                const tbody = $('#gatewaySystemTableBody');
+                const row = this.buildSystemRow({}, true);
+                tbody.prepend(row);
+                makeFieldsClickToEdit('#gatewaySystemTableBody');
+                focusFirstEditable(tbody.find('tr').first());
+            },
+            deleteSelected: function() {
+                const selected = $('#gatewaySystemTableBody').find('input.row-check:checked');
+                if (selected.length === 0) {
+                    Toast.warning('삭제할 항목을 선택하세요.');
+                    return;
+                }
+                Toast.confirm(`선택한 ${selected.length}개 항목을 삭제하시겠습니까?`, () => {
+                    selected.each(function() {
+                        const row = $(this).closest('tr');
+                        if (row.data('is-new')) {
+                            row.remove();
+                        } else {
+                            markRowForDelete(row);
+                        }
+                    });
+
+                    $('#gwSystemSelectAll').prop('checked', false);
+                });
+            },
+            collectSystemRowData: function($row) {
+                return {
+                    gwId: this.gwId,
+                    systemId: ($row.find('[data-field=\"systemId\"]').val() || '').trim(),
+                    ip: ($row.find('[data-field=\"ip\"]').val() || '').trim(),
+                    port: ($row.find('[data-field=\"port\"]').val() || '').trim(),
+                    systemDesc: ($row.find('[data-field=\"systemDesc\"]').val() || '').trim(),
+                    operModeType: $row.find('[data-field=\"operModeType\"]').val(),
+                    stopYn: $row.find('[data-field=\"stopYn\"]').val(),
+                    appliedWasInstance: ($row.find('[data-field=\"appliedWasInstance\"]').val() || '').trim()
+                };
+            },
+            validateGatewayForm: function() {
+                const gwId = ($('#gwManageId').val() || '').trim();
+                const gwName = ($('#gwManageName').val() || '').trim();
+                const threadCount = parseIntSafe($('#gwManageThread').val());
+                const ioType = $('#gwManageIoType').val();
+
+                if (!gwId) {
+                    Toast.warning('GW ID는 필수입니다.');
+                    return false;
+                }
+                if (gwId.length > 20 || !isValidGwId(gwId)) {
+                    Toast.info('GW ID는 영문/숫자/언더스코어 20자 이내여야 합니다.');
+                    return false;
+                }
+                if (!gwName) {
+                    Toast.warning('G/W 명은 필수입니다.');
+                    return false;
+                }
+                if (threadCount == null || threadCount < 1 || threadCount > 999) {
+                    Toast.info('THREAD 수는 1~999 범위여야 합니다.');
+                    return false;
+                }
+                if (ioType !== 'I' && ioType !== 'O') {
+                    Toast.warning('송/수신구분을 선택하세요.');
+                    return false;
+                }
+                return true;
+            },
+            validateSystemRowData: function(data) {
+                if (!data.systemId) {
+                    Toast.warning('System ID는 필수입니다.');
+                    return false;
+                }
+                if (!isValidIpv4(data.ip)) {
+                    Toast.info('IP 형식이 올바르지 않습니다.');
+                    return false;
+                }
+                if (!isValidPort(data.port)) {
+                    Toast.info('PORT 값이 올바르지 않습니다.');
+                    return false;
+                }
+                return true;
+            },
+            saveChanges: function() {
+                if (!this.validateGatewayForm()) {
+                    return;
+                }
+
+                const gatewayPayload = {
+                    gwId: ($('#gwManageId').val() || '').trim(),
+                    gwName: ($('#gwManageName').val() || '').trim(),
+                    gwProperties: ($('#gwManageProps').val() || '').trim(),
+                    gwDesc: ($('#gwManageDesc').val() || '').trim(),
+                    gwAppName: ($('#gwManageAppName').val() || '').trim(),
+                    ioType: $('#gwManageIoType').val(),
+                    threadCount: parseIntSafe($('#gwManageThread').val())
+                };
+
+                const systemUpserts = [];
+                const systemDeletes = [];
+
+                $('#gatewaySystemTableBody tr').each((_, row) => {
+                    const $row = $(row);
+                    if ($row.hasClass('marked-for-deletion')) {
+                        const rowData = this.collectSystemRowData($row);
+                        systemDeletes.push({ gwId: gatewayPayload.gwId, systemId: rowData.systemId });
+                        return;
+                    }
+
+                    const rowData = this.collectSystemRowData($row);
+                    const isNew = $row.data('is-new') === true;
+                    const original = $row.data('original');
+                    const isDirty = isNew || isRowDirty($row) || hasDiff(original, rowData, [
+                        'gwId', 'systemId', 'ip', 'port', 'systemDesc', 'operModeType', 'stopYn', 'appliedWasInstance'
+                    ]);
+
+                    if (isDirty) {
+                        if (!this.validateSystemRowData(rowData)) {
+                            return false;
+                        }
+                        systemUpserts.push(rowData);
+                    }
+                });
+
+                Toast.confirm('변경사항을 저장하시겠습니까?', () => {
+                    $.ajax({
+                        url: API_BASE_URL + '/gateways/with-systems',
+                        method: 'POST',
+                        contentType: 'application/json',
+                        data: JSON.stringify({
+                            gateway: gatewayPayload,
+                            systems: {
+                                upserts: systemUpserts,
+                                deletes: systemDeletes
+                            }
+                        }),
+                        success: () => {
+                            Toast.success('저장되었습니다.');
+                            this.close();
+                            if (typeof this.onSaved === 'function') {
+                                this.onSaved();
+                            }
+                        },
+                        error: (xhr) => {
+                            console.error('Failed to save gateway with systems:', xhr);
+                            Toast.error('저장에 실패했습니다.');
+                        }
+                    });
+                });
+            }
+        };
+
+    }
+
+    // Auto init when fragment HTML is injected (TabManager reloads the content)
+    $(function() {
+        if ($('#orgTable').length > 0 && window.InterfaceMnt && InterfaceMnt.Orgs) {
+            InterfaceMnt.Orgs.itemsPerPage = parseInt($('#orgPageSize').val(), 10) || InterfaceMnt.Orgs.itemsPerPage;
+            InterfaceMnt.Orgs.init();
+        }
+    });
+</script>
+</th:block>
+</body>
+</html>

@@ -1,0 +1,527 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<div th:fragment="modal">
+    <!-- Modal -->
+    <div class="modal fade" id="codeModal" tabindex="-1" aria-labelledby="codeModalLabel" aria-hidden="true"
+         data-bs-backdrop="static" data-bs-keyboard="false">
+        <div class="modal-dialog modal-dialog-centered modal-lg">
+            <div class="modal-content">
+                <!-- Modal Header -->
+                <div class="modal-header py-2">
+                    <h5 class="modal-title" id="codeModalLabel">코드 정보</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+
+                <!-- Modal Body -->
+                <div class="modal-body">
+                    <!-- Section Title -->
+                    <div class="modal-section-title">
+                        <i class="bi bi-exclamation-circle-fill text-danger"></i>
+                        <span>코드 수정</span>
+                    </div>
+
+                    <!-- Form -->
+                    <form id="codeForm">
+                        <div class="mb-3">
+                            <!-- Row 1 -->
+                            <div class="row g-3 mb-2">
+                                <div class="col-md-6">
+                                    <label class="form-label small mb-1">코드그룹ID<span class="text-danger">*</span></label>
+                                    <select class="form-select form-select-sm" id="codeGroupId" name="codeGroupId" required>
+                                        <option value="">코드 그룹 선택</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label small mb-1">코드<span class="text-danger">*</span></label>
+                                    <input type="text" class="form-control form-control-sm" id="code" name="code"
+                                           maxlength="50" required>
+                                </div>
+                            </div>
+
+                            <!-- Row 2 -->
+                            <div class="row g-3 mb-2">
+                                <div class="col-md-6">
+                                    <label class="form-label small mb-1">코드명<span class="text-danger">*</span></label>
+                                    <input type="text" class="form-control form-control-sm" id="codeName" name="codeName"
+                                           maxlength="100" required>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label small mb-1">코드영문명<span class="text-danger">*</span></label>
+                                    <input type="text" class="form-control form-control-sm" id="codeEngname"
+                                           name="codeEngname" maxlength="300" required>
+                                </div>
+                            </div>
+
+                            <!-- Row 3 -->
+                            <div class="row g-3 mb-2">
+                                <div class="col-12">
+                                    <label class="form-label small mb-1">코드설명</label>
+                                    <input type="text" class="form-control form-control-sm" id="codeDesc" name="codeDesc"
+                                           maxlength="200">
+                                </div>
+                            </div>
+
+                            <!-- Row 4 -->
+                            <div class="row g-3 mb-2">
+                                <div class="col-md-6">
+                                    <label class="form-label small mb-1">정렬순서</label>
+                                    <input type="number" class="form-control form-control-sm text-center" id="sortOrder"
+                                           name="sortOrder" value="0">
+                                    <span class="code-count-info">* 등록된 코드: <span
+                                            id="registeredCodeCount">0</span></span>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label small mb-1">사용여부<span class="text-danger">*</span></label>
+                                    <select class="form-select form-select-sm" id="useYn" name="useYn" required>
+                                        <option value="Y">사용</option>
+                                        <option value="N">미사용</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- Modal Footer -->
+                <div class="modal-footer py-2">
+                    <button type="button" class="btn btn-primary btn-sm" id="btnSave"
+                            th:if="${userAuthorities != null and userAuthorities.contains('CODE_MANAGEMENT:W')}">
+                        <i class="bi bi-check-lg"></i> 저장
+                    </button>
+                    <button type="button" class="btn btn-danger btn-sm" id="btnDelete"
+                            th:if="${userAuthorities != null and userAuthorities.contains('CODE_MANAGEMENT:W')}">
+                        <i class="bi bi-trash"></i> 삭제
+                    </button>
+                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">
+                        <i class="bi bi-x-lg"></i> 닫기
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // IIFE to avoid global scope pollution
+        (function () {
+            window.CodeModal = {
+                mode: 'create', // 'create' or 'edit'
+                currentCodeGroupId: null,
+                currentCode: null,
+
+                /**
+                 * Open modal for creating new code
+                 */
+                openForCreate: function (codeGroupId) {
+                    console.log('openForCreate called with codeGroupId:', codeGroupId);
+
+                    this.mode = 'create';
+                    this.currentCodeGroupId = null;
+                    this.currentCode = null;
+
+                    // Reset form
+                    $('#codeForm')[0].reset();
+
+                    // Set modal title
+                    $('#codeModalLabel').text('코드 정보');
+                    $('.modal-section-title span').text('코드 등록');
+
+                    // Load code groups for dropdown
+                    this.loadCodeGroups(codeGroupId);
+
+                    // Enable/disable fields
+                    $('#code').prop('readonly', false);
+                    $('#codeGroupId').prop('disabled', false); // Enable dropdown for selection
+
+                    // Show/hide buttons
+                    $('#btnDelete').hide();
+                    $('#btnSave').show();
+
+                    // Show modal
+                    bootstrap.Modal.getOrCreateInstance(document.getElementById('codeModal')).show();
+                },
+
+                /**
+                 * Open modal for editing existing code
+                 */
+                openForEdit: function (codeGroupId, code) {
+                    console.log('openForEdit called with:', codeGroupId, code);
+
+                    this.mode = 'edit';
+                    this.currentCodeGroupId = codeGroupId;
+                    this.currentCode = code;
+
+                    // Set modal title
+                    $('#codeModalLabel').text('코드 정보');
+                    $('.modal-section-title span').text('코드 수정');
+
+                    // Load code data (코드그룹 전체 조회 없이 현재 데이터만 로드)
+                    this.loadCodeDataForEdit(codeGroupId, code);
+
+                    // Code group ID and Code are readonly (Primary Key cannot be changed)
+                    $('#codeGroupId').prop('disabled', true);
+                    $('#code').prop('readonly', true);
+
+                    // Show/hide buttons
+                    $('#btnDelete').show();
+                    $('#btnSave').show();
+
+                    // Load registered code count
+                    this.loadCodeCount(codeGroupId);
+
+                    // Show modal
+                    bootstrap.Modal.getOrCreateInstance(document.getElementById('codeModal')).show();
+                },
+
+                /**
+                 * Load code data from server (legacy - with code group loading)
+                 */
+                loadCodeData: function (codeGroupId, code) {
+                    $.ajax({
+                        url: `${API_BASE_URL}/codes/${codeGroupId}/${code}`,
+                        method: 'GET',
+                        success: (response) => {
+                            if (response.success && response.data) {
+                                const data = response.data;
+
+                                // Load code groups first, then set the value
+                                this.loadCodeGroups(data.codeGroupId, () => {
+                                    $('#codeGroupId').val(data.codeGroupId || '');
+                                    $('#code').val(data.code || '');
+                                    $('#codeName').val(data.codeName || '');
+                                    $('#codeEngname').val(data.codeEngname || '');
+                                    $('#codeDesc').val(data.codeDesc || '');
+                                    $('#sortOrder').val(data.sortOrder !== null ? data.sortOrder : 0);
+                                    $('#useYn').val(data.useYn || 'Y');
+
+                                    // Disable dropdown in edit mode
+                                    $('#codeGroupId').prop('disabled', true);
+                                });
+                            }
+                        },
+                        error: (xhr) => {
+                            console.error('Failed to load code data:', xhr);
+                            Toast.error('코드 정보를 불러오는데 실패했습니다.');
+                            bootstrap.Modal.getInstance(document.getElementById('codeModal')).hide();
+                        }
+                    });
+                },
+
+                /**
+                 * Load code data for edit mode (without loading all code groups - 성능 최적화)
+                 */
+                loadCodeDataForEdit: function (codeGroupId, code) {
+                    $.ajax({
+                        url: `${API_BASE_URL}/codes/${codeGroupId}/${code}`,
+                        method: 'GET',
+                        success: (response) => {
+                            if (response.success && response.data) {
+                                const data = response.data;
+
+                                // 코드그룹 Select를 현재 값만 가지도록 설정 (전체 조회 없음)
+                                const dropdown = $('#codeGroupId');
+                                dropdown.empty();
+                                const displayName = data.codeGroupName
+                                    ? `${data.codeGroupName} (${data.codeGroupId})`
+                                    : data.codeGroupId;
+                                dropdown.append(`<option value="${data.codeGroupId}">${displayName}</option>`);
+                                dropdown.val(data.codeGroupId);
+
+                                // 폼 필드 설정
+                                $('#code').val(data.code || '');
+                                $('#codeName').val(data.codeName || '');
+                                $('#codeEngname').val(data.codeEngname || '');
+                                $('#codeDesc').val(data.codeDesc || '');
+                                $('#sortOrder').val(data.sortOrder !== null ? data.sortOrder : 0);
+                                $('#useYn').val(data.useYn || 'Y');
+                            }
+                        },
+                        error: (xhr) => {
+                            console.error('Failed to load code data:', xhr);
+                            Toast.error('코드 정보를 불러오는데 실패했습니다.');
+                            bootstrap.Modal.getInstance(document.getElementById('codeModal')).hide();
+                        }
+                    });
+                },
+
+                /**
+                 * Load code groups for dropdown
+                 */
+                loadCodeGroups: function (selectedCodeGroupId, callback) {
+                    $.ajax({
+                        url: `${API_BASE_URL}/code-groups`,
+                        method: 'GET',
+                        success: (response) => {
+                            const dropdown = $('#codeGroupId');
+                            dropdown.empty();
+                            dropdown.append('<option value="">코드 그룹 선택</option>');
+
+                            if (response.success && response.data) {
+                                response.data.forEach(group => {
+                                    dropdown.append(`<option value="${group.codeGroupId}">${group.codeGroupName} (${group.codeGroupId})</option>`);
+                                });
+
+                                // Set selected value if provided
+                                if (selectedCodeGroupId) {
+                                    dropdown.val(selectedCodeGroupId);
+                                    this.loadCodeCount(selectedCodeGroupId);
+                                }
+
+                                // Call callback if provided
+                                if (callback) callback();
+                            }
+                        },
+                        error: (xhr) => {
+                            console.error('Failed to load code groups:', xhr);
+                            Toast.error('코드 그룹 목록을 불러오는데 실패했습니다.');
+                        }
+                    });
+                },
+
+                /**
+                 * Load registered code count
+                 */
+                loadCodeCount: function (codeGroupId) {
+                    if (!codeGroupId) {
+                        $('#registeredCodeCount').text('0');
+                        return;
+                    }
+
+                    $.ajax({
+                        url: `${API_BASE_URL}/codes/count/${codeGroupId}`,
+                        method: 'GET',
+                        success: (response) => {
+                            if (response.success) {
+                                $('#registeredCodeCount').text(response.data || 0);
+                            }
+                        },
+                        error: () => {
+                            $('#registeredCodeCount').text('0');
+                        }
+                    });
+                },
+
+                /**
+                 * Save code (create or update)
+                 */
+                save: function () {
+                    console.log('Save button clicked! Mode:', this.mode);
+
+                    // Validate form
+                    if (!this.validateForm()) {
+                        return;
+                    }
+
+                    const formData = {
+                        codeGroupId: $('#codeGroupId').val(),
+                        code: $('#code').val(),
+                        codeName: $('#codeName').val(),
+                        codeEngname: $('#codeEngname').val(),
+                        codeDesc: $('#codeDesc').val(),
+                        sortOrder: parseInt($('#sortOrder').val()) || 0,
+                        useYn: $('#useYn').val()
+                    };
+
+                    console.log('Form data:', formData);
+
+                    if (this.mode === 'create') {
+                        this.createCode(formData);
+                    } else {
+                        this.updateCode(formData);
+                    }
+                },
+
+                /**
+                 * Validate form
+                 */
+                validateForm: function () {
+                    const codeGroupId = $('#codeGroupId').val().trim();
+                    const code = $('#code').val().trim();
+                    const codeName = $('#codeName').val().trim();
+                    const codeEngname = $('#codeEngname').val().trim();
+
+                    if (!codeGroupId) {
+                        Toast.warning('코드그룹ID를 입력해주세요.');
+                        $('#codeGroupId').focus();
+                        return false;
+                    }
+
+                    if (!code) {
+                        Toast.warning('코드를 입력해주세요.');
+                        $('#code').focus();
+                        return false;
+                    }
+
+                    if (!codeName) {
+                        Toast.warning('코드명을 입력해주세요.');
+                        $('#codeName').focus();
+                        return false;
+                    }
+
+                    if (!codeEngname) {
+                        Toast.warning('코드영문명을 입력해주세요.');
+                        $('#codeEngname').focus();
+                        return false;
+                    }
+
+                    return true;
+                },
+
+                /**
+                 * Create new code
+                 */
+                createCode: function (formData) {
+                    console.log('Creating code with data:', formData);
+
+                    $.ajax({
+                        url: `${API_BASE_URL}/codes`,
+                        method: 'POST',
+                        contentType: 'application/json',
+                        data: JSON.stringify(formData),
+                        success: (response) => {
+                            console.log('Create response:', response);
+                            if (response.success) {
+                                Toast.success('코드가 등록되었습니다.');
+                                bootstrap.Modal.getInstance(document.getElementById('codeModal')).hide();
+                                // Reload codes list
+                                if (typeof Codes !== 'undefined' && Codes.load) {
+                                    Codes.load();
+                                }
+                            } else {
+                                Toast.error(response.message || '코드 등록에 실패했습니다.');
+                            }
+                        },
+                        error: (xhr) => {
+                            console.error('Create error:', xhr);
+                            const errorMsg = xhr.responseJSON?.message || '코드 등록에 실패했습니다.';
+                            Toast.error(errorMsg);
+                        }
+                    });
+                },
+
+                /**
+                 * Update existing code
+                 */
+                updateCode: function (formData) {
+                    // Use the original code for the URL path
+                    const urlCodeGroupId = this.currentCodeGroupId;
+                    const urlCode = this.currentCode;
+
+                    console.log('Updating code:', {
+                        urlPath: `${urlCodeGroupId}/${urlCode}`,
+                        formData: formData
+                    });
+
+                    $.ajax({
+                        url: `${API_BASE_URL}/codes/${urlCodeGroupId}/${urlCode}`,
+                        method: 'PUT',
+                        contentType: 'application/json',
+                        data: JSON.stringify(formData),
+                        success: (response) => {
+                            console.log('Update response:', response);
+                            if (response.success) {
+                                Toast.success('코드가 수정되었습니다.');
+                                bootstrap.Modal.getInstance(document.getElementById('codeModal')).hide();
+
+                                // Update current references if code was changed
+                                this.currentCodeGroupId = formData.codeGroupId;
+                                this.currentCode = formData.code;
+
+                                // Reload codes list
+                                if (typeof Codes !== 'undefined' && Codes.load) {
+                                    Codes.load();
+                                }
+                            } else {
+                                Toast.error(response.message || '코드 수정에 실패했습니다.');
+                            }
+                        },
+                        error: (xhr) => {
+                            console.error('Update error:', xhr);
+                            const errorMsg = xhr.responseJSON?.message || '코드 수정에 실패했습니다.';
+                            Toast.error(errorMsg);
+                        }
+                    });
+                },
+
+                /**
+                 * Delete code
+                 */
+                delete: function () {
+                    console.log('Delete button clicked!');
+
+                    var self = this;
+                    Toast.confirm('정말 삭제하시겠습니까?', function () {
+                        $.ajax({
+                            url: API_BASE_URL + '/codes/' + self.currentCodeGroupId + '/' + self.currentCode,
+                            method: 'DELETE',
+                            success: function (response) {
+                                console.log('Delete response:', response);
+                                if (response.success) {
+                                    Toast.success('코드가 삭제되었습니다.');
+                                    bootstrap.Modal.getInstance(document.getElementById('codeModal')).hide();
+                                    if (typeof Codes !== 'undefined' && Codes.load) {
+                                        Codes.load();
+                                    }
+                                } else {
+                                    Toast.error(response.message || '코드 삭제에 실패했습니다.');
+                                }
+                            },
+                            error: function (xhr) {
+                                console.error('Delete error:', xhr);
+                                var errorMsg = xhr.responseJSON?.message || '코드 삭제에 실패했습니다.';
+                                Toast.error(errorMsg);
+                            }
+                        });
+                    });
+                }
+            };
+
+            // Event delegation for dynamically loaded content (backup)
+            $(document).on('click', '#btnSave', function (e) {
+                console.log('Save button clicked via EVENT DELEGATION');
+                e.preventDefault();
+                e.stopPropagation();
+                if (window.CodeModal) {
+                    window.CodeModal.save();
+                } else {
+                    console.error('CodeModal not found!');
+                }
+            });
+
+            $(document).on('click', '#btnDelete', function (e) {
+                console.log('Delete button clicked via EVENT DELEGATION');
+                e.preventDefault();
+                e.stopPropagation();
+                if (window.CodeModal) {
+                    window.CodeModal.delete();
+                } else {
+                    console.error('CodeModal not found!');
+                }
+            });
+
+            $(document).on('submit', '#codeForm', function (e) {
+                console.log('Form submitted via EVENT DELEGATION');
+                e.preventDefault();
+                if (window.CodeModal) {
+                    window.CodeModal.save();
+                } else {
+                    console.error('CodeModal not found!');
+                }
+            });
+
+            // Code group change event - update code count
+            $(document).on('change', '#codeGroupId', function (e) {
+                const codeGroupId = $(this).val();
+                console.log('Code group changed:', codeGroupId);
+                if (window.CodeModal) {
+                    window.CodeModal.loadCodeCount(codeGroupId);
+                }
+            });
+
+            // Log that script is loaded
+            console.log('CodeModal script loaded. CodeModal:', window.CodeModal);
+        })();
+    </script>
+</div>
+</body>
+</html>

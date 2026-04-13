@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+
+<!-- Message Add/Edit Modal -->
+<div th:fragment="modal" class="modal fade" id="messageModal" tabindex="-1" aria-hidden="true"
+     data-bs-backdrop="static" data-bs-keyboard="false">
+    <div class="modal-dialog modal-dialog-centered sp-modal-lg">
+    <div id="modalContainer" class="modal-content sp-modal-content-flex p-0 position-relative">
+
+        <!-- Resize handles -->
+        <div id="modalResizeTop"><div class="resize-grip"></div></div>
+        <div id="modalResizeLeft"><div class="resize-grip"></div></div>
+        <div id="modalResizeRight"><div class="resize-grip"></div></div>
+        <div id="modalResizeBottom"><div class="resize-grip"></div></div>
+
+        <!-- Modal Header -->
+        <div class="modal-header py-2">
+            <h6 class="modal-title" id="modalTitle">전문 등록</h6>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+
+        <!-- Modal Body -->
+        <div class="sp-modal-body-flex">
+
+            <!-- 기본정보 Section -->
+            <div class="modal-section mb-2 flex-shrink-0">
+                <div class="section-header">
+                    <i class="bi bi-caret-right-fill"></i>
+                    <span>기본정보</span>
+                </div>
+                    <table class="sp-form-table">
+                        <colgroup>
+                            <col class="col-w-110">
+                            <col>
+                            <col class="col-w-16">
+                            <col class="col-w-110">
+                            <col>
+                        </colgroup>
+                        <tbody>
+                            <!-- Row 1: 기관명 / 상위전문ID -->
+                            <tr>
+                                <th>기관명 <span class="text-danger">*</span></th>
+                                <td>
+                                    <select id="modalOrgId" class="form-select form-select-sm sp-form-select-inline">
+                                        <option value="">선택하세요</option>
+                                    </select>
+                                    <span class="error-message" id="orgIdError"></span>
+                                </td>
+                                <td></td>
+                                <th>상위전문ID</th>
+                                <td>
+                                    <select id="modalParentMessageId" class="form-select form-select-sm sp-form-select-inline">
+                                        <option value="">선택</option>
+                                    </select>
+                                    <span class="error-message" id="parentMessageIdError"></span>
+                                </td>
+                            </tr>
+                            <!-- Row 2: 전문ID / 전문명 -->
+                            <tr>
+                                <th>전문ID <span class="text-danger">*</span></th>
+                                <td>
+                                    <input type="text" id="modalMessageId" class="form-control form-control-sm fs-sm w-100"
+                                           maxlength="50" pattern="^[a-zA-Z0-9_-]+$"
+                                           title="영문, 숫자, 언더스코어(_), 하이픈(-)만 사용 가능합니다">
+                                    <span class="error-message" id="messageIdError"></span>
+                                </td>
+                                <td></td>
+                                <th>전문명 <span class="text-danger">*</span></th>
+                                <td>
+                                    <input type="text" id="modalMessageName" class="form-control form-control-sm fs-sm w-100"
+                                           maxlength="100">
+                                    <span class="error-message" id="messageNameError"></span>
+                                </td>
+                            </tr>
+                            <!-- Row 3: 전문설명 / 로그레벨 -->
+                            <tr>
+                                <th>전문설명</th>
+                                <td>
+                                    <input type="text" id="modalMessageDesc" class="form-control form-control-sm fs-sm w-100"
+                                           maxlength="200">
+                                </td>
+                                <td></td>
+                                <th>로그레벨</th>
+                                <td>
+                                    <select id="modalLogLevel" class="form-select form-select-sm sp-form-select-inline" >
+                                        <option value="H">H (헤더만 로깅)</option>
+                                        <option value="A">A (전체 로깅)</option>
+                                        <option value="N">N (사용안함)</option>
+                                    </select>
+                                </td>
+                            </tr>
+                            <!-- Row 4: 헤더전문여부 / 전문유형*+요청응답구분 -->
+                            <tr>
+                                <th>헤더전문여부</th>
+                                <td>
+                                    <select id="modalHeaderYn" class="form-select form-select-sm fs-sm w-150">
+                                        <option value="N">아니오 (N)</option>
+                                        <option value="Y">예 (Y)</option>
+                                    </select>
+                                </td>
+                                <td></td>
+                                <th>전문유형/요청응답구분</th>
+                                <td>
+                                    <div class="d-flex align-items-center">
+                                        <select id="modalMessageType" class="form-select form-select-sm sp-form-select-inline">
+                                            <option value="">선택하세요</option>
+                                            <option value="J">Json</option>
+                                            <option value="X">XML</option>
+                                            <option value="F">Fixed Length</option>
+                                            <option value="I">ISO8583</option>
+                                            <option value="C">CSV_FILE</option>
+                                            <option value="D">Delimiter</option>
+                                        </select>
+                                        <span class="text-danger mx-1">*</span>
+                                        <span class="mx-1 text-body-secondary">/</span>
+                                        <select id="modalRequestYn" class="form-select form-select-sm sp-form-select-inline" >
+                                            <option value="Q">요청</option>
+                                            <option value="S">응답</option>
+                                        </select>
+                                    </div>
+                                    <span class="error-message" id="messageTypeError"></span>
+                                </td>
+                            </tr>
+                            <!-- Row 5: 사전로딩여부 / SITE구분* -->
+                            <tr>
+                                <th>사전로딩여부</th>
+                                <td>
+                                    <select id="modalPreLoadYn" class="form-select form-select-sm fs-sm w-150">
+                                        <option value="N">아니오 (N)</option>
+                                        <option value="Y">예 (Y)</option>
+                                    </select>
+                                </td>
+                                <td></td>
+                                <th>SITE구분 <span class="text-danger">*</span></th>
+                                <td>
+                                    <select id="modalBizDomain" class="form-select form-select-sm fs-sm w-150">
+                                        <option value="">선택하세요</option>
+                                        <option value="뱅킹">뱅킹전용</option>
+                                        <option value="기업">기업뱅킹</option>
+                                        <option value="공통">공통</option>
+                                        <option value="포탈">포탈전용</option>
+                                        <option value="CM">커뮤니티</option>
+                                        <option value="카드">카드전용</option>
+                                    </select>
+                                    <span class="error-message" id="bizDomainError"></span>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- 상세설정 Section -->
+            <!--
+            <div class="mb-2 flex-shrink-0">
+                <div class="sp-section-header">
+                    <i class="bi bi-caret-right-fill text-danger me-1 fs-xs"></i>
+                    <strong class="fs-sm">상세설정</strong>
+                </div>
+                <div class="sp-section-body">
+                    <table class="sp-form-table">
+                        <colgroup>
+                            <col class="col-w-110">
+                            <col>
+                            <col class="col-w-16">
+                            <col class="col-w-110">
+                            <col>
+                        </colgroup>
+                        <tbody>
+                            <tr>
+                                <th>거래유형</th>
+                                <td>
+                                    <select id="modalTrxType" class="form-select form-select-sm fs-sm w-150">
+                                        <option value="1">ONLINE (1)</option>
+                                        <option value="2">BATCH (2)</option>
+                                    </select>
+                                </td>
+                                <td></td>
+                                <th>검증사용여부</th>
+                                <td>
+                                    <select id="modalValidationUseYn" class="form-select form-select-sm fs-sm w-150">
+                                        <option value="N">아니오 (N)</option>
+                                        <option value="Y">예 (Y)</option>
+                                    </select>
+                                </td>
+                            </tr>
+                            <tr>
+                                <th>잠금여부</th>
+                                <td>
+                                    <select id="modalLockYn" class="form-select form-select-sm fs-sm w-150">
+                                        <option value="N">아니오 (N)</option>
+                                        <option value="Y">예 (Y)</option>
+                                    </select>
+                                </td>
+                                <td></td>
+                                <th>현재버전</th>
+                                <td>
+                                    <input type="number" id="modalCurVersion" class="form-control form-control-sm fs-sm w-80 bg-readonly"
+                                           value="1" min="1" readonly>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            -->
+
+            <!-- Field Table Section (항상 표시, 버튼 가시성만 mode별 제어) -->
+            <div id="modalFieldsSection" class="mt-2 d-flex flex-column flex-grow-1 sp-flex-min-h-0">
+
+                <!-- Section Header -->
+                <div class="section-header mb-0">
+                    <i class="bi bi-caret-right-fill"></i>
+                    <span>전문 상세정보</span>
+                    <div class="ms-auto d-flex gap-1">
+                        <button type="button" id="modalBtnExcelSave" class="btn btn-sm btn-primary"><i class="bi bi-arrow-right"></i> 엑셀저장</button>
+                        <button type="button" id="modalBtnHeaderInclude" class="btn btn-sm btn-primary"><i class="bi bi-arrow-right"></i> 헤더전문포함조회</button>
+                        <button type="button" class="btn btn-sm btn-primary"><i class="bi bi-arrow-right"></i> 필드풀 검증</button>
+                        <button type="button" class="btn btn-sm btn-primary"><i class="bi bi-arrow-right"></i> 다국어 검증</button>
+                    </div>
+                </div>
+
+                <div class="d-flex flex-column flex-grow-1 sp-flex-overflow-hidden">
+
+                    <!-- Toolbar -->
+                    <div class="d-flex justify-content-between align-items-center mb-1 fs-sm flex-shrink-0">
+                        <div class="text-body-secondary">
+                            ※Excel데이터 Copy는 Excel복사버튼 클릭하세요!
+                            <i class="bi bi-file-earmark-excel text-body-secondary mx-1"></i>
+                            <button type="button" class="btn btn-sm btn-outline-secondary">전문 필드 순서 변경</button>
+                        </div>
+                        <div class="d-flex gap-4px">
+                            <button type="button" class="btn btn-sm btn-outline-secondary">Excel복사</button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary">유사전문복사</button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary">테이블</button>
+                            <button type="button" onclick="MessageModal.addFieldRow()" class="btn btn-sm btn-outline-secondary">행 추가</button>
+                            <button type="button" onclick="MessageModal.deleteSelectedRows()" class="btn btn-sm btn-outline-secondary">선택행 삭제</button>
+                        </div>
+                    </div>
+
+                    <!-- Parent Fields (edit mode, 상위전문 있을 때만 표시) -->
+                    <div id="modalParentFieldsCard" class="d-hidden mb-2 flex-shrink-0">
+                        <div class="sp-parent-fields-header">
+                            <i class="bi bi-caret-right-fill text-danger me-1 fs-xs"></i>
+                            <strong class="fs-sm text-warning-dark">상위 전문 필드 (<span id="modalParentFieldCount">0</span>건)</strong>
+                        </div>
+                        <div class="sp-parent-fields-wrap">
+                            <table class="sp-parent-fields-table">
+                                <thead>
+                                    <tr>
+                                        <th class="col-w-50">No</th>
+                                        <th class="col-w-140">필드ID</th>
+                                        <th class="col-w-140">필드명</th>
+                                        <th class="col-w-70">타입</th>
+                                        <th class="col-w-60">길이</th>
+                                        <th class="col-w-60">필수</th>
+                                        <th>기본값</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="modalParentFieldsBody"></tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Message Fields count -->
+                    <div class="fs-xs text-body-secondary mb-1 flex-shrink-0">총 <span id="modalMessageFieldCount">0</span>건</div>
+
+                    <!-- Message Fields table (detail modal과 동일 구조) -->
+                    <div class="sp-field-table-scroll">
+                        <table class="sp-field-table">
+                            <!-- Fixed Length / Json 헤더 -->
+                            <thead id="modalFieldHeadDefault">
+                                <tr>
+                                    <th class="col-w-30"><input type="checkbox" class="selectAllModalFields"></th>
+                                    <th class="col-w-50">CRUD</th>
+                                    <th data-sort-field="sortOrder" class="col-w-45">순번</th>
+                                    <th data-sort-field="messageFieldName" class="col-w-110">전문필드명</th>
+                                    <th data-sort-field="messageFieldId" class="col-w-110">전문필드ID</th>
+                                    <th data-sort-field="dataType" class="col-w-50">data<br>타입</th>
+                                    <th data-sort-field="dataLength" class="col-w-50">data<br>길이</th>
+                                    <th data-sort-field="align" class="col-w-50">정렬<br>기준</th>
+                                    <th data-sort-field="messageFieldDesc" class="col-w-80">특이사항</th>
+                                    <th data-sort-field="requiredYn" class="col-w-50">필수<br>여부</th>
+                                    <th data-sort-field="scale" class="col-w-50">스케일</th>
+                                    <th data-sort-field="filler" class="col-w-50">삽입<br>문자</th>
+                                    <th data-sort-field="useMode" class="col-w-50">입력<br>구분</th>
+                                    <th data-sort-field="codeGroup" class="col-w-80">코드그룹</th>
+                                    <th data-sort-field="codeMappingYn" class="col-w-80">코드맵핑</th>
+                                    <th data-sort-field="defaultValue" class="col-w-60">초기값</th>
+                                    <th data-sort-field="remark" class="col-w-90">remark</th>
+                                    <th data-sort-field="logYn" class="col-w-50">로그<br>여부</th>
+                                    <th data-sort-field="validationRuleId" class="col-w-90">Validation</th>
+                                </tr>
+                            </thead>
+                            <!-- XML 헤더 -->
+                            <thead id="modalFieldHeadXml" class="d-hidden">
+                                <tr>
+                                    <th class="col-w-30"><input type="checkbox" class="selectAllModalFields"></th>
+                                    <th class="col-w-50">CRUD</th>
+                                    <th data-sort-field="sortOrder" class="col-w-45">순번</th>
+                                    <th data-sort-field="messageFieldName" class="col-w-120">전문필드명</th>
+                                    <th data-sort-field="messageFieldId" class="col-w-120">전문필드ID</th>
+                                    <th data-sort-field="messageFieldDesc" class="col-w-80">특이사항</th>
+                                    <th data-sort-field="requiredYn" class="col-w-50">필수<br>여부</th>
+                                    <th data-sort-field="useMode" class="col-w-50">입력<br>구분</th>
+                                    <th data-sort-field="fieldTag" class="col-w-120">Field XML<br>태그</th>
+                                    <th data-sort-field="codeGroup" class="col-w-80">코드그룹</th>
+                                    <th data-sort-field="codeMappingYn" class="col-w-80">코드맵핑</th>
+                                    <th data-sort-field="defaultValue" class="col-w-60">초기값</th>
+                                    <th data-sort-field="remark" class="col-w-90">remark</th>
+                                    <th data-sort-field="logYn" class="col-w-50">로그<br>여부</th>
+                                    <th data-sort-field="validationRuleId" class="col-w-90">Validation</th>
+                                </tr>
+                            </thead>
+                            <tbody id="modalMessageFieldsBody"></tbody>
+                        </table>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+
+        <!-- Modal Footer -->
+        <div class="modal-footer py-2">
+            <button id="btnDelete" type="button" class="btn btn-danger btn-sm me-auto d-hidden" onclick="MessageModal.delete()"
+                    th:if="${userAuthorities != null and userAuthorities.contains('MESSAGE:W')}">
+                <i class="bi bi-arrow-right"></i> 삭제
+            </button>
+            <div class="flex-grow-1"></div>
+            <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">
+                닫기
+            </button>
+            <button type="button" class="btn btn-primary btn-sm" onclick="MessageModal.save()"
+                    th:if="${userAuthorities != null and userAuthorities.contains('MESSAGE:W')}">
+                <i class="bi bi-arrow-right"></i> 저장
+            </button>
+        </div>
+
+    </div>
+    </div>
+</div>
+
+</body>
+</html>

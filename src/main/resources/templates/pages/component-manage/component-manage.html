@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<div th:fragment="content">
+
+    <!-- Search Section Header -->
+    <div class="page-header">
+        <h4 class="page-title">
+            <i class="bi bi-exclamation-circle-fill text-danger"></i>
+            검색조건
+        </h4>
+    </div>
+
+    <!-- Search Container (동적 생성) -->
+    <div id="searchContainer"></div>
+
+    <!-- List Section Header -->
+    <div class="page-header mt-3">
+        <h4 class="page-title">
+            <i class="bi bi-exclamation-circle-fill text-danger"></i>
+            리스트
+        </h4>
+
+        <!-- Toolbar -->
+        <th:block th:replace="~{fragments/page-content-layout :: toolbar}" />
+    </div>
+
+    <!-- Table Container (동적 생성) -->
+    <div id="tableContainer"></div>
+
+    <!-- Pagination -->
+    <th:block th:replace="~{fragments/page-content-layout :: pagination}" />
+
+    <!-- Bottom Action Buttons -->
+    <div class="bottom-actions" th:if="${userAuthorities != null and userAuthorities.contains('COMPONENT:W')}">
+        <button class="btn btn-primary btn-sm" id="btnAdd">
+            + 등록
+        </button>
+    </div>
+
+    <!-- 권한 플래그 (모달에서 사용) -->
+    <script th:inline="javascript">
+        var component_access = /*[[${userAuthorities != null and userAuthorities.contains('COMPONENT:W')}]]*/ false;
+    </script>
+
+    <!-- Component Modal -->
+    <div th:replace="~{pages/component-manage/component-modal :: modal}"></div>
+
+    <!-- Page Script -->
+    <script th:inline="javascript">
+        var PAGE_CONFIG = {
+            pageId: 'components',
+            apiEndpoint: API_BASE_URL + '/components/page',
+
+            search: {
+                fields: [
+                    {
+                        type: 'text',
+                        id: 'componentId',
+                        label: '컴포넌트 ID',
+                        labelStyle: 'min-width: 80px;',
+                        placeholder: '컴포넌트 ID',
+                        width: '150px'
+                    },
+                    {
+                        type: 'text',
+                        id: 'componentName',
+                        label: '컴포넌트명',
+                        labelStyle: 'min-width: 70px; margin-left: 10px;',
+                        placeholder: '컴포넌트명',
+                        width: '150px'
+                    },
+                    {
+                        type: 'text',
+                        id: 'componentType',
+                        label: '유형',
+                        labelStyle: 'min-width: 35px; margin-left: 10px;',
+                        placeholder: '유형',
+                        width: '80px'
+                    },
+                    {
+                        type: 'select',
+                        id: 'useYn',
+                        label: '사용여부',
+                        labelStyle: 'min-width: 55px; margin-left: 10px;',
+                        width: '100px',
+                        placeholder: '전체',
+                        options: ComboManager.simple.getList('USE_YN')
+                    }
+                ],
+                limit: { default: 10, showLarge: true }
+            },
+
+            table: {
+                id: 'componentTable',
+                columns: [
+                    { key: 'componentId', label: '컴포넌트 ID', width: '160px', sortable: true },
+                    { key: 'componentName', label: '컴포넌트명', width: '180px', sortable: true },
+                    { key: 'componentType', label: '유형', width: '70px', sortable: true },
+                    { key: 'componentClassName', label: '클래스명', width: '220px', sortable: false },
+                    { key: 'componentMethodName', label: '메서드명', width: '130px', sortable: false },
+                    {
+                        key: 'useYn',
+                        label: '사용여부',
+                        width: '80px',
+                        sortable: true,
+                        render: (val) => val === 'Y'
+                            ? '<span class="badge text-bg-success">Y</span>'
+                            : '<span class="badge text-bg-secondary">N</span>'
+                    }
+                ],
+                emptyMessage: '조회 버튼을 클릭하여 데이터를 불러오세요.',
+                noDataMessage: '조회된 데이터가 없습니다.'
+            },
+
+            containers: {
+                search: '#searchContainer',
+                table: '#tableContainer',
+                pagination: '#pagination',
+                pageInfo: '#pageInfo'
+            },
+
+            autoLoad: true
+        };
+
+        window.ComponentPage = {
+            currentPage: 1,
+            totalItems: 0,
+            itemsPerPage: 10,
+            sortBy: null,
+            sortDirection: null,
+
+            init: function() {
+                SearchForm.render('#searchContainer', PAGE_CONFIG.search, () => {
+                    this.currentPage = 1;
+                    this.load();
+                });
+
+                const tableConfig = {
+                    ...PAGE_CONFIG.table,
+                    onSort: (sortBy, sortDirection) => {
+                        this.sortBy = sortBy;
+                        this.sortDirection = sortDirection;
+                        this.currentPage = 1;
+                        this.load();
+                    }
+                };
+
+                DataTable.render('#tableContainer', tableConfig, (row) => {
+                    if (window.ComponentModal) {
+                        window.ComponentModal.openForDetail(row.componentId);
+                    }
+                });
+
+                Pagination.init('#pagination', '#pageInfo', (page) => {
+                    this.currentPage = page;
+                    this.load();
+                });
+
+                $('#btnRefresh').off('click').on('click', () => {
+                    this.load();
+                });
+
+                $('#btnPrint').off('click').on('click', () => {
+                    this.printTable();
+                });
+
+                $('#btnAdd').off('click').on('click', () => {
+                    if (window.ComponentModal) {
+                        window.ComponentModal.openForCreate();
+                    }
+                });
+
+                if (PAGE_CONFIG.autoLoad) {
+                    this.load();
+                }
+            },
+
+            load: function() {
+                const params = SearchForm.getParams('#searchContainer');
+                params.page = this.currentPage;
+                params.size = params.size || this.itemsPerPage;
+
+                if (this.sortBy) {
+                    params.sortBy = this.sortBy;
+                    params.sortDirection = this.sortDirection || 'ASC';
+                }
+
+                $.ajax({
+                    url: PAGE_CONFIG.apiEndpoint,
+                    method: 'GET',
+                    data: params,
+                    success: (response) => {
+                        if (response.success && response.data) {
+                            const pageData = response.data;
+                            DataTable.setData('#tableContainer', pageData.content || []);
+
+                            this.totalItems = pageData.totalElements || 0;
+                            this.itemsPerPage = params.size;
+
+                            Pagination.update('#pagination', {
+                                currentPage: this.currentPage,
+                                totalItems: this.totalItems,
+                                itemsPerPage: this.itemsPerPage
+                            });
+                        } else {
+                            DataTable.setData('#tableContainer', []);
+                            Pagination.reset('#pagination');
+                        }
+                    },
+                    error: (xhr) => {
+                        console.error('Failed to load components:', xhr);
+                        Toast.error('컴포넌트 목록을 불러오는데 실패했습니다.');
+                        DataTable.setData('#tableContainer', []);
+                        Pagination.reset('#pagination');
+                    }
+                });
+            },
+
+            printTable: function() {
+                const printColumns = PAGE_CONFIG.table.columns
+                    .filter(col => !col.render)
+                    .map(col => ({ key: col.key, label: col.label }));
+                const data = DataTable.getData('#tableContainer');
+                PrintUtil.print({ title: '컴포넌트 목록', columns: printColumns, data: data });
+            }
+        };
+
+        $(document).ready(function() {
+            ComponentPage.init();
+        });
+    </script>
+</div>
+</body>
+</html>

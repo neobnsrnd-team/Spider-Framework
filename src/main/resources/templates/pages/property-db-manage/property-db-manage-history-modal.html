@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<div th:fragment="modal">
+    <!-- 프로퍼티 그룹 히스토리 Modal -->
+    <div class="modal fade" id="propertyHistoryModal" tabindex="-1" aria-labelledby="propertyHistoryModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-xl sp-modal-xxl">
+            <div class="modal-content">
+                <!-- Modal Header -->
+                <div class="modal-header">
+                    <h5 class="modal-title" id="propertyHistoryModalLabel">
+                        <i class="bi bi-clock-history"></i> 프로퍼티 그룹 히스토리
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+
+                <!-- Modal Body -->
+                <div class="modal-body">
+                    <!-- 프로퍼티 그룹 정보 -->
+                    <div class="mb-3">
+                        <h6 class="section-title mb-3">
+                            <i class="bi bi-stack text-danger"></i> 프로퍼티 그룹 정보
+                        </h6>
+                        <div class="row align-items-center">
+                            <div class="col-auto">
+                                <label class="form-label mb-0">프로퍼티 그룹 ID</label>
+
+                            </div>
+                            <div class="col-md-4">
+                                <input type="text" class="form-control form-control-sm bg-light" id="historyModalGroupId" readonly>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 프로퍼티 정보 비교 -->
+                    <h6 class="section-title mb-3">
+                        <i class="bi bi-list-ul text-danger"></i> 프로퍼티 정보
+                    </h6>
+
+                    <div class="sp-comparison-section">
+                        <!-- 좌측: 현재 버전 -->
+                        <div class="sp-comparison-panel">
+                            <div class="panel-header">
+                                <strong><i class="bi bi-database"></i> 현재 버전</strong>
+                            </div>
+                            <div class="table-responsive sp-scrollable">
+                                <table class="table table-sm table-hover sp-data-grid" id="historyCurrentTable">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th class="col-w-120">프로퍼티ID</th>
+                                            <th class="col-w-120">프로퍼티명</th>
+                                            <th class="col-w-150">프로퍼티 설명</th>
+                                            <th class="col-w-100">초기값</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="historyCurrentTableBody">
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <!-- 우측: 히스토리 버전 -->
+                        <div class="sp-comparison-panel">
+                            <div class="panel-header">
+                                <strong><i class="bi bi-clock-history"></i> 히스토리 버전</strong>
+                                <select class="form-select form-select-sm w-200" id="historyVersionSelect" onchange="PropertyHistoryModal.onVersionChange()">
+                                </select>
+                            </div>
+                            <div class="table-responsive sp-scrollable">
+                                <table class="table table-sm table-hover sp-data-grid" id="historyVersionTable">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th class="col-w-120">프로퍼티ID</th>
+                                            <th class="col-w-120">프로퍼티명</th>
+                                            <th class="col-w-150">프로퍼티 설명</th>
+                                            <th class="col-w-100">초기값</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="historyVersionTableBody">
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Modal Footer -->
+                <div class="modal-footer justify-content-end">
+                    <button type="button" class="btn btn-warning btn-sm" onclick="PropertyHistoryModal.restore()">
+                        <i class="bi bi-arrow-counterclockwise"></i> 전체 복원
+                    </button>
+                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">
+                        <i class="bi bi-x-lg"></i> 닫기
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<th:block th:fragment="script">
+<script>
+    const PropertyHistoryModal = {
+        currentPropertyGroupId: null,
+        currentProperties: [],
+        historyVersions: [],
+        historyProperties: [],
+        selectedVersion: null,
+
+        // 모달 열기
+        open: function(propertyGroupId) {
+            this.currentPropertyGroupId = propertyGroupId;
+            $('#historyModalGroupId').val(propertyGroupId);
+
+            // 데이터 로드
+            this.loadData();
+
+            const modal = bootstrap.Modal.getOrCreateInstance(document.getElementById('propertyHistoryModal'));
+            modal.show();
+        },
+
+        // 데이터 로드 (현재 프로퍼티 + 버전 목록)
+        loadData: function() {
+            const groupId = this.currentPropertyGroupId;
+
+            // 현재 프로퍼티 조회
+            $.ajax({
+                url: API_BASE_URL + '/properties/groups/' + groupId + '/properties',
+                method: 'GET',
+                success: (response) => {
+                    if (response.success && response.data) {
+                        this.currentProperties = response.data;
+                    } else {
+                        this.currentProperties = [];
+                    }
+                    this.renderCurrentProperties();
+                },
+                error: (xhr) => {
+                    console.error('Failed to load current properties:', xhr);
+                    this.currentProperties = [];
+                    this.renderCurrentProperties();
+                }
+            });
+
+            // 버전 목록 조회
+            $.ajax({
+                url: API_BASE_URL + '/properties/groups/' + groupId + '/history/versions',
+                method: 'GET',
+                success: (response) => {
+                    if (response.success && response.data) {
+                        this.historyVersions = response.data;
+                    } else {
+                        this.historyVersions = [];
+                    }
+                    this.renderVersionSelect();
+
+                    // 첫번째 버전(가장 오래된 = 버전 1) 자동 로드
+                    if (this.historyVersions.length > 0) {
+                        // 버전 1 찾기, 없으면 마지막(가장 작은 번호) 사용
+                        const version1 = this.historyVersions.find(v => v.version === 1);
+                        if (version1) {
+                            this.selectedVersion = 1;
+                            $('#historyVersionSelect').val(1);
+                        } else {
+                            this.selectedVersion = this.historyVersions[this.historyVersions.length - 1].version;
+                            $('#historyVersionSelect').val(this.selectedVersion);
+                        }
+                        this.loadHistoryVersion(this.selectedVersion);
+                    } else {
+                        this.historyProperties = [];
+                        this.renderHistoryProperties();
+                    }
+                },
+                error: (xhr) => {
+                    console.error('Failed to load history versions:', xhr);
+                    this.historyVersions = [];
+                    this.renderVersionSelect();
+                    this.historyProperties = [];
+                    this.renderHistoryProperties();
+                }
+            });
+        },
+
+        // 현재 프로퍼티 렌더링
+        renderCurrentProperties: function() {
+            const tbody = $('#historyCurrentTableBody');
+            tbody.empty();
+
+            if (!this.currentProperties || this.currentProperties.length === 0) {
+                tbody.append(`
+                    <tr>
+                        <td colspan="4" class="text-center text-muted py-3">
+                            등록된 프로퍼티가 없습니다.
+                        </td>
+                    </tr>
+                `);
+                return;
+            }
+
+            this.currentProperties.forEach((prop) => {
+                tbody.append(`
+                    <tr data-property-id="${HtmlUtils.escape(prop.propertyId)}">
+                        <td>${HtmlUtils.escape(prop.propertyId)}</td>
+                        <td>${HtmlUtils.escape(prop.propertyName || '')}</td>
+                        <td>${HtmlUtils.escape(prop.propertyDesc || '')}</td>
+                        <td>${HtmlUtils.escape(prop.defaultValue || '')}</td>
+                    </tr>
+                `);
+            });
+        },
+
+        // 버전 콤보박스 렌더링
+        renderVersionSelect: function() {
+            const select = $('#historyVersionSelect');
+            select.empty();
+
+            if (!this.historyVersions || this.historyVersions.length === 0) {
+                select.append('<option value="">히스토리 없음</option>');
+                return;
+            }
+
+            this.historyVersions.forEach((v) => {
+                const reasonText = v.reason ? ' - ' + v.reason : '';
+                select.append(`<option value="${v.version}">버전 ${v.version}${reasonText} (${this.formatDtime(v.lastUpdateDtime)})</option>`);
+            });
+        },
+
+        // 버전 변경 시
+        onVersionChange: function() {
+            const version = parseInt($('#historyVersionSelect').val());
+            if (isNaN(version)) return;
+
+            this.selectedVersion = version;
+            this.loadHistoryVersion(version);
+        },
+
+        // 특정 버전 히스토리 로드
+        loadHistoryVersion: function(version) {
+            $.ajax({
+                url: API_BASE_URL + '/properties/groups/' + this.currentPropertyGroupId + '/history/' + version,
+                method: 'GET',
+                success: (response) => {
+                    if (response.success && response.data) {
+                        this.historyProperties = response.data;
+                    } else {
+                        this.historyProperties = [];
+                    }
+                    this.renderHistoryProperties();
+                },
+                error: (xhr) => {
+                    console.error('Failed to load history version:', xhr);
+                    this.historyProperties = [];
+                    this.renderHistoryProperties();
+                }
+            });
+        },
+
+        // 히스토리 프로퍼티 렌더링
+        renderHistoryProperties: function() {
+            const tbody = $('#historyVersionTableBody');
+            tbody.empty();
+
+            if (!this.historyProperties || this.historyProperties.length === 0) {
+                tbody.append(`
+                    <tr>
+                        <td colspan="4" class="text-center text-muted py-3">
+                            히스토리 데이터가 없습니다.
+                        </td>
+                    </tr>
+                `);
+                return;
+            }
+
+            // 현재 프로퍼티 맵 생성 (비교용)
+            const currentMap = {};
+            this.currentProperties.forEach(p => {
+                currentMap[p.propertyId] = p;
+            });
+
+            this.historyProperties.forEach((prop) => {
+                const current = currentMap[prop.propertyId];
+                let rowClass = '';
+
+                if (!current) {
+                    // 현재에 없는 프로퍼티 (삭제됨)
+                    rowClass = 'history-diff-removed';
+                } else {
+                    // 값 비교
+                    const nameChanged = (current.propertyName || '') !== (prop.propertyName || '');
+                    const descChanged = (current.propertyDesc || '') !== (prop.propertyDesc || '');
+                    const defaultChanged = (current.defaultValue || '') !== (prop.defaultValue || '');
+                    if (nameChanged || descChanged || defaultChanged) {
+                        rowClass = 'history-diff-changed';
+                    }
+                }
+
+                tbody.append(`
+                    <tr class="${rowClass}" data-property-id="${HtmlUtils.escape(prop.propertyId)}">
+                        <td>${HtmlUtils.escape(prop.propertyId)}</td>
+                        <td>${HtmlUtils.escape(prop.propertyName || '')}</td>
+                        <td>${HtmlUtils.escape(prop.propertyDesc || '')}</td>
+                        <td>${HtmlUtils.escape(prop.defaultValue || '')}</td>
+                    </tr>
+                `);
+            });
+
+            // 현재에만 있는 프로퍼티 (추가됨) 표시를 위해 현재 테이블도 업데이트
+            this.highlightCurrentDiff();
+        },
+
+        // 현재 프로퍼티 테이블에 차이 하이라이트
+        highlightCurrentDiff: function() {
+            // 히스토리 프로퍼티 맵
+            const historyMap = {};
+            this.historyProperties.forEach(p => {
+                historyMap[p.propertyId] = p;
+            });
+
+            $('#historyCurrentTableBody tr').each(function() {
+                const $row = $(this);
+                const propertyId = $row.data('property-id');
+                if (!propertyId) return;
+
+                $row.removeClass('history-diff-added history-diff-changed');
+
+                const history = historyMap[propertyId];
+                if (!history) {
+                    // 히스토리에 없는 프로퍼티 (새로 추가됨)
+                    $row.addClass('history-diff-added');
+                }
+            });
+        },
+
+        // 전체 복원
+        restore: function() {
+            if (!this.selectedVersion) {
+                Toast.warning('복원할 버전을 선택해주세요.');
+                return;
+            }
+
+            if (!this.historyProperties || this.historyProperties.length === 0) {
+                Toast.warning('복원할 히스토리 데이터가 없습니다.');
+                return;
+            }
+
+            Toast.confirm('선택한 버전으로 복원 하시겠습니까?', () => {
+                $.ajax({
+                    url: API_BASE_URL + '/properties/groups/' + this.currentPropertyGroupId + '/restore/' + this.selectedVersion,
+                    method: 'POST',
+                    success: (response) => {
+                        if (response.success) {
+                            Toast.success('복원이 완료되었습니다.');
+                            // 히스토리 모달 닫기
+                            const historyModal = bootstrap.Modal.getInstance(document.getElementById('propertyHistoryModal'));
+                            if (historyModal) {
+                                historyModal.hide();
+                            }
+                            // 상세 모달의 프로퍼티 목록 새로고침
+                            if (typeof PropertyDetailModal !== 'undefined') {
+                                PropertyDetailModal.loadProperties(this.currentPropertyGroupId);
+                            }
+                        } else {
+                            Toast.error('복원 중 오류가 발생했습니다: ' + (response.message || ''));
+                        }
+                    },
+                    error: (xhr) => {
+                        console.error('Failed to restore property group:', xhr);
+                        const errorMessage = xhr.responseJSON?.message || '복원 중 오류가 발생했습니다.';
+                        Toast.error(errorMessage);
+                    }
+                });
+            });
+        },
+
+        // 날짜시간 포맷
+        formatDtime: function(dtime) {
+            if (!dtime || dtime.length < 8) return dtime || '';
+            return dtime.substring(0, 4) + '-' + dtime.substring(4, 6) + '-' + dtime.substring(6, 8);
+        }
+    };
+</script>
+</th:block>
+</body>
+</html>

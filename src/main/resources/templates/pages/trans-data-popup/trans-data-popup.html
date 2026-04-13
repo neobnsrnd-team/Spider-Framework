@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<div th:fragment="content">
+    <!-- Include Page Content Layout Styles -->
+
+    <!-- Search Section Header -->
+    <div class="page-header">
+        <h4 class="page-title">
+            <i class="bi bi-file-earmark-arrow-up text-primary"></i>
+            검색조건
+        </h4>
+    </div>
+
+    <!-- Search Box -->
+    <div th:replace="~{pages/trans-data-popup/trans-data-popup-search :: search}"></div>
+
+    <!-- List Section Header -->
+    <div class="page-header mt-3">
+        <h4 class="page-title">
+            <i class="bi bi-file-earmark-arrow-up text-primary"></i>
+            리스트
+        </h4>
+    </div>
+
+    <!-- Source Table + Target Area -->
+    <div class="sp-popup-layout">
+        <!-- Left: Source Data Table -->
+        <div class="sp-popup-panel">
+            <div th:replace="~{pages/trans-data-popup/trans-data-popup-table :: table}"></div>
+        </div>
+
+        <!-- Center: Move Button -->
+        <div class="sp-popup-center-actions"
+             th:if="${userAuthorities != null and userAuthorities.contains('TRANS_DATA_POPUP:W')}">
+            <button class="btn btn-primary btn-sm px-2 fs-base" onclick="TransDataGeneration.addToTarget()" title="선택 항목 이동">
+                <i class="bi bi-chevron-right"></i><i class="bi bi-chevron-right"></i>
+            </button>
+        </div>
+
+        <!-- Right: Target Area -->
+        <div class="sp-popup-panel">
+            <div th:replace="~{pages/trans-data-popup/trans-data-popup-target :: target}"></div>
+        </div>
+    </div>
+
+    <!-- Execute Modal -->
+    <div th:replace="~{pages/trans-data-popup/trans-data-popup-modal :: modal}"></div>
+
+    <!-- Script -->
+    <th:block th:replace="~{pages/trans-data-popup/trans-data-popup-script :: script}" />
+</div>
+</body>
+</html>

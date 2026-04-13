@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<div th:fragment="modal">
+
+    <!-- DataSource Detail/Create Modal -->
+    <div class="modal fade" id="datasourceModal" tabindex="-1" aria-labelledby="datasourceModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="datasourceModalLabel">데이터소스 상세</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="datasourceForm">
+                        <div class="form-section">
+
+                            <!-- Row 1: DB ID, DB 명 -->
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                    <label class="form-label">DB ID <span class="text-danger">*</span></label>
+                                    <input type="text" class="form-control" id="dsModalDbId" name="dbId"
+                                           maxlength="50" required>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">DB 명</label>
+                                    <input type="text" class="form-control" id="dsModalDbName" name="dbName"
+                                           maxlength="100">
+                                </div>
+                            </div>
+
+                            <!-- Row 2: DB 사용자 ID, DB 비밀번호 -->
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                    <label class="form-label">DB 사용자 ID</label>
+                                    <input type="text" class="form-control" id="dsModalDbUserId" name="dbUserId"
+                                           maxlength="100">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">DB 비밀번호</label>
+                                    <input type="password" class="form-control" id="dsModalDbPassword" name="dbPassword"
+                                           maxlength="200" placeholder="변경하려면 새 비밀번호 입력">
+                                </div>
+                            </div>
+
+                            <!-- Row 3: JNDI 여부 -->
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                    <label class="form-label">JNDI 여부</label>
+                                    <select class="form-select" id="dsModalJndiYn" name="jndiYn">
+                                        <option value="N">직접접속</option>
+                                        <option value="Y">JNDI</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-6"></div>
+                            </div>
+
+                            <!-- Row 4: 접속 URL, 드라이버 클래스 (직접접속 모드) -->
+                            <div id="dsDirectSection">
+                                <div class="row mb-3">
+                                    <div class="col-12">
+                                        <label class="form-label">접속 URL</label>
+                                        <input type="text" class="form-control" id="dsModalConnectionUrl"
+                                               name="connectionUrl" maxlength="500">
+                                    </div>
+                                </div>
+                                <div class="row mb-3">
+                                    <div class="col-12">
+                                        <label class="form-label">드라이버 클래스</label>
+                                        <input type="text" class="form-control" id="dsModalDriverClass"
+                                               name="driverClass" maxlength="200">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Row 5: JNDI 필드 (JNDI 모드) -->
+                            <div id="dsJndiSection" style="display:none;">
+                                <div class="row mb-3">
+                                    <div class="col-md-6">
+                                        <label class="form-label">JNDI ID</label>
+                                        <input type="text" class="form-control" id="dsModalJndiId"
+                                               name="jndiId" maxlength="100">
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label">JNDI Provider URL</label>
+                                        <input type="text" class="form-control" id="dsModalJndiProviderUrl"
+                                               name="jndiProviderUrl" maxlength="200">
+                                    </div>
+                                </div>
+                                <div class="row mb-3">
+                                    <div class="col-12">
+                                        <label class="form-label">JNDI Context Factory</label>
+                                        <input type="text" class="form-control" id="dsModalJndiContextFactory"
+                                               name="jndiContextFactory" maxlength="200">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Row 6: DB 설명 -->
+                            <div class="row mb-3">
+                                <div class="col-12">
+                                    <label class="form-label">DB 설명</label>
+                                    <textarea class="form-control resize-vertical" id="dsModalDbDesc" name="dbDesc"
+                                              rows="2" maxlength="300"></textarea>
+                                </div>
+                            </div>
+
+                            <!-- Row 7: 시스템 정보 (상세 모드) -->
+                            <div class="row mb-3 d-hidden" id="dsSystemInfoRow">
+                                <div class="col-md-6">
+                                    <label class="form-label">최종수정자 ID</label>
+                                    <input type="text" class="form-control" id="dsModalLastUpdateUserId" readonly>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">최종수정일시</label>
+                                    <input type="text" class="form-control" id="dsModalLastUpdateDtime" readonly>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+
+                <div class="modal-footer justify-content-end">
+                    <button th:if="${userAuthorities != null and userAuthorities.contains('DATASOURCE:W')}"
+                            type="button" class="btn btn-primary btn-sm d-hidden" id="btnDsSave">
+                        <i class="bi bi-floppy"></i> 저장
+                    </button>
+                    <button th:if="${userAuthorities != null and userAuthorities.contains('DATASOURCE:W')}"
+                            type="button" class="btn btn-danger btn-sm d-hidden" id="btnDsDelete">
+                        <i class="bi bi-trash"></i> 삭제
+                    </button>
+                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal"><i class="bi bi-x-lg"></i> 닫기</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        (function () {
+            // JNDI 여부 변경 시 섹션 토글
+            $(document).on('change', '#dsModalJndiYn', function () {
+                DataSourceModal._toggleJndiSections($(this).val());
+            });
+
+            window.DataSourceModal = {
+                mode: 'detail',
+                currentDbId: null,
+
+                _showModal: function () {
+                    const modal = bootstrap.Modal.getOrCreateInstance(document.getElementById('datasourceModal'));
+                    modal.show();
+                },
+
+                _hideModal: function () {
+                    const modalEl = document.getElementById('datasourceModal');
+                    const modal = bootstrap.Modal.getInstance(modalEl);
+                    if (modal) modal.hide();
+                },
+
+                _toggleJndiSections: function (jndiYn) {
+                    if (jndiYn === 'Y') {
+                        $('#dsDirectSection').hide();
+                        $('#dsJndiSection').show();
+                    } else {
+                        $('#dsDirectSection').show();
+                        $('#dsJndiSection').hide();
+                    }
+                },
+
+                openForDetail: function (rowData) {
+                    this.mode = 'detail';
+                    this.currentDbId = rowData.dbId;
+
+                    const hasWrite = datasource_access;
+
+                    $('#datasourceModalLabel').text('데이터소스 상세');
+                    this._fillForm(rowData);
+                    this._toggleJndiSections(rowData.jndiYn || 'N');
+                    this._setFieldsReadonly(!hasWrite);
+
+                    if (hasWrite) {
+                        $('#dsModalDbId').prop('readonly', true).prop('disabled', true);
+                        // 수정 모드에서 비밀번호 미입력 시 기존값 유지 안내
+                        $('#dsModalDbPassword').val('').attr('placeholder', '변경하려면 새 비밀번호 입력');
+                    }
+
+                    $('#dsSystemInfoRow').removeClass('d-hidden');
+                    $('#btnDsSave').toggleClass('d-hidden', !hasWrite);
+                    $('#btnDsDelete').toggleClass('d-hidden', !hasWrite);
+
+                    this._showModal();
+                },
+
+                openForCreate: function () {
+                    this.mode = 'create';
+                    this.currentDbId = null;
+
+                    $('#datasourceModalLabel').text('데이터소스 등록');
+                    $('#datasourceForm')[0].reset();
+                    $('#dsModalJndiYn').val('N');
+                    this._toggleJndiSections('N');
+                    this._setFieldsReadonly(false);
+                    $('#dsModalDbId').prop('readonly', false).prop('disabled', false);
+                    $('#dsModalDbPassword').attr('placeholder', 'DB 비밀번호 입력');
+
+                    $('#dsSystemInfoRow').addClass('d-hidden');
+                    $('#btnDsSave').removeClass('d-hidden');
+                    $('#btnDsDelete').addClass('d-hidden');
+
+                    this._showModal();
+                },
+
+                _fillForm: function (data) {
+                    $('#dsModalDbId').val(data.dbId || '');
+                    $('#dsModalDbName').val(data.dbName || '');
+                    $('#dsModalDbUserId').val(data.dbUserId || '');
+                    $('#dsModalDbPassword').val('');
+                    $('#dsModalJndiYn').val(data.jndiYn || 'N');
+                    $('#dsModalConnectionUrl').val(data.connectionUrl || '');
+                    $('#dsModalDriverClass').val(data.driverClass || '');
+                    $('#dsModalJndiId').val(data.jndiId || '');
+                    $('#dsModalJndiProviderUrl').val(data.jndiProviderUrl || '');
+                    $('#dsModalJndiContextFactory').val(data.jndiContextFactory || '');
+                    $('#dsModalDbDesc').val(data.dbDesc || '');
+                    $('#dsModalLastUpdateUserId').val(data.lastUpdateUserId || '');
+                    $('#dsModalLastUpdateDtime').val(this._formatDatetime(data.lastUpdateDtime));
+                },
+
+                _setFieldsReadonly: function (readonly) {
+                    $('#dsModalDbId').prop('readonly', readonly).prop('disabled', readonly);
+                    $('#dsModalDbName').prop('readonly', readonly);
+                    $('#dsModalDbUserId').prop('readonly', readonly);
+                    $('#dsModalDbPassword').prop('readonly', readonly);
+                    $('#dsModalJndiYn').prop('disabled', readonly);
+                    $('#dsModalConnectionUrl').prop('readonly', readonly);
+                    $('#dsModalDriverClass').prop('readonly', readonly);
+                    $('#dsModalJndiId').prop('readonly', readonly);
+                    $('#dsModalJndiProviderUrl').prop('readonly', readonly);
+                    $('#dsModalJndiContextFactory').prop('readonly', readonly);
+                    $('#dsModalDbDesc').prop('readonly', readonly);
+                },
+
+                _formatDatetime: function (dateStr) {
+                    if (!dateStr || dateStr.length < 14) return dateStr || '';
+                    return dateStr.substring(0, 4) + '/' +
+                           dateStr.substring(4, 6) + '/' +
+                           dateStr.substring(6, 8) + ' ' +
+                           dateStr.substring(8, 10) + ':' +
+                           dateStr.substring(10, 12) + ':' +
+                           dateStr.substring(12, 14);
+                },
+
+                _validateForm: function () {
+                    if (this.mode === 'create') {
+                        const dbId = $('#dsModalDbId').val().trim();
+                        if (!dbId) {
+                            Toast.warning('DB ID를 입력해주세요.');
+                            $('#dsModalDbId').focus();
+                            return false;
+                        }
+                    }
+                    return true;
+                },
+
+                save: function () {
+                    if (!this._validateForm()) return;
+
+                    const formData = {
+                        dbName: $('#dsModalDbName').val(),
+                        dbUserId: $('#dsModalDbUserId').val(),
+                        jndiYn: $('#dsModalJndiYn').val(),
+                        connectionUrl: $('#dsModalConnectionUrl').val(),
+                        driverClass: $('#dsModalDriverClass').val(),
+                        jndiId: $('#dsModalJndiId').val(),
+                        jndiProviderUrl: $('#dsModalJndiProviderUrl').val(),
+                        jndiContextFactory: $('#dsModalJndiContextFactory').val(),
+                        dbDesc: $('#dsModalDbDesc').val()
+                    };
+
+                    const password = $('#dsModalDbPassword').val();
+                    if (password) {
+                        formData.dbPassword = password;
+                    }
+
+                    if (this.mode === 'create') {
+                        formData.dbId = $('#dsModalDbId').val();
+                        $.ajax({
+                            url: API_BASE_URL + '/datasources',
+                            method: 'POST',
+                            contentType: 'application/json',
+                            data: JSON.stringify(formData),
+                            success: (response) => {
+                                if (response.success) {
+                                    Toast.success('데이터소스가 등록되었습니다.');
+                                    this._hideModal();
+                                    if (window.DataSourcePage) DataSourcePage.load();
+                                } else {
+                                    Toast.error(response.message || '데이터소스 등록에 실패했습니다.');
+                                }
+                            },
+                            error: (xhr) => {
+                                Toast.error(xhr.responseJSON?.message || '데이터소스 등록에 실패했습니다.');
+                            }
+                        });
+                    } else {
+                        $.ajax({
+                            url: API_BASE_URL + '/datasources/' + encodeURIComponent(this.currentDbId),
+                            method: 'PUT',
+                            contentType: 'application/json',
+                            data: JSON.stringify(formData),
+                            success: (response) => {
+                                if (response.success) {
+                                    Toast.success('데이터소스가 수정되었습니다.');
+                                    this._hideModal();
+                                    if (window.DataSourcePage) DataSourcePage.load();
+                                } else {
+                                    Toast.error(response.message || '데이터소스 수정에 실패했습니다.');
+                                }
+                            },
+                            error: (xhr) => {
+                                Toast.error(xhr.responseJSON?.message || '데이터소스 수정에 실패했습니다.');
+                            }
+                        });
+                    }
+                },
+
+                delete: function () {
+                    Toast.confirm('정말 삭제하시겠습니까?', () => {
+                        $.ajax({
+                            url: API_BASE_URL + '/datasources/' + encodeURIComponent(this.currentDbId),
+                            method: 'DELETE',
+                            success: (response) => {
+                                if (response.success) {
+                                    Toast.success('데이터소스가 삭제되었습니다.');
+                                    this._hideModal();
+                                    if (window.DataSourcePage) DataSourcePage.load();
+                                } else {
+                                    Toast.error(response.message || '데이터소스 삭제에 실패했습니다.');
+                                }
+                            },
+                            error: (xhr) => {
+                                Toast.error(xhr.responseJSON?.message || '데이터소스 삭제에 실패했습니다.');
+                            }
+                        });
+                    });
+                }
+            };
+
+            $(document).off('click', '#btnDsSave').on('click', '#btnDsSave', function () {
+                DataSourceModal.save();
+            });
+
+            $(document).off('click', '#btnDsDelete').on('click', '#btnDsDelete', function () {
+                DataSourceModal.delete();
+            });
+        })();
+    </script>
+</div>
+</body>
+</html>

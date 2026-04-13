@@ -1,0 +1,883 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<div th:fragment="content">
+    <!-- Include Page Content Layout Styles -->
+
+    <!-- Search Section Header -->
+    <div class="page-header">
+        <h4 class="page-title">
+            <i class="bi bi-exclamation-circle-fill text-danger"></i>
+            검색조건
+        </h4>
+    </div>
+
+    <!-- Search Box -->
+    <div class="card border p-2 mb-3">
+        <div class="d-flex flex-wrap align-items-center gap-2 mb-1">
+            <select id="searchField" class="form-select form-select-sm flex-fixed-120">
+                <option value="boardId">게시판 ID</option>
+                <option value="boardName">게시판명</option>
+            </select>
+            <input type="text" id="searchValue" class="form-control form-control-sm flex-fixed-200" placeholder="">
+
+            <label class="form-label mb-0 small fw-medium ms-3">게시판 유형</label>
+            <select id="boardTypeFilter" class="form-select form-select-sm flex-fixed-120">
+                <option value="">전체</option>
+                <option value="N">공지사항</option>
+                <option value="F">자유게시판</option>
+                <option value="Q">FAQ</option>
+            </select>
+
+            <div class="flex-grow-1"></div>
+
+            <select id="limitRows" class="form-select form-select-sm sp-limit-select">
+                <option value="10" selected>10</option>
+                <option value="20">20</option>
+                <option value="50">50</option>
+                <option value="100">100</option>
+            </select>
+
+            <label class="form-label mb-0 small fw-medium">건씩</label>
+
+            <button class="btn btn-primary btn-sm" onclick="BoardMgmt.load()">
+                <i class="bi bi-search"></i> 조회
+            </button>
+        </div>
+    </div>
+
+    <!-- List Section Header + Toolbar -->
+    <div class="toolbar mt-3">
+        <div class="toolbar-left">
+            <h4 class="page-title">
+                <i class="bi bi-exclamation-circle-fill text-danger"></i>
+                리스트
+            </h4>
+        </div>
+        <div class="toolbar-right">
+            <button class="btn btn-outline-secondary btn-sm" id="btnExcel">
+                <i class="bi bi-file-earmark-excel"></i> 엑셀
+            </button>
+            <button class="btn btn-outline-secondary btn-sm" id="btnPrint">
+                <i class="bi bi-file-earmark-text"></i> 출력
+            </button>
+        </div>
+    </div>
+
+    <!-- Table -->
+    <div class="table-responsive">
+        <table class="table table-sm table-hover sp-data-grid" id="boardTable">
+            <thead class="table-light">
+                <tr>
+                    <th class="col-w-50">No</th>
+                    <th class="col-w-150" data-sort="boardId">게시판 ID</th>
+                    <th class="col-w-200" data-sort="boardName">게시판명</th>
+                    <th class="col-w-100" data-sort="boardType">게시판 유형</th>
+                    <th class="col-w-120">관리자 ID</th>
+                    <th class="col-w-150" data-sort="lastUpdateDtime">최종 수정일</th>
+                    <th class="col-w-120">최종 수정자</th>
+                </tr>
+            </thead>
+            <tbody id="boardTableBody">
+                <tr>
+                    <td colspan="7" class="sp-empty-state">조회 버튼을 클릭하여 데이터를 불러오세요.</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Pagination -->
+    <div th:replace="~{fragments/page-content-layout :: pagination}"></div>
+
+    <!-- Bottom Action Buttons -->
+    <div class="bottom-actions">
+        <button class="btn btn-primary btn-sm" id="btnRegister">
+            + 등록
+        </button>
+    </div>
+
+    <!-- Board Management Modal -->
+    <div id="boardMgmtModal" class="modal fade" tabindex="-1" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
+        <div class="modal-dialog modal-dialog-centered sp-modal-lg">
+        <div class="modal-content">
+            <div class="modal-header py-2">
+                <h5 class="modal-title" id="boardMgmtModalTitle">게시판 등록</h5>
+                <button class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <!-- 기본 정보 섹션 -->
+                <div class="modal-section">
+                    <div class="section-header">
+                        <i class="bi bi-caret-right-fill"></i>
+                        <span>기본 정보</span>
+                    </div>
+
+                    <div class="mb-3">
+                        <div class="row g-3 mb-2">
+                            <div class="col-md-6">
+                                <label class="form-label small mb-1">게시판 ID<span class="text-danger">*</span></label>
+                                <input type="text"
+                                       id="modalBoardId"
+                                       class="form-control form-control-sm"
+                                       required
+                                       maxlength="20"
+                                       placeholder="게시판 ID 입력" />
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label small mb-1">게시판명<span class="text-danger">*</span></label>
+                                <input type="text"
+                                       id="modalBoardName"
+                                       class="form-control form-control-sm"
+                                       required
+                                       maxlength="100"
+                                       placeholder="게시판명 입력" />
+                            </div>
+                        </div>
+                        <div class="row g-3 mb-2">
+                            <div class="col-md-6">
+                                <label class="form-label small mb-1">게시판 유형<span class="text-danger">*</span></label>
+                                <select id="modalBoardType" class="form-select form-select-sm" required>
+                                    <option value="">선택</option>
+                                    <option value="N">공지사항</option>
+                                    <option value="F">자유게시판</option>
+                                    <option value="Q">FAQ</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label small mb-1">관리자 ID</label>
+                                <select id="modalAdminId" class="form-select form-select-sm">
+                                    <option value="">선택</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 카테고리 관리 섹션 -->
+                <div class="modal-section d-hidden mt-3" id="categorySectionWrapper">
+                    <div class="section-header d-flex justify-content-between align-items-center">
+                        <div class="d-flex align-items-center gap-2">
+                            <i class="bi bi-caret-right-fill"></i>
+                            <span>카테고리 관리</span>
+                        </div>
+                        <button type="button" class="btn btn-sm btn-outline-primary" onclick="CategoryManager.add()">
+                            <i class="bi bi-plus-lg"></i> 추가
+                        </button>
+                    </div>
+
+                    <div class="category-list-container sp-scrollable-sm">
+                        <table class="table table-sm table-hover sp-data-grid fs-xs">
+                            <thead class="table-light">
+                                <tr>
+                                    <th class="col-w-60">순번</th>
+                                    <th>카테고리명</th>
+                                    <th class="col-w-100">관리</th>
+                                </tr>
+                            </thead>
+                            <tbody id="categoryTableBody">
+                                <tr>
+                                    <td colspan="3" class="sp-empty-state">카테고리가 없습니다.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer py-2">
+                <button class="btn btn-danger btn-sm me-auto d-hidden" id="btnDeleteBoard" onclick="BoardMgmtModal.delete()">
+                    <i class="bi bi-trash"></i> 삭제
+                </button>
+                <button class="btn btn-secondary btn-sm" data-bs-dismiss="modal"><i class="bi bi-x-lg"></i> 닫기</button>
+                <button class="btn btn-primary btn-sm" onclick="BoardMgmtModal.save()"><i class="bi bi-floppy"></i> 저장</button>
+            </div>
+        </div>
+        </div>
+    </div>
+
+    <!-- Category Add/Edit Modal -->
+    <div id="categoryModal" class="modal fade sp-modal-stacked-category" tabindex="-1" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
+        <div class="modal-dialog modal-dialog-centered sp-modal-xs">
+        <div class="modal-content">
+            <div class="modal-header py-2">
+                <h5 class="modal-title" id="categoryModalTitle">카테고리 추가</h5>
+                <button class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-2">
+                    <label class="form-label small mb-1">카테고리명<span class="text-danger">*</span></label>
+                    <input type="text" id="modalCategoryName" class="form-control form-control-sm" maxlength="50" placeholder="카테고리명 입력">
+                    <input type="hidden" id="modalCategorySeq">
+                </div>
+            </div>
+            <div class="modal-footer py-2">
+                <button class="btn btn-secondary btn-sm" data-bs-dismiss="modal"><i class="bi bi-x-lg"></i> 취소</button>
+                <button class="btn btn-primary btn-sm" onclick="CategoryManager.saveModal()"><i class="bi bi-floppy"></i> 저장</button>
+            </div>
+        </div>
+        </div>
+    </div>
+
+    <!-- Script -->
+    <script>
+        // 게시판 목록 관리
+        window.BoardMgmt = {
+            currentPage: 1,
+            totalItems: 0,
+            itemsPerPage: 10,
+            boardsData: [],
+            _sortBy: null,
+            _sortDirection: null,
+
+            load: function() {
+                this.itemsPerPage = parseInt($('#limitRows').val()) || 10;
+
+                const params = {
+                    page: this.currentPage,
+                    size: this.itemsPerPage
+                };
+
+                // 검색 조건 추가
+                const searchField = $('#searchField').val();
+                const searchValue = $('#searchValue').val().trim();
+                const boardType = $('#boardTypeFilter').val();
+
+                if (searchValue) {
+                    params[searchField] = searchValue;
+                }
+                if (boardType) {
+                    params.boardType = boardType;
+                }
+                if (this._sortBy) {
+                    params.sortBy = this._sortBy;
+                    params.sortDirection = this._sortDirection || 'DESC';
+                }
+
+                $.ajax({
+                    url: API_BASE_URL + '/boards/page',
+                    method: 'GET',
+                    data: params,
+                    success: (response) => {
+                        if (response.success && response.data) {
+                            const pageData = response.data;
+                            this.boardsData = pageData.content || [];
+                            this.totalItems = pageData.totalElements || 0;
+                            this.renderTable();
+                            this.renderPagination();
+                        }
+                    },
+                    error: (xhr) => {
+                        console.error('Failed to load boards:', xhr);
+                        Toast.error('게시판 목록을 불러오는데 실패했습니다.');
+                    }
+                });
+            },
+
+            renderTable: function() {
+                const tbody = $('#boardTableBody').empty();
+
+                if (!this.boardsData || this.boardsData.length === 0) {
+                    tbody.append(`
+                        <tr>
+                            <td colspan="7" class="sp-empty-state">조회된 데이터가 없습니다.</td>
+                        </tr>
+                    `);
+                    return;
+                }
+
+                this.boardsData.forEach((board, idx) => {
+                    const rowNum = (this.currentPage - 1) * this.itemsPerPage + idx + 1;
+                    const boardTypeText = this.getBoardTypeText(board.boardType);
+
+                    const row = $(`
+                        <tr data-board-id="${HtmlUtils.escape(board.boardId)}" class="cursor-pointer">
+                            <td>${rowNum}</td>
+                            <td>${HtmlUtils.escape(board.boardId)}</td>
+                            <td class="text-start">${HtmlUtils.escape(board.boardName)}</td>
+                            <td>${boardTypeText}</td>
+                            <td>${HtmlUtils.escape(board.adminId || '-')}</td>
+                            <td>${this.formatDate(board.lastUpdateDtime)}</td>
+                            <td>${HtmlUtils.escape(board.lastUpdateUserId || '-')}</td>
+                        </tr>
+                    `);
+
+                    row.on('click', () => BoardMgmtModal.open('edit', board));
+                    tbody.append(row);
+                });
+            },
+
+            renderPagination: function() {
+                const totalPages = Math.ceil(this.totalItems / this.itemsPerPage) || 1;
+                const pagination = $('#pagination').empty();
+
+                // First
+                pagination.append(`
+                    <li class="page-item ${this.currentPage === 1 ? 'disabled' : ''}">
+                        <a class="page-link" href="#" onclick="BoardMgmt.changePage(1); return false;">
+                            <i class="bi bi-chevron-double-left"></i>
+                        </a>
+                    </li>
+                `);
+
+                // Previous
+                pagination.append(`
+                    <li class="page-item ${this.currentPage === 1 ? 'disabled' : ''}">
+                        <a class="page-link" href="#" onclick="BoardMgmt.changePage(${this.currentPage - 1}); return false;">
+                            <i class="bi bi-chevron-left"></i>
+                        </a>
+                    </li>
+                `);
+
+                // Page numbers
+                const maxButtons = 5;
+                let startPage = Math.max(1, this.currentPage - Math.floor(maxButtons / 2));
+                let endPage = Math.min(totalPages, startPage + maxButtons - 1);
+                if (endPage - startPage + 1 < maxButtons) {
+                    startPage = Math.max(1, endPage - maxButtons + 1);
+                }
+
+                for (let i = startPage; i <= endPage; i++) {
+                    pagination.append(`
+                        <li class="page-item ${i === this.currentPage ? 'active' : ''}">
+                            <a class="page-link" href="#" onclick="BoardMgmt.changePage(${i}); return false;">${i}</a>
+                        </li>
+                    `);
+                }
+
+                // Next
+                pagination.append(`
+                    <li class="page-item ${this.currentPage >= totalPages ? 'disabled' : ''}">
+                        <a class="page-link" href="#" onclick="BoardMgmt.changePage(${this.currentPage + 1}); return false;">
+                            <i class="bi bi-chevron-right"></i>
+                        </a>
+                    </li>
+                `);
+
+                // Last
+                pagination.append(`
+                    <li class="page-item ${this.currentPage >= totalPages ? 'disabled' : ''}">
+                        <a class="page-link" href="#" onclick="BoardMgmt.changePage(${totalPages}); return false;">
+                            <i class="bi bi-chevron-double-right"></i>
+                        </a>
+                    </li>
+                `);
+
+                const start = this.totalItems === 0 ? 0 : (this.currentPage - 1) * this.itemsPerPage + 1;
+                const end = Math.min(this.currentPage * this.itemsPerPage, this.totalItems);
+                $('#pageInfo').text(`${start} - ${end} of ${this.totalItems} items`);
+            },
+
+            changePage: function(page) {
+                const totalPages = Math.ceil(this.totalItems / this.itemsPerPage) || 1;
+                if (page < 1 || page > totalPages) return;
+                this.currentPage = page;
+                this.load();
+            },
+
+            getBoardTypeText: function(type) {
+                const types = {
+                    'N': '공지사항',
+                    'F': '자유게시판',
+                    'Q': 'FAQ'
+                };
+                return types[type] || type || '-';
+            },
+
+            formatDate: function(dateStr) {
+                if (!dateStr) return '-';
+                if (dateStr.length >= 8) {
+                    return dateStr.substring(0, 4) + '/' + dateStr.substring(4, 6) + '/' + dateStr.substring(6, 8);
+                }
+                return dateStr;
+            },
+
+            sortBy: function(field) {
+                if (this._sortBy === field) {
+                    if (this._sortDirection === 'ASC') {
+                        this._sortDirection = 'DESC';
+                    } else {
+                        this._sortBy = null;
+                        this._sortDirection = null;
+                    }
+                } else {
+                    this._sortBy = field;
+                    this._sortDirection = 'ASC';
+                }
+                this.updateSortIcons();
+                this.currentPage = 1;
+                this.load();
+            },
+
+            updateSortIcons: function() {
+                var headers = $('#boardTable thead th.sortable');
+                headers.removeClass('sort-asc sort-desc');
+                if (this._sortBy && this._sortDirection) {
+                    headers.filter('[data-sort="' + this._sortBy + '"]')
+                        .addClass(this._sortDirection === 'ASC' ? 'sort-asc' : 'sort-desc');
+                }
+            },
+
+            sanitizeCsv: function(val) {
+                var s = String(val || '');
+                if (/^[=+\-@\t\r]/.test(s)) s = "'" + s;
+                return s.replace(/"/g, '""');
+            },
+
+            exportExcel: function() {
+                if (!this.boardsData || this.boardsData.length === 0) {
+                    Toast.warning('다운로드할 데이터가 없습니다.');
+                    return;
+                }
+                var BOM = '\uFEFF';
+                var header = 'No,게시판 ID,게시판명,게시판 유형,관리자 ID,최종 수정일,최종 수정자\n';
+                var rows = this.boardsData.map(function(b, idx) {
+                    var boardId = BoardMgmt.sanitizeCsv(b.boardId);
+                    var boardName = BoardMgmt.sanitizeCsv(b.boardName);
+                    var boardType = BoardMgmt.getBoardTypeText(b.boardType);
+                    var adminId = BoardMgmt.sanitizeCsv(b.adminId || '-');
+                    var date = BoardMgmt.formatDate(b.lastUpdateDtime);
+                    var updater = BoardMgmt.sanitizeCsv(b.lastUpdateUserId || '-');
+                    return (idx + 1) + ',"' + boardId + '","' + boardName + '","' + boardType + '","' + adminId + '",' + date + ',"' + updater + '"';
+                }).join('\n');
+                var blob = new Blob([BOM + header + rows], { type: 'text/csv;charset=utf-8;' });
+                var link = document.createElement('a');
+                link.href = URL.createObjectURL(blob);
+                link.download = 'board_manage.csv';
+                link.click();
+                URL.revokeObjectURL(link.href);
+            },
+
+            printTable: function() {
+                var columns = [
+                    { key: '_no', label: 'No' },
+                    { key: 'boardId', label: '게시판 ID' },
+                    { key: 'boardName', label: '게시판명' },
+                    { key: '_boardType', label: '게시판 유형' },
+                    { key: '_adminId', label: '관리자 ID' },
+                    { key: '_date', label: '최종 수정일' },
+                    { key: '_updater', label: '최종 수정자' }
+                ];
+                var data = this.boardsData.map(function(b, idx) {
+                    return {
+                        _no: idx + 1,
+                        boardId: b.boardId || '',
+                        boardName: b.boardName || '',
+                        _boardType: BoardMgmt.getBoardTypeText(b.boardType),
+                        _adminId: b.adminId || '-',
+                        _date: BoardMgmt.formatDate(b.lastUpdateDtime),
+                        _updater: b.lastUpdateUserId || '-'
+                    };
+                });
+                PrintUtil.print({ title: '게시판 관리', columns: columns, data: data });
+            },
+
+        };
+
+        // 게시판 모달 관리
+        window.BoardMgmtModal = {
+            mode: 'create',
+            currentBoardId: null,
+            hasWritePermission: false,
+
+            checkPermission: function(boardId) {
+                return new Promise((resolve) => {
+                    $.ajax({
+                        url: API_BASE_URL + '/board-auth/my/' + encodeURIComponent(boardId),
+                        method: 'GET',
+                        success: (response) => {
+                            const authCode = response.success ? response.data : null;
+                            this.hasWritePermission = (authCode === 'W');
+                            resolve(this.hasWritePermission);
+                        },
+                        error: () => {
+                            this.hasWritePermission = false;
+                            resolve(false);
+                        }
+                    });
+                });
+            },
+
+            open: function(mode, boardData) {
+                this.mode = mode;
+
+                if (mode === 'create') {
+                    $('#boardMgmtModalTitle').text('게시판 등록');
+                    $('#btnDeleteBoard').addClass('d-hidden');
+                    $('#modalBoardId').prop('disabled', false);
+                    $('#categorySectionWrapper').addClass('d-hidden');
+                    // 메뉴 자동 생성은 항상 활성화 (BOARD_V2 하위에 고정)
+                    this.hasWritePermission = true;
+                    this.setFormEditable(true);
+                    this.clearForm();
+                    bootstrap.Modal.getOrCreateInstance(document.getElementById('boardMgmtModal')).show();
+                } else {
+                    // 수정 시에는 메뉴 자동 생성 불필요
+                    // 수정 모드: 권한 확인 후 모달 열기
+                    this.checkPermission(boardData.boardId).then(() => {
+                        if (this.hasWritePermission) {
+                            $('#boardMgmtModalTitle').text('게시판 수정');
+                            $('#btnDeleteBoard').removeClass('d-hidden');
+                            this.setFormEditable(true);
+                        } else {
+                            $('#boardMgmtModalTitle').text('게시판 상세 (읽기 전용)');
+                            $('#btnDeleteBoard').addClass('d-hidden');
+                            this.setFormEditable(false);
+                        }
+                        $('#modalBoardId').prop('disabled', true);
+                        $('#categorySectionWrapper').removeClass('d-hidden');
+                        this.loadBoardDetail(boardData.boardId);
+                        bootstrap.Modal.getOrCreateInstance(document.getElementById('boardMgmtModal')).show();
+                    });
+                }
+            },
+
+            setFormEditable: function(editable) {
+                // 폼 필드 활성화/비활성화
+                $('#modalBoardName').prop('disabled', !editable);
+                $('#modalBoardType').prop('disabled', !editable);
+                $('#modalAdminId').prop('disabled', !editable);
+
+                // 저장 버튼 표시/숨김
+                if (editable) {
+                    $('.modal-footer .btn-primary').show();
+                } else {
+                    $('.modal-footer .btn-primary').hide();
+                }
+
+                // 카테고리 관리 버튼 표시/숨김
+                if (editable) {
+                    $('#categorySectionWrapper .btn-outline-primary').show();
+                } else {
+                    $('#categorySectionWrapper .btn-outline-primary').hide();
+                }
+
+                // CategoryManager에 권한 상태 전달
+                CategoryManager.hasWritePermission = editable;
+            },
+
+            close: function() {
+                bootstrap.Modal.getInstance(document.getElementById('boardMgmtModal'))?.hide();
+            },
+
+            clearForm: function() {
+                $('#modalBoardId').val('');
+                $('#modalBoardName').val('');
+                $('#modalBoardType').val('');
+                $('#modalAdminId').val('');
+                CategoryManager.categories = [];
+                CategoryManager.render();
+            },
+
+            loadBoardDetail: function(boardId) {
+                this.currentBoardId = boardId;
+
+                $.ajax({
+                    url: API_BASE_URL + '/boards/' + encodeURIComponent(boardId),
+                    method: 'GET',
+                    success: (response) => {
+                        if (response.success && response.data) {
+                            const board = response.data;
+                            $('#modalBoardId').val(board.boardId || '');
+                            $('#modalBoardName').val(board.boardName || '');
+                            $('#modalBoardType').val(board.boardType || '');
+                            $('#modalAdminId').val(board.adminId || '');
+
+                            // 카테고리 로드
+                            CategoryManager.loadCategories(boardId);
+                        }
+                    },
+                    error: (xhr) => {
+                        console.error('Failed to load board detail:', xhr);
+                        Toast.error('게시판 정보를 불러오는데 실패했습니다.');
+                        this.close();
+                    }
+                });
+            },
+
+            validateForm: function() {
+                const boardId = $('#modalBoardId').val().trim();
+                const boardName = $('#modalBoardName').val().trim();
+                const boardType = $('#modalBoardType').val();
+                if (!boardId) {
+                    Toast.warning('게시판 ID를 입력하세요.');
+                    $('#modalBoardId').focus();
+                    return false;
+                }
+
+                if (!boardName) {
+                    Toast.warning('게시판명을 입력하세요.');
+                    $('#modalBoardName').focus();
+                    return false;
+                }
+
+                if (!boardType) {
+                    Toast.warning('게시판 유형을 선택하세요.');
+                    $('#modalBoardType').focus();
+                    return false;
+                }
+
+                return true;
+            },
+
+            save: function() {
+                if (!this.validateForm()) return;
+
+                const boardData = {
+                    boardId: $('#modalBoardId').val().trim(),
+                    boardName: $('#modalBoardName').val().trim(),
+                    boardType: $('#modalBoardType').val() || null,
+                    adminId: $('#modalAdminId').val() || null
+                };
+
+                const method = this.mode === 'create' ? 'POST' : 'PUT';
+                const url = this.mode === 'create'
+                    ? API_BASE_URL + '/boards'
+                    : API_BASE_URL + '/boards/' + encodeURIComponent(this.currentBoardId);
+
+                $.ajax({
+                    url: url,
+                    method: method,
+                    contentType: 'application/json',
+                    data: JSON.stringify(boardData),
+                    success: (response) => {
+                        if (response.success) {
+                            Toast.success(this.mode === 'create' ? '게시판이 등록되었습니다.' : '게시판이 수정되었습니다.');
+                            this.close();
+                            BoardMgmt.load();
+                        } else {
+                            Toast.error('저장 실패: ' + (response.message || '알 수 없는 오류'));
+                        }
+                    },
+                    error: (xhr) => {
+                        console.error('Failed to save board:', xhr);
+                        console.error('Response:', xhr.responseText);
+                        const errorMsg = xhr.responseJSON?.message || xhr.responseJSON?.error || xhr.statusText || '저장에 실패했습니다.';
+                        Toast.error('저장 실패: ' + errorMsg);
+                    }
+                });
+            },
+
+            delete: function() {
+                Toast.confirm('정말 삭제하시겠습니까?\n이 게시판의 모든 게시글도 함께 삭제됩니다.', () => {
+                    $.ajax({
+                        url: API_BASE_URL + '/boards/' + encodeURIComponent(this.currentBoardId),
+                        method: 'DELETE',
+                        success: (response) => {
+                            if (response.success) {
+                                Toast.success('게시판이 삭제되었습니다.');
+                                this.close();
+                                BoardMgmt.load();
+                            } else {
+                                Toast.error('삭제 실패: ' + (response.message || '알 수 없는 오류'));
+                            }
+                        },
+                        error: (xhr) => {
+                            console.error('Failed to delete board:', xhr);
+                            const errorMsg = xhr.responseJSON?.message || '삭제에 실패했습니다.';
+                            Toast.error('삭제 실패: ' + errorMsg);
+                        }
+                    });
+                });
+            }
+        };
+
+        // 카테고리 관리
+        window.CategoryManager = {
+            categories: [],
+            editingCategorySeq: null,
+            hasWritePermission: false,
+
+            loadCategories: function(boardId) {
+                $.ajax({
+                    url: API_BASE_URL + '/board-categories/board/' + encodeURIComponent(boardId),
+                    method: 'GET',
+                    success: (response) => {
+                        if (response.success && response.data) {
+                            this.categories = response.data;
+                        } else {
+                            this.categories = [];
+                        }
+                        this.render();
+                    },
+                    error: (xhr) => {
+                        console.error('Failed to load categories:', xhr);
+                        this.categories = [];
+                        this.render();
+                    }
+                });
+            },
+
+            render: function() {
+                const tbody = $('#categoryTableBody').empty();
+
+                if (!this.categories || this.categories.length === 0) {
+                    tbody.append(`
+                        <tr>
+                            <td colspan="3" class="sp-empty-state">카테고리가 없습니다.</td>
+                        </tr>
+                    `);
+                    return;
+                }
+
+                this.categories.forEach((cat, idx) => {
+                    const actionButtons = this.hasWritePermission ? `
+                                <button class="btn btn-xs btn-outline-secondary" onclick="CategoryManager.edit(${cat.categorySeq})">
+                                    <i class="bi bi-pencil"></i>
+                                </button>
+                                <button class="btn btn-xs btn-outline-danger" onclick="CategoryManager.delete(${cat.categorySeq})">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            ` : '-';
+                    tbody.append(`
+                        <tr data-category-seq="${cat.categorySeq}">
+                            <td>${idx + 1}</td>
+                            <td class="text-start">${HtmlUtils.escape(cat.categoryName)}</td>
+                            <td>${actionButtons}</td>
+                        </tr>
+                    `);
+                });
+            },
+
+            add: function() {
+                this.editingCategorySeq = null;
+                $('#categoryModalTitle').text('카테고리 추가');
+                $('#modalCategoryName').val('');
+                $('#modalCategorySeq').val('');
+                bootstrap.Modal.getOrCreateInstance(document.getElementById('categoryModal')).show();
+            },
+
+            edit: function(categorySeq) {
+                const cat = this.categories.find(c => c.categorySeq === categorySeq);
+                if (!cat) return;
+
+                this.editingCategorySeq = categorySeq;
+                $('#categoryModalTitle').text('카테고리 수정');
+                $('#modalCategoryName').val(cat.categoryName || '');
+                $('#modalCategorySeq').val(categorySeq);
+                bootstrap.Modal.getOrCreateInstance(document.getElementById('categoryModal')).show();
+            },
+
+            closeModal: function() {
+                bootstrap.Modal.getInstance(document.getElementById('categoryModal'))?.hide();
+            },
+
+            saveModal: function() {
+                const categoryName = $('#modalCategoryName').val().trim();
+                if (!categoryName) {
+                    Toast.warning('카테고리명을 입력하세요.');
+                    $('#modalCategoryName').focus();
+                    return;
+                }
+
+                const boardId = BoardMgmtModal.currentBoardId;
+                const isEdit = this.editingCategorySeq !== null;
+
+                const data = {
+                    boardId: boardId,
+                    categoryName: categoryName
+                };
+
+                const method = isEdit ? 'PUT' : 'POST';
+                const url = isEdit
+                    ? API_BASE_URL + '/board-categories/' + encodeURIComponent(boardId) + '/' + this.editingCategorySeq
+                    : API_BASE_URL + '/board-categories/' + encodeURIComponent(boardId);
+
+                $.ajax({
+                    url: url,
+                    method: method,
+                    contentType: 'application/json',
+                    data: JSON.stringify(data),
+                    success: (response) => {
+                        if (response.success) {
+                            Toast.success(isEdit ? '카테고리가 수정되었습니다.' : '카테고리가 추가되었습니다.');
+                            this.closeModal();
+                            this.loadCategories(boardId);
+                        } else {
+                            Toast.error('저장 실패: ' + (response.message || '알 수 없는 오류'));
+                        }
+                    },
+                    error: (xhr) => {
+                        console.error('Failed to save category:', xhr);
+                        const errorMsg = xhr.responseJSON?.message || '저장에 실패했습니다.';
+                        Toast.error('저장 실패: ' + errorMsg);
+                    }
+                });
+            },
+
+            delete: function(categorySeq) {
+                Toast.confirm('이 카테고리를 삭제하시겠습니까?', () => {
+                    const boardId = BoardMgmtModal.currentBoardId;
+
+                    $.ajax({
+                        url: API_BASE_URL + '/board-categories/' + encodeURIComponent(boardId) + '/' + categorySeq,
+                        method: 'DELETE',
+                        success: (response) => {
+                            if (response.success) {
+                                Toast.success('카테고리가 삭제되었습니다.');
+                                this.loadCategories(boardId);
+                            } else {
+                                Toast.error('삭제 실패: ' + (response.message || '알 수 없는 오류'));
+                            }
+                        },
+                        error: (xhr) => {
+                            console.error('Failed to delete category:', xhr);
+                            const errorMsg = xhr.responseJSON?.message || '삭제에 실패했습니다.';
+                            Toast.error('삭제 실패: ' + errorMsg);
+                        }
+                    });
+                });
+            },
+
+        };
+
+        // 관리자 사용자 목록 로드
+        window.loadAdminUsers = function() {
+            $.ajax({
+                url: API_BASE_URL + '/users',
+                method: 'GET',
+                success: function(response) {
+                    const select = $('#modalAdminId');
+                    select.empty().append('<option value="">선택</option>');
+                    if (response.data) {
+                        response.data.forEach(user => {
+                            select.append(`<option value="${HtmlUtils.escape(user.userId)}">${HtmlUtils.escape(user.userId)} - ${HtmlUtils.escape(user.userName)}</option>`);
+                        });
+                    }
+                },
+                error: function(xhr) {
+                    console.error('Failed to load users:', xhr);
+                }
+            });
+        };
+
+        // 초기화
+        $(document).ready(function() {
+            $('#btnRegister').on('click', () => BoardMgmtModal.open('create'));
+
+            // Enter 키로 검색
+            $('#searchValue').on('keypress', function(e) {
+                if (e.which === 13) {
+                    BoardMgmt.load();
+                }
+            });
+
+            // Sort click handler
+            $('#boardTable thead th[data-sort]').addClass('sortable').on('click', function() {
+                var sortKey = $(this).data('sort');
+                if (sortKey) BoardMgmt.sortBy(sortKey);
+            });
+
+            // 엑셀/출력 버튼 바인딩
+            $('#btnExcel').off('click').on('click', () => BoardMgmt.exportExcel());
+            $('#btnPrint').off('click').on('click', () => BoardMgmt.printTable());
+
+            // 관리자 목록 로드
+            loadAdminUsers();
+
+            // 페이지 로드 시 자동 조회
+            BoardMgmt.load();
+        });
+    </script>
+
+</div>
+</body>
+</html>

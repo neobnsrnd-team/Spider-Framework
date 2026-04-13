@@ -1,0 +1,557 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<!-- WAS Gateway Status Page Scripts -->
+<th:block th:fragment="script">
+<script>
+    (function() {
+        window.WasGatewayStatus = {
+            rows: [],
+            currentPage: 1,
+            pageSize: 10,
+            sortBy: null,
+            sortDirection: null,
+            selectedIndex: null,
+
+            init() {
+                const pageSizeSelect = document.getElementById('gwStatusPageSize');
+                if (pageSizeSelect) {
+                    pageSizeSelect.addEventListener('change', (e) => {
+                        this.pageSize = parseInt(e.target.value, 10) || 10;
+                        this.load(1);
+                    });
+                }
+
+                const searchBtn = document.getElementById('gwStatusSearchBtn');
+                if (searchBtn) {
+                    searchBtn.addEventListener('click', () => this.load(1));
+                }
+
+                const refreshBtn = document.getElementById('btnRefresh');
+                if (refreshBtn) {
+                    refreshBtn.addEventListener('click', () => this.load(this.currentPage));
+                }
+
+                const excelBtn = document.getElementById('btnExcel');
+                if (excelBtn) {
+                    excelBtn.addEventListener('click', () => this.exportExcel());
+                }
+
+                const printBtn = document.getElementById('btnPrint');
+                if (printBtn) {
+                    printBtn.addEventListener('click', () => this.printTable());
+                }
+
+                const runBtn = document.getElementById('gwStatusTestRun');
+                if (runBtn) {
+                    runBtn.addEventListener('click', () => this.runTest());
+                }
+
+                const tableBody = document.getElementById('gwStatusTableBody');
+                if (tableBody) {
+                    tableBody.addEventListener('click', (e) => {
+                        if (e.target.closest('button')) return;
+                        const tr = e.target.closest('tr[data-row-index]');
+                        if (tr && tr.dataset.rowIndex !== undefined) {
+                            this.openTestModal(parseInt(tr.dataset.rowIndex, 10));
+                        }
+                    });
+                }
+
+                this.bindSortEvents();
+                this.loadOptions();
+                this.load(1);
+            },
+
+            resetFilters() {
+                const instanceSel = document.getElementById('gwStatusInstanceId');
+                const gwSel = document.getElementById('gwStatusGwId');
+                const operSel = document.getElementById('gwStatusOperMode');
+                const pageSizeSel = document.getElementById('gwStatusPageSize');
+                if (instanceSel) instanceSel.value = '';
+                if (gwSel) gwSel.value = '';
+                if (operSel) operSel.value = '';
+                if (pageSizeSel) {
+                    pageSizeSel.value = '10';
+                    this.pageSize = 10;
+                }
+                this.load(1);
+            },
+
+            bindSortEvents() {
+                const headers = document.querySelectorAll('#gwStatusTable thead th[data-sort]');
+                headers.forEach(header => {
+                    header.classList.add('sortable');
+                    if (header.dataset.sortBound === 'true') return;
+                    header.dataset.sortBound = 'true';
+                    header.addEventListener('click', () => {
+                        const key = header.dataset.sort;
+                        if (!key) return;
+                        if (this.sortBy === key) {
+                            this.sortDirection = this.sortDirection === 'ASC' ? 'DESC' : 'ASC';
+                        } else {
+                            this.sortBy = key;
+                            this.sortDirection = 'ASC';
+                        }
+                        this.updateSortIndicators();
+                        this.load(1); // 서버 사이드 정렬
+                    });
+                });
+            },
+
+            updateSortIndicators() {
+                const headers = document.querySelectorAll('#gwStatusTable thead th.sortable');
+                headers.forEach(header => header.classList.remove('sort-asc', 'sort-desc'));
+                if (!this.sortBy || !this.sortDirection) return;
+                const active = document.querySelector(`#gwStatusTable thead th[data-sort="${this.sortBy}"]`);
+                if (active) {
+                    active.classList.add(this.sortDirection === 'ASC' ? 'sort-asc' : 'sort-desc');
+                }
+            },
+
+            loadOptions() {
+                fetch('/api/was/gateway-status/options', {credentials: 'same-origin'})
+                    .then(res => res.json())
+                    .then(res => {
+                        if (!res.success || !res.data) {
+                            throw new Error(res.message || '옵션 조회 실패');
+                        }
+                        const data = res.data;
+                        this.fillSelect('gwStatusInstanceId', data.instances);
+                        this.fillSelect('gwStatusGwId', data.gateways);
+                        const normalizedOperModes = this.normalizeOperModes(data.operModes || []);
+                        if (normalizedOperModes.length) {
+                            const operSel = document.getElementById('gwStatusOperMode');
+                            if (operSel) {
+                                const keepAll = operSel.querySelector('option[value=\"\"]');
+                                operSel.innerHTML = keepAll ? keepAll.outerHTML : '<option value=\"\">전체</option>';
+                                normalizedOperModes.forEach(opt => {
+                                    const option = document.createElement('option');
+                                    option.value = opt.value;
+                                    option.textContent = opt.label || opt.value;
+                                    operSel.appendChild(option);
+                                });
+                            }
+                        }
+                    })
+                    .catch(err => {
+                        console.warn('[WasGatewayStatus.loadOptions] failed:', err);
+                    });
+            },
+
+            normalizeOperModes(options) {
+                if (!Array.isArray(options)) return [];
+                const seen = new Set();
+                const result = [];
+                options.forEach(opt => {
+                    const normalized = this.normalizeOperModeOption(opt);
+                    if (!normalized || !normalized.value) return;
+                    const key = String(normalized.value);
+                    if (seen.has(key)) return;
+                    seen.add(key);
+                    result.push(normalized);
+                });
+                return result;
+            },
+
+            normalizeOperModeOption(opt) {
+                const rawValue = opt?.value ?? opt?.code ?? opt ?? '';
+                const rawLabel = opt?.label ?? opt?.description ?? opt?.name ?? rawValue;
+                const valueStr = String(rawValue).trim();
+                const labelStr = String(rawLabel || '').trim();
+                const upper = valueStr.toUpperCase();
+
+                if (upper === 'R' || labelStr === '운영' || labelStr === '리얼') {
+                    return { value: 'R', label: '운영' };
+                }
+                if (upper === 'T' || labelStr === '테스트') {
+                    return { value: 'T', label: '테스트' };
+                }
+                if (upper === 'D' || labelStr === '개발') {
+                    return { value: 'D', label: '개발' };
+                }
+                if (upper === '1') {
+                    return { value: '1', label: '신규 운영' };
+                }
+                return { value: valueStr, label: labelStr || valueStr };
+            },
+
+            fillSelect(selectId, options) {
+                const sel = document.getElementById(selectId);
+                if (!sel || !options) return;
+                const first = sel.querySelector('option[value=\"\"]');
+                sel.innerHTML = first ? first.outerHTML : '<option value=\"\">전체</option>';
+                options.forEach(opt => {
+                    const option = document.createElement('option');
+                    option.value = opt.value;
+                    option.textContent = opt.label || opt.value;
+                    sel.appendChild(option);
+                });
+            },
+
+            load(page) {
+                this.currentPage = page || 1;
+
+                const instanceId = document.getElementById('gwStatusInstanceId')?.value || '';
+                const gwId = document.getElementById('gwStatusGwId')?.value || '';
+                const operMode = document.getElementById('gwStatusOperMode')?.value || '';
+
+                const params = new URLSearchParams({
+                    page: String(this.currentPage),
+                    size: String(this.pageSize)
+                });
+                if (instanceId) params.set('instanceId', instanceId);
+                if (gwId) params.set('gwId', gwId);
+                if (operMode) params.set('operModeType', operMode);
+                if (this.sortBy) params.set('sortBy', this.sortBy);
+                if (this.sortDirection) params.set('sortDirection', this.sortDirection);
+
+                fetch(`/api/was/gateway-status/page?${params.toString()}`, {credentials: 'same-origin'})
+                    .then(res => res.json())
+                    .then(res => {
+                        if (!res.success) {
+                            throw new Error(res.message || '조회 실패');
+                        }
+                        const data = res.data || {};
+                        this.rows = data.content || [];
+                        this.pageSize = data.size || this.pageSize;
+                        this.renderTable(this.rows); // 서버에서 정렬된 데이터 사용
+                        this.updateSortIndicators();
+                        this.renderPagination(data);
+                    })
+                    .catch(err => {
+                        console.error('[WasGatewayStatus.load] Error:', err);
+                        this.renderTable([]);
+                    });
+            },
+
+            renderTable(rows) {
+                const tbody = document.getElementById('gwStatusTableBody');
+                if (!tbody) return;
+
+                if (!rows || rows.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan=\"14\" class=\"text-center text-body-secondary py-5\">조회된 데이터가 없습니다.</td></tr>';
+                    return;
+                }
+
+                tbody.innerHTML = rows.map((row, idx) => `
+                    <tr data-row-index="${idx}" style="cursor:pointer">
+                        <td>${HtmlUtils.escape(row.instanceName || row.instanceId)}</td>
+                        <td>${this.instanceTypeLabel(row.instanceType)}</td>
+                        <td>${HtmlUtils.escape(row.instanceIp || '')}</td>
+                        <td>${HtmlUtils.escape(row.instancePort || '')}</td>
+                        <td>${HtmlUtils.escape(row.gwName || row.gwId)}</td>
+                        <td class=\"text-truncate\" title=\"${HtmlUtils.escape(row.gwProperties || '')}\">${HtmlUtils.escape(row.gwProperties || '')}</td>
+                        <td class=\"text-center\">${row.threadCount ?? '-'}</td>
+                        <td class=\"text-center\">${this.ioTypeIcon(row.ioType)}</td>
+                        <td class=\"text-center\">${this.operModeLabel(row.operModeType)}</td>
+                        <td>${HtmlUtils.escape(row.systemIp || '')}</td>
+                        <td>${HtmlUtils.escape(row.systemPort || '')}</td>
+                        <td class=\"text-center\">${this.stopBadge(row.stopYn)}</td>
+                        <td class=\"text-truncate\" title=\"${HtmlUtils.escape(row.systemDesc || '')}\">${HtmlUtils.escape(row.systemDesc || '')}</td>
+                        <td class=\"text-center\">
+                            <button class=\"btn btn-outline-secondary btn-sm\" onclick=\"WasGatewayStatus.openTestModal(${idx})\">테스트</button>
+                        </td>
+                    </tr>
+                `).join('');
+            },
+
+            getSortedRows(rows) {
+                if (!rows || !rows.length || !this.sortBy || !this.sortDirection) {
+                    return rows || [];
+                }
+                const direction = this.sortDirection === 'DESC' ? -1 : 1;
+                return [...rows].sort((a, b) => {
+                    const aVal = this.getSortValue(a, this.sortBy);
+                    const bVal = this.getSortValue(b, this.sortBy);
+                    return this.compareValues(aVal, bVal) * direction;
+                });
+            },
+
+            getSortValue(row, key) {
+                if (!row) return '';
+                switch (key) {
+                    case 'instanceName':
+                        return row.instanceName || row.instanceId || '';
+                    case 'gwName':
+                        return row.gwName || row.gwId || '';
+                    case 'threadCount':
+                        return this.toNumber(row.threadCount);
+                    case 'instancePort':
+                        return this.toNumber(row.instancePort);
+                    case 'systemPort':
+                        return this.toNumber(row.systemPort);
+                    default:
+                        return row[key] ?? '';
+                }
+            },
+
+            compareValues(aVal, bVal) {
+                const aNull = aVal === null || aVal === undefined || aVal === '';
+                const bNull = bVal === null || bVal === undefined || bVal === '';
+                if (aNull && bNull) return 0;
+                if (aNull) return 1;
+                if (bNull) return -1;
+                if (typeof aVal === 'number' && typeof bVal === 'number') {
+                    return aVal - bVal;
+                }
+                return String(aVal).localeCompare(String(bVal), 'ko', { numeric: true, sensitivity: 'base' });
+            },
+
+            toNumber(value) {
+                if (value === null || value === undefined || value === '') return null;
+                const num = Number(value);
+                return Number.isNaN(num) ? null : num;
+            },
+
+            statusPill(status) {
+                const label = status === 'RUNNING' ? '정상' : status === 'STOP' ? '중지' : (status || '-');
+                const cls = status === 'RUNNING' ? 'success' : status === 'STOP' ? 'danger' : '';
+                const dotCls = status === 'RUNNING' ? 'ok' : status === 'STOP' ? 'stop' : '';
+                return `<span class=\"status-pill ${cls}\"><span class=\"status-dot ${dotCls}\"></span>${HtmlUtils.escape(label)}</span>`;
+            },
+
+            ioTypeLabel(code) {
+                const c = (code || '').toUpperCase();
+                switch (c) {
+                    case 'O': return '기동 (REQUEST-OUT)';
+                    case 'I': return '수동 (REQUEST-IN)';
+                    case 'Q': return '요구 (REQUEST)';
+                    case 'S': return '응답 (RESPONSE)';
+                    default: return HtmlUtils.escape(code || '-');
+                }
+            },
+
+            ioTypeIcon(code) {
+                const c = (code || '').toUpperCase();
+                const label = this.ioTypeLabel(c);
+                if (c === 'O') {
+                    return `<span class=\"io-type-cell\"><img src=\"/images/output.gif\" alt=\"${label}\" title=\"${label}\" class=\"sp-icon-img\" onerror=\"this.parentNode.textContent='${label}'\"></span>`;
+                }
+                if (c === 'I') {
+                    return `<span class=\"io-type-cell\"><img src=\"/images/input.gif\" alt=\"${label}\" title=\"${label}\" class=\"sp-icon-img\" onerror=\"this.parentNode.textContent='${label}'\"></span>`;
+                }
+                return HtmlUtils.escape(label || '-');
+            },
+
+            instanceTypeLabel(type) {
+                switch (type) {
+                    case '1': return 'WEB';
+                    case '2': return 'AP';
+                    case '3': return '통합';
+                    default: return HtmlUtils.escape(type || '-');
+                }
+            },
+
+            operModeLabel(mode) {
+                switch (mode) {
+                    case 'R': return '리얼';
+                    case '1': return '신규 운영';
+                    case 'D': return '개발';
+                    default: return HtmlUtils.escape(mode || '-');
+                }
+            },
+
+            stopBadge(stopYn) {
+                if (stopYn === 'Y') return '<span class=\"badge bg-danger\">중지</span>';
+                if (stopYn === 'N') return '<span class=\"badge bg-success\">정상</span>';
+                return HtmlUtils.escape(stopYn || '-');
+            },
+
+            renderPagination(pageData) {
+                const container = document.getElementById('pagination');
+                const pageInfo = document.getElementById('pageInfo');
+                if (!container) return;
+
+                const totalPages = pageData.totalPages || 0;
+                const currentPage = pageData.currentPage || 1;
+                const total = pageData.totalElements || 0;
+                const size = pageData.size || this.pageSize;
+                const start = total === 0 ? 0 : (currentPage - 1) * size + 1;
+                const end = Math.min(currentPage * size, total);
+
+                if (pageInfo) {
+                    pageInfo.textContent = `${start} - ${end} of ${total} items`;
+                }
+
+                const maxButtons = 5;
+                let startPage = Math.max(1, currentPage - Math.floor(maxButtons / 2));
+                let endPage = Math.min(totalPages, startPage + maxButtons - 1);
+
+                if (endPage - startPage + 1 < maxButtons) {
+                    startPage = Math.max(1, endPage - maxButtons + 1);
+                }
+
+                let html = `
+                    <li class="page-item ${currentPage === 1 ? 'disabled' : ''}">
+                        <a class="page-link" href="#" onclick="WasGatewayStatus.load(1); return false;">
+                            <i class="bi bi-chevron-double-left"></i>
+                        </a>
+                    </li>
+                    <li class="page-item ${currentPage === 1 ? 'disabled' : ''}">
+                        <a class="page-link" href="#" onclick="WasGatewayStatus.load(${currentPage - 1}); return false;">
+                            <i class="bi bi-chevron-left"></i>
+                        </a>
+                    </li>
+                `;
+
+                for (let i = startPage; i <= endPage; i++) {
+                    html += `
+                        <li class="page-item ${i === currentPage ? 'active' : ''}">
+                            <a class="page-link" href="#" onclick="WasGatewayStatus.load(${i}); return false;">${i}</a>
+                        </li>
+                    `;
+                }
+
+                html += `
+                    <li class="page-item ${currentPage === totalPages || totalPages === 0 ? 'disabled' : ''}">
+                        <a class="page-link" href="#" onclick="WasGatewayStatus.load(${currentPage + 1}); return false;">
+                            <i class="bi bi-chevron-right"></i>
+                        </a>
+                    </li>
+                    <li class="page-item ${currentPage === totalPages || totalPages === 0 ? 'disabled' : ''}">
+                        <a class="page-link" href="#" onclick="WasGatewayStatus.load(${totalPages}); return false;">
+                            <i class="bi bi-chevron-double-right"></i>
+                        </a>
+                    </li>
+                `;
+
+                container.innerHTML = html;
+            },
+
+            openTestModal(index) {
+                this.selectedIndex = index;
+                const row = this.rows[index];
+                if (!row) return;
+
+                const instanceEl = document.getElementById('gwStatusModalInstance');
+                const gwEl = document.getElementById('gwStatusModalGateway');
+                const sysEl = document.getElementById('gwStatusModalSystem');
+                const targetEl = document.getElementById('gwStatusModalTarget');
+                const resultEl = document.getElementById('gwStatusModalResult');
+
+                if (instanceEl) instanceEl.textContent = `${row.instanceId || ''} / ${row.instanceName || ''}`;
+                if (gwEl) gwEl.textContent = `${row.gwId || ''} / ${row.gwName || ''}`;
+                if (sysEl) sysEl.textContent = row.systemId || '';
+                if (targetEl) targetEl.textContent = `${row.systemIp || row.instanceIp || '-'}:${row.systemPort || row.instancePort || '-'}`;
+                if (resultEl) resultEl.innerHTML = '<span class=\"text-muted\">테스트를 실행하면 결과가 표시됩니다.</span>';
+
+                const runBtn = document.getElementById('gwStatusTestRun');
+                if (runBtn) runBtn.classList.toggle('d-none', !window.was_gateway_status_write);
+
+                const modalEl = document.getElementById('gwStatusModal');
+                if (modalEl) bootstrap.Modal.getOrCreateInstance(modalEl).show();
+            },
+
+            closeModal() {
+                const modalEl = document.getElementById('gwStatusModal');
+                if (modalEl) {
+                    const instance = bootstrap.Modal.getInstance(modalEl);
+                    if (instance) instance.hide();
+                }
+                this.selectedIndex = null;
+            },
+
+            runTest() {
+                if (this.selectedIndex === null || this.selectedIndex === undefined) return;
+                const row = this.rows[this.selectedIndex];
+                if (!row) return;
+
+                const btn = document.getElementById('gwStatusTestRun');
+                if (btn) {
+                    btn.disabled = true;
+                    btn.textContent = '테스트 중...';
+                }
+
+                fetch(`/api/was/gateway-status/${encodeURIComponent(row.instanceId)}/${encodeURIComponent(row.gwId)}/${encodeURIComponent(row.systemId)}/test`, {
+                    method: 'POST',
+                    credentials: 'same-origin'
+                })
+                    .then(res => res.json())
+                    .then(res => {
+                        if (!res.success) {
+                            throw new Error(res.message || '테스트 실패');
+                        }
+                        this.renderTestResult(res.data);
+                    })
+                    .catch(err => {
+                        console.error('[WasGatewayStatus.runTest] Error:', err);
+                        this.renderTestResult({connected: false, message: err.message});
+                    })
+                    .finally(() => {
+                        if (btn) {
+                            btn.disabled = false;
+                            btn.textContent = '테스트 실행';
+                        }
+                    });
+            },
+
+            renderTestResult(data) {
+                const el = document.getElementById('gwStatusModalResult');
+                if (!el) return;
+                const success = data && data.connected;
+                const latency = data && data.latencyMs != null ? `${data.latencyMs} ms` : '-';
+                const message = data && data.message ? HtmlUtils.escape(data.message) : '결과를 표시할 수 없습니다.';
+                const checkedAt = data && data.checkedAt ? HtmlUtils.escape(data.checkedAt) : '';
+                const targetIp = data && data.targetIp ? HtmlUtils.escape(data.targetIp) : '';
+                const targetPort = data && data.targetPort ? data.targetPort : '';
+                const target = targetIp ? `${targetIp}:${targetPort || '-'}` : '';
+
+                el.innerHTML = `
+                    <div class=\"status-pill ${success ? 'success' : 'danger'}\">
+                        <span class=\"status-dot ${success ? 'ok' : 'stop'}\"></span>
+                        ${success ? '성공' : '실패'}
+                    </div>
+                    <div>메시지: ${message}</div>
+                    <div>지연시간: ${latency}</div>
+                    ${target ? `<div>대상: ${target}</div>` : ''}
+                    ${checkedAt ? `<div>시각: ${checkedAt}</div>` : ''}
+                `;
+            },
+
+            exportExcel: function() {
+                const params = new URLSearchParams();
+                const instanceId = document.getElementById('gwStatusInstanceId')?.value || '';
+                const gwId = document.getElementById('gwStatusGwId')?.value || '';
+                const operMode = document.getElementById('gwStatusOperMode')?.value || '';
+
+                if (instanceId) params.set('instanceId', instanceId);
+                if (gwId) params.set('gwId', gwId);
+                if (operMode) params.set('operModeType', operMode);
+                if (this.sortBy) params.set('sortBy', this.sortBy);
+                if (this.sortDirection) params.set('sortDirection', this.sortDirection);
+
+                const qs = params.toString();
+                window.location.href = '/api/was/gateway-status/export' + (qs ? '?' + qs : '');
+            },
+
+            printTable: function() {
+                const columns = [
+                    { key: 'instanceName', label: '인스턴스명' },
+                    { key: 'instanceType', label: '인스턴스유형' },
+                    { key: 'instanceIp', label: '인스턴스IP' },
+                    { key: 'instancePort', label: '인스턴스PORT' },
+                    { key: 'gwName', label: 'GW명' },
+                    { key: 'gwProperties', label: 'GW속성' },
+                    { key: 'threadCount', label: '쓰레드수' },
+                    { key: 'ioType', label: 'IO유형' },
+                    { key: 'operModeType', label: '운영모드' },
+                    { key: 'systemIp', label: '시스템IP' },
+                    { key: 'systemPort', label: '시스템PORT' },
+                    { key: 'stopYn', label: '중지여부' },
+                    { key: 'systemDesc', label: '시스템설명' }
+                ];
+                PrintUtil.print({ title: 'WAS별 Gateway 정보', columns: columns, data: this.rows });
+            }
+        };
+
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', () => window.WasGatewayStatus.init());
+        } else {
+            window.WasGatewayStatus.init();
+        }
+    })();
+</script>
+</th:block>
+</body>
+</html>

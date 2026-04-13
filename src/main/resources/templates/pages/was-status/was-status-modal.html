@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<div th:fragment="modal">
+    <div class="modal fade" id="gwStatusModal" tabindex="-1" aria-labelledby="gwStatusModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header py-2">
+                    <h6 class="modal-title" id="gwStatusModalLabel">연결 테스트</h6>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row g-2 mb-3 sp-was-modal-info">
+                        <div class="col-4 text-muted">인스턴스</div>
+                        <div class="col-8" id="gwStatusModalInstance">-</div>
+                        <div class="col-4 text-muted">Gateway</div>
+                        <div class="col-8" id="gwStatusModalGateway">-</div>
+                        <div class="col-4 text-muted">System</div>
+                        <div class="col-8" id="gwStatusModalSystem">-</div>
+                        <div class="col-4 text-muted">대상 IP/PORT</div>
+                        <div class="col-8" id="gwStatusModalTarget">-</div>
+                    </div>
+
+                    <hr class="my-2">
+                    <div class="sp-was-modal-result-info">
+                        <div class="fw-semibold mb-2">결과</div>
+                        <div id="gwStatusModalResult" class="border rounded p-2 bg-body-tertiary d-flex flex-column gap-1 sp-was-modal-result">
+                            <span class="text-muted">테스트를 실행하면 결과가 표시됩니다.</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer py-2">
+                    <button id="gwStatusTestRun" class="btn btn-sm btn-primary">테스트 실행</button>
+                    <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal"><i class="bi bi-x-lg"></i> 닫기</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+</body>
+</html>

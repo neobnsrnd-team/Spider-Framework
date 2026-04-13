@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<div th:fragment="historyModals">
+    <!-- Backup Reason Modal -->
+    <div class="modal fade" id="backupReasonModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header py-2">
+                    <h6 class="modal-title">전문 백업</h6>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label fw-medium">백업 사유</label>
+                        <textarea id="backupReason" class="form-control" rows="3"
+                                  placeholder="백업 사유를 입력하세요 (선택사항)"></textarea>
+                    </div>
+                    <div class="text-body-secondary small">
+                        현재 전문 데이터와 필드가 히스토리에 저장됩니다.
+                    </div>
+                </div>
+                <div class="modal-footer py-2">
+                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal"><i class="bi bi-x-lg"></i> 취소</button>
+                    <button type="button" class="btn btn-warning btn-sm" onclick="window.MessageDetailModal.executeBackup()">
+                        <i class="bi bi-clock-history"></i> 백업 실행
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Restore Version Modal -->
+    <div class="modal fade" id="restoreVersionModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
+        <div class="modal-dialog modal-dialog-centered modal-xl">
+            <div class="modal-content">
+                <div class="modal-header py-2">
+                    <h6 class="modal-title">전문 복원</h6>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3 text-body-secondary small">
+                        복원할 버전을 선택하세요. 현재 전문 데이터가 선택한 버전으로 대체됩니다.
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table table-sm table-hover sp-data-grid">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>버전</th>
+                                    <th>백업 사유</th>
+                                    <th>백업 일시</th>
+                                    <th>백업 사용자</th>
+                                    <th>작업</th>
+                                </tr>
+                            </thead>
+                            <tbody id="versionListBody">
+                                <tr>
+                                    <td colspan="5" class="text-center">로딩 중...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Field Comparison Section (shown when a version row is clicked) -->
+                    <div id="fieldComparisonSection" class="mt-3" style="display: none;">
+                        <h6 class="fw-medium mb-2">
+                            <i class="bi bi-arrow-left-right"></i>
+                            필드 비교 — 현재 <span class="text-primary">vs</span> 버전 <span id="comparisonVersionLabel" class="text-info"></span>
+                        </h6>
+                        <div class="row g-2">
+                            <!-- Current Fields -->
+                            <div class="col-6">
+                                <div class="border rounded">
+                                    <div class="bg-light px-2 py-1 fw-medium small border-bottom">현재 필드</div>
+                                    <div class="table-responsive" style="max-height: 350px; overflow-y: auto;">
+                                        <table class="table table-sm table-bordered mb-0 sp-data-grid">
+                                            <thead class="table-light sticky-top">
+                                                <tr>
+                                                    <th class="text-center" style="width: 40px;">순서</th>
+                                                    <th>필드ID</th>
+                                                    <th>필드명</th>
+                                                    <th class="text-center" style="width: 60px;">타입</th>
+                                                    <th class="text-center" style="width: 50px;">길이</th>
+                                                    <th>기본값</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody id="currentFieldsCompareBody">
+                                                <tr><td colspan="6" class="text-center text-body-secondary">버전을 선택하세요</td></tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                            <!-- Historic Version Fields -->
+                            <div class="col-6">
+                                <div class="border rounded">
+                                    <div class="bg-info bg-opacity-10 px-2 py-1 fw-medium small border-bottom">선택 버전 필드</div>
+                                    <div class="table-responsive" style="max-height: 350px; overflow-y: auto;">
+                                        <table class="table table-sm table-bordered mb-0 sp-data-grid">
+                                            <thead class="table-light sticky-top">
+                                                <tr>
+                                                    <th class="text-center" style="width: 40px;">순서</th>
+                                                    <th>필드ID</th>
+                                                    <th>필드명</th>
+                                                    <th class="text-center" style="width: 60px;">타입</th>
+                                                    <th class="text-center" style="width: 50px;">길이</th>
+                                                    <th>기본값</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody id="versionFieldsCompareBody">
+                                                <tr><td colspan="6" class="text-center text-body-secondary">버전을 선택하세요</td></tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer py-2">
+                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal"><i class="bi bi-x-lg"></i> 닫기</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+</body>
+</html>

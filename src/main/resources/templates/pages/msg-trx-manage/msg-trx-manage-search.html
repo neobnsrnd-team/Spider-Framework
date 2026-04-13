@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<!-- Trx Search Fragment -->
+<div th:fragment="search" class="card border p-2 mb-3">
+    <div class="d-flex flex-wrap align-items-center gap-2 mb-1">
+        <!-- Left Side Components -->
+        <label class="form-label mb-0 small fw-medium">기관</label>
+        <select id="orgIdFilter" class="form-select form-select-sm flex-fixed-150">
+            <option value="">전체</option>
+        </select>
+
+        <select id="searchField" class="form-select form-select-sm flex-fixed-100 ms-2">
+            <option value="trxId">거래ID</option>
+            <option value="trxName">거래명</option>
+            <option value="messageId">전문ID</option>
+        </select>
+        <input type="text" id="searchValue" class="form-control form-control-sm flex-fixed-180" placeholder="" onkeypress="if(event.key === 'Enter') TrxPage.load()">
+
+        <label class="form-label mb-0 small fw-medium ms-2">상태</label>
+        <select id="trxStopYnFilter" class="form-select form-select-sm flex-fixed-100">
+            <option value="">전체</option>
+            <option value="N">정상</option>
+            <option value="Y">중지</option>
+        </select>
+
+        <!-- Spacer to push right side to the end -->
+        <div class="flex-grow-1"></div>
+
+        <!-- Right Side Components -->
+        <select id="limitRows" class="form-select form-select-sm sp-limit-select">
+            <option value="10" selected>10</option>
+            <option value="20" >20</option>
+            <option value="50">50</option>
+            <option value="100">100</option>
+            <option value="200">200</option>
+        </select>
+        <label class="form-label mb-0 small fw-medium ms-1 me-2 fs-xs">건씩</label>
+
+        <button class="btn btn-primary btn-sm" onclick="TrxPage.load()">
+            <i class="bi bi-search"></i> 조회
+        </button>
+    </div>
+</div>
+</body>
+</html>

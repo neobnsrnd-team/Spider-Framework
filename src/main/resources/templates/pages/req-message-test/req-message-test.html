@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<div th:fragment="content">
+    <!-- Include Page Content Layout Styles -->
+
+    <!-- Page Header -->
+    <div class="page-header">
+        <h4 class="page-title">
+            <i class="bi bi-droplet"></i>
+            전문 테스트
+        </h4>
+    </div>
+
+    <!-- Search Section -->
+    <div th:replace="~{pages/req-message-test/req-message-test-search :: search}"></div>
+
+    <!-- Result Table and Test Case Section -->
+    <div th:replace="~{pages/req-message-test/req-message-test-result :: result}"></div>
+
+    <!-- Transaction Search Modal -->
+    <div th:replace="~{pages/req-message-test/req-message-test-trx-modal :: modal}"></div>
+
+    <!-- Test Case Select Modal -->
+    <div th:replace="~{pages/req-message-test/req-message-test-testcase-modal :: modal}"></div>
+
+    <!-- Simulation Result Modal -->
+    <div th:replace="~{pages/req-message-test/req-message-test-simulation-modal :: modal}"></div>
+
+    <!-- Scripts -->
+    <th:block th:replace="~{pages/req-message-test/req-message-test-script :: script}" />
+</div>
+</body>
+</html>

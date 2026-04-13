@@ -1,0 +1,1079 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<th:block th:fragment="script">
+    <script>
+        // ==================== TrxStopPage Object ====================
+
+        window.TrxStopPage = window.TrxStopPage || {
+            currentPage: 1,
+            totalItems: 0,
+            itemsPerPage: 20,
+            sortBy: null,
+            sortDirection: null,
+            trxStopData: [],
+            appliedParams: { searchField: '', searchValue: '', operModeTypeFilter: '', trxStopYnFilter: '' },
+
+            init: function() {
+                this.bindEvents();
+            },
+
+            bindEvents: function() {
+                // Sort header click
+                $('#trxStopTable thead th[data-sort]').off('click').on('click', function() {
+                    const sortKey = $(this).data('sort');
+                    if (!sortKey) return;
+                    if (window.TrxStopPage.sortBy === sortKey) {
+                        window.TrxStopPage.sortDirection =
+                            window.TrxStopPage.sortDirection === 'ASC' ? 'DESC' : 'ASC';
+                    } else {
+                        window.TrxStopPage.sortBy = sortKey;
+                        window.TrxStopPage.sortDirection = 'ASC';
+                    }
+                    window.TrxStopPage.updateSortIndicators();
+                    window.TrxStopPage.load();
+                });
+
+                // Page size change
+                $('#limitRows').change(function() {
+                    window.TrxStopPage.itemsPerPage = parseInt($(this).val()) || 20;
+                    window.TrxStopPage.currentPage = 1;
+                    window.TrxStopPage.load();
+                });
+
+                // Select all checkbox
+                $('#selectAll').change(function() {
+                    $('input.row-checkbox').prop('checked', $(this).is(':checked'));
+                });
+            },
+
+            search: function() {
+                this.appliedParams = {
+                    searchField: $('#searchField').val(),
+                    searchValue: $('#searchValue').val(),
+                    operModeTypeFilter: $('#operModeTypeFilter').val(),
+                    trxStopYnFilter: $('#trxStopYnFilter').val()
+                };
+                this.currentPage = 1;
+                this.load();
+            },
+
+            load: function() {
+                const params = {
+                    page: this.currentPage,
+                    size: this.itemsPerPage,
+                    searchField: this.appliedParams.searchField,
+                    searchValue: this.appliedParams.searchValue,
+                    operModeTypeFilter: this.appliedParams.operModeTypeFilter,
+                    trxStopYnFilter: this.appliedParams.trxStopYnFilter,
+                    sortBy: this.sortBy || undefined,
+                    sortDirection: this.sortDirection || undefined
+                };
+
+                $.ajax({
+                    url: API_BASE_URL + '/trx-stop/page',
+                    method: 'GET',
+                    data: params,
+                    success: (response) => {
+                        if (response.success) {
+                            const pageData = response.data;
+                            this.totalItems = pageData.totalElements;
+                            this.trxStopData = pageData.content;
+                            this.renderTable(pageData.content);
+                            this.renderPagination();
+                        } else {
+                            Toast.error('조회 실패: ' + (response.message || '알 수 없는 오류'));
+                        }
+                    },
+                    error: (xhr) => {
+                        Toast.info(typeof getUserFriendlyErrorMessage === 'function'
+                            ? getUserFriendlyErrorMessage(xhr)
+                            : '데이터 조회 중 오류가 발생했습니다.');
+                    }
+                });
+            },
+
+            renderTable: function(list) {
+                const tbody = $('#trxStopTableBody');
+                tbody.empty();
+                $('#selectAll').prop('checked', false);
+
+                if (!list || list.length === 0) {
+                    tbody.append(`
+                        <tr>
+                            <td colspan="9" class="text-center py-4 text-body-secondary">
+                                조회된 데이터가 없습니다.
+                            </td>
+                        </tr>
+                    `);
+                    return;
+                }
+
+                const operModeMap = { 'D': '개발환경', 'R': '리얼환경', 'T': '테스트환경' };
+                const trxTypeMap = { '1': 'ONLINE', '2': 'BATCH', '3': 'ASYNC' };
+
+                list.forEach((trx) => {
+                    const isStopped = trx.trxStopYn === 'Y';
+
+                    // 상태 아이콘
+                    const statusIcon = isStopped
+                        ? '<span class="status-icon inactive"></span>'
+                        : '<span class="status-icon active"></span>';
+
+                    // 상태 변경 버튼
+                    const toggleBtn = isStopped
+                        ? `<button class="btn btn-xs btn-success" onclick="TrxStopPage.toggleStop('${HtmlUtils.escape(trx.trxId)}', 'N'); event.stopPropagation();">시작</button>`
+                        : `<button class="btn btn-xs btn-secondary" onclick="TrxStopPage.toggleStop('${HtmlUtils.escape(trx.trxId)}', 'Y'); event.stopPropagation();">중지</button>`;
+
+                    // 재처리 아이콘
+                    const retryIcon = trx.retryTrxYn === 'Y'
+                        ? '<span class="status-icon active"></span>'
+                        : '<span class="status-icon inactive"></span>';
+
+                    // 허용자 수
+                    const accessCount = trx.accessUserCount || 0;
+
+                    tbody.append(`<tr>
+                        <td class="text-center">
+                            <input type="checkbox" class="row-checkbox" value="${HtmlUtils.escape(trx.trxId)}">
+                        </td>
+                        <td>${HtmlUtils.escape(trx.trxId)}</td>
+                        <td>${HtmlUtils.escape(trx.trxName)}</td>
+                        <td>${HtmlUtils.escape(operModeMap[trx.operModeType] || (trx.operModeType ? trx.operModeType : '전체'))}</td>
+                        <td>${HtmlUtils.escape(trxTypeMap[trx.trxType] || trx.trxType || '')}</td>
+                        <td class="text-center">${retryIcon}</td>
+                        <td class="text-center">${statusIcon}</td>
+                        <td class="text-center">${toggleBtn}</td>
+                        <td class="text-center">
+                            <button class="btn btn-xs btn-secondary" onclick="TrxStopPage.openAccessUser('${HtmlUtils.escape(trx.trxId)}'); event.stopPropagation();">
+                                + (${accessCount})
+                            </button>
+                        </td>
+                    </tr>`);
+                });
+            },
+
+            renderPagination: function() {
+                const totalPages = Math.ceil(this.totalItems / this.itemsPerPage);
+                const pagination = $('#pagination');
+                pagination.empty();
+
+                pagination.append(`
+                    <li class="page-item ${this.currentPage === 1 ? 'disabled' : ''}">
+                        <a class="page-link" href="#" onclick="window.TrxStopPage.changePage(1); return false;"><i class="bi bi-chevron-double-left"></i></a>
+                    </li>
+                    <li class="page-item ${this.currentPage === 1 ? 'disabled' : ''}">
+                        <a class="page-link" href="#" onclick="window.TrxStopPage.changePage(${this.currentPage - 1}); return false;"><i class="bi bi-chevron-left"></i></a>
+                    </li>
+                `);
+
+                const maxButtons = 5;
+                let startPage = Math.max(1, this.currentPage - Math.floor(maxButtons / 2));
+                let endPage = Math.min(totalPages, startPage + maxButtons - 1);
+                if (endPage - startPage + 1 < maxButtons) {
+                    startPage = Math.max(1, endPage - maxButtons + 1);
+                }
+
+                for (let i = startPage; i <= endPage; i++) {
+                    pagination.append(`
+                        <li class="page-item ${i === this.currentPage ? 'active' : ''}">
+                            <a class="page-link" href="#" onclick="window.TrxStopPage.changePage(${i}); return false;">${i}</a>
+                        </li>
+                    `);
+                }
+
+                pagination.append(`
+                    <li class="page-item ${this.currentPage === totalPages || totalPages === 0 ? 'disabled' : ''}">
+                        <a class="page-link" href="#" onclick="window.TrxStopPage.changePage(${this.currentPage + 1}); return false;"><i class="bi bi-chevron-right"></i></a>
+                    </li>
+                    <li class="page-item ${this.currentPage === totalPages || totalPages === 0 ? 'disabled' : ''}">
+                        <a class="page-link" href="#" onclick="window.TrxStopPage.changePage(${totalPages}); return false;"><i class="bi bi-chevron-double-right"></i></a>
+                    </li>
+                `);
+
+                const start = this.totalItems === 0 ? 0 : (this.currentPage - 1) * this.itemsPerPage + 1;
+                const end = Math.min(this.currentPage * this.itemsPerPage, this.totalItems);
+                $('#pageInfo').text(`${start} - ${end} of ${this.totalItems} items`);
+            },
+
+            changePage: function(page) {
+                const totalPages = Math.ceil(this.totalItems / this.itemsPerPage);
+                if (page < 1 || page > totalPages) return;
+                this.currentPage = page;
+                this.load();
+            },
+
+            updateSortIndicators: function() {
+                const headers = $('#trxStopTable thead th[data-sort]');
+                headers.removeClass('sort-asc sort-desc');
+                if (!this.sortBy || !this.sortDirection) return;
+                headers.filter(`[data-sort="${this.sortBy}"]`)
+                    .addClass(this.sortDirection === 'ASC' ? 'sort-asc' : 'sort-desc');
+            },
+
+            getSelectedTrxIds: function() {
+                return $('input.row-checkbox:checked').map(function() {
+                    return $(this).val();
+                }).get();
+            },
+
+            // ===== Action Methods =====
+
+            toggleStop: function(trxId, stopYn) {
+                if (stopYn === 'Y') {
+                    // 중지: 확인 → 사유 입력 → API
+                    TrxStopConfirmModal.open('거래 [' + trxId + ']을(를) 중지하시겠습니까?', function() {
+                        TrxStopReasonModal.open(function(reason) {
+                            window.TrxStopPage.callBatchApi([trxId], 'Y', reason);
+                        });
+                    });
+                } else {
+                    // 시작: 확인 → API
+                    TrxStopConfirmModal.open('거래 [' + trxId + ']을(를) 시작하시겠습니까?', function() {
+                        window.TrxStopPage.callBatchApi([trxId], 'N', null);
+                    });
+                }
+            },
+
+            batchStop: function() {
+                const ids = this.getSelectedTrxIds();
+                if (ids.length === 0) {
+                    Toast.warning('거래를 선택해주세요.');
+                    return;
+                }
+                TrxStopConfirmModal.open('선택된 ' + ids.length + '건의 거래를 중지하시겠습니까?', function() {
+                    TrxStopReasonModal.open(function(reason) {
+                        window.TrxStopPage.callBatchApi(ids, 'Y', reason);
+                    });
+                });
+            },
+
+            batchStart: function() {
+                const ids = this.getSelectedTrxIds();
+                if (ids.length === 0) {
+                    Toast.warning('거래를 선택해주세요.');
+                    return;
+                }
+                TrxStopConfirmModal.open('선택된 ' + ids.length + '건의 거래를 시작하시겠습니까?', function() {
+                    window.TrxStopPage.callBatchApi(ids, 'N', null);
+                });
+            },
+
+            callBatchApi: function(trxIds, trxStopYn, trxStopReason) {
+                $.ajax({
+                    url: API_BASE_URL + '/trx-stop/batch',
+                    method: 'PUT',
+                    contentType: 'application/json',
+                    data: JSON.stringify({
+                        trxIds: trxIds,
+                        trxStopYn: trxStopYn,
+                        trxStopReason: trxStopReason
+                    }),
+                    success: function(response) {
+                        if (response.success) {
+                            const action = trxStopYn === 'Y' ? '중지' : '시작';
+                            Toast.success(trxIds.length + '건의 거래가 ' + action + ' 처리되었습니다.');
+                            window.TrxStopPage.load();
+                        } else {
+                            Toast.error('처리 실패: ' + (response.message || '알 수 없는 오류'));
+                        }
+                    },
+                    error: function(xhr) {
+                        var message = '처리 중 오류가 발생했습니다.';
+                        if (xhr.responseJSON && xhr.responseJSON.message) {
+                            message = xhr.responseJSON.message;
+                        }
+                        Toast.info(message);
+                    }
+                });
+            },
+
+            openAccessUser: function(trxId) {
+                TrxStopAccessUserModal.open(trxId);
+            },
+
+            openAccessUserList: function() {
+                TrxStopAccessUserListModal.open();
+            },
+
+            openOperModeChange: function() {
+                TrxStopOperModeModal.open();
+            }
+        };
+
+        // ==================== Modal Objects ====================
+
+        window.TrxStopConfirmModal = {
+            callback: null,
+
+            open: function(text, callback) {
+                this.callback = callback;
+                $('#trxStopConfirmText').text(text || '처리하시겠습니까?');
+                bootstrap.Modal.getOrCreateInstance(document.getElementById('trxStopConfirmModal')).show();
+            },
+
+            confirm: function() {
+                var cb = this.callback;
+                this.callback = null;
+                bootstrap.Modal.getInstance(document.getElementById('trxStopConfirmModal'))?.hide();
+                if (cb) cb();
+            },
+
+            close: function() {
+                this.callback = null;
+                bootstrap.Modal.getInstance(document.getElementById('trxStopConfirmModal'))?.hide();
+            }
+        };
+
+        window.TrxStopReasonModal = {
+            callback: null,
+
+            open: function(callback) {
+                this.callback = callback;
+                $('#trxStopReasonInput').val('');
+                bootstrap.Modal.getOrCreateInstance(document.getElementById('trxStopReasonModal')).show();
+                setTimeout(function() { $('#trxStopReasonInput').focus(); }, 250);
+            },
+
+            submit: function() {
+                var reason = $('#trxStopReasonInput').val().trim();
+                var cb = this.callback;
+                this.callback = null;
+                bootstrap.Modal.getInstance(document.getElementById('trxStopReasonModal'))?.hide();
+                if (cb) cb(reason);
+            },
+
+            close: function() {
+                this.callback = null;
+                bootstrap.Modal.getInstance(document.getElementById('trxStopReasonModal'))?.hide();
+            }
+        };
+
+        // ==================== Access User Modal (개별 거래) ====================
+
+        window.TrxStopAccessUserModal = {
+            currentTrxId: null,
+            rows: {},
+            nextRowId: 1,
+            sortBy: null,
+            sortDirection: null,
+
+            open: function(trxId) {
+                this.currentTrxId = trxId;
+                this.rows = {};
+                this.nextRowId = 1;
+                this.sortBy = null;
+                this.sortDirection = null;
+                $('#auModalCheckAll').prop('checked', false);
+                this.load();
+                bootstrap.Modal.getOrCreateInstance(document.getElementById('trxStopAccessUserModal')).show();
+            },
+
+            close: function() {
+                this.currentTrxId = null;
+                this.rows = {};
+                bootstrap.Modal.getInstance(document.getElementById('trxStopAccessUserModal'))?.hide();
+                window.TrxStopPage.load();
+            },
+
+            load: function(onComplete) {
+                var self = this;
+                $.ajax({
+                    url: API_BASE_URL + '/access-users/page?page=1&size=100&gubunType=T&trxId=' + encodeURIComponent(this.currentTrxId),
+                    method: 'GET',
+                    success: function(response) {
+                        if (response.success) {
+                            self.rows = {};
+                            self.nextRowId = 1;
+                            var list = response.data.content || [];
+                            list.forEach(function(u) {
+                                var rid = 'am' + self.nextRowId++;
+                                self.rows[rid] = { status: 'existing', gubunType: u.gubunType, trxId: u.trxId, custUserId: u.custUserId, useYn: u.useYn, originalUseYn: u.useYn };
+                            });
+                            self.renderTable();
+                            if (typeof onComplete === 'function') onComplete();
+                        }
+                    },
+                    error: function() {
+                        $('#auModalTableBody').html('<tr><td colspan="4" class="text-center py-3 text-danger">데이터 조회 실패</td></tr>');
+                    }
+                });
+            },
+
+            renderTable: function() {
+                var self = this;
+                var tbody = $('#auModalTableBody');
+                tbody.empty();
+                $('#auModalCheckAll').prop('checked', false);
+
+                // 클라이언트 사이드 정렬
+                var keys = Object.keys(this.rows);
+                if (this.sortBy) {
+                    var sortKey = this.sortBy;
+                    var sortDir = this.sortDirection;
+                    keys.sort(function(a, b) {
+                        var valA = self.rows[a][sortKey] || '';
+                        var valB = self.rows[b][sortKey] || '';
+                        return sortDir === 'ASC' ? valA.localeCompare(valB) : valB.localeCompare(valA);
+                    });
+                }
+
+                var count = 0;
+
+                for (var i = 0; i < keys.length; i++) {
+                    var rid = keys[i];
+                    var row = this.rows[rid];
+
+                    if (row.status === 'deleted') {
+                        tbody.append('<tr data-rid="' + rid + '" style="text-decoration:line-through;opacity:0.5;">' +
+                            '<td class="text-center"><input type="checkbox" disabled></td>' +
+                            '<td class="text-center"><span class="sp-crud-delete">D</span></td>' +
+                            '<td>' + HtmlUtils.escape(row.custUserId) + '</td>' +
+                            '<td class="text-center">' + HtmlUtils.escape(row.useYn === 'Y' ? '사용' : '미사용') + '</td>' +
+                        '</tr>');
+                        continue;
+                    }
+
+                    count++;
+
+                    var crudLabel = '';
+                    if (row.status === 'new') crudLabel = '<span class="sp-crud-create">C</span>';
+                    else if (row.status === 'updated') crudLabel = '<span class="sp-crud-update">U</span>';
+
+                    var custUserIdCell;
+                    if (row.status === 'new') {
+                        custUserIdCell = '<input type="text" class="form-control sp-table-input-sm" id="amCust_' + rid + '" value="" placeholder="사용자ID">';
+                    } else {
+                        custUserIdCell = HtmlUtils.escape(row.custUserId);
+                    }
+
+                    var useYnCell = '<select class="form-control sp-table-input-sm" id="amUseYn_' + rid + '">' +
+                        '<option value="Y"' + (row.useYn === 'Y' ? ' selected' : '') + '>사용</option>' +
+                        '<option value="N"' + (row.useYn === 'N' ? ' selected' : '') + '>미사용</option></select>';
+
+                    tbody.append('<tr data-rid="' + rid + '">' +
+                        '<td class="text-center"><input type="checkbox" class="au-modal-check" data-rid="' + rid + '"></td>' +
+                        '<td class="text-center">' + crudLabel + '</td>' +
+                        '<td>' + custUserIdCell + '</td>' +
+                        '<td class="text-center">' + useYnCell + '</td>' +
+                    '</tr>');
+                }
+
+                if (count === 0 && keys.length === 0) {
+                    tbody.append('<tr><td colspan="4" class="text-center py-4 text-body-secondary">등록된 접근허용자가 없습니다.</td></tr>');
+                }
+
+                $('#auModalPageInfo').text(count + ' items');
+
+                // useYn change → U 배지 즉시 반영 (new 행은 C 배지 유지)
+                $('#auModalTableBody').find('select[id^="amUseYn_"]').off('change').on('change', function() {
+                    var rid = $(this).closest('tr').data('rid');
+                    var newVal = $(this).val();
+                    var row = self.rows[rid];
+                    if (!row) return;
+                    row.useYn = newVal;
+                    if (row.status === 'existing' && newVal !== row.originalUseYn) {
+                        row.status = 'updated';
+                        $(this).closest('tr').find('td:nth-child(2)').html('<span class="sp-crud-update">U</span>');
+                    } else if (row.status === 'updated' && newVal === row.originalUseYn) {
+                        row.status = 'existing';
+                        $(this).closest('tr').find('td:nth-child(2)').html('');
+                    }
+                });
+
+                this.bindSortHandlers();
+                this._updateSortIndicators();
+            },
+
+            toggleCheckAll: function(el) {
+                $('.au-modal-check').prop('checked', $(el).is(':checked'));
+            },
+
+            addRow: function() {
+                this._collectInputValues();
+                var rid = 'am' + this.nextRowId++;
+                this.rows[rid] = { status: 'new', gubunType: 'T', trxId: this.currentTrxId, custUserId: '', useYn: 'Y' };
+                this.renderTable();
+                $('#amCust_' + rid).focus();
+            },
+
+            deleteSelected: function() {
+                var self = this;
+                var checked = [];
+                $('.au-modal-check:checked').each(function() { checked.push($(this).data('rid')); });
+
+                if (checked.length === 0) {
+                    Toast.warning('삭제할 항목을 선택해주세요.');
+                    return;
+                }
+
+                this._collectInputValues();
+
+                checked.forEach(function(rid) {
+                    if (self.rows[rid]) {
+                        if (self.rows[rid].status === 'new') {
+                            delete self.rows[rid];
+                        } else {
+                            self.rows[rid].status = 'deleted';
+                        }
+                    }
+                });
+
+                this.renderTable();
+            },
+
+            _collectInputValues: function() {
+                var self = this;
+                Object.keys(this.rows).forEach(function(rid) {
+                    var row = self.rows[rid];
+                    if (row.status === 'deleted') return;
+                    if (row.status === 'new') {
+                        var ci = $('#amCust_' + rid);
+                        if (ci.length) row.custUserId = ci.val().trim();
+                    }
+                });
+            },
+
+            bindSortHandlers: function() {
+                var self = this;
+                $('#auModalTable thead th[data-sort]').off('click').on('click', function() {
+                    var key = $(this).data('sort');
+                    if (self.sortBy === key) {
+                        if (self.sortDirection === 'ASC') {
+                            self.sortDirection = 'DESC';
+                        } else {
+                            self.sortBy = null;
+                            self.sortDirection = null;
+                        }
+                    } else {
+                        self.sortBy = key;
+                        self.sortDirection = 'ASC';
+                    }
+                    self._updateSortIndicators();
+                    self.renderTable();
+                });
+            },
+
+            _updateSortIndicators: function() {
+                var headers = $('#auModalTable thead th[data-sort]');
+                headers.removeClass('sort-asc sort-desc');
+                if (!this.sortBy) return;
+                headers.filter('[data-sort="' + this.sortBy + '"]')
+                    .addClass(this.sortDirection === 'ASC' ? 'sort-asc' : 'sort-desc');
+            },
+
+            save: function() {
+                this._collectInputValues();
+                var self = this;
+
+                var newRows = [];
+                var updatedRows = [];
+                var deletedRows = [];
+                Object.keys(this.rows).forEach(function(rid) {
+                    if (self.rows[rid].status === 'new') newRows.push(self.rows[rid]);
+                    if (self.rows[rid].status === 'updated') updatedRows.push(self.rows[rid]);
+                    if (self.rows[rid].status === 'deleted') deletedRows.push(self.rows[rid]);
+                });
+
+                for (var i = 0; i < newRows.length; i++) {
+                    if (!newRows[i].custUserId) { Toast.warning('허용자 ID를 입력해주세요.'); return; }
+                }
+
+                if (newRows.length === 0 && updatedRows.length === 0 && deletedRows.length === 0) {
+                    Toast.warning('변경사항이 없습니다.');
+                    return;
+                }
+
+                var promises = [];
+
+                newRows.forEach(function(row) {
+                    promises.push($.ajax({
+                        url: API_BASE_URL + '/access-users',
+                        method: 'POST',
+                        contentType: 'application/json',
+                        data: JSON.stringify({ gubunType: row.gubunType, trxId: row.trxId, custUserId: row.custUserId, useYn: row.useYn })
+                    }));
+                });
+
+                updatedRows.forEach(function(row) {
+                    promises.push($.ajax({
+                        url: API_BASE_URL + '/access-users',
+                        method: 'PUT',
+                        contentType: 'application/json',
+                        data: JSON.stringify({ gubunType: row.gubunType, trxId: row.trxId, custUserId: row.custUserId, useYn: row.useYn })
+                    }));
+                });
+
+                deletedRows.forEach(function(row) {
+                    promises.push($.ajax({
+                        url: API_BASE_URL + '/access-users/' + encodeURIComponent(row.gubunType) + '/' + encodeURIComponent(row.trxId) + '/' + encodeURIComponent(row.custUserId),
+                        method: 'DELETE'
+                    }));
+                });
+
+                $.when.apply($, promises).then(
+                    function() {
+                        Toast.success('변경사항이 저장되었습니다.');
+                        self.load(function() {
+                            var count = Object.keys(self.rows).length;
+                            var trxId = self.currentTrxId;
+                            $('#trxStopTableBody input.row-checkbox[value="' + trxId + '"]')
+                                .closest('tr')
+                                .find('td:last-child button')
+                                .text('+ (' + count + ')');
+                        });
+                    },
+                    function(xhr) {
+                        var msg = '저장 중 오류가 발생했습니다.';
+                        if (xhr && xhr.responseJSON && xhr.responseJSON.message) msg = xhr.responseJSON.message;
+                        Toast.info(msg);
+                        self.load();
+                    }
+                );
+            }
+        };
+
+        // ==================== Access User List Modal (전체 목록) ====================
+
+        window.TrxStopAccessUserListModal = {
+            rows: {},
+            nextRowId: 1,
+            currentPage: 1,
+            totalItems: 0,
+            itemsPerPage: 20,
+            sortBy: null,
+            sortDirection: null,
+
+            open: function() {
+                this.rows = {};
+                this.nextRowId = 1;
+                this.currentPage = 1;
+                this.totalItems = 0;
+                this.sortBy = null;
+                this.sortDirection = null;
+                $('#auListSearchTrxId').val('');
+                $('#auListSearchCustUserId').val('');
+                $('#auListCheckAll').prop('checked', false);
+                $('#auListPagination').empty();
+                $('#auListPageInfo').text('');
+                bootstrap.Modal.getOrCreateInstance(document.getElementById('trxStopAccessUserListModal')).show();
+                this.load();
+            },
+
+            close: function() {
+                this.rows = {};
+                bootstrap.Modal.getInstance(document.getElementById('trxStopAccessUserListModal'))?.hide();
+                window.TrxStopPage.load();
+            },
+
+            search: function() {
+                this.currentPage = 1;
+                this.load();
+            },
+
+            load: function() {
+                var self = this;
+                var params = new URLSearchParams({ page: this.currentPage, size: this.itemsPerPage, gubunType: 'T' });
+                var trxId = $('#auListSearchTrxId').val().trim();
+                var custUserId = $('#auListSearchCustUserId').val().trim();
+                if (trxId) params.append('trxId', trxId);
+                if (custUserId) params.append('custUserId', custUserId);
+                if (this.sortBy) {
+                    params.append('sortBy', this.sortBy);
+                    params.append('sortDirection', this.sortDirection || 'ASC');
+                }
+
+                $.ajax({
+                    url: API_BASE_URL + '/access-users/page?' + params.toString(),
+                    method: 'GET',
+                    success: function(response) {
+                        if (response.success) {
+                            self.rows = {};
+                            self.nextRowId = 1;
+                            var pageData = response.data;
+                            self.totalItems = pageData.totalElements;
+                            var list = pageData.content || [];
+                            list.forEach(function(u) {
+                                var rid = 'al' + self.nextRowId++;
+                                self.rows[rid] = { status: 'existing', gubunType: u.gubunType, trxId: u.trxId, custUserId: u.custUserId, useYn: u.useYn, originalUseYn: u.useYn };
+                            });
+                            self.renderTable();
+                            self.renderPagination();
+                        }
+                    },
+                    error: function() {
+                        $('#auListTableBody').html('<tr><td colspan="5" class="text-center py-3 text-danger">데이터 조회 실패</td></tr>');
+                    }
+                });
+            },
+
+            renderTable: function() {
+                var self = this;
+                var tbody = $('#auListTableBody');
+                tbody.empty();
+                $('#auListCheckAll').prop('checked', false);
+
+                var keys = Object.keys(this.rows);
+                var count = 0;
+
+                for (var i = 0; i < keys.length; i++) {
+                    var rid = keys[i];
+                    var row = this.rows[rid];
+
+                    if (row.status === 'deleted') {
+                        tbody.append('<tr data-rid="' + rid + '" style="text-decoration:line-through;opacity:0.5;">' +
+                            '<td class="text-center"><input type="checkbox" disabled></td>' +
+                            '<td class="text-center"><span class="sp-crud-delete">D</span></td>' +
+                            '<td>' + HtmlUtils.escape(row.trxId) + '</td>' +
+                            '<td>' + HtmlUtils.escape(row.custUserId) + '</td>' +
+                            '<td class="text-center">' + HtmlUtils.escape(row.useYn === 'Y' ? '사용' : '미사용') + '</td>' +
+                        '</tr>');
+                        continue;
+                    }
+
+                    count++;
+
+                    var crudLabel = '';
+                    if (row.status === 'new') crudLabel = '<span class="sp-crud-create">C</span>';
+                    else if (row.status === 'updated') crudLabel = '<span class="sp-crud-update">U</span>';
+
+                    var trxIdCell, custUserIdCell;
+                    if (row.status === 'new') {
+                        trxIdCell = '<input type="text" class="form-control sp-table-input-sm" id="alTrx_' + rid + '" value="" placeholder="거래/서비스ID">';
+                        custUserIdCell = '<input type="text" class="form-control sp-table-input-sm" id="alCust_' + rid + '" value="" placeholder="사용자ID">';
+                    } else {
+                        trxIdCell = HtmlUtils.escape(row.trxId);
+                        custUserIdCell = HtmlUtils.escape(row.custUserId);
+                    }
+
+                    var useYnCell = '<select class="form-control sp-table-input-sm" id="alUseYn_' + rid + '">' +
+                        '<option value="Y"' + (row.useYn === 'Y' ? ' selected' : '') + '>사용</option>' +
+                        '<option value="N"' + (row.useYn === 'N' ? ' selected' : '') + '>미사용</option></select>';
+
+                    tbody.append('<tr data-rid="' + rid + '">' +
+                        '<td class="text-center"><input type="checkbox" class="au-list-check" data-rid="' + rid + '"></td>' +
+                        '<td class="text-center">' + crudLabel + '</td>' +
+                        '<td>' + trxIdCell + '</td>' +
+                        '<td>' + custUserIdCell + '</td>' +
+                        '<td class="text-center">' + useYnCell + '</td>' +
+                    '</tr>');
+                }
+
+                if (count === 0 && Object.keys(this.rows).every(function(k) { return self.rows[k].status === 'deleted'; }) && Object.keys(this.rows).length > 0) {
+                    // all rows deleted — no empty message needed
+                } else if (count === 0) {
+                    tbody.append('<tr><td colspan="5" class="text-center py-4 text-body-secondary">조회된 데이터가 없습니다.</td></tr>');
+                }
+
+                // Bind useYn change → immediate U badge (new 행은 C 배지 유지)
+                $('#auListTableBody').find('select[id^="alUseYn_"]').off('change').on('change', function() {
+                    var rid = $(this).closest('tr').data('rid');
+                    var newVal = $(this).val();
+                    var row = self.rows[rid];
+                    if (!row) return;
+                    row.useYn = newVal;
+                    if (row.status === 'existing' && newVal !== row.originalUseYn) {
+                        row.status = 'updated';
+                        $(this).closest('tr').find('td:nth-child(2)').html('<span class="sp-crud-update">U</span>');
+                    } else if (row.status === 'updated' && newVal === row.originalUseYn) {
+                        row.status = 'existing';
+                        $(this).closest('tr').find('td:nth-child(2)').html('');
+                    }
+                });
+
+                this.bindSortHandlers();
+                this._updateSortIndicators();
+            },
+
+            renderPagination: function() {
+                var totalPages = Math.ceil(this.totalItems / this.itemsPerPage);
+                var pg = $('#auListPagination');
+                pg.empty();
+
+                pg.append('<li class="page-item ' + (this.currentPage === 1 ? 'disabled' : '') + '"><a class="page-link" href="#" onclick="TrxStopAccessUserListModal.changePage(1);return false;"><i class="bi bi-chevron-double-left"></i></a></li>');
+                pg.append('<li class="page-item ' + (this.currentPage === 1 ? 'disabled' : '') + '"><a class="page-link" href="#" onclick="TrxStopAccessUserListModal.changePage(' + (this.currentPage - 1) + ');return false;"><i class="bi bi-chevron-left"></i></a></li>');
+
+                var maxBtn = 5;
+                var startP = Math.max(1, this.currentPage - Math.floor(maxBtn / 2));
+                var endP = Math.min(totalPages, startP + maxBtn - 1);
+                if (endP - startP + 1 < maxBtn) startP = Math.max(1, endP - maxBtn + 1);
+
+                for (var i = startP; i <= endP; i++) {
+                    pg.append('<li class="page-item ' + (i === this.currentPage ? 'active' : '') + '"><a class="page-link" href="#" onclick="TrxStopAccessUserListModal.changePage(' + i + ');return false;">' + i + '</a></li>');
+                }
+
+                pg.append('<li class="page-item ' + (this.currentPage >= totalPages || totalPages === 0 ? 'disabled' : '') + '"><a class="page-link" href="#" onclick="TrxStopAccessUserListModal.changePage(' + (this.currentPage + 1) + ');return false;"><i class="bi bi-chevron-right"></i></a></li>');
+                pg.append('<li class="page-item ' + (this.currentPage >= totalPages || totalPages === 0 ? 'disabled' : '') + '"><a class="page-link" href="#" onclick="TrxStopAccessUserListModal.changePage(' + totalPages + ');return false;"><i class="bi bi-chevron-double-right"></i></a></li>');
+
+                var start = this.totalItems === 0 ? 0 : (this.currentPage - 1) * this.itemsPerPage + 1;
+                var end = Math.min(this.currentPage * this.itemsPerPage, this.totalItems);
+                $('#auListPageInfo').text(start + ' - ' + end + ' of ' + this.totalItems + ' items');
+            },
+
+            changePage: function(page) {
+                var totalPages = Math.ceil(this.totalItems / this.itemsPerPage);
+                if (page < 1 || page > totalPages) return;
+                this.currentPage = page;
+                this.load();
+            },
+
+            toggleCheckAll: function(el) {
+                $('.au-list-check').prop('checked', $(el).is(':checked'));
+            },
+
+            addRow: function() {
+                this._collectInputValues();
+                var rid = 'al' + this.nextRowId++;
+                this.rows[rid] = { status: 'new', gubunType: 'T', trxId: '', custUserId: '', useYn: 'Y' };
+                this.renderTable();
+                $('#alTrx_' + rid).focus();
+            },
+
+            deleteSelected: function() {
+                var self = this;
+                var checked = [];
+                $('.au-list-check:checked').each(function() { checked.push($(this).data('rid')); });
+
+                if (checked.length === 0) {
+                    Toast.warning('삭제할 항목을 선택해주세요.');
+                    return;
+                }
+
+                this._collectInputValues();
+
+                checked.forEach(function(rid) {
+                    if (self.rows[rid]) {
+                        if (self.rows[rid].status === 'new') {
+                            delete self.rows[rid];
+                        } else {
+                            self.rows[rid].status = 'deleted';
+                        }
+                    }
+                });
+
+                this.renderTable();
+            },
+
+            _collectInputValues: function() {
+                var self = this;
+                Object.keys(this.rows).forEach(function(rid) {
+                    var row = self.rows[rid];
+                    if (row.status === 'deleted') return;
+                    if (row.status === 'new') {
+                        var ti = $('#alTrx_' + rid);
+                        var ci = $('#alCust_' + rid);
+                        if (ti.length) row.trxId = ti.val().trim();
+                        if (ci.length) row.custUserId = ci.val().trim();
+                    }
+                });
+            },
+
+            bindSortHandlers: function() {
+                var self = this;
+                $('#auListTable thead th[data-sort]').off('click').on('click', function() {
+                    var key = $(this).data('sort');
+                    if (self.sortBy === key) {
+                        if (self.sortDirection === 'ASC') {
+                            self.sortDirection = 'DESC';
+                        } else {
+                            self.sortBy = null;
+                            self.sortDirection = null;
+                        }
+                    } else {
+                        self.sortBy = key;
+                        self.sortDirection = 'ASC';
+                    }
+                    self._updateSortIndicators();
+                    self.currentPage = 1;
+                    self.load();
+                });
+            },
+
+            _updateSortIndicators: function() {
+                var headers = $('#auListTable thead th[data-sort]');
+                headers.removeClass('sort-asc sort-desc');
+                if (!this.sortBy) return;
+                headers.filter('[data-sort="' + this.sortBy + '"]')
+                    .addClass(this.sortDirection === 'ASC' ? 'sort-asc' : 'sort-desc');
+            },
+
+            save: function() {
+                this._collectInputValues();
+                var self = this;
+
+                var newRows = [];
+                var updatedRows = [];
+                var deletedRows = [];
+                Object.keys(this.rows).forEach(function(rid) {
+                    if (self.rows[rid].status === 'new') newRows.push(self.rows[rid]);
+                    if (self.rows[rid].status === 'updated') updatedRows.push(self.rows[rid]);
+                    if (self.rows[rid].status === 'deleted') deletedRows.push(self.rows[rid]);
+                });
+
+                for (var i = 0; i < newRows.length; i++) {
+                    if (!newRows[i].trxId) { Toast.warning('거래/서비스ID를 입력해주세요.'); return; }
+                    if (!newRows[i].custUserId) { Toast.warning('접근허용고객 사용자ID를 입력해주세요.'); return; }
+                }
+
+                if (newRows.length === 0 && updatedRows.length === 0 && deletedRows.length === 0) {
+                    Toast.warning('변경사항이 없습니다.');
+                    return;
+                }
+
+                var promises = [];
+
+                newRows.forEach(function(row) {
+                    promises.push($.ajax({
+                        url: API_BASE_URL + '/access-users',
+                        method: 'POST',
+                        contentType: 'application/json',
+                        data: JSON.stringify({ gubunType: row.gubunType, trxId: row.trxId, custUserId: row.custUserId, useYn: row.useYn })
+                    }));
+                });
+
+                updatedRows.forEach(function(row) {
+                    promises.push($.ajax({
+                        url: API_BASE_URL + '/access-users',
+                        method: 'PUT',
+                        contentType: 'application/json',
+                        data: JSON.stringify({ gubunType: row.gubunType, trxId: row.trxId, custUserId: row.custUserId, useYn: row.useYn })
+                    }));
+                });
+
+                deletedRows.forEach(function(row) {
+                    promises.push($.ajax({
+                        url: API_BASE_URL + '/access-users/' + encodeURIComponent(row.gubunType) + '/' + encodeURIComponent(row.trxId) + '/' + encodeURIComponent(row.custUserId),
+                        method: 'DELETE'
+                    }));
+                });
+
+                $.when.apply($, promises).then(
+                    function() { Toast.success('변경사항이 저장되었습니다.'); self.load(); },
+                    function(xhr) {
+                        var msg = '저장 중 오류가 발생했습니다.';
+                        if (xhr && xhr.responseJSON && xhr.responseJSON.message) msg = xhr.responseJSON.message;
+                        Toast.info(msg);
+                        self.load();
+                    }
+                );
+            },
+
+            reload: function() {
+                $('#wasReloadModal').addClass('sp-z-1300');
+                $('#wasReloadErrorModal').addClass('sp-z-1300');
+                document.getElementById('wasReloadModal').addEventListener('hidden.bs.modal', function() {
+                    $('#wasReloadModal').removeClass('sp-z-1300');
+                    $('#wasReloadErrorModal').removeClass('sp-z-1300');
+                }, { once: true });
+                WasSelectReloadModal.open({
+                    title: '접근허용자 정보 WAS Reload',
+                    onExecute: function(instanceIds) {
+                        $.ajax({
+                            url: API_BASE_URL + '/reload/execute',
+                            method: 'POST',
+                            contentType: 'application/json',
+                            data: JSON.stringify({ reloadType: 'trx', instanceIds: instanceIds }),
+                            success: function(response) {
+                                if (response.success && response.data) {
+                                    WasSelectReloadModal.showResults(response.data.results);
+                                } else {
+                                    WasSelectReloadModal.resetButton();
+                                    Toast.error(response.message || 'Reload 실행에 실패했습니다.');
+                                }
+                            },
+                            error: function(xhr) {
+                                WasSelectReloadModal.resetButton();
+                                Toast.info((xhr.responseJSON && xhr.responseJSON.message) || 'Reload 실행 중 오류가 발생했습니다.');
+                            }
+                        });
+                    }
+                });
+            }
+        };
+
+        // ==================== Oper Mode Modal (운영모드 일괄 수정) ====================
+
+        window.TrxStopOperModeModal = {
+
+            open: function() {
+                $('#operModeSelect').val('');
+                bootstrap.Modal.getOrCreateInstance(document.getElementById('trxStopOperModeModal')).show();
+            },
+
+            close: function() {
+                bootstrap.Modal.getInstance(document.getElementById('trxStopOperModeModal'))?.hide();
+            },
+
+            execute: function() {
+                var operModeType = $('#operModeSelect').val();
+                var self = this;
+                var modeMap = { 'D': '개발환경', 'R': '리얼환경', 'T': '테스트환경' };
+                var modeName = operModeType ? modeMap[operModeType] || operModeType : '전체';
+
+                TrxStopConfirmModal.open('모든 거래의 운영모드를 [' + modeName + '](으)로 변경하시겠습니까?', function() {
+                    $.ajax({
+                        url: API_BASE_URL + '/trx-stop/batch-oper-mode',
+                        method: 'PUT',
+                        contentType: 'application/json',
+                        data: JSON.stringify({
+                            operModeType: operModeType || null
+                        }),
+                        success: function(response) {
+                            if (response.success) {
+                                Toast.info('모든 거래의 운영모드가 [' + modeName + '](으)로 변경되었습니다.');
+                                self.close();
+                                window.TrxStopPage.load();
+                            } else {
+                                Toast.error('처리 실패: ' + (response.message || '알 수 없는 오류'));
+                            }
+                        },
+                        error: function(xhr) {
+                            var message = '처리 중 오류가 발생했습니다.';
+                            if (xhr.responseJSON && xhr.responseJSON.message) {
+                                message = xhr.responseJSON.message;
+                            }
+                            Toast.info(message);
+                        }
+                    });
+                });
+            }
+        };
+
+        // ==================== Toolbar Event Bindings ====================
+
+        $('#btnExcel').off('click').on('click', function() {
+            const ap = window.TrxStopPage.appliedParams;
+            const params = {};
+            if (ap.searchField && ap.searchValue) { params.searchField = ap.searchField; params.searchValue = ap.searchValue; }
+            if (ap.operModeTypeFilter) { params.operModeTypeFilter = ap.operModeTypeFilter; }
+            if (ap.trxStopYnFilter) { params.trxStopYnFilter = ap.trxStopYnFilter; }
+            if (window.TrxStopPage.sortBy) { params.sortBy = window.TrxStopPage.sortBy; params.sortDirection = window.TrxStopPage.sortDirection || 'ASC'; }
+            const qs = $.param(params);
+            window.location.href = API_BASE_URL + '/trx-stop/export' + (qs ? '?' + qs : '');
+        });
+        $('#btnPrint').off('click').on('click', function() {
+            const columns = [
+                { key: 'trxId', label: '거래ID' },
+                { key: 'trxName', label: '거래명' },
+                { key: 'operModeType', label: '운영모드' },
+                { key: 'trxType', label: '거래유형' },
+                { key: 'retryTrxYn', label: '재처리' },
+                { key: 'trxStopYn', label: '중지여부' }
+            ];
+            PrintUtil.print({ title: '거래중지 목록', columns: columns, data: window.TrxStopPage.trxStopData });
+        });
+        $('#btnRefresh').off('click').on('click', function() { window.TrxStopPage.load(); });
+
+        // ==================== Initialization ====================
+
+        WasSelectReloadModal.init();
+        window.TrxStopPage.init();
+        window.TrxStopPage.itemsPerPage = parseInt($('#limitRows').val()) || 20;
+        window.TrxStopPage.currentPage = 1;
+        $('#trxStopTable thead th[data-sort]').addClass('sortable');
+        window.TrxStopPage.updateSortIndicators();
+        window.TrxStopPage.search();
+    </script>
+</th:block>
+</body>
+</html>

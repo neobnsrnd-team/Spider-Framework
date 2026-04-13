@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<div th:fragment="mappingModal">
+    <div id="appMappingModal" class="modal fade" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
+        <div class="modal-dialog modal-dialog-centered sp-modal-md">
+            <div class="modal-content">
+        <div class="modal-header py-2">
+            <span id="appMappingModalTitle">요청처리 App 맵핑관리 상세조회</span>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+
+        <div class="modal-body">
+            <input type="hidden" id="appMappingMode" value="create" />
+            <input type="hidden" id="originalGwId" value="" />
+            <input type="hidden" id="originalReqIdCode" value="" />
+            <input type="hidden" id="modalTrxId" value="" />
+
+            <div class="card border p-2 mb-2">
+                <div class="d-flex flex-wrap align-items-center gap-2 mb-1">
+                    <div class="col-auto flex-grow-1 gap-2">
+                        <label class="form-label mb-0 small fw-medium required">게이트웨이</label>
+                        <select id="modalGwId" class="form-select form-select-sm col-w-250">
+                            <option value="">선택하세요</option>
+                        </select>
+                    </div>
+                    <div class="col-auto flex-grow-1 gap-2">
+                        <label class="form-label mb-0 small fw-medium required">전문식별자</label>
+                        <input id="modalReqIdCode" type="text" class="form-control form-control-sm col-w-250"
+                               maxlength="40" placeholder="필수">
+                    </div>
+                </div>
+
+                <div class="d-flex flex-wrap align-items-center gap-2 mb-1">
+                    <div class="col-auto flex-grow-1 gap-2">
+                        <label class="form-label mb-0 small fw-medium">기관</label>
+                        <select id="modalOrgId" class="form-select form-select-sm col-w-250">
+                            <option value="">전체</option>
+                        </select>
+                    </div>
+                    <div class="col-auto flex-grow-1 gap-2">
+                        <label class="form-label mb-0 small fw-medium">거래</label>
+                        <input id="modalTrxName" type="text" class="form-control form-control-sm col-w-200 sp-readonly-bg"
+                               readonly>
+                        <button type="button" class="btn btn-sm btn-secondary" onclick="AppMappingTrxModal.openWithOrgFilter()">
+                            조회
+                        </button>
+                    </div>
+                </div>
+
+                <div class="d-flex flex-wrap align-items-center gap-2 mb-1">
+                    <div class="col-auto flex-grow-1 gap-2">
+                        <label class="form-label mb-0 small fw-medium">요청처리 App</label>
+                        <input id="modalBizAppId" type="text" class="form-control form-control-sm"
+                               maxlength="100">
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="modal-footer py-2 modal-actions">
+            <div class="modal-actions-left" th:if="${userAuthorities != null and userAuthorities.contains('APP_MAPPING:W')}">
+                <button type="button" class="btn btn-danger btn-sm d-hidden" id="appMappingDeleteBtn"
+                        onclick="AppMappingModal.deleteCurrent()">
+                    <i class="bi bi-trash"></i> 삭제
+                </button>
+            </div>
+            <div class="modal-actions-right">
+                <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">
+                    <i class="bi bi-x-lg"></i> 닫기
+                </button>
+                <button type="button" class="btn btn-primary btn-sm" onclick="AppMappingModal.save()"
+                        th:if="${userAuthorities != null and userAuthorities.contains('APP_MAPPING:W')}">
+                    <i class="bi bi-floppy"></i> 저장
+                </button>
+            </div>
+        </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Styles extracted to app.css -->
+<th:block th:fragment="styles">
+</th:block>
+</body>
+</html>

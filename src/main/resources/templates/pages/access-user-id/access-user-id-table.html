@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<!-- Access User Table Fragment -->
+<div th:fragment="table" class="table-responsive">
+    <table class="table table-sm table-hover sp-data-grid" id="accessorTable">
+        <thead class="table-light">
+            <tr>
+                <th class="col-w-50">
+                    <input type="checkbox" id="checkAll" onclick="window.AccessUser.toggleCheckAll(this)">
+                </th>
+                <th class="col-w-60">CRUD</th>
+                <th class="col-w-120" data-sort="gubunType">구분유형</th>
+                <th class="col-w-150" data-sort="trxId">중지거래 접근 허용자</th>
+                <th class="col-w-200" data-sort="custUserId">접근허용고객 사용자ID</th>
+                <th class="col-w-100" data-sort="useYn">사용여부</th>
+            </tr>
+        </thead>
+        <tbody id="accessorTableBody">
+            <tr>
+                <td colspan="6" class="text-center py-4 text-body-secondary">
+                    조회 버튼을 클릭하여 데이터를 불러오세요.
+                </td>
+            </tr>
+        </tbody>
+    </table>
+</div>
+</body>
+</html>

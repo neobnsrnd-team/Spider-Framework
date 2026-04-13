@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<div th:fragment="modal">
+    <!-- ErrorHis Detail Modal -->
+    <div class="modal fade" id="errorHisModal" tabindex="-1" aria-labelledby="errorHisModalLabel" aria-hidden="true"
+         data-bs-backdrop="static" data-bs-keyboard="false">
+        <div class="modal-dialog modal-dialog-centered modal-lg sp-modal-lg">
+            <div class="modal-content">
+                <!-- Modal Header -->
+                <div class="modal-header py-2">
+                    <h5 class="modal-title" id="errorHisModalLabel">에러 TRACE 정보</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+
+                <!-- Modal Body -->
+                <div class="modal-body sp-scrollable p-3">
+                    <!-- Section: 상세정보 -->
+                    <div class="modal-section-title mb-2">
+                        <i class="bi bi-info-circle-fill text-danger"></i>
+                        <span>상세정보</span>
+                    </div>
+
+                    <div class="sp-detail-info">
+                        <table>
+                            <tr>
+                                <td class="col-w-pct-50">
+                                    <table>
+                                        <tr>
+                                            <td class="sp-detail-label">오류코드</td>
+                                            <td class="sp-detail-value" id="modalErrorCode"></td>
+                                        </tr>
+                                        <tr>
+                                            <td class="sp-detail-label">고객ID</td>
+                                            <td class="sp-detail-value" id="modalCustUserId"></td>
+                                        </tr>
+                                        <tr>
+                                            <td class="sp-detail-label">오류메뉴 URL</td>
+                                            <td class="sp-detail-value" id="modalErrorUrl"></td>
+                                        </tr>
+                                        <tr>
+                                            <td class="sp-detail-label">고객 전화번호</td>
+                                            <td class="sp-detail-value" id="modalCustPhoneNo"></td>
+                                        </tr>
+                                    </table>
+                                </td>
+                                <td class="col-w-pct-50">
+                                    <table>
+                                        <tr>
+                                            <td class="sp-detail-label">오류 발생 일련번호</td>
+                                            <td class="sp-detail-value" id="modalErrorSerNo"></td>
+                                        </tr>
+                                        <tr>
+                                            <td class="sp-detail-label">오류 발생 일시</td>
+                                            <td class="sp-detail-value" id="modalErrorOccurDtime"></td>
+                                        </tr>
+                                        <tr>
+                                            <td class="sp-detail-label">오류 메뉴명</td>
+                                            <td class="sp-detail-value" id="modalErrorLevel"></td>
+                                        </tr>
+                                        <tr>
+                                            <td class="sp-detail-label">발생 인스턴스ID</td>
+                                            <td class="sp-detail-value" id="modalErrorInstanceId"></td>
+                                        </tr>
+                                    </table>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td colspan="2" class="px-1 pt-2">
+                                    <table>
+                                        <tr>
+                                            <td class="sp-detail-label">고객 출력 메세지</td>
+                                            <td class="sp-detail-value-alt">
+                                                <div id="modalErrorMessage" class="sp-trace-content"></div>
+                                            </td>
+                                        </tr>
+                                    </table>
+                                </td>
+                            </tr>
+                        </table>
+
+                        <!-- 등록된 메세지 (상세정보 박스 내부) -->
+                        <div class="sp-subsection">
+                            <div class="sp-subsection-header">
+                                <i class="bi bi-chat text-primary"></i>
+                                <span class="sp-subsection-label">등록된 메세지</span>
+                            </div>
+                            <div class="sp-subsection-box">
+                                <div id="modalRegisteredMessage" class="sp-message-content"></div>
+                            </div>
+                        </div>
+
+                        <!-- 에러 TRACE 정보 (상세정보 박스 내부) -->
+                        <div class="sp-subsection">
+                            <div class="sp-subsection-header">
+                                <i class="bi bi-code-slash text-info"></i>
+                                <span class="sp-subsection-label">에러 TRACE 정보</span>
+                            </div>
+                            <div class="sp-subsection-box">
+                                <textarea class="form-control sp-trace-textarea" id="modalErrorTrace" rows="12" readonly></textarea>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Modal Footer -->
+                <div class="modal-footer py-2">
+                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">
+                        <i class="bi bi-x-lg"></i> 닫기
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        (function () {
+            /**
+             * 일시 포맷 함수 (yyyyMMddHHmmss -> yyyy/MM/dd HH:mm:ss)
+             */
+            function formatDateTime(dtimeStr) {
+                if (!dtimeStr || dtimeStr.length < 14) return '';
+                return dtimeStr.substring(0, 4) + '/' +
+                       dtimeStr.substring(4, 6) + '/' +
+                       dtimeStr.substring(6, 8) + ' ' +
+                       dtimeStr.substring(8, 10) + ':' +
+                       dtimeStr.substring(10, 12) + ':' +
+                       dtimeStr.substring(12, 14);
+            }
+
+            function getErrorLevelName(errorLevel) {
+                switch(errorLevel) {
+                    case '1': return '안전';
+                    case '2': return '주의';
+                    case '3': return '경계';
+                    default: return errorLevel || '';
+                }
+            }
+
+            /**
+             * Extract first line of error message for "등록된 메세지"
+             */
+            function extractFirstErrorLine(errorTrace) {
+                if (!errorTrace) return '';
+                const lines = errorTrace.split('\n');
+                // Find first meaningful line (usually starts with exception class name)
+                for (let line of lines) {
+                    const trimmed = line.trim();
+                    if (trimmed && !trimmed.startsWith('at ') && !trimmed.startsWith('...')) {
+                        return trimmed;
+                    }
+                }
+                return lines[0] || '';
+            }
+
+            window.ErrorHisModal = {
+                currentErrorCode: null,
+                currentErrorSerNo: null,
+
+                open: function (errorCode, errorSerNo) {
+                    this.currentErrorCode = errorCode;
+                    this.currentErrorSerNo = errorSerNo;
+
+                    // 초기화
+                    this.clearForm();
+
+                    // 데이터 로드
+                    this.loadErrorHisData(errorCode, errorSerNo);
+
+                    // 모달 열기
+                    $('#errorHisModal').modal('show');
+                },
+
+                clearForm: function() {
+                    $('#modalErrorCode').text('');
+                    $('#modalErrorSerNo').text('');
+                    $('#modalCustUserId').text('');
+                    $('#modalCustPhoneNo').text('');
+                    $('#modalErrorUrl').text('');
+                    $('#modalErrorInstanceId').text('');
+                    $('#modalErrorOccurDtime').text('');
+                    $('#modalErrorLevel').text('');
+                    $('#modalErrorMessage').text('');
+                    $('#modalRegisteredMessage').text('');
+                    $('#modalErrorTrace').val('');
+                },
+
+                loadErrorHisData: function (errorCode, errorSerNo) {
+                    $.ajax({
+                        url: `/api/error-histories/${encodeURIComponent(errorCode)}/${encodeURIComponent(errorSerNo)}`,
+                        method: 'GET',
+                        success: (response) => {
+                            if (response.success && response.data) {
+                                const data = response.data;
+                                $('#modalErrorCode').text(data.errorCode || '');
+                                $('#modalErrorSerNo').text(data.errorSerNo || '');
+                                $('#modalCustUserId').text(data.custUserId || '');
+                                $('#modalCustPhoneNo').text(data.custPhoneNo || '');
+                                $('#modalErrorUrl').text(data.errorUrl || '');
+                                $('#modalErrorInstanceId').text(data.errorInstanceId || '');
+                                $('#modalErrorOccurDtime').text(formatDateTime(data.errorOccurDtime));
+                                $('#modalErrorLevel').text(data.errorLevelName || getErrorLevelName(data.errorLevel));
+                                $('#modalErrorMessage').text(data.errorMessage || '');
+
+                                // 등록된 메세지: Extract first meaningful line from trace
+                                const registeredMsg = extractFirstErrorLine(data.errorTrace);
+                                $('#modalRegisteredMessage').text(registeredMsg);
+
+                                $('#modalErrorTrace').val(data.errorTrace || '');
+                            }
+                        },
+                        error: (xhr) => {
+                            console.error('Failed to load error history data:', xhr);
+                            Toast.error('오류 발생 이력 정보를 불러오는데 실패했습니다.');
+                            $('#errorHisModal').modal('hide');
+                        }
+                    });
+                }
+            };
+        })();
+    </script>
+</div>
+</body>
+</html>

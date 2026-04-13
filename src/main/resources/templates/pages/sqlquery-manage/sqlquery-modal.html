@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<div th:fragment="modal">
+    <!-- SqlQuery Detail/Create Modal -->
+    <div class="modal fade" id="sqlQueryModal" tabindex="-1" aria-labelledby="sqlQueryModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="sqlQueryModalLabel">SQL Query 상세</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="sqlQueryForm">
+                        <div class="form-section">
+                            <!-- Row 1: Query ID, Query 명 -->
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                    <label class="form-label">Query ID <span class="text-danger">*</span></label>
+                                    <input type="text" class="form-control" id="sqModalQueryId" name="queryId"
+                                           maxlength="50" required>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Query 명 <span class="text-danger">*</span></label>
+                                    <input type="text" class="form-control" id="sqModalQueryName" name="queryName"
+                                           maxlength="200" required>
+                                </div>
+                            </div>
+
+                            <!-- Row 2: SQL Group ID, DB ID -->
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                    <label class="form-label">SQL 그룹 ID</label>
+                                    <input type="text" class="form-control" id="sqModalSqlGroupId" name="sqlGroupId"
+                                           maxlength="50">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">DB ID</label>
+                                    <input type="text" class="form-control" id="sqModalDbId" name="dbId"
+                                           maxlength="50">
+                                </div>
+                            </div>
+
+                            <!-- Row 3: SQL Type, Exec Type, Result Type -->
+                            <div class="row mb-3">
+                                <div class="col-md-4">
+                                    <label class="form-label">SQL 유형</label>
+                                    <input type="text" class="form-control" id="sqModalSqlType" name="sqlType"
+                                           maxlength="10">
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">실행 유형</label>
+                                    <input type="text" class="form-control" id="sqModalExecType" name="execType"
+                                           maxlength="10">
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">결과 유형</label>
+                                    <input type="text" class="form-control" id="sqModalResultType" name="resultType"
+                                           maxlength="10">
+                                </div>
+                            </div>
+
+                            <!-- Row 4: Cache YN, Time Out, Use YN -->
+                            <div class="row mb-3">
+                                <div class="col-md-4">
+                                    <label class="form-label">캐시여부</label>
+                                    <select class="form-select" id="sqModalCacheYn" name="cacheYn">
+                                        <option value="">선택</option>
+                                        <option value="Y">Y</option>
+                                        <option value="N">N</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">타임아웃</label>
+                                    <input type="text" class="form-control" id="sqModalTimeOut" name="timeOut"
+                                           maxlength="10">
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">사용여부</label>
+                                    <select class="form-select" id="sqModalUseYn" name="useYn">
+                                        <option value="Y">Y</option>
+                                        <option value="N">N</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <!-- Row 5: SQL Query -->
+                            <div class="row mb-3">
+                                <div class="col-12">
+                                    <label class="form-label">SQL Query</label>
+                                    <textarea class="form-control resize-vertical" id="sqModalSqlQuery" name="sqlQuery"
+                                              rows="5" maxlength="4000"
+                                              placeholder="SQL 쿼리를 입력하세요"></textarea>
+                                </div>
+                            </div>
+
+                            <!-- Row 6: SQL Query2 (대용량) -->
+                            <div class="row mb-3">
+                                <div class="col-12">
+                                    <label class="form-label">SQL Query2 (연장)</label>
+                                    <textarea class="form-control resize-vertical" id="sqModalSqlQuery2" name="sqlQuery2"
+                                              rows="3" maxlength="4000"
+                                              placeholder="SQL 쿼리가 길 경우 연장 부분을 입력하세요"></textarea>
+                                </div>
+                            </div>
+
+                            <!-- Row 7: 설명 -->
+                            <div class="row mb-3">
+                                <div class="col-12">
+                                    <label class="form-label">설명</label>
+                                    <textarea class="form-control resize-vertical" id="sqModalQueryDesc" name="queryDesc"
+                                              rows="2" maxlength="500"></textarea>
+                                </div>
+                            </div>
+
+                            <!-- Row 8: 최종수정자 ID, 최종수정일시 (상세 모드에서만 표시) -->
+                            <div class="row mb-3 d-hidden" id="sqlQuerySystemInfoRow">
+                                <div class="col-md-6">
+                                    <label class="form-label">최종수정자 ID</label>
+                                    <input type="text" class="form-control" id="sqModalLastUpdateUserId" readonly>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">최종수정일시</label>
+                                    <input type="text" class="form-control" id="sqModalLastUpdateDtime" readonly>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <!-- Modal Footer -->
+                <div class="modal-footer justify-content-end">
+                    <button th:if="${userAuthorities != null and userAuthorities.contains('SQL_QUERY:W')}"
+                            type="button" class="btn btn-primary btn-sm d-hidden" id="btnSqlQuerySave">
+                        <i class="bi bi-floppy"></i> 저장
+                    </button>
+                    <button th:if="${userAuthorities != null and userAuthorities.contains('SQL_QUERY:W')}"
+                            type="button" class="btn btn-danger btn-sm d-hidden" id="btnSqlQueryDelete">
+                        <i class="bi bi-trash"></i> 삭제
+                    </button>
+                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal"><i class="bi bi-x-lg"></i> 닫기</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        (function () {
+            window.SqlQueryModal = {
+                mode: 'detail',
+                currentQueryId: null,
+
+                _showModal: function () {
+                    const modal = bootstrap.Modal.getOrCreateInstance(document.getElementById('sqlQueryModal'));
+                    modal.show();
+                },
+
+                _hideModal: function () {
+                    const modalEl = document.getElementById('sqlQueryModal');
+                    const modal = bootstrap.Modal.getInstance(modalEl);
+                    if (modal) {
+                        modal.hide();
+                    }
+                },
+
+                openForDetail: function (rowData) {
+                    this.mode = 'detail';
+                    this.currentQueryId = rowData.queryId;
+
+                    var hasWrite = sql_query_access;
+                    var self = this;
+
+                    $('#sqlQueryModalLabel').text('SQL Query 상세');
+
+                    // 목록 조회에는 SQL_QUERY/SQL_QUERY2가 포함되지 않으므로 상세 API로 전체 데이터를 가져온다
+                    $.ajax({
+                        url: API_BASE_URL + '/sql-queries/' + encodeURIComponent(rowData.queryId),
+                        method: 'GET',
+                        success: function (response) {
+                            var data = (response.success && response.data) ? response.data : rowData;
+                            self._fillForm(data);
+                            self._setFieldsReadonly(!hasWrite);
+                            if (hasWrite) {
+                                $('#sqModalQueryId').prop('readonly', true);
+                                $('#sqModalQueryId').prop('disabled', true);
+                            }
+
+                            $('#sqlQuerySystemInfoRow').removeClass('d-hidden');
+                            $('#btnSqlQuerySave').toggleClass('d-hidden', !hasWrite);
+                            $('#btnSqlQueryDelete').toggleClass('d-hidden', !hasWrite);
+
+                            self._showModal();
+                        },
+                        error: function () {
+                            // API 실패 시 목록 데이터로 폴백
+                            self._fillForm(rowData);
+                            self._setFieldsReadonly(!hasWrite);
+                            if (hasWrite) {
+                                $('#sqModalQueryId').prop('readonly', true);
+                                $('#sqModalQueryId').prop('disabled', true);
+                            }
+
+                            $('#sqlQuerySystemInfoRow').removeClass('d-hidden');
+                            $('#btnSqlQuerySave').toggleClass('d-hidden', !hasWrite);
+                            $('#btnSqlQueryDelete').toggleClass('d-hidden', !hasWrite);
+
+                            self._showModal();
+                        }
+                    });
+                },
+
+                openForCreate: function () {
+                    this.mode = 'create';
+                    this.currentQueryId = null;
+
+                    $('#sqlQueryModalLabel').text('SQL Query 등록');
+
+                    $('#sqlQueryForm')[0].reset();
+                    this._setFieldsReadonly(false);
+
+                    $('#sqModalQueryId').prop('readonly', false);
+                    $('#sqModalQueryId').prop('disabled', false);
+
+                    $('#sqlQuerySystemInfoRow').addClass('d-hidden');
+                    $('#btnSqlQuerySave').removeClass('d-hidden');
+                    $('#btnSqlQueryDelete').addClass('d-hidden');
+
+                    this._showModal();
+                },
+
+                _fillForm: function (data) {
+                    $('#sqModalQueryId').val(data.queryId || '');
+                    $('#sqModalQueryName').val(data.queryName || '');
+                    $('#sqModalSqlGroupId').val(data.sqlGroupId || '');
+                    $('#sqModalDbId').val(data.dbId || '');
+                    $('#sqModalSqlType').val(data.sqlType || '');
+                    $('#sqModalExecType').val(data.execType || '');
+                    $('#sqModalResultType').val(data.resultType || '');
+                    $('#sqModalCacheYn').val(data.cacheYn || '');
+                    $('#sqModalTimeOut').val(data.timeOut || '');
+                    $('#sqModalUseYn').val(data.useYn || 'Y');
+                    $('#sqModalSqlQuery').val(data.sqlQuery || '');
+                    $('#sqModalSqlQuery2').val(data.sqlQuery2 || '');
+                    $('#sqModalQueryDesc').val(data.queryDesc || '');
+                    $('#sqModalLastUpdateUserId').val(data.lastUpdateUserId || '');
+                    $('#sqModalLastUpdateDtime').val(this._formatDatetime(data.lastUpdateDtime));
+                },
+
+                _setFieldsReadonly: function (readonly) {
+                    $('#sqModalQueryId').prop('readonly', readonly).prop('disabled', readonly);
+                    $('#sqModalQueryName').prop('readonly', readonly);
+                    $('#sqModalSqlGroupId').prop('readonly', readonly);
+                    $('#sqModalDbId').prop('readonly', readonly);
+                    $('#sqModalSqlType').prop('readonly', readonly);
+                    $('#sqModalExecType').prop('readonly', readonly);
+                    $('#sqModalResultType').prop('readonly', readonly);
+                    $('#sqModalCacheYn').prop('disabled', readonly);
+                    $('#sqModalTimeOut').prop('readonly', readonly);
+                    $('#sqModalUseYn').prop('disabled', readonly);
+                    $('#sqModalSqlQuery').prop('readonly', readonly);
+                    $('#sqModalSqlQuery2').prop('readonly', readonly);
+                    $('#sqModalQueryDesc').prop('readonly', readonly);
+                },
+
+                _formatDatetime: function (dateStr) {
+                    if (!dateStr || dateStr.length < 14) return dateStr || '';
+                    return dateStr.substring(0, 4) + '/' +
+                           dateStr.substring(4, 6) + '/' +
+                           dateStr.substring(6, 8) + ' ' +
+                           dateStr.substring(8, 10) + ':' +
+                           dateStr.substring(10, 12) + ':' +
+                           dateStr.substring(12, 14);
+                },
+
+                save: function () {
+                    if (!this._validateForm()) {
+                        return;
+                    }
+
+                    const formData = {
+                        queryName: $('#sqModalQueryName').val(),
+                        sqlGroupId: $('#sqModalSqlGroupId').val(),
+                        dbId: $('#sqModalDbId').val(),
+                        sqlType: $('#sqModalSqlType').val(),
+                        execType: $('#sqModalExecType').val(),
+                        resultType: $('#sqModalResultType').val(),
+                        cacheYn: $('#sqModalCacheYn').val(),
+                        timeOut: $('#sqModalTimeOut').val(),
+                        useYn: $('#sqModalUseYn').val(),
+                        sqlQuery: $('#sqModalSqlQuery').val(),
+                        sqlQuery2: $('#sqModalSqlQuery2').val(),
+                        queryDesc: $('#sqModalQueryDesc').val()
+                    };
+
+                    if (this.mode === 'create') {
+                        formData.queryId = $('#sqModalQueryId').val();
+                        $.ajax({
+                            url: API_BASE_URL + '/sql-queries',
+                            method: 'POST',
+                            contentType: 'application/json',
+                            data: JSON.stringify(formData),
+                            success: (response) => {
+                                if (response.success) {
+                                    Toast.success('SQL Query가 등록되었습니다.');
+                                    this._hideModal();
+                                    if (window.SqlQueryPage) {
+                                        SqlQueryPage.load();
+                                    }
+                                } else {
+                                    Toast.error(response.message || 'SQL Query 등록에 실패했습니다.');
+                                }
+                            },
+                            error: (xhr) => {
+                                const errorMsg = xhr.responseJSON?.message || 'SQL Query 등록에 실패했습니다.';
+                                Toast.error(errorMsg);
+                            }
+                        });
+                    } else {
+                        $.ajax({
+                            url: API_BASE_URL + '/sql-queries/' + encodeURIComponent(this.currentQueryId),
+                            method: 'PUT',
+                            contentType: 'application/json',
+                            data: JSON.stringify(formData),
+                            success: (response) => {
+                                if (response.success) {
+                                    Toast.success('SQL Query가 수정되었습니다.');
+                                    this._hideModal();
+                                    if (window.SqlQueryPage) {
+                                        SqlQueryPage.load();
+                                    }
+                                } else {
+                                    Toast.error(response.message || 'SQL Query 수정에 실패했습니다.');
+                                }
+                            },
+                            error: (xhr) => {
+                                const errorMsg = xhr.responseJSON?.message || 'SQL Query 수정에 실패했습니다.';
+                                Toast.error(errorMsg);
+                            }
+                        });
+                    }
+                },
+
+                delete: function () {
+                    Toast.confirm('정말 삭제하시겠습니까?', () => {
+                        $.ajax({
+                            url: API_BASE_URL + '/sql-queries/' + encodeURIComponent(this.currentQueryId),
+                            method: 'DELETE',
+                            success: (response) => {
+                                if (response.success) {
+                                    Toast.success('SQL Query가 삭제되었습니다.');
+                                    this._hideModal();
+                                    if (window.SqlQueryPage) {
+                                        SqlQueryPage.load();
+                                    }
+                                } else {
+                                    Toast.error(response.message || 'SQL Query 삭제에 실패했습니다.');
+                                }
+                            },
+                            error: (xhr) => {
+                                const errorMsg = xhr.responseJSON?.message || 'SQL Query 삭제에 실패했습니다.';
+                                Toast.error(errorMsg);
+                            }
+                        });
+                    });
+                },
+
+                _validateForm: function () {
+                    if (this.mode === 'create') {
+                        const queryId = $('#sqModalQueryId').val().trim();
+                        if (!queryId) {
+                            Toast.warning('Query ID를 입력해주세요.');
+                            $('#sqModalQueryId').focus();
+                            return false;
+                        }
+                    }
+
+                    const queryName = $('#sqModalQueryName').val().trim();
+                    if (!queryName) {
+                        Toast.warning('Query 명을 입력해주세요.');
+                        $('#sqModalQueryName').focus();
+                        return false;
+                    }
+
+                    return true;
+                }
+            };
+
+            $(document).off('click', '#btnSqlQuerySave').on('click', '#btnSqlQuerySave', function () {
+                SqlQueryModal.save();
+            });
+
+            $(document).off('click', '#btnSqlQueryDelete').on('click', '#btnSqlQueryDelete', function () {
+                SqlQueryModal.delete();
+            });
+        })();
+    </script>
+</div>
+</body>
+</html>

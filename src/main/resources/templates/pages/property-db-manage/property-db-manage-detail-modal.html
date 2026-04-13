@@ -1,0 +1,741 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<div th:fragment="modal">
+    <!-- Property Detail Modal -->
+    <div class="modal fade" id="propertyDetailModal" tabindex="-1" aria-labelledby="propertyDetailModalLabel" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
+        <div class="modal-dialog modal-xl sp-modal-xl">
+            <div class="modal-content">
+                <!-- Modal Header -->
+                <div class="modal-header">
+                    <h5 class="modal-title" id="propertyDetailModalLabel">
+                        <i class="bi bi-gear"></i> 프로퍼티 상세보기
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+
+                <!-- Modal Body -->
+                <div class="modal-body">
+                    <!-- 프로퍼티 그룹 정보 섹션 -->
+                    <div class="property-group-section mb-4">
+                        <h6 class="section-title mb-3">
+                            <i class="bi bi-stack text-danger"></i> 프로퍼티 그룹 정보
+                        </h6>
+                        <div class="row align-items-center">
+                            <div class="col-auto">
+                                <label class="form-label mb-0">프로퍼티 그룹 ID</label>
+                            </div>
+                            <div class="col-md-4">
+                                <select class="form-select" id="modalPropertyGroupId" onchange="PropertyDetailModal.onGroupChange()">
+                                </select>
+                            </div>
+                            <div class="col"></div>
+                            <div class="col-auto">
+                                <button class="btn btn-outline-info btn-sm" onclick="PropertyDetailModal.openSimilarPropertyModal()">
+                                    <i class="bi bi-clipboard"></i> 유사 프로퍼티 등록
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 프로퍼티 정보 섹션 -->
+                    <div class="property-info-section">
+                        <h6 class="section-title mb-3">
+                            <i class="bi bi-list-ul text-danger"></i> 프로퍼티 정보
+                        </h6>
+
+                        <!-- 검색 영역 -->
+                        <div class="row mb-3 align-items-center">
+                            <div class="col-auto">
+                                <select class="w-130" id="propertySearchField">
+                                    <option value="propertyId">프로퍼티ID</option>
+                                    <option value="propertyName">프로퍼티명</option>
+                                </select>
+                            </div>
+                            <div class="col-auto">
+                                <input type="text" class="w-200" id="propertySearchValue"
+                                       placeholder="검색어 입력">
+                            </div>
+                            <div class="col-auto">
+                                <button class="btn btn-primary btn-sm" onclick="PropertyDetailModal.search()">
+                                    <i class="bi bi-search"></i> 조회
+                                </button>
+                            </div>
+                            <div class="col"></div>
+                            <!-- 우측 상단 버튼 -->
+                            <div class="col-auto">
+                                <button class="btn btn-outline-secondary btn-sm" onclick="PropertyDetailModal.reloadProperties()">
+                                    <i class="bi bi-arrow-clockwise"></i> Reload
+                                </button>
+                                <button class="btn btn-outline-primary btn-sm" onclick="PropertyDetailModal.addRow()">
+                                    <i class="bi bi-plus-lg"></i> 행추가
+                                </button>
+                                <button class="btn btn-outline-danger btn-sm" onclick="PropertyDetailModal.deleteSelected()">
+                                    <i class="bi bi-trash"></i> 선택행 삭제
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- 프로퍼티 테이블 -->
+                        <div class="table-responsive sp-scrollable">
+                            <table class="table table-sm table-hover sp-data-grid" id="propertyDetailTable">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th class="col-w-40 text-center">
+                                            <input type="checkbox" id="selectAllProperties" onchange="PropertyDetailModal.toggleSelectAll(this)">
+                                        </th>
+                                        <th class="col-w-60 text-center">CRUD</th>
+                                        <th class="col-w-150">프로퍼티ID</th>
+                                        <th class="col-w-150">프로퍼티명</th>
+                                        <th class="col-w-200">프로퍼티 설명</th>
+                                        <th class="col-w-120">초기값</th>
+                                        <th class="col-w-120">유효값</th>
+                                        <th class="col-w-100">DATA 타입</th>
+                                        <th class="col-w-140 text-center">WAS별 설정</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="propertyDetailTableBody">
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Modal Footer -->
+                <div class="modal-footer justify-content-between">
+                    <!-- 좌측 하단 버튼 -->
+                    <div>
+                        <button type="button" class="btn btn-outline-success btn-sm" onclick="PropertyDetailModal.backupAll()">
+                            <i class="bi bi-download"></i> 전체백업
+                        </button>
+                        <button type="button" class="btn btn-outline-warning btn-sm" onclick="PropertyDetailModal.restoreAll()">
+                            <i class="bi bi-upload"></i> 전체복원
+                        </button>
+                        <button type="button" class="btn btn-outline-info btn-sm" onclick="PropertyDetailModal.backupWasSetting()">
+                            <i class="bi bi-hdd-rack"></i> WAS별 설정 백업
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary btn-sm" onclick="PropertyDetailModal.restoreWasSetting()">
+                            <i class="bi bi-arrow-counterclockwise"></i> WAS별 설정 복원
+                        </button>
+                    </div>
+                    <!-- 우측 하단 버튼 -->
+                    <div>
+                        <button type="button" class="btn btn-danger btn-sm" onclick="PropertyDetailModal.deleteAll()">
+                            <i class="bi bi-trash"></i> 전체삭제
+                        </button>
+                        <button type="button" class="btn btn-success btn-sm" onclick="PropertyDetailModal.save()">
+                            <i class="bi bi-floppy"></i> 저장
+                        </button>
+                        <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">
+                            <i class="bi bi-x-lg"></i> 닫기
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<th:block th:fragment="script">
+<script>
+    const PropertyDetailModal = {
+        currentPropertyGroupId: null,
+        properties: [],
+        allPropertyGroups: [],
+        originalProperties: [], // 원본 데이터 저장 (변경 감지용)
+        newRowIndex: 0, // 새 행 인덱스 (음수로 관리)
+
+        // 모달 열기
+        open: function(propertyGroupId) {
+            this.currentPropertyGroupId = propertyGroupId;
+            this.loadPropertyGroups(propertyGroupId);
+            const modal = bootstrap.Modal.getOrCreateInstance(document.getElementById('propertyDetailModal'));
+            modal.show();
+        },
+
+        // 프로퍼티 그룹 목록 로드 (콤보박스용)
+        loadPropertyGroups: function(selectedGroupId) {
+            $.ajax({
+                url: API_BASE_URL + '/properties/groups',
+                method: 'GET',
+                success: (response) => {
+                    if (response.success && response.data) {
+                        this.allPropertyGroups = response.data;
+                        this.renderGroupSelect(response.data, selectedGroupId);
+                        this.loadProperties(selectedGroupId);
+                    }
+                },
+                error: (xhr) => {
+                    console.error('Failed to load property groups:', xhr);
+                    Toast.error('프로퍼티 그룹 목록을 불러오는데 실패했습니다.');
+                }
+            });
+        },
+
+        // 프로퍼티 그룹 콤보박스 렌더링
+        renderGroupSelect: function(groups, selectedGroupId) {
+            const select = $('#modalPropertyGroupId');
+            select.empty();
+            groups.forEach(group => {
+                const selected = group.propertyGroupId === selectedGroupId ? 'selected' : '';
+                select.append(`<option value="${group.propertyGroupId}" ${selected}>${group.propertyGroupId}</option>`);
+            });
+        },
+
+        // 그룹 변경 시
+        onGroupChange: function() {
+            const newGroupId = $('#modalPropertyGroupId').val();
+            this.currentPropertyGroupId = newGroupId;
+            this.loadProperties(newGroupId);
+        },
+
+        // 프로퍼티 목록 로드
+        loadProperties: function(propertyGroupId) {
+            const searchField = $('#propertySearchField').val();
+            const searchValue = $('#propertySearchValue').val();
+
+            $.ajax({
+                url: API_BASE_URL + '/properties/groups/' + propertyGroupId + '/properties',
+                method: 'GET',
+                data: {
+                    searchField: searchField,
+                    searchValue: searchValue
+                },
+                success: (response) => {
+                    if (response.success && response.data) {
+                        this.renderProperties(response.data);
+                    } else {
+                        this.renderProperties([]);
+                    }
+                },
+                error: (xhr) => {
+                    console.error('Failed to load properties:', xhr);
+                    Toast.error('프로퍼티 목록을 불러오는데 실패했습니다.');
+                    this.renderProperties([]);
+                }
+            });
+        },
+
+        // 프로퍼티 목록 렌더링
+        renderProperties: function(properties) {
+            // 원본 데이터 깊은 복사 저장
+            this.originalProperties = JSON.parse(JSON.stringify(properties));
+            this.properties = properties.map(p => ({...p, crud: ''})); // CRUD 초기화
+            this.newRowIndex = 0;
+
+            const tbody = $('#propertyDetailTableBody');
+            tbody.empty();
+
+            if (!this.properties || this.properties.length === 0) {
+                tbody.append(`
+                    <tr>
+                        <td colspan="9" class="text-center text-muted py-4">
+                            등록된 프로퍼티가 없습니다.
+                        </td>
+                    </tr>
+                `);
+                return;
+            }
+
+            this.properties.forEach((prop, index) => {
+                tbody.append(this.createPropertyRow(prop, index));
+            });
+
+            // 변경 감지 이벤트 바인딩
+            this.bindChangeEvents();
+        },
+
+        // 프로퍼티 행 생성
+        createPropertyRow: function(prop, index, isNew = false) {
+            const dataTypeOptions = `
+                <option value="C" ${prop.dataType === 'C' ? 'selected' : ''}>String</option>
+                <option value="N" ${prop.dataType === 'N' ? 'selected' : ''}>Number</option>
+                <option value="B" ${prop.dataType === 'B' ? 'selected' : ''}>Boolean</option>
+            `;
+
+            // 새 행 스타일 클래스
+            const newFieldClass = isNew ? 'sp-field-new' : '';
+
+            // 새 행이면 프로퍼티ID 수정 가능, 기존 행이면 수정 불가
+            const propertyIdField = isNew ?
+                `<input type="text" class="${newFieldClass}"
+                        value="${HtmlUtils.escape(prop.propertyId || '')}"
+                        data-field="propertyId" data-index="${index}">` :
+                `<input type="text" class="bg-light cursor-not-allowed"
+                        value="${HtmlUtils.escape(prop.propertyId || '')}"
+                        data-field="propertyId" data-index="${index}" readonly>`;
+
+            return `
+                <tr data-index="${index}" data-property-id="${prop.propertyId || ''}" data-is-new="${isNew}">
+                    <td class="text-center">
+                        <input type="checkbox" class="property-checkbox" data-index="${index}">
+                    </td>
+                    <td class="text-center crud-cell">
+                        <span class="badge ${this.getCrudBadgeClass(prop.crud)}">${this.getCrudLabel(prop.crud)}</span>
+                    </td>
+                    <td>
+                        ${propertyIdField}
+                    </td>
+                    <td>
+                        <input type="text" class="${newFieldClass}"
+                               value="${HtmlUtils.escape(prop.propertyName || '')}"
+                               data-field="propertyName" data-index="${index}">
+                    </td>
+                    <td>
+                        <input type="text" class="${newFieldClass}"
+                               value="${HtmlUtils.escape(prop.propertyDesc || '')}"
+                               data-field="propertyDesc" data-index="${index}">
+                    </td>
+                    <td>
+                        <input type="text" class="${newFieldClass}"
+                               value="${HtmlUtils.escape(prop.defaultValue || '')}"
+                               data-field="defaultValue" data-index="${index}">
+                    </td>
+                    <td>
+                        <input type="text" class="${newFieldClass}"
+                               value="${HtmlUtils.escape(prop.validData || '')}"
+                               data-field="validData" data-index="${index}">
+                    </td>
+                    <td>
+                        <select class="${newFieldClass}" data-field="dataType" data-index="${index}">
+                            ${dataTypeOptions}
+                        </select>
+                    </td>
+                    <td class="text-center">
+                        <button class="btn btn-outline-info btn-sm" onclick="PropertyDetailModal.openWasSetting('${prop.propertyId}')" ${isNew ? 'disabled' : ''}>
+                            <i class="bi bi-hdd-rack"></i> WAS별 설정
+                        </button>
+                    </td>
+                </tr>
+            `;
+        },
+
+        // CRUD 배지 클래스
+        getCrudBadgeClass: function(crud) {
+            switch(crud) {
+                case 'C': return 'bg-success';
+                case 'U': return 'bg-warning text-dark';
+                case 'D': return 'bg-danger';
+                default: return 'bg-secondary';
+            }
+        },
+
+        // CRUD 한글 라벨
+        getCrudLabel: function(crud) {
+            switch(crud) {
+                case 'C': return '추가';
+                case 'U': return '수정';
+                case 'D': return '삭제';
+                default: return '';
+            }
+        },
+
+        // 변경 감지 이벤트 바인딩
+        bindChangeEvents: function() {
+            const self = this;
+
+            // 입력 필드 변경 감지
+            $('#propertyDetailTableBody').off('input change').on('input change', 'input, select', function() {
+                const $input = $(this);
+                const index = parseInt($input.data('index'));
+                const field = $input.data('field');
+                const newValue = $input.val();
+                const $row = $input.closest('tr');
+                const isNew = $row.data('is-new') === true;
+
+                // properties 배열 업데이트
+                if (self.properties[index]) {
+                    self.properties[index][field] = newValue;
+
+                    // 새 행이 아닌 경우에만 변경 감지하여 U 표시
+                    if (!isNew && self.properties[index].crud !== 'D') {
+                        const original = self.originalProperties.find(
+                            p => p.propertyId === self.properties[index].propertyId
+                        );
+
+                        if (original) {
+                            // 개별 필드 변경 여부 체크 및 스타일 적용
+                            self.updateFieldStyle($input, field, original, self.properties[index]);
+
+                            // 전체 행 변경 여부 체크
+                            if (self.hasChanges(original, self.properties[index])) {
+                                self.updateCrudStatus(index, 'U');
+                            } else {
+                                self.updateCrudStatus(index, '');
+                            }
+                        }
+                    }
+                }
+            });
+        },
+
+        // 개별 필드 스타일 업데이트
+        updateFieldStyle: function($input, field, original, current) {
+            const originalValue = original[field] || '';
+            const currentValue = current[field] || '';
+
+            if (originalValue !== currentValue) {
+                $input.addClass('sp-field-changed');
+            } else {
+                $input.removeClass('sp-field-changed');
+            }
+        },
+
+        // 원본과 비교하여 변경 여부 확인
+        hasChanges: function(original, current) {
+            const fields = ['propertyName', 'propertyDesc', 'defaultValue', 'validData', 'dataType'];
+            return fields.some(field => (original[field] || '') !== (current[field] || ''));
+        },
+
+        // CRUD 상태 업데이트
+        updateCrudStatus: function(index, status) {
+            this.properties[index].crud = status;
+            const $row = $(`#propertyDetailTableBody tr[data-index="${index}"]`);
+            const $crudCell = $row.find('.crud-cell');
+            $crudCell.html(`<span class="badge ${this.getCrudBadgeClass(status)}">${this.getCrudLabel(status)}</span>`);
+        },
+
+        // 검색
+        search: function() {
+            this.loadProperties(this.currentPropertyGroupId);
+        },
+
+        // 전체 선택/해제
+        toggleSelectAll: function(checkbox) {
+            $('.property-checkbox').prop('checked', checkbox.checked);
+        },
+
+        // 행 추가
+        addRow: function() {
+            this.newRowIndex--;
+            const newIndex = this.properties.length;
+
+            const newProperty = {
+                propertyGroupId: this.currentPropertyGroupId,
+                propertyId: '',
+                propertyName: '',
+                propertyDesc: '',
+                dataType: 'C',
+                validData: '',
+                defaultValue: '',
+                crud: 'C'
+            };
+
+            this.properties.push(newProperty);
+
+            const tbody = $('#propertyDetailTableBody');
+            // "등록된 프로퍼티가 없습니다" 메시지 제거
+            tbody.find('tr td[colspan="9"]').closest('tr').remove();
+
+            tbody.append(this.createPropertyRow(newProperty, newIndex, true));
+
+            // 새 행에 대한 변경 이벤트 바인딩
+            this.bindChangeEvents();
+
+            // 새로 추가된 행의 프로퍼티ID 입력 필드에 포커스
+            tbody.find(`tr[data-index="${newIndex}"] input[data-field="propertyId"]`).focus();
+        },
+
+        // 선택행 삭제
+        deleteSelected: function() {
+            const $checked = $('.property-checkbox:checked');
+            const checkedCount = $checked.length;
+
+            if (checkedCount === 0) {
+                Toast.warning('삭제할 항목을 선택해주세요.');
+                return;
+            }
+
+            const self = this;
+            $checked.each(function() {
+                const index = parseInt($(this).data('index'));
+                const $row = $(this).closest('tr');
+                const isNew = $row.data('is-new') === true;
+
+                if (isNew) {
+                    // 새로 추가된 행은 바로 삭제
+                    $row.remove();
+                    self.properties[index] = null; // null로 표시 (나중에 필터링)
+                } else {
+                    // 기존 행은 D 표시
+                    self.updateCrudStatus(index, 'D');
+                    // 체크박스 해제
+                    $(this).prop('checked', false);
+                    // 삭제 행 스타일 적용
+                    $row.addClass('sp-row-crud-deleted');
+                    $row.find('input, select').prop('disabled', true);
+                    $row.find('.property-checkbox').prop('disabled', false); // 체크박스는 활성화 유지
+                }
+            });
+
+            // 전체 선택 체크박스 해제
+            $('#selectAllProperties').prop('checked', false);
+        },
+
+        // Reload (미구현)
+        reloadProperties: function() {
+            Toast.warning('Reload 기능은 추후 구현 예정입니다.');
+        },
+
+        // 유사 프로퍼티 등록
+        openSimilarPropertyModal: function() {
+            var self = this;
+            SimilarPropertyModal.open('propertyDetailModal', function(copiedProperties) {
+                var tbody = $('#propertyDetailTableBody');
+                // "등록된 프로퍼티가 없습니다" 메시지 제거
+                tbody.find('tr td[colspan="9"]').closest('tr').remove();
+
+                copiedProperties.forEach(function(prop) {
+                    var newIndex = self.properties.length;
+                    var newProperty = {
+                        propertyGroupId: self.currentPropertyGroupId,
+                        propertyId: prop.propertyId,
+                        propertyName: prop.propertyName,
+                        propertyDesc: prop.propertyDesc,
+                        dataType: prop.dataType,
+                        validData: prop.validData,
+                        defaultValue: prop.defaultValue,
+                        crud: 'C'
+                    };
+                    self.properties.push(newProperty);
+                    tbody.append(self.createPropertyRow(newProperty, newIndex, true));
+                });
+
+                self.bindChangeEvents();
+            });
+        },
+
+        // WAS별 설정
+        openWasSetting: function(propertyId) {
+            // 해당 프로퍼티 정보 찾기
+            const property = this.properties.find(p => p && p.propertyId === propertyId);
+            if (!property) {
+                Toast.error('프로퍼티 정보를 찾을 수 없습니다.');
+                return;
+            }
+
+            // WAS 일괄적용 모달 열기 (부모 모달 숨김/복원 처리)
+            PropertyWasModal.open(
+                this.currentPropertyGroupId,
+                propertyId,
+                property.validData,
+                property.defaultValue,
+                'edit',
+                'propertyDetailModal'
+            );
+        },
+
+        // 전체백업
+        backupAll: function() {
+            if (!this.currentPropertyGroupId) {
+                Toast.warning('프로퍼티 그룹이 선택되지 않았습니다.');
+                return;
+            }
+
+            Toast.confirm(this.currentPropertyGroupId + ' 정보를 백업하시겠습니까?', () => {
+                const reason = prompt('백업사유를 입력 해주세요');
+                if (reason === null) {
+                    return;
+                }
+                if (!reason || reason.trim() === '') {
+                    Toast.warning('백업사유를 입력해주세요.');
+                    return;
+                }
+
+                $.ajax({
+                    url: API_BASE_URL + '/properties/groups/' + this.currentPropertyGroupId + '/backup',
+                    method: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify({ reason: reason.trim() }),
+                    success: (response) => {
+                        if (response.success) {
+                            Toast.success('백업이 완료되었습니다.');
+                            // 프로퍼티 목록 새로고침
+                            this.loadProperties(this.currentPropertyGroupId);
+                        } else {
+                            Toast.error('백업 중 오류가 발생했습니다: ' + (response.message || ''));
+                        }
+                    },
+                    error: (xhr) => {
+                        console.error('Failed to backup property group:', xhr);
+                        const errorMessage = xhr.responseJSON?.message || '백업 중 오류가 발생했습니다.';
+                        Toast.error(errorMessage);
+                    }
+                });
+            });
+        },
+
+        // 전체복원
+        restoreAll: function() {
+            if (!this.currentPropertyGroupId) {
+                Toast.warning('프로퍼티 그룹이 선택되지 않았습니다.');
+                return;
+            }
+
+            PropertyHistoryModal.open(this.currentPropertyGroupId);
+        },
+
+        // WAS별 설정 백업
+        backupWasSetting: function() {
+            if (!this.currentPropertyGroupId) {
+                Toast.warning('프로퍼티 그룹이 선택되지 않았습니다.');
+                return;
+            }
+
+            WasInstanceSelectModal.open(this.currentPropertyGroupId);
+        },
+
+        // WAS별 설정 복원
+        restoreWasSetting: function() {
+            if (!this.currentPropertyGroupId) {
+                Toast.warning('프로퍼티 그룹이 선택되지 않았습니다.');
+                return;
+            }
+
+            WasPropertyHistoryModal.open(this.currentPropertyGroupId);
+        },
+
+        // 전체삭제
+        deleteAll: function() {
+            if (!this.currentPropertyGroupId) {
+                Toast.warning('프로퍼티 그룹이 선택되지 않았습니다.');
+                return;
+            }
+
+            Toast.confirm('프로퍼티 그룹정보를 삭제 하시겠습니까? 코드정보도 함께 삭제 됩니다.', () => {
+                $.ajax({
+                    url: API_BASE_URL + '/properties/groups/' + this.currentPropertyGroupId,
+                    method: 'DELETE',
+                    success: (response) => {
+                        if (response.success) {
+                            Toast.success('처리가 완료되었습니다.');
+                            // 모달 닫기
+                            const modal = bootstrap.Modal.getInstance(document.getElementById('propertyDetailModal'));
+                            if (modal) {
+                                modal.hide();
+                            }
+                            // 메인 페이지 목록 새로고침
+                            if (typeof PropertyPage !== 'undefined' && PropertyPage.load) {
+                                PropertyPage.load();
+                            }
+                        } else {
+                            Toast.error('삭제 중 오류가 발생했습니다: ' + (response.message || ''));
+                        }
+                    },
+                    error: (xhr) => {
+                        console.error('Failed to delete property group:', xhr);
+                        const errorMessage = xhr.responseJSON?.message || '삭제 중 오류가 발생했습니다.';
+                        Toast.error(errorMessage);
+                    }
+                });
+            });
+        },
+
+        // 저장
+        save: function() {
+            // 변경된 항목만 필터링 (C, U, D)
+            const changedProperties = this.properties
+                .filter(p => p !== null && p.crud && ['C', 'U', 'D'].includes(p.crud))
+                .map(p => ({
+                    propertyGroupId: this.currentPropertyGroupId,
+                    propertyId: p.propertyId,
+                    propertyName: p.propertyName,
+                    propertyDesc: p.propertyDesc,
+                    dataType: p.dataType,
+                    validData: p.validData,
+                    defaultValue: p.defaultValue,
+                    crud: p.crud
+                }));
+
+            if (changedProperties.length === 0) {
+                Toast.warning('변경된 항목이 없습니다.');
+                return;
+            }
+
+            // 새 항목(C)의 필수값 유효성 검사
+            const newItems = changedProperties.filter(p => p.crud === 'C');
+            for (const item of newItems) {
+                if (!item.propertyId || item.propertyId.trim() === '') {
+                    Toast.warning('새로 추가된 항목의 프로퍼티ID를 입력해주세요.');
+                    return;
+                }
+                if (!item.propertyName || item.propertyName.trim() === '') {
+                    Toast.warning('프로퍼티ID [' + item.propertyId.trim() + ']의 프로퍼티명을 입력해주세요.');
+                    return;
+                }
+                if (!item.propertyDesc || item.propertyDesc.trim() === '') {
+                    Toast.warning('프로퍼티ID [' + item.propertyId.trim() + ']의 프로퍼티 설명을 입력해주세요.');
+                    return;
+                }
+            }
+
+            // 전체 삭제 여부 확인: 기존 프로퍼티가 모두 삭제 대상이고 새 항목이 없는 경우
+            const deleteItems = changedProperties.filter(p => p.crud === 'D');
+            const isAllDeleted = this.originalProperties.length > 0 &&
+                                 deleteItems.length === this.originalProperties.length &&
+                                 newItems.length === 0 &&
+                                 changedProperties.filter(p => p.crud === 'U').length === 0;
+
+            if (isAllDeleted) {
+                // 전체 삭제와 동일한 프로세스
+                Toast.confirm('프로퍼티 그룹정보를 삭제 하시겠습니까? 코드정보도 함께 삭제 됩니다.', () => {
+                    $.ajax({
+                        url: API_BASE_URL + '/properties/groups/' + this.currentPropertyGroupId,
+                        method: 'DELETE',
+                        success: (response) => {
+                            if (response.success) {
+                                Toast.success('처리가 완료되었습니다.');
+                                // 모달 닫기
+                                const modal = bootstrap.Modal.getInstance(document.getElementById('propertyDetailModal'));
+                                if (modal) {
+                                    modal.hide();
+                                }
+                                // 메인 페이지 목록 새로고침
+                                if (typeof PropertyPage !== 'undefined' && PropertyPage.load) {
+                                    PropertyPage.load();
+                                }
+                            } else {
+                                Toast.error('삭제 중 오류가 발생했습니다: ' + (response.message || ''));
+                            }
+                        },
+                        error: (xhr) => {
+                            console.error('Failed to delete property group:', xhr);
+                            const errorMessage = xhr.responseJSON?.message || '삭제 중 오류가 발생했습니다.';
+                            Toast.error(errorMessage);
+                        }
+                    });
+                });
+                return;
+            }
+
+            // 일반 저장 API 호출
+            $.ajax({
+                url: API_BASE_URL + '/properties/save',
+                method: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify(changedProperties),
+                success: (response) => {
+                    if (response.success) {
+                        Toast.success('처리가 완료되었습니다.');
+                        // 데이터 새로고침
+                        this.loadProperties(this.currentPropertyGroupId);
+                        // 메인 페이지 목록 새로고침
+                        if (typeof PropertyPage !== 'undefined' && PropertyPage.load) {
+                            PropertyPage.load();
+                        }
+                    } else {
+                        Toast.error('저장 중 오류가 발생했습니다: ' + (response.message || ''));
+                    }
+                },
+                error: (xhr) => {
+                    console.error('Failed to save properties:', xhr);
+                    const errorMessage = xhr.responseJSON?.message || '저장 중 오류가 발생했습니다.';
+                    Toast.error(errorMessage);
+                }
+            });
+        }
+    };
+</script>
+</th:block>
+</body>
+</html>

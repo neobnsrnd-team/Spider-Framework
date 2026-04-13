@@ -1,0 +1,582 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<!-- 전문 송수신 로그 상세 모달 -->
+<div th:fragment="detailModal">
+    <div class="modal fade" id="messageInstanceDetailModal" tabindex="-1" aria-labelledby="messageInstanceDetailModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header py-2">
+                    <h5 class="modal-title" id="messageInstanceDetailModalLabel">
+                        <i class="bi bi-file-earmark-text me-2"></i>전문 송수신 로그
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <!-- 섹션 헤더 -->
+                    <div class="d-flex align-items-center mb-3">
+                        <i class="bi bi-exclamation-circle-fill text-danger me-2"></i>
+                        <span class="fw-bold">전문 송수신 로그</span>
+                    </div>
+
+                    <!-- 동적 탭 -->
+                    <ul class="nav nav-tabs" id="detailTabs" role="tablist">
+                        <!-- 탭은 JavaScript로 동적 생성 -->
+                    </ul>
+
+                    <!-- 탭 내용 -->
+                    <div class="tab-content border border-top-0 p-3" id="detailTabContent">
+                        <!-- 탭 내용은 JavaScript로 동적 생성 -->
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"><i class="bi bi-x-lg"></i> 닫기</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 파싱결과 팝업 (필드 파싱) -->
+    <div class="modal fade" id="parseResultModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-centered sp-modal-lg">
+            <div class="modal-content">
+                <div class="modal-header py-2">
+                    <h5 class="modal-title">파싱결과</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-3">
+                    <!-- 헤더 정보 -->
+                    <div class="d-flex align-items-center justify-content-between mb-3">
+                        <div>
+                            <i class="bi bi-exclamation-circle-fill text-danger me-1"></i>
+                            <span class="fw-bold">파싱결과</span>
+                            <span class="text-muted ms-2">(거래추적번호: <span id="parseResultTrxNo"></span>)</span>
+                        </div>
+                        <div>
+                            <button type="button" class="btn btn-sm btn-outline-success me-1" onclick="MessageParseResult.exportExcel()">
+                                <i class="bi bi-file-earmark-excel me-1"></i>엑셀
+                            </button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="MessageParseResult.print()">
+                                <i class="bi bi-printer me-1"></i>출력
+                            </button>
+                        </div>
+                    </div>
+                    <!-- 파싱 테이블 -->
+                    <div class="table-responsive sp-scrollable-md">
+                        <table class="table table-sm table-bordered table-striped mb-0" id="parseResultTable">
+                            <thead class="table-light sticky-top">
+                                <tr>
+                                    <th class="col-w-100">메시지 ID</th>
+                                    <th class="col-w-150">전문필드ID</th>
+                                    <th class="col-w-150">전문필드명</th>
+                                    <th class="col-w-80">길이[Byte]</th>
+                                    <th>데이터</th>
+                                </tr>
+                            </thead>
+                            <tbody id="parseResultTableBody">
+                                <!-- 동적 생성 -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="bi bi-x-lg me-1"></i>닫기
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 논파싱 팝업 (원본 메시지) -->
+    <div class="modal fade" id="rawResultModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-centered sp-modal-lg">
+            <div class="modal-content">
+                <div class="modal-header py-2">
+                    <h5 class="modal-title">파싱결과</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-3">
+                    <!-- 헤더 정보 -->
+                    <div class="d-flex align-items-center justify-content-between mb-3">
+                        <div>
+                            <i class="bi bi-exclamation-circle-fill text-danger me-1"></i>
+                            <span class="fw-bold">파싱결과</span>
+                            <span class="text-muted ms-2">(거래추적번호: <span id="rawResultTrxNo"></span>)</span>
+                        </div>
+                        <div>
+                            <button type="button" class="btn btn-sm btn-outline-success me-1" onclick="MessageParseResult.exportExcelRaw()">
+                                <i class="bi bi-file-earmark-excel me-1"></i>엑셀
+                            </button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="MessageParseResult.printRaw()">
+                                <i class="bi bi-printer me-1"></i>출력
+                            </button>
+                        </div>
+                    </div>
+                    <!-- 논파싱 테이블 -->
+                    <table class="table table-bordered mb-0" id="rawResultTable">
+                        <tbody>
+                            <tr>
+                                <th class="table-light col-w-120">기관ID</th>
+                                <td id="rawResultOrgId"></td>
+                                <th class="table-light col-w-120">전문ID</th>
+                                <td id="rawResultMessageId"></td>
+                            </tr>
+                            <tr>
+                                <th class="table-light">메세지</th>
+                                <td colspan="3">
+                                    <pre id="rawResultMessage" class="sp-json-preview bg-body-secondary border rounded p-2 mb-0 font-monospace fs-xs"></pre>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="bi bi-x-lg me-1"></i>닫기
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 상세 모달 스크립트 -->
+<script th:fragment="detailModalScript">
+    const MessageInstanceDetail = {
+        /**
+         * 거래추적번호로 상세 조회 후 모달 표시
+         * @param {string} trxTrackingNo 거래추적번호
+         */
+        show: function(trxTrackingNo) {
+            if (!trxTrackingNo) {
+                Toast.warning('거래추적번호가 없습니다.');
+                return;
+            }
+
+            const self = this;
+
+            // API 호출
+            $.ajax({
+                url: API_BASE_URL + '/message-instances/tracking/' + encodeURIComponent(trxTrackingNo),
+                method: 'GET',
+                success: function(response) {
+                    if (response.success && response.data && response.data.length > 0) {
+                        self.renderTabs(response.data);
+                        $('#messageInstanceDetailModal').modal('show');
+                    } else {
+                        Toast.warning('조회된 데이터가 없습니다.');
+                    }
+                },
+                error: function(xhr) {
+                    console.error('상세 조회 실패:', xhr);
+                    Toast.error('상세 조회에 실패했습니다.');
+                }
+            });
+        },
+
+        /**
+         * 탭 및 내용 렌더링
+         * @param {Array} dataList 조회된 데이터 목록
+         */
+        renderTabs: function(dataList) {
+            const tabsContainer = document.getElementById('detailTabs');
+            const contentContainer = document.getElementById('detailTabContent');
+
+            // 초기화
+            tabsContainer.innerHTML = '';
+            contentContainer.innerHTML = '';
+
+            dataList.forEach((data, index) => {
+                const tabId = `detail-tab-${index}`;
+                const contentId = `detail-content-${index}`;
+                const isActive = index === 0;
+
+                // 탭 버튼 생성
+                const tabItem = document.createElement('li');
+                tabItem.className = 'nav-item';
+                tabItem.setAttribute('role', 'presentation');
+                tabItem.innerHTML = `
+                    <button class="nav-link ${isActive ? 'active' : ''}"
+                            id="${tabId}"
+                            data-bs-toggle="tab"
+                            data-bs-target="#${contentId}"
+                            type="button"
+                            role="tab"
+                            aria-controls="${contentId}"
+                            aria-selected="${isActive}">
+                        ${index + 1}
+                    </button>
+                `;
+                tabsContainer.appendChild(tabItem);
+
+                // 탭 내용 생성
+                const tabContent = document.createElement('div');
+                tabContent.className = `tab-pane fade ${isActive ? 'show active' : ''}`;
+                tabContent.id = contentId;
+                tabContent.setAttribute('role', 'tabpanel');
+                tabContent.setAttribute('aria-labelledby', tabId);
+                tabContent.innerHTML = this.createDetailContent(data);
+                contentContainer.appendChild(tabContent);
+            });
+        },
+
+        /**
+         * 상세 내용 HTML 생성
+         * @param {Object} data 데이터
+         * @returns {string} HTML 문자열
+         */
+        createDetailContent: function(data) {
+            // IO_TYPE 표시 변환
+            const ioTypeDisplay = this.formatIoType(data.ioType);
+
+            // 날짜 포맷팅
+            const logDtimeFormatted = this.formatDateTime(data.logDtime);
+            const trxDtimeFormatted = this.formatDateTime(data.trxDtime);
+
+            // 메시지 데이터 escape 처리
+            const messageContent = (data.messageData || data.logData || '').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
+            return `
+                <table class="sp-form-table">
+                    <tbody>
+                        <tr>
+                            <th>거래추적번호</th>
+                            <td>${data.trxTrackingNo || ''}</td>
+                            <th>기관ID 기동/수동</th>
+                            <td>${data.orgId || ''} ${ioTypeDisplay}</td>
+                        </tr>
+                        <tr>
+                            <th>사용자ID</th>
+                            <td>${data.userId || ''}</td>
+                            <th>결과코드</th>
+                            <td>${data.lastRtCode || ''}</td>
+                        </tr>
+                        <tr>
+                            <th>거래ID</th>
+                            <td>${data.trxId || ''}</td>
+                            <th>로그시간</th>
+                            <td>${logDtimeFormatted}</td>
+                        </tr>
+                        <tr>
+                            <th>기관전문ID</th>
+                            <td>${data.messageId || ''}</td>
+                            <th>거래시각</th>
+                            <td>${trxDtimeFormatted}</td>
+                        </tr>
+                        <tr>
+                            <th>로그메시지</th>
+                            <td colspan="3">
+                                <textarea class="form-control font-monospace fs-xs log-message-area cursor-pointer" readonly
+                                    data-org-id="${data.orgId || ''}"
+                                    data-message-id="${data.messageId || ''}"
+                                    data-trx-tracking-no="${data.trxTrackingNo || ''}"
+                                    title="클릭하여 파싱결과 보기">${messageContent}</textarea>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            `;
+        },
+
+        /**
+         * IO_TYPE 코드를 표시용 문자열로 변환
+         */
+        formatIoType: function(ioType) {
+            const types = {
+                'I': '▷▷ ■',  // 수동
+                'O': '◁◁ ■',  // 기동
+                'Q': '▷▷',    // 요구
+                'S': '◁◁'     // 응답
+            };
+            return types[ioType] || '';
+        },
+
+        /**
+         * 날짜 포맷팅 (YYYYMMDDHHMMSS -> YYYY/MM/DD HH:MM:SS)
+         */
+        formatDateTime: function(dateStr) {
+            if (!dateStr || dateStr.length < 14) return dateStr || '';
+
+            const year = dateStr.substring(0, 4);
+            const month = dateStr.substring(4, 6);
+            const day = dateStr.substring(6, 8);
+            const hour = dateStr.substring(8, 10);
+            const min = dateStr.substring(10, 12);
+            const sec = dateStr.substring(12, 14);
+
+            return `${year}/${month}/${day} ${hour}:${min}:${sec}`;
+        }
+    };
+
+    /**
+     * 파싱결과 팝업 관리 객체
+     */
+    const MessageParseResult = {
+        currentData: null,
+
+        /**
+         * 로그메시지 더블클릭 시 파싱결과 팝업 표시
+         * @param {HTMLElement} textarea 더블클릭된 textarea 요소
+         */
+        show: function(textarea) {
+            const orgId = textarea.dataset.orgId;
+            const messageId = textarea.dataset.messageId;
+            const trxTrackingNo = textarea.dataset.trxTrackingNo;
+            const messageData = textarea.value;
+
+            if (!messageData) {
+                Toast.warning('메시지 데이터가 없습니다.');
+                return;
+            }
+
+            this.currentData = {
+                orgId: orgId,
+                messageId: messageId,
+                trxTrackingNo: trxTrackingNo,
+                messageData: messageData
+            };
+
+            // 필드 정의가 있는지 확인하여 파싱 가능 여부 판단
+            if (orgId && messageId) {
+                this.tryParseMessage(orgId, messageId, trxTrackingNo, messageData);
+            } else {
+                // 필드 정의 조회 불가 - 논파싱 팝업 표시
+                this.showRawResult(orgId, messageId, trxTrackingNo, messageData);
+            }
+        },
+
+        /**
+         * 기존 파싱 API 호출 (POST /api/telegram/parse)
+         */
+        tryParseMessage: function(orgId, messageId, trxTrackingNo, messageData) {
+            const self = this;
+
+            $.ajax({
+                url: API_BASE_URL + '/telegram/parse',
+                method: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify({
+                    orgId: orgId,
+                    messageId: messageId,
+                    rawString: messageData
+                }),
+                success: function(response) {
+                    if (response.success && response.data && response.data.fields && response.data.fields.length > 0) {
+                        self.showParseResult(trxTrackingNo, response.data);
+                    } else {
+                        self.showRawResult(orgId, messageId, trxTrackingNo, messageData);
+                    }
+                },
+                error: function() {
+                    self.showRawResult(orgId, messageId, trxTrackingNo, messageData);
+                }
+            });
+        },
+
+        /**
+         * 파싱 결과 팝업 표시 (API 응답 기반)
+         */
+        /**
+         * 문자열이 JSON인지 확인
+         */
+        isJson: function(str) {
+            if (!str || typeof str !== 'string') return false;
+            const trimmed = str.trim();
+            if (!(trimmed.startsWith('{') || trimmed.startsWith('['))) return false;
+            try {
+                JSON.parse(trimmed);
+                return true;
+            } catch (e) {
+                return false;
+            }
+        },
+
+        showParseResult: function(trxTrackingNo, parseData) {
+            $('#parseResultTrxNo').text(trxTrackingNo);
+
+            const tbody = $('#parseResultTableBody');
+            tbody.empty();
+            const self = this;
+
+            parseData.fields.forEach(function(field) {
+                const dataValue = field.parsedValue || field.rawValue || '';
+                const row = $('<tr>');
+                row.append($('<td>').text(field.messageId || ''));
+                row.append($('<td>').text(field.fieldId || ''));
+                row.append($('<td>').text(field.fieldName || ''));
+                row.append($('<td>').addClass('text-center').text(field.dataLength || 0));
+
+                const dataTd = $('<td>');
+                if (self.isJson(dataValue)) {
+                    const wrapper = $('<div>');
+                    const summary = $('<span>')
+                        .text(dataValue.length > 80 ? dataValue.substring(0, 80) + '...' : dataValue)
+                        .addClass('cursor-pointer text-primary')
+                        .attr('title', 'JSON 펼치기/접기');
+                    const icon = $('<i>').addClass('bi bi-search-plus ms-1 cursor-pointer');
+                    const preBlock = $('<pre>')
+                        .text(JSON.stringify(JSON.parse(dataValue.trim()), null, 4))
+                        .addClass('sp-json-expand bg-body-secondary border rounded p-2 font-monospace fs-2xs text-start');
+
+                    const toggle = function() {
+                        preBlock.slideToggle(200);
+                        icon.toggleClass('fa-search-plus fa-search-minus');
+                    };
+                    summary.on('click', toggle);
+                    icon.on('click', toggle);
+
+                    wrapper.append(summary).append(icon).append(preBlock);
+                    dataTd.append(wrapper);
+                } else {
+                    dataTd.text(dataValue);
+                }
+                row.append(dataTd);
+                tbody.append(row);
+            });
+
+            $('#parseResultModal').modal('show');
+        },
+
+        /**
+         * 논파싱 결과 팝업 표시 (원본 메시지)
+         */
+        showRawResult: function(orgId, messageId, trxTrackingNo, messageData) {
+            $('#rawResultTrxNo').text(trxTrackingNo);
+            $('#rawResultOrgId').text(orgId || '');
+            $('#rawResultMessageId').text(messageId || '');
+
+            // JSON이면 pretty-print
+            let displayData = messageData;
+            try {
+                const parsed = JSON.parse(messageData);
+                if (typeof parsed === 'object' && parsed !== null) {
+                    displayData = JSON.stringify(parsed, null, 4);
+                }
+            } catch (e) {
+                // JSON이 아니면 원본 그대로
+            }
+            $('#rawResultMessage').text(displayData);
+
+            // 논파싱 팝업 표시
+            $('#rawResultModal').modal('show');
+        },
+
+        /**
+         * 파싱 결과 엑셀 내보내기
+         */
+        exportExcel: function() {
+            const table = document.getElementById('parseResultTable');
+            if (!table) return;
+
+            let csv = '\uFEFF'; // BOM for Excel UTF-8
+            const rows = table.querySelectorAll('tr');
+
+            rows.forEach(function(row) {
+                const cols = row.querySelectorAll('th, td');
+                const rowData = [];
+                cols.forEach(function(col) {
+                    let text = col.innerText.replace(/"/g, '""');
+                    rowData.push('"' + text + '"');
+                });
+                csv += rowData.join(',') + '\n';
+            });
+
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = 'parse_result_' + ($('#parseResultTrxNo').text() || 'data') + '.csv';
+            link.click();
+        },
+
+        /**
+         * 논파싱 결과 엑셀 내보내기
+         */
+        exportExcelRaw: function() {
+            const orgId = $('#rawResultOrgId').text();
+            const messageId = $('#rawResultMessageId').text();
+            const messageData = $('#rawResultMessage').text();
+            const trxNo = $('#rawResultTrxNo').text();
+
+            let csv = '\uFEFF';
+            csv += '"기관ID","전문ID"\n';
+            csv += '"' + orgId + '","' + messageId + '"\n\n';
+            csv += '"메세지"\n';
+            csv += '"' + messageData.replace(/"/g, '""') + '"\n';
+
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = 'raw_result_' + (trxNo || 'data') + '.csv';
+            link.click();
+        },
+
+        /**
+         * 파싱 결과 인쇄
+         */
+        print: function() {
+            const content = document.getElementById('parseResultTable').outerHTML;
+            this.printContent(content, '파싱결과');
+        },
+
+        /**
+         * 논파싱 결과 인쇄
+         */
+        printRaw: function() {
+            const content = document.getElementById('rawResultTable').outerHTML;
+            this.printContent(content, '파싱결과');
+        },
+
+        /**
+         * 인쇄 공통 함수
+         */
+        printContent: function(content, title) {
+            const printWindow = window.open('', '_blank');
+            printWindow.document.write(`
+                <html>
+                <head>
+                    <title>${title}</title>
+                    <style>
+                        body { font-family: 'Malgun Gothic', sans-serif; padding: 20px; }
+                        table { width: 100%; border-collapse: collapse; }
+                        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; font-size: 12px; }
+                        th { background-color: #f5f5f5; }
+                        textarea { width: 100%; min-height: 200px; font-family: monospace; }
+                    </style>
+                </head>
+                <body>
+                    <h3>${title}</h3>
+                    ${content}
+                </body>
+                </html>
+            `);
+            printWindow.document.close();
+            printWindow.print();
+        }
+    };
+
+    // 모달 닫힐 때 포커스 제거 (aria-hidden 경고 방지)
+    $(function() {
+        $('#messageInstanceDetailModal').on('hide.bs.modal', function() {
+            const focusedElement = this.querySelector(':focus');
+            if (focusedElement) {
+                focusedElement.blur();
+            }
+        });
+
+        // 로그메시지 textarea 클릭 이벤트 (이벤트 위임)
+        $('#messageInstanceDetailModal').on('click', '.log-message-area', function() {
+            MessageParseResult.show(this);
+        });
+
+        // 파싱결과 모달들 포커스 제거
+        $('#parseResultModal, #rawResultModal').on('hide.bs.modal', function() {
+            const focusedElement = this.querySelector(':focus');
+            if (focusedElement) {
+                focusedElement.blur();
+            }
+        });
+    });
+</script>
+</body>
+</html>

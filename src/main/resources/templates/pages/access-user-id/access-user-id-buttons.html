@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<!-- Access User Bottom Actions Fragment -->
+<div th:fragment="buttons" class="bottom-actions">
+    <button class="btn btn-info btn-sm" onclick="window.AccessUser.openReloadModal()">
+        <i class="bi bi-arrow-clockwise"></i> Reload
+    </button>
+    <button th:if="${userAuthorities != null and userAuthorities.contains('ACCESS_USER:W')}"
+            class="btn btn-success btn-sm" onclick="window.AccessUser.addNewRow()">
+        <i class="bi bi-plus-lg"></i> 행 추가
+    </button>
+    <button th:if="${userAuthorities != null and userAuthorities.contains('ACCESS_USER:W')}"
+            class="btn btn-danger btn-sm" onclick="window.AccessUser.deleteSelectedRows()">
+        <i class="bi bi-trash"></i> 선택행 삭제
+    </button>
+    <button th:if="${userAuthorities != null and userAuthorities.contains('ACCESS_USER:W')}"
+            class="btn btn-primary btn-sm" onclick="window.AccessUser.saveAllChanges()">
+        <i class="bi bi-floppy"></i> 변경사항 저장
+    </button>
+</div>
+</body>
+</html>

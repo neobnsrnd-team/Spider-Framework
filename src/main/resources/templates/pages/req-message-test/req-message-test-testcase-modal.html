@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<div th:fragment="modal">
+    <!-- 테스트 케이스 선택 모달 -->
+    <div class="modal fade" id="testCaseSelectModal" tabindex="-1" aria-labelledby="testCaseSelectModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="testCaseSelectModalLabel">전문 테스트값 리스트</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <!-- 검색 영역 -->
+                    <div class="row g-2 mb-3">
+                        <div class="col-md-4">
+                            <label class="form-label mb-1 fs-sm">테스트명</label>
+                            <input type="text" class="form-control form-control-sm" id="modalTestName" placeholder="테스트명">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label mb-1 fs-sm">테스트데이터</label>
+                            <input type="text" class="form-control form-control-sm" id="modalTestData" placeholder="테스트데이터">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label mb-1 fs-sm">등록자ID</label>
+                            <input type="text" class="form-control form-control-sm" id="modalUserId" placeholder="등록자ID">
+                        </div>
+                    </div>
+                    <div class="text-center mb-3">
+                        <button type="button" class="btn btn-primary btn-sm" id="btnTestCaseSearch">조회</button>
+                    </div>
+
+                    <!-- 테스트 케이스 목록 테이블 -->
+                    <div class="table-responsive sp-scrollable">
+                        <table class="table table-sm table-bordered table-hover">
+                            <thead class="table-light sp-sticky-top">
+                            <tr class="fs-sm">
+                                <th class="col-w-pct-15">테스트명</th>
+                                <th class="col-w-pct-10">등록자ID</th>
+                                <th class="col-w-pct-10">서비스ID</th>
+                                <th class="col-w-pct-20">테스트설명</th>
+                                <th class="col-w-pct-45">테스트데이터</th>
+                            </tr>
+                            </thead>
+                            <tbody id="testCaseTableBody" class="fs-sm">
+                            <!-- 테스트 케이스 목록이 여기에 표시됩니다 -->
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- 결과 카운트 -->
+                    <div class="text-center mt-2 sp-result-count">
+                        총 <span id="testCaseCount">0</span>건이 검색되었습니다.
+                    </div>
+                </div>
+                <div class="modal-footer justify-content-end">
+                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal"><i class="bi bi-x-lg"></i> 닫기</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+</body>
+</html>

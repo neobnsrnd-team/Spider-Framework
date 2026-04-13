@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<!-- TransDataGeneration Execute Modal -->
+<div th:fragment="modal">
+    <div class="modal fade" id="genExecuteModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header py-2 bg-body-tertiary">
+                    <h5 class="modal-title fs-base fw-semibold">
+                        <i class="bi bi-file-earmark-arrow-up text-primary"></i> 이행 실행 확인
+                    </h5>
+                    <button type="button" class="btn-close fs-2xs" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body p-3">
+                    <!-- 이행 대상 요약 -->
+                    <div class="mb-3">
+                        <label class="sp-exec-modal-label">이행 대상 건수</label>
+                        <div id="genExecuteSummary" class="sp-exec-modal-summary">
+                            -
+                        </div>
+                    </div>
+
+                    <!-- 이행 사유 입력 -->
+                    <div>
+                        <label for="genTranReason" class="sp-exec-modal-label">이행 사유</label>
+                        <textarea id="genTranReason" class="form-control fs-sm"
+                                  placeholder="이행 사유를 입력하세요 (필수, 최대 100자)"
+                                  maxlength="100"
+                                  rows="3"></textarea>
+                        <div class="sp-char-count">
+                            <span id="genTranReasonCount">0</span> / 100
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer py-2">
+                    <button type="button" class="btn btn-primary btn-sm" data-bs-dismiss="modal"><i class="bi bi-x-lg"></i> 취소</button>
+                    <button type="button" class="btn btn-primary btn-sm" onclick="TransDataGeneration.executeTransfer()">
+                        <i class="bi bi-play-fill"></i> 이행 실행
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+</body>
+</html>

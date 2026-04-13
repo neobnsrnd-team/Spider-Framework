@@ -1,0 +1,24 @@
+{
+  "name": "spider-admin-e2e",
+  "version": "1.0.0",
+  "description": "E2E tests for spider-admin",
+  "scripts": {
+    "test:e2e": "playwright test --project=auth-setup --project=readonly-setup --project=smoke --project=api --project=pages",
+    "test:e2e:smoke": "playwright test --project=auth-setup --project=smoke",
+    "test:e2e:ui": "playwright test --ui",
+    "test:e2e:headed": "playwright test --project=auth-setup --project=readonly-setup --project=smoke --project=api --project=pages --headed",
+    "test:e2e:report": "playwright show-report",
+    "lint": "eslint src/main/resources/static/js e2e playwright.config.ts",
+    "lint:fix": "eslint --fix src/main/resources/static/js e2e playwright.config.ts"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.18.0",
+    "@playwright/test": "^1.50.0",
+    "@types/node": "^25.3.3",
+    "eslint": "^9.18.0",
+    "globals": "^15.14.0",
+    "typescript": "^5.7.0",
+    "typescript-eslint": "^8.20.0",
+    "xlsx": "^0.18.5"
+  }
+}

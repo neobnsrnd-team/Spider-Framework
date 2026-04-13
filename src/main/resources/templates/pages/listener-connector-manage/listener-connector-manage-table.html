@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<div th:fragment="table" class="table-responsive">
+    <table class="table table-sm table-hover sp-data-grid" id="listenerConnectorMappingTable">
+        <thead class="table-light">
+        <tr>
+            <th class="col-w-160 sortable" data-sort="listenerGwId">리스너 GATEWAY</th>
+            <th class="col-w-160 sortable" data-sort="listenerSystemId">리스너 SYSTEM</th>
+            <th class="col-w-160 sortable" data-sort="connectorGwId">응답커넥터 GATEWAY</th>
+            <th class="col-w-160 sortable" data-sort="connectorSystemId">응답커넥터 SYSTEM</th>
+            <th class="col-w-140 sortable" data-sort="identifier">식별자</th>
+            <th class="col-w-200 sortable" data-sort="description">설명</th>
+        </tr>
+        </thead>
+        <tbody id="listenerConnectorMappingTableBody">
+        <tr>
+            <td colspan="6" class="text-center py-4 text-body-secondary">
+                데이터를 불러오는 중...
+            </td>
+        </tr>
+        </tbody>
+    </table>
+</div>
+</body>
+</html>

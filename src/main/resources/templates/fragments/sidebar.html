@@ -1,0 +1,463 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<div th:fragment="sidebar" class="left-sidebar" id="left-sidebar">
+    <!-- Sidebar Header -->
+    <div class="sidebar-header">
+        <div class="header-title" id="workspace-title" th:text="${appTitle}">Neo Spider Admin</div>
+        <button class="btn-toggle-sidebar" id="btn-toggle-sidebar" title="사이드바 접기/펼치기">
+            <i class="bi bi-chevron-left"></i>
+        </button>
+    </div>
+
+    <!-- Search -->
+    <div class="sidebar-search px-2 py-2">
+        <div class="position-relative">
+            <i class="bi bi-search position-absolute top-50 translate-middle-y text-body-tertiary" style="left: 10px"></i>
+            <input type="text" id="sidebar-menu-search"
+                   class="form-control form-control-sm pe-4 border-0" style="padding-left: 32px"
+                   placeholder="메뉴 이름으로 검색하기" autocomplete="off">
+            <button type="button" id="sidebar-search-clear"
+                    class="btn btn-link position-absolute top-50 translate-middle-y end-0 me-2 p-0 text-body-tertiary d-none sidebar-search-clear"
+                    title="검색어 지우기">
+                <i class="bi bi-x-lg"></i>
+            </button>
+        </div>
+    </div>
+
+    <!-- Menu Tree (동적으로 로드됨) -->
+    <div class="menu-tree" id="dynamic-menu-tree">
+        <div class="menu-loading">
+            <i class="bi bi-arrow-repeat sp-spin"></i>
+            <span>메뉴를 불러오는 중...</span>
+        </div>
+    </div>
+
+    <script>
+        // ── API: 메뉴 로드 ──
+        window.loadUserMenus = function() {
+            fetch('/api/user-menus')
+                .then(function(response) { return response.json(); })
+                .then(function(data) {
+                    if (data.success && data.data) {
+                        if (data.data.length === 0) {
+                            showNoMenusMessage();
+                        } else {
+                            renderMenus(data.data);
+                        }
+                    } else {
+                        console.error('Invalid response format:', data);
+                        showErrorMessage('메뉴 응답 형식이 올바르지 않습니다.');
+                    }
+                })
+                .catch(function(error) {
+                    console.error('Menu loading failed:', error);
+                    showErrorMessage('메뉴를 불러오는데 실패했습니다: ' + error.message);
+                });
+        };
+
+        document.addEventListener('DOMContentLoaded', function() {
+            loadUserMenus();
+            initSidebarToggle();
+            initMenuTreeEvents();
+            initMenuSearch();
+        });
+
+        // ── 사이드바 접기/펼치기 (Notion-style) ──
+        function initSidebarToggle() {
+            var toggleBtn = document.getElementById('btn-toggle-sidebar');
+            var sidebar = document.getElementById('left-sidebar');
+            var trigger = document.getElementById('sidebarHoverTrigger');
+            var toggleIcon = toggleBtn ? toggleBtn.querySelector('i') : null;
+            var pendingCollapse = false;
+
+            function updateToggleIcon() {
+                if (!toggleIcon) return;
+                if (sidebar.classList.contains('collapsed')) {
+                    toggleIcon.classList.remove('bi-chevron-left');
+                    toggleIcon.classList.add('bi-chevron-right');
+                } else {
+                    toggleIcon.classList.remove('bi-chevron-right');
+                    toggleIcon.classList.add('bi-chevron-left');
+                }
+            }
+
+            function updateTrigger() {
+                if (trigger) {
+                    trigger.classList.toggle('active', sidebar.classList.contains('collapsed'));
+                }
+            }
+
+            if (localStorage.getItem('sidebarCollapsed') === 'true') {
+                sidebar.classList.add('collapsed');
+                updateToggleIcon();
+                updateTrigger();
+            }
+
+            if (toggleBtn && sidebar) {
+                toggleBtn.addEventListener('click', function() {
+                    if (sidebar.classList.contains('collapsed')) {
+                        // 펼치기 — 즉시 실행
+                        sidebar.classList.remove('collapsed');
+                        sidebar.style.transform = '';
+                        pendingCollapse = false;
+                    } else {
+                        // 접기 — 마우스가 사이드바를 떠날 때까지 시각적으로 유지
+                        sidebar.classList.add('collapsed');
+                        pendingCollapse = true;
+                        sidebar.style.transform = 'translateX(0)';
+                    }
+                    localStorage.setItem('sidebarCollapsed', sidebar.classList.contains('collapsed'));
+                    updateToggleIcon();
+                    updateTrigger();
+                });
+            }
+
+            // 호버 트리거: 마우스 진입 시 딜레이 후 사이드바 슬라이드 인
+            var hoverTimer = null;
+            function startHoverOpen() {
+                if (!sidebar.classList.contains('collapsed') || pendingCollapse) return;
+                clearTimeout(hoverTimer);
+                hoverTimer = setTimeout(function() {
+                    sidebar.style.transform = 'translateX(0)';
+                }, 250);
+            }
+            function cancelHoverOpen() {
+                clearTimeout(hoverTimer);
+            }
+            function closeSidebar() {
+                clearTimeout(hoverTimer);
+                pendingCollapse = false;
+                if (sidebar.classList.contains('collapsed')) {
+                    sidebar.style.transform = '';
+                }
+            }
+            if (trigger && sidebar) {
+                trigger.addEventListener('mouseenter', startHoverOpen);
+                trigger.addEventListener('mouseleave', cancelHoverOpen);
+                sidebar.addEventListener('mouseenter', function() {
+                    if (!pendingCollapse) startHoverOpen();
+                });
+                sidebar.addEventListener('mouseleave', closeSidebar);
+            }
+        }
+
+        // ── 이벤트 위임: L1/L2 토글 + L3 클릭 ──
+        function initMenuTreeEvents() {
+            var menuTree = document.getElementById('dynamic-menu-tree');
+
+            menuTree.addEventListener('click', function(e) {
+                // L1 그룹 토글
+                var groupLabel = e.target.closest('.sidebar-group-label');
+                if (groupLabel) {
+                    e.stopPropagation();
+                    var group = groupLabel.closest('.sidebar-group');
+                    group.classList.toggle('open');
+                    var content = group.querySelector('.sidebar-group-content');
+                    if (content) content.classList.toggle('d-none');
+                    return;
+                }
+
+                // L2 섹션 토글
+                var sectionLabel = e.target.closest('.sidebar-section-label');
+                if (sectionLabel) {
+                    e.stopPropagation();
+                    var section = sectionLabel.closest('.sidebar-section');
+                    section.classList.toggle('open');
+                    var sectionContent = section.querySelector(':scope > .sidebar-section-content');
+                    if (sectionContent) sectionContent.classList.toggle('d-none');
+                    return;
+                }
+
+                // L3 메뉴 클릭
+                var menuLink = e.target.closest('.sidebar-menu-link');
+                if (menuLink) {
+                    e.preventDefault();
+                    var url = menuLink.getAttribute('data-menu-url');
+                    var title = menuLink.getAttribute('data-title');
+
+                    if (typeof window.TabManager !== 'undefined') {
+                        window.TabManager.addTab(url, title, false);
+                    } else {
+                        window.location.href = url;
+                    }
+                }
+            });
+        }
+
+        // ── 검색 기능 ──
+        function initMenuSearch() {
+            var input = document.getElementById('sidebar-menu-search');
+            var clearBtn = document.getElementById('sidebar-search-clear');
+
+            input.addEventListener('input', function() {
+                var query = this.value.trim().toLowerCase();
+                clearBtn.classList.toggle('d-none', !this.value);
+                filterMenuTree(query);
+            });
+
+            clearBtn.addEventListener('click', function() {
+                input.value = '';
+                clearBtn.classList.add('d-none');
+                filterMenuTree('');
+                input.focus();
+            });
+        }
+
+        function filterMenuTree(query) {
+            var groups = document.querySelectorAll('.sidebar-group');
+            if (!query) {
+                // 검색어 없으면 원래 상태 복원
+                groups.forEach(function(group) {
+                    group.classList.remove('d-none');
+                    group.querySelector('.sidebar-group-content').classList.remove('d-none');
+                    group.classList.add('open');
+                });
+                document.querySelectorAll('.sidebar-section').forEach(function(section) {
+                    section.classList.remove('d-none');
+                    section.classList.remove('open');
+                    var content = section.querySelector(':scope > .sidebar-section-content');
+                    if (content) content.classList.add('d-none');
+                });
+                document.querySelectorAll('.nav-item').forEach(function(item) {
+                    item.classList.remove('d-none');
+                });
+                // 첫 번째 그룹만 열기 (초기 상태)
+                var firstGroup = document.querySelector('.sidebar-group');
+                if (firstGroup) {
+                    firstGroup.classList.add('open');
+                    var fc = firstGroup.querySelector('.sidebar-group-content');
+                    if (fc) fc.classList.remove('d-none');
+                }
+                // 나머지 그룹은 닫기
+                groups.forEach(function(group, idx) {
+                    if (idx > 0) {
+                        group.classList.remove('open');
+                        var gc = group.querySelector('.sidebar-group-content');
+                        if (gc) gc.classList.add('d-none');
+                    }
+                });
+                return;
+            }
+
+            // Recursive filter: returns true if this node (or a descendant) matches
+            function filterNode(node) {
+                var link = node.matches && node.matches('.sidebar-menu-link') ? node : null;
+                if (!link && node.querySelector) {
+                    var directLink = node.querySelector(':scope > .sidebar-menu-link');
+                    if (directLink) link = directLink;
+                }
+                if (link) {
+                    var title = (link.getAttribute('data-title') || '').toLowerCase();
+                    var match = title.indexOf(query) !== -1;
+                    var item = link.closest('.nav-item');
+                    if (item) item.classList.toggle('d-none', !match);
+                    return match;
+                }
+
+                if (node.classList && node.classList.contains('sidebar-section')) {
+                    var content = node.querySelector(':scope > .sidebar-section-content');
+                    var children = content ? content.children : [];
+                    var hasMatch = false;
+                    for (var i = 0; i < children.length; i++) {
+                        var child = children[i];
+                        var inner = child.querySelector(':scope > .sidebar-section') || child.querySelector(':scope > .sidebar-menu-link') || child;
+                        if (filterNode(inner)) hasMatch = true;
+                    }
+                    node.classList.toggle('d-none', !hasMatch);
+                    if (hasMatch && content) {
+                        node.classList.add('open');
+                        content.classList.remove('d-none');
+                    }
+                    var navItem = node.closest('.nav-item');
+                    if (navItem) navItem.classList.toggle('d-none', !hasMatch);
+                    return hasMatch;
+                }
+                return false;
+            }
+
+            groups.forEach(function(group) {
+                var content = group.querySelector('.sidebar-group-content');
+                var children = content ? content.children : [];
+                var groupHasMatch = false;
+                for (var i = 0; i < children.length; i++) {
+                    if (filterNode(children[i])) groupHasMatch = true;
+                }
+                if (groupHasMatch) {
+                    group.classList.remove('d-none');
+                    group.classList.add('open');
+                    if (content) content.classList.remove('d-none');
+                } else {
+                    group.classList.add('d-none');
+                }
+            });
+        }
+
+        // ── Active 메뉴 동기화 ──
+        window.syncSidebarActiveMenu = function(url) {
+            document.querySelectorAll('.sidebar-menu-link.active')
+                .forEach(function(el) { el.classList.remove('active'); });
+            if (!url) return;
+            var link = document.querySelector('.sidebar-menu-link[data-menu-url="' + CSS.escape(url) + '"]');
+            if (link) {
+                link.classList.add('active');
+                // Walk up all ancestor sections and open them
+                var ancestor = link.closest('.sidebar-section');
+                while (ancestor) {
+                    if (!ancestor.classList.contains('open')) {
+                        ancestor.classList.add('open');
+                        var sc = ancestor.querySelector(':scope > .sidebar-section-content');
+                        if (sc) sc.classList.remove('d-none');
+                    }
+                    ancestor = ancestor.parentElement ? ancestor.parentElement.closest('.sidebar-section') : null;
+                }
+                var group = link.closest('.sidebar-group');
+                if (group && !group.classList.contains('open')) {
+                    group.classList.add('open');
+                    var gc = group.querySelector('.sidebar-group-content');
+                    if (gc) gc.classList.remove('d-none');
+                }
+                link.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+            }
+        };
+
+        // ── 렌더링 ──
+        function renderMenus(menus) {
+            var menuTree = document.getElementById('dynamic-menu-tree');
+            menuTree.innerHTML = '';
+
+            if (!menus || menus.length === 0) {
+                showNoMenusMessage();
+                return;
+            }
+
+            menus.forEach(function(rootMenu, index) {
+                var rootGroup = renderRootMenuGroup(rootMenu, index === 0);
+                menuTree.appendChild(rootGroup);
+            });
+
+            // F5 새로고침 시 탭 복원
+            var savedState = window._savedTabState;
+            var pending = window.pendingInitialPage;
+            if (savedState && savedState.tabs && savedState.tabs.length > 0
+                    && pending === savedState.activeTab
+                    && typeof window.TabManager !== 'undefined') {
+                window._savedTabState = null;
+                window.pendingInitialPage = null;
+                savedState.tabs.forEach(function(tab) {
+                    window.TabManager.tabs.push(tab);
+                });
+                window.TabManager.activeTab = savedState.activeTab;
+                window.TabManager.renderTabs();
+                if (savedState.activeTab) {
+                    window.TabManager.loadContent(savedState.activeTab);
+                    syncSidebarActiveMenu(savedState.activeTab);
+                }
+            } else if (pending && typeof window.TabManager !== 'undefined') {
+                window.pendingInitialPage = null;
+                var menuLinks = document.querySelectorAll('.sidebar-menu-link');
+                var title = pending;
+                for (var i = 0; i < menuLinks.length; i++) {
+                    if (menuLinks[i].getAttribute('data-menu-url') === pending) {
+                        title = menuLinks[i].getAttribute('data-title') || pending;
+                        break;
+                    }
+                }
+                window.TabManager.addTab(pending, title, false);
+            }
+        }
+
+        function renderRootMenuGroup(rootMenu, isFirst) {
+            var e = HtmlUtils.escape;
+            var group = document.createElement('div');
+            group.className = 'sidebar-group' + (isFirst ? ' open' : '');
+            group.setAttribute('data-root-menu-id', rootMenu.menuId);
+
+            // L1 label
+            var label = document.createElement('div');
+            label.className = 'sidebar-group-label d-flex align-items-center px-3 pt-3 pb-2 text-uppercase fw-semibold';
+            label.innerHTML = '<i class="bi bi-chevron-right toggle-icon me-1"></i><span>' + e(rootMenu.menuName) + '</span>';
+            group.appendChild(label);
+
+            // L2+ container
+            var content = document.createElement('div');
+            content.className = 'sidebar-group-content';
+            if (!isFirst) content.classList.add('d-none');
+
+            if (rootMenu.children && rootMenu.children.length > 0) {
+                rootMenu.children.forEach(function(childMenu) {
+                    content.appendChild(renderMenuNode(childMenu, 2));
+                });
+            }
+
+            group.appendChild(content);
+            return group;
+        }
+
+        function renderMenuNode(menu, depth) {
+            var e = HtmlUtils.escape;
+            var hasChildren = menu.children && menu.children.length > 0;
+
+            if (hasChildren) {
+                // Branch: toggle section with recursive children
+                var section = document.createElement('div');
+                section.className = 'sidebar-section';
+                section.setAttribute('data-menu-id', menu.menuId);
+
+                var label = document.createElement('div');
+                label.className = 'sidebar-section-label d-flex align-items-center px-3 py-2';
+                label.innerHTML = '<span>' + e(menu.menuName) + '</span><i class="bi bi-chevron-right toggle-icon ms-auto"></i>';
+                section.appendChild(label);
+
+                var ul = document.createElement('ul');
+                ul.className = 'nav flex-column sidebar-section-content d-none';
+
+                menu.children.forEach(function(childMenu) {
+                    var li = document.createElement('li');
+                    li.className = 'nav-item';
+                    li.appendChild(renderMenuNode(childMenu, depth + 1));
+                    ul.appendChild(li);
+                });
+
+                section.appendChild(ul);
+                return section;
+            } else {
+                // Leaf: clickable link
+                var url = menu.menuUrl || '#';
+                if (url !== '#' && !url.startsWith('/')) {
+                    url = '/' + url;
+                }
+
+                var a = document.createElement('a');
+                a.href = url;
+                a.className = 'nav-link sidebar-menu-link';
+                a.setAttribute('data-title', e(menu.menuName));
+                a.setAttribute('data-menu-url', url);
+                a.textContent = menu.menuName;
+                return a;
+            }
+        }
+
+        function showNoMenusMessage() {
+            var menuTree = document.getElementById('dynamic-menu-tree');
+            menuTree.innerHTML = '<div class="menu-error d-flex flex-column align-items-center py-5 text-center">'
+                + '<i class="bi bi-exclamation-circle fs-3 mb-2"></i>'
+                + '<p>접근 가능한 메뉴가 없습니다.</p>'
+                + '<p class="text-body-tertiary mt-1 fs-xs">관리자에게 권한을 요청하세요.</p>'
+                + '</div>';
+        }
+
+        function showErrorMessage(message) {
+            var e = HtmlUtils.escape;
+            var menuTree = document.getElementById('dynamic-menu-tree');
+            menuTree.innerHTML = '<div class="menu-error d-flex flex-column align-items-center py-5 text-center">'
+                + '<i class="bi bi-exclamation-triangle fs-3 mb-2"></i>'
+                + '<p>' + e(message) + '</p>'
+                + '<button class="btn btn-sm btn-outline-secondary mt-2" onclick="loadUserMenus()">'
+                + '<i class="bi bi-arrow-clockwise"></i> 다시 시도</button>'
+                + '</div>';
+        }
+    </script>
+</div>
+</body>
+</html>

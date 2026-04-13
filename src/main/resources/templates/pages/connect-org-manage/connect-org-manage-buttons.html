@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<th:block th:fragment="buttons">
+<div class="bottom-actions"
+     th:if="${userAuthorities != null and userAuthorities.contains('ORG:W')}">
+    <div class="bottom-actions-left">
+        <button class="btn btn-outline-secondary btn-sm" onclick="InterfaceMnt.Orgs.addRow()">
+            <i class="bi bi-plus-lg"></i> 행 추가
+        </button>
+        <button class="btn btn-outline-secondary btn-sm" onclick="InterfaceMnt.Orgs.deleteSelected()">
+            <i class="bi bi-trash"></i> 선택행 삭제
+        </button>
+    </div>
+    <div class="bottom-actions-right">
+        <button class="btn btn-primary btn-sm" onclick="InterfaceMnt.Orgs.saveChanges()">
+            <i class="bi bi-floppy"></i> 변경사항 저장
+        </button>
+    </div>
+</div>
+</th:block>
+</body>
+</html>

@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<th:block th:fragment="buttons">
+<div class="bottom-actions"
+     th:if="${userAuthorities != null and userAuthorities.contains('GATEWAY_MAPPING:W')}">
+    <div class="bottom-actions-left">
+        <button class="btn btn-outline-secondary btn-sm" onclick="GatewayMappingList.addRow()">
+            <i class="bi bi-plus-lg"></i> 행 추가
+        </button>
+        <button class="btn btn-outline-secondary btn-sm" onclick="GatewayMappingList.deleteSelected()">
+            <i class="bi bi-trash"></i> 선택행 삭제
+        </button>
+    </div>
+    <div class="bottom-actions-right">
+        <button class="btn btn-primary btn-sm" onclick="GatewayMappingList.saveChanges()">
+            <i class="bi bi-floppy"></i> 변경사항 저장
+        </button>
+        <button class="btn btn-outline-primary btn-sm" onclick="GatewayMappingList.createMapping()">
+            <i class="bi bi-plus-circle"></i> 게이트웨이 생성
+        </button>
+    </div>
+</div>
+</th:block>
+</body>
+</html>

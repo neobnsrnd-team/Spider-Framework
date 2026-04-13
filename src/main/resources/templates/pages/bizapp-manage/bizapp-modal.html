@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<div th:fragment="modal">
+    <!-- BizApp Detail/Create Modal -->
+    <div class="modal fade" id="bizAppModal" tabindex="-1" aria-labelledby="bizAppModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="bizAppModalLabel">Biz App 상세</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="bizAppForm">
+                        <div class="form-section">
+                            <!-- Row 1: Biz App ID, Biz App 명 -->
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                    <label class="form-label">Biz App ID <span class="text-danger">*</span></label>
+                                    <input type="text" class="form-control" id="baModalBizAppId" name="bizAppId"
+                                           maxlength="50" required>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Biz App 명 <span class="text-danger">*</span></label>
+                                    <input type="text" class="form-control" id="baModalBizAppName" name="bizAppName"
+                                           maxlength="100" required>
+                                </div>
+                            </div>
+
+                            <!-- Row 2: Biz App 설명 (full width) -->
+                            <div class="row mb-3">
+                                <div class="col-12">
+                                    <label class="form-label">Biz App 설명</label>
+                                    <textarea class="form-control resize-vertical" id="baModalBizAppDesc" name="bizAppDesc"
+                                              rows="3" maxlength="500"></textarea>
+                                </div>
+                            </div>
+
+                            <!-- Row 3: 실행 큐, 이중처리 체크여부 -->
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                    <label class="form-label">실행 큐 <span class="text-danger">*</span></label>
+                                    <select class="form-select" id="baModalQueName" name="queName"></select>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">이중처리 체크여부 <span class="text-danger">*</span></label>
+                                    <select class="form-select" id="baModalDupCheckYn" name="dupCheckYn"></select>
+                                </div>
+                            </div>
+
+                            <!-- Row 4: 로그여부 -->
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                    <label class="form-label">로그여부 <span class="text-danger">*</span></label>
+                                    <select class="form-select" id="baModalLogYn" name="logYn"></select>
+                                </div>
+                                <div class="col-md-6"></div>
+                            </div>
+
+                            <!-- Row 5: 최종수정자 ID, 최종수정일시 (상세 모드에서만 표시) -->
+                            <div class="row mb-3 d-hidden" id="bizAppSystemInfoRow">
+                                <div class="col-md-6">
+                                    <label class="form-label">최종수정자 ID</label>
+                                    <input type="text" class="form-control" id="baModalLastUpdateUserId" readonly>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">최종수정일시</label>
+                                    <input type="text" class="form-control" id="baModalLastUpdateDtime" readonly>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <!-- Modal Footer -->
+                <div class="modal-footer justify-content-end">
+                    <button th:if="${userAuthorities != null and userAuthorities.contains('BIZ_APP:W')}"
+                            type="button" class="btn btn-primary btn-sm d-hidden" id="btnBizAppSave">
+                        <i class="bi bi-floppy"></i> 저장
+                    </button>
+                    <button th:if="${userAuthorities != null and userAuthorities.contains('BIZ_APP:W')}"
+                            type="button" class="btn btn-danger btn-sm d-hidden" id="btnBizAppDelete">
+                        <i class="bi bi-trash"></i> 삭제
+                    </button>
+                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal"><i class="bi bi-x-lg"></i> 닫기</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        (function () {
+            // 정적 콤보 초기화 (이중처리 체크, 로그여부)
+            ComboManager.simple.populateSelect('#baModalDupCheckYn', 'USE_YN');
+            ComboManager.simple.populateSelect('#baModalLogYn', 'USE_YN');
+
+            window.BizAppModal = {
+                mode: 'detail',
+                currentBizAppId: null,
+
+                _showModal: function () {
+                    const modal = bootstrap.Modal.getOrCreateInstance(document.getElementById('bizAppModal'));
+                    modal.show();
+                },
+
+                _hideModal: function () {
+                    const modalEl = document.getElementById('bizAppModal');
+                    const modal = bootstrap.Modal.getInstance(modalEl);
+                    if (modal) {
+                        modal.hide();
+                    }
+                },
+
+                loadQueNameOptions: function (callback) {
+                    ComboManager.db.getList('/api/codes/by-group/FR20003').then(options => {
+                        const $select = $('#baModalQueName');
+                        $select.empty();
+                        options.forEach(opt => {
+                            $select.append(`<option value="${opt.value}">${opt.label}</option>`);
+                        });
+                        if (callback) callback();
+                    });
+                },
+
+                openForDetail: function (rowData) {
+                    this.mode = 'detail';
+                    this.currentBizAppId = rowData.bizAppId;
+
+                    var hasWrite = biz_app_access;
+
+                    $('#bizAppModalLabel').text('Biz App 상세');
+
+                    this.loadQueNameOptions(() => {
+                        this._fillForm(rowData);
+                        this._setFieldsReadonly(!hasWrite);
+                        if (hasWrite) {
+                            $('#baModalBizAppId').prop('readonly', true);
+                            $('#baModalBizAppId').prop('disabled', true);
+                        }
+                    });
+
+                    $('#bizAppSystemInfoRow').removeClass('d-hidden');
+                    $('#btnBizAppSave').toggleClass('d-hidden', !hasWrite);
+                    $('#btnBizAppDelete').toggleClass('d-hidden', !hasWrite);
+
+                    this._showModal();
+                },
+
+                openForCreate: function () {
+                    this.mode = 'create';
+                    this.currentBizAppId = null;
+
+                    $('#bizAppModalLabel').text('Biz App 등록');
+
+                    $('#bizAppForm')[0].reset();
+
+                    this.loadQueNameOptions(null);
+                    this._setFieldsReadonly(false);
+
+                    $('#baModalBizAppId').prop('readonly', false);
+                    $('#baModalBizAppId').prop('disabled', false);
+
+                    $('#bizAppSystemInfoRow').addClass('d-hidden');
+                    $('#btnBizAppSave').removeClass('d-hidden');
+                    $('#btnBizAppDelete').addClass('d-hidden');
+
+                    this._showModal();
+                },
+
+                _fillForm: function (data) {
+                    $('#baModalBizAppId').val(data.bizAppId || '');
+                    $('#baModalBizAppName').val(data.bizAppName || '');
+                    $('#baModalBizAppDesc').val(data.bizAppDesc || '');
+                    $('#baModalQueName').val(data.queName || '');
+                    $('#baModalDupCheckYn').val(data.dupCheckYn || 'N');
+                    $('#baModalLogYn').val(data.logYn || 'N');
+                    $('#baModalLastUpdateUserId').val(data.lastUpdateUserId || '');
+                    $('#baModalLastUpdateDtime').val(this._formatDatetime(data.lastUpdateDtime));
+                },
+
+                _setFieldsReadonly: function (readonly) {
+                    $('#baModalBizAppId').prop('readonly', readonly);
+                    $('#baModalBizAppId').prop('disabled', readonly);
+                    $('#baModalBizAppName').prop('readonly', readonly);
+                    $('#baModalBizAppDesc').prop('readonly', readonly);
+                    $('#baModalQueName').prop('disabled', readonly);
+                    $('#baModalDupCheckYn').prop('disabled', readonly);
+                    $('#baModalLogYn').prop('disabled', readonly);
+                },
+
+                _formatDatetime: function (dateStr) {
+                    if (!dateStr || dateStr.length < 14) return dateStr || '';
+                    return dateStr.substring(0, 4) + '/' +
+                           dateStr.substring(4, 6) + '/' +
+                           dateStr.substring(6, 8) + ' ' +
+                           dateStr.substring(8, 10) + ':' +
+                           dateStr.substring(10, 12) + ':' +
+                           dateStr.substring(12, 14);
+                },
+
+                save: function () {
+                    if (!this._validateForm()) {
+                        return;
+                    }
+
+                    const formData = {
+                        bizAppName: $('#baModalBizAppName').val(),
+                        bizAppDesc: $('#baModalBizAppDesc').val(),
+                        queName: $('#baModalQueName').val(),
+                        dupCheckYn: $('#baModalDupCheckYn').val(),
+                        logYn: $('#baModalLogYn').val()
+                    };
+
+                    if (this.mode === 'create') {
+                        formData.bizAppId = $('#baModalBizAppId').val();
+                        $.ajax({
+                            url: API_BASE_URL + '/biz-apps',
+                            method: 'POST',
+                            contentType: 'application/json',
+                            data: JSON.stringify(formData),
+                            success: (response) => {
+                                if (response.success) {
+                                    Toast.success('Biz App이 등록되었습니다.');
+                                    this._hideModal();
+                                    if (window.BizAppPage) {
+                                        BizAppPage.load();
+                                    }
+                                } else {
+                                    Toast.error(response.message || 'Biz App 등록에 실패했습니다.');
+                                }
+                            },
+                            error: (xhr) => {
+                                const errorMsg = xhr.responseJSON?.message || 'Biz App 등록에 실패했습니다.';
+                                Toast.error(errorMsg);
+                            }
+                        });
+                    } else {
+                        $.ajax({
+                            url: API_BASE_URL + '/biz-apps/' + encodeURIComponent(this.currentBizAppId),
+                            method: 'PUT',
+                            contentType: 'application/json',
+                            data: JSON.stringify(formData),
+                            success: (response) => {
+                                if (response.success) {
+                                    Toast.success('Biz App이 수정되었습니다.');
+                                    this._hideModal();
+                                    if (window.BizAppPage) {
+                                        BizAppPage.load();
+                                    }
+                                } else {
+                                    Toast.error(response.message || 'Biz App 수정에 실패했습니다.');
+                                }
+                            },
+                            error: (xhr) => {
+                                const errorMsg = xhr.responseJSON?.message || 'Biz App 수정에 실패했습니다.';
+                                Toast.error(errorMsg);
+                            }
+                        });
+                    }
+                },
+
+                delete: function () {
+                    Toast.confirm('정말 삭제하시겠습니까?', () => {
+                        $.ajax({
+                            url: API_BASE_URL + '/biz-apps/' + encodeURIComponent(this.currentBizAppId),
+                            method: 'DELETE',
+                            success: (response) => {
+                                if (response.success) {
+                                    Toast.success('Biz App이 삭제되었습니다.');
+                                    this._hideModal();
+                                    if (window.BizAppPage) {
+                                        BizAppPage.load();
+                                    }
+                                } else {
+                                    Toast.error(response.message || 'Biz App 삭제에 실패했습니다.');
+                                }
+                            },
+                            error: (xhr) => {
+                                const errorMsg = xhr.responseJSON?.message || 'Biz App 삭제에 실패했습니다.';
+                                Toast.error(errorMsg);
+                            }
+                        });
+                    });
+                },
+
+                _validateForm: function () {
+                    if (this.mode === 'create') {
+                        const bizAppId = $('#baModalBizAppId').val().trim();
+                        if (!bizAppId) {
+                            Toast.warning('Biz App ID를 입력해주세요.');
+                            $('#baModalBizAppId').focus();
+                            return false;
+                        }
+                    }
+
+                    const bizAppName = $('#baModalBizAppName').val().trim();
+                    if (!bizAppName) {
+                        Toast.warning('Biz App 명을 입력해주세요.');
+                        $('#baModalBizAppName').focus();
+                        return false;
+                    }
+
+                    const queName = $('#baModalQueName').val();
+                    if (!queName) {
+                        Toast.warning('실행 큐를 선택해주세요.');
+                        $('#baModalQueName').focus();
+                        return false;
+                    }
+
+                    return true;
+                }
+            };
+
+            $(document).off('click', '#btnBizAppSave').on('click', '#btnBizAppSave', function () {
+                BizAppModal.save();
+            });
+
+            $(document).off('click', '#btnBizAppDelete').on('click', '#btnBizAppDelete', function () {
+                BizAppModal.delete();
+            });
+        })();
+    </script>
+</div>
+</body>
+</html>

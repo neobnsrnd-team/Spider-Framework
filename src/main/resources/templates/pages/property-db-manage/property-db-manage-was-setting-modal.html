@@ -1,0 +1,625 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<div th:fragment="modal">
+    <!-- WAS Setting Modal -->
+    <div class="modal fade" id="wasSettingModal" tabindex="-1" aria-labelledby="wasSettingModalLabel" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
+        <div class="modal-dialog modal-xl sp-modal-xxl">
+            <div class="modal-content">
+                <!-- Modal Header -->
+                <div class="modal-header">
+                    <h5 class="modal-title" id="wasSettingModalLabel">
+                        <i class="bi bi-hdd-rack"></i> WAS별 설정값 조회
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+
+                <!-- Modal Body -->
+                <div class="modal-body">
+                    <!-- 프로퍼티 그룹 + WAS 인스턴스 선택 섹션 -->
+                    <div class="property-group-section mb-4">
+                        <h6 class="section-title mb-3">
+                            <i class="bi bi-stack text-danger"></i> 조회 조건
+                        </h6>
+                        <div class="row align-items-center">
+                            <div class="col-auto">
+                                <label class="form-label mb-0">WAS 인스턴스</label>
+                            </div>
+                            <div class="col-md-3">
+                                <select class="form-select form-select-sm" id="wasInstanceSelect" onchange="WasSettingModal.onInstanceChange()">
+                                </select>
+                            </div>
+                            <div class="col-auto">
+                                <label class="form-label mb-0">프로퍼티 그룹 ID</label>
+                            </div>
+                            <div class="col-md-3">
+                                <select class="form-select form-select-sm" id="wasPropertyGroupId" onchange="WasSettingModal.onGroupChange()">
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 프로퍼티 목록 섹션 -->
+                    <div class="property-info-section">
+                        <h6 class="section-title mb-3">
+                            <i class="bi bi-list-ul text-danger"></i> 프로퍼티 목록
+                        </h6>
+
+                        <!-- 액션 버튼 -->
+                        <div class="row mb-3 align-items-center">
+                            <div class="col"></div>
+                            <div class="col-auto">
+                                <button class="btn btn-outline-primary btn-sm" onclick="WasSettingModal.addRow()">
+                                    <i class="bi bi-plus-lg"></i> 행 추가
+                                </button>
+                                <button class="btn btn-outline-danger btn-sm" onclick="WasSettingModal.deleteSelected()">
+                                    <i class="bi bi-trash"></i> 선택행 삭제
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- 프로퍼티 테이블 -->
+                        <div class="table-responsive sp-scrollable">
+                            <table class="table table-sm table-hover sp-data-grid" id="wasPropertyTable">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th class="col-w-40 text-center">
+                                            <input type="checkbox" id="wasSelectAll" onchange="WasSettingModal.toggleSelectAll(this)">
+                                        </th>
+                                        <th class="col-w-60 text-center">CRUD</th>
+                                        <th class="col-w-160">프로퍼티 그룹ID</th>
+                                        <th class="col-w-160">프로퍼티ID</th>
+                                        <th class="col-w-120">유효값</th>
+                                        <th class="col-w-120">초기값</th>
+                                        <th class="col-w-150">설정된 값</th>
+                                        <th class="col-w-200">특이사항</th>
+                                        <th class="col-w-100">DATA 타입</th>
+                                        <th class="col-w-110 text-center">WAS별 보기</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="setWasPropertyTableBody">
+                                    <tr>
+                                        <td colspan="10" class="text-center text-muted py-4">
+                                            조회된 데이터가 없습니다.
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Modal Footer -->
+                <div class="modal-footer justify-content-end">
+                    <button type="button" class="btn btn-success btn-sm" onclick="WasSettingModal.save()">
+                        <i class="bi bi-floppy"></i> 저장
+                    </button>
+                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">
+                        <i class="bi bi-x-lg"></i> 닫기
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<th:block th:fragment="script">
+<script>
+    const WasSettingModal = {
+        currentPropertyGroupId: null,
+        currentInstanceId: null,
+        allPropertyGroups: [],
+        groupPropertyList: [],  // 현재 그룹의 프로퍼티 목록 (select용)
+        properties: [],
+        originalProperties: [],
+        newRowIndex: 0,
+
+        // 모달 열기 (캐시된 데이터 사용)
+        open: function(propertyGroupId) {
+            this.currentPropertyGroupId = propertyGroupId;
+            this.currentInstanceId = null;
+            this.properties = [];
+            this.originalProperties = [];
+            this.newRowIndex = 0;
+
+            $('#wasInstanceSelect').empty();
+            $('#wasPropertyGroupId').empty();
+            $('#setWasPropertyTableBody').html(
+                '<tr><td colspan="10" class="text-center text-muted py-4">WAS 인스턴스를 선택하고 조회하세요.</td></tr>'
+            );
+            $('#wasSelectAll').prop('checked', false);
+
+            var self = this;
+
+            // 프로퍼티 그룹 셀렉트 렌더링
+            var cachedGroups = (typeof PropertyPage !== 'undefined' && PropertyPage.cachedPropertyGroups) || [];
+            if (cachedGroups.length > 0) {
+                self.allPropertyGroups = cachedGroups;
+                self.renderGroupSelect(cachedGroups, propertyGroupId);
+            } else {
+                $.ajax({
+                    url: API_BASE_URL + '/properties/groups',
+                    method: 'GET',
+                    async: false,
+                    success: function(response) {
+                        if (response.success && response.data) {
+                            self.allPropertyGroups = response.data;
+                            self.renderGroupSelect(response.data, propertyGroupId);
+                        }
+                    }
+                });
+            }
+
+            self.loadGroupPropertyList(propertyGroupId);
+
+            // WAS 인스턴스 셀렉트 렌더링
+            var cachedInstances = (typeof PropertyPage !== 'undefined' && PropertyPage.cachedInstances) || [];
+            if (cachedInstances.length > 0) {
+                self.renderInstanceSelect(cachedInstances);
+                self.currentInstanceId = cachedInstances[0].instanceId;
+                self.loadProperties();
+            } else {
+                $.ajax({
+                    url: API_BASE_URL + '/was/instance',
+                    method: 'GET',
+                    success: function(response) {
+                        if (response.success && response.data && response.data.length > 0) {
+                            self.renderInstanceSelect(response.data);
+                            self.currentInstanceId = response.data[0].instanceId;
+                            self.loadProperties();
+                        } else {
+                            $('#wasInstanceSelect').html('<option value="">인스턴스 없음</option>');
+                        }
+                    }
+                });
+            }
+
+            const modal = bootstrap.Modal.getOrCreateInstance(document.getElementById('wasSettingModal'));
+            modal.show();
+        },
+
+        // 프로퍼티 그룹의 프로퍼티 목록 로드
+        loadGroupPropertyList: function(groupId) {
+            var self = this;
+            $.ajax({
+                url: API_BASE_URL + '/properties/groups/' + encodeURIComponent(groupId) + '/properties',
+                method: 'GET',
+                success: function(response) {
+                    if (response.success && response.data) {
+                        self.groupPropertyList = response.data;
+                    } else {
+                        self.groupPropertyList = [];
+                    }
+                },
+                error: function() {
+                    self.groupPropertyList = [];
+                }
+            });
+        },
+
+        // 프로퍼티 그룹 콤보박스 렌더링
+        renderGroupSelect: function(groups, selectedGroupId) {
+            const select = $('#wasPropertyGroupId');
+            select.empty();
+            groups.forEach(group => {
+                const selected = group.propertyGroupId === selectedGroupId ? 'selected' : '';
+                select.append('<option value="' + HtmlUtils.escape(group.propertyGroupId) + '" ' + selected + '>' +
+                    HtmlUtils.escape(group.propertyGroupId) + '</option>');
+            });
+        },
+
+        // 프로퍼티 그룹 변경 시
+        onGroupChange: function() {
+            this.currentPropertyGroupId = $('#wasPropertyGroupId').val();
+            this.loadGroupPropertyList(this.currentPropertyGroupId);
+            this.loadProperties();
+        },
+
+        // 인스턴스 콤보박스 렌더링
+        renderInstanceSelect: function(instances) {
+            const select = $('#wasInstanceSelect');
+            select.empty();
+            instances.forEach((inst, idx) => {
+                const selected = idx === 0 ? 'selected' : '';
+                select.append('<option value="' + HtmlUtils.escape(inst.instanceId) + '" ' + selected + '>' +
+                    HtmlUtils.escape(inst.instanceId) + '</option>');
+            });
+        },
+
+        // 인스턴스 변경 시
+        onInstanceChange: function() {
+            this.currentInstanceId = $('#wasInstanceSelect').val();
+            this.loadProperties();
+        },
+
+        // 프로퍼티 목록 로드
+        loadProperties: function() {
+            const instanceId = this.currentInstanceId || $('#wasInstanceSelect').val();
+            if (!instanceId) {
+                Toast.warning('WAS 인스턴스를 선택하세요.');
+                return;
+            }
+            this.currentInstanceId = instanceId;
+
+            const groupId = $('#wasPropertyGroupId').val() || this.currentPropertyGroupId;
+            this.currentPropertyGroupId = groupId;
+
+            $.ajax({
+                url: API_BASE_URL + '/was/property/instance/' + encodeURIComponent(instanceId) +
+                     '/group/' + encodeURIComponent(groupId),
+                method: 'GET',
+                success: (response) => {
+                    if (response.success && response.data) {
+                        this.renderProperties(response.data);
+                    } else {
+                        this.renderProperties([]);
+                    }
+                },
+                error: (xhr) => {
+                    console.error('Failed to load WAS properties:', xhr);
+                    Toast.error('프로퍼티 목록을 불러오는데 실패했습니다.');
+                    this.renderProperties([]);
+                }
+            });
+        },
+
+        // 프로퍼티 목록 렌더링
+        renderProperties: function(properties) {
+            this.originalProperties = JSON.parse(JSON.stringify(properties));
+            this.properties = properties.map(p => ({...p, crud: ''}));
+            this.newRowIndex = 0;
+
+            const tbody = $('#setWasPropertyTableBody');
+            tbody.empty();
+
+            if (!this.properties || this.properties.length === 0) {
+                tbody.append(
+                    '<tr><td colspan="10" class="text-center text-muted py-4">조회된 데이터가 없습니다.</td></tr>'
+                );
+                return;
+            }
+
+            this.properties.forEach((prop, index) => {
+                if(prop.propertyValue != 'NO DATA') {
+                    tbody.append(this.createRow(prop, index));
+                }
+            });
+
+            if(tbody.html().length > 0) {
+                this.bindChangeEvents();
+            } else {
+                tbody.append(
+                    '<tr><td colspan="10" class="text-center text-muted py-4">조회된 데이터가 없습니다.</td></tr>'
+                );
+            }
+        },
+
+        // 행 HTML 생성
+        createRow: function(prop, index, isNew) {
+            isNew = isNew || false;
+            var newFieldClass = isNew ? 'sp-field-new' : '';
+
+            var propertyIdField;
+            if (isNew) {
+                var usedIds = this.properties
+                    .filter(function(p) { return p !== null && p.propertyId; })
+                    .map(function(p) { return p.propertyId; });
+                var options = '<option value="">-- 선택 --</option>';
+                this.groupPropertyList.forEach(function(gp) {
+                    var pid = gp.propertyId;
+                    var disabled = usedIds.indexOf(pid) !== -1 ? ' disabled class="text-body-tertiary"' : '';
+                    options += '<option value="' + HtmlUtils.escape(pid) + '"' + disabled + '>' +
+                        HtmlUtils.escape(pid) + '</option>';
+                });
+                propertyIdField = '<select class="' + newFieldClass + '" data-field="propertyId" data-index="' + index + '">' + options + '</select>';
+            } else {
+                propertyIdField = '<input type="text" class="bg-light cursor-not-allowed"' +
+                    ' value="' + HtmlUtils.escape(prop.propertyId || '') + '"' +
+                    ' data-field="propertyId" data-index="' + index + '" readonly>';
+            }
+
+            return '<tr data-index="' + index + '" data-is-new="' + isNew + '">' +
+                '<td class="text-center">' +
+                    '<input type="checkbox" class="was-prop-checkbox" data-index="' + index + '">' +
+                '</td>' +
+                '<td class="text-center was-crud-cell">' +
+                    '<span class="badge ' + this.getCrudBadgeClass(prop.crud) + '">' + this.getCrudLabel(prop.crud) + '</span>' +
+                '</td>' +
+                '<td>' +
+                    '<input type="text" class="bg-light cursor-not-allowed"' +
+                    ' value="' + HtmlUtils.escape(prop.propertyGroupId || this.currentPropertyGroupId) + '"' +
+                    ' data-field="propertyGroupId" data-index="' + index + '" readonly>' +
+                '</td>' +
+                '<td>' + propertyIdField + '</td>' +
+                '<td>' +
+                    '<input type="text" class="bg-light cursor-not-allowed"' +
+                    ' value="' + (isNew ? '' : HtmlUtils.escape(prop.validData || '')) + '"' +
+                    ' placeholder="' + (isNew ? '자동입력' : '') + '"' +
+                    ' data-field="validData" data-index="' + index + '" readonly>' +
+                '</td>' +
+                '<td>' +
+                    '<input type="text" class="bg-light cursor-not-allowed"' +
+                    ' value="' + (isNew ? '' : HtmlUtils.escape(prop.defaultValue || '')) + '"' +
+                    ' placeholder="' + (isNew ? '자동입력' : '') + '"' +
+                    ' data-field="defaultValue" data-index="' + index + '" readonly>' +
+                '</td>' +
+                '<td>' +
+                    '<input type="text" class="' + (isNew ? newFieldClass : '') + '"' +
+                    ' value="' + HtmlUtils.escape(prop.propertyValue || '') + '"' +
+                    ' data-field="propertyValue" data-index="' + index + '">' +
+                '</td>' +
+                '<td>' +
+                    '<input type="text" class="' + (isNew ? newFieldClass : '') + '"' +
+                    ' value="' + HtmlUtils.escape(prop.propertyDesc || '') + '"' +
+                    ' data-field="propertyDesc" data-index="' + index + '">' +
+                '</td>' +
+                '<td>' +
+                    '<input type="text" class="bg-light cursor-not-allowed"' +
+                    ' value="' + (isNew ? '' : HtmlUtils.escape(this.getDataTypeLabel(prop.dataType))) + '"' +
+                    ' placeholder="' + (isNew ? '자동입력' : '') + '"' +
+                    ' data-index="' + index + '" readonly>' +
+                '</td>' +
+                '<td class="text-center">' +
+                    '<button class="btn btn-outline-info btn-sm" onclick="WasSettingModal.openWasView(' +
+                    index + ')" ' + (isNew ? 'disabled' : '') + '>' +
+                    '<i class="bi bi-eye"></i> WAS별</button>' +
+                '</td>' +
+            '</tr>';
+        },
+
+        // DATA 타입 라벨
+        getDataTypeLabel: function(dataType) {
+            switch(dataType) {
+                case 'C': return 'String';
+                case 'N': return 'Number';
+                case 'B': return 'Boolean';
+                default: return dataType || '';
+            }
+        },
+
+        // 변경 감지 이벤트 바인딩
+        bindChangeEvents: function() {
+            var self = this;
+            $('#setWasPropertyTableBody').off('input change').on('input change', 'input:not([readonly]), select', function() {
+                var $input = $(this);
+                var index = parseInt($input.data('index'));
+                var field = $input.data('field');
+                var newValue = $input.val();
+                var $row = $input.closest('tr');
+                var isNew = $row.data('is-new') === true;
+
+                if (self.properties[index]) {
+                    self.properties[index][field] = newValue;
+
+                    if (!isNew && self.properties[index].crud !== 'D') {
+                        var original = self.originalProperties[index];
+                        if (original) {
+                            // 설정된 값 변경 체크
+                            if (field === 'propertyValue') {
+                                var origVal = original.propertyValue || '';
+                                if (newValue !== origVal) {
+                                    $input.addClass('sp-field-changed');
+                                } else {
+                                    $input.removeClass('sp-field-changed');
+                                }
+                            }
+
+                            // 특이사항 변경 체크
+                            if (field === 'propertyDesc') {
+                                var origVal = original.propertyDesc || '';
+                                if (newValue !== origVal) {
+                                    $input.addClass('sp-field-changed');
+                                } else {
+                                    $input.removeClass('sp-field-changed');
+                                }
+                            }
+
+                            // 전체 변경 여부 체크
+                            if ((original.propertyValue || '') !== (self.properties[index].propertyValue || '')
+                                || (original.propertyDesc || '') !== (self.properties[index].propertyDesc || '')) {
+                                self.updateCrudStatus(index, 'U');
+                            } else {
+                                self.updateCrudStatus(index, '');
+                            }
+                        }
+                    }
+                }
+            });
+        },
+
+        // CRUD 상태 업데이트
+        updateCrudStatus: function(index, status) {
+            this.properties[index].crud = status;
+            var $row = $('#setWasPropertyTableBody tr[data-index="' + index + '"]');
+            var $crudCell = $row.find('.was-crud-cell');
+            $crudCell.html('<span class="badge ' + this.getCrudBadgeClass(status) + '">' + this.getCrudLabel(status) + '</span>');
+        },
+
+        // 전체 선택/해제
+        toggleSelectAll: function(checkbox) {
+            $('.was-prop-checkbox').prop('checked', checkbox.checked);
+        },
+
+        // 행 추가
+        addRow: function() {
+            this.newRowIndex--;
+            var newIndex = this.properties.length;
+
+            var newProperty = {
+                propertyGroupId: this.currentPropertyGroupId,
+                propertyId: '',
+                propertyName: '',
+                propertyDesc: '',
+                dataType: 'C',
+                validData: '',
+                defaultValue: '',
+                propertyValue: '',
+                crud: 'C'
+            };
+
+            this.properties.push(newProperty);
+
+            var tbody = $('#setWasPropertyTableBody');
+            tbody.find('tr td[colspan="10"]').closest('tr').remove();
+            tbody.append(this.createRow(newProperty, newIndex, true));
+
+            this.bindChangeEvents();
+
+            tbody.find('tr[data-index="' + newIndex + '"] input[data-field="propertyId"]').focus();
+        },
+
+        // 선택행 삭제
+        deleteSelected: function() {
+            var $checked = $('.was-prop-checkbox:checked');
+            if ($checked.length === 0) {
+                Toast.warning('삭제할 항목을 선택해주세요.');
+                return;
+            }
+
+            var self = this;
+            $checked.each(function() {
+                var index = parseInt($(this).data('index'));
+                var $row = $(this).closest('tr');
+                var isNew = $row.data('is-new') === true;
+
+                if (isNew) {
+                    $row.remove();
+                    self.properties[index] = null;
+                } else {
+                    self.updateCrudStatus(index, 'D');
+                    $(this).prop('checked', false);
+                    $row.addClass('sp-row-crud-deleted');
+                    $row.find('input, select').prop('disabled', true);
+                    $row.find('.was-prop-checkbox').prop('disabled', false);
+                }
+            });
+
+            $('#wasSelectAll').prop('checked', false);
+        },
+
+        // WAS별 보기 - PropertyWasModal을 view 모드로 호출 (부모 모달 숨김/복원 처리)
+        openWasView: function(index) {
+            var prop = this.properties[index];
+            if (!prop) return;
+
+            var groupId = prop.propertyGroupId || this.currentPropertyGroupId;
+            var propertyId = prop.propertyId;
+            var validData = prop.validData || '';
+            var defaultValue = prop.defaultValue || '';
+
+            PropertyWasModal.open(groupId, propertyId, validData, defaultValue, 'view', 'wasSettingModal');
+        },
+
+        // 저장
+        save: function() {
+            var changedProperties = this.properties
+                .filter(function(p) { return p !== null && p.crud && ['C', 'U', 'D'].indexOf(p.crud) !== -1; })
+                .map(function(p) {
+                    return {
+                        propertyGroupId: p.propertyGroupId || WasSettingModal.currentPropertyGroupId,
+                        propertyId: p.propertyId,
+                        propertyValue: p.propertyValue || '',
+                        propertyDesc: p.propertyDesc || '',
+                        instanceId: WasSettingModal.currentInstanceId,
+                        crud: p.crud
+                    };
+                });
+
+            if (changedProperties.length === 0) {
+                Toast.warning('변경된 항목이 없습니다.');
+                return;
+            }
+
+            // 필수값 유효성 검사
+            if (!WasSettingModal.currentInstanceId) {
+                Toast.warning('WAS 인스턴스를 선택해주세요.');
+                return;
+            }
+            if (!$('#wasPropertyGroupId').val()) {
+                Toast.warning('프로퍼티 그룹 ID를 선택해주세요.');
+                return;
+            }
+
+            for (var i = 0; i < changedProperties.length; i++) {
+                var p = changedProperties[i];
+                if (p.crud === 'C') {
+                    if (!p.propertyId || p.propertyId.trim() === '') {
+                        Toast.warning('새로 추가된 항목의 프로퍼티ID를 선택해주세요.');
+                        return;
+                    }
+                    if (!p.propertyValue || p.propertyValue.trim() === '') {
+                        Toast.warning('프로퍼티ID [' + p.propertyId.trim() + ']의 설정된 값을 입력해주세요.');
+                        return;
+                    }
+                }
+                if (p.crud === 'U') {
+                    if (!p.propertyValue || p.propertyValue.trim() === '') {
+                        Toast.warning('프로퍼티ID [' + p.propertyId + ']의 설정된 값을 입력해주세요.');
+                        return;
+                    }
+                }
+            }
+
+            var self = this;
+
+            Toast.confirm('변경사항을 저장하시겠습니까?\n변경 건수: ' + changedProperties.length + '건', function() {
+                // 배치 API 호출
+                $.ajax({
+                    url: API_BASE_URL + '/was/property/batch',
+                    method: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify(changedProperties),
+                    success: function(response) {
+                        if (response.success) {
+                            Toast.success('처리가 완료되었습니다.\n처리 건수: ' + response.data + '건');
+                            self.loadProperties();
+                            PropertyPage.load();
+                        } else {
+                            Toast.error('저장 중 오류가 발생했습니다.\n' + (response.message || ''));
+                            self.loadProperties();
+                        }
+                    },
+                    error: function(xhr) {
+                        console.error('Failed to save WAS properties:', xhr);
+                        var errorMsg = '저장 중 오류가 발생했습니다.';
+                        if (xhr.responseJSON && xhr.responseJSON.message) {
+                            errorMsg += '\n' + xhr.responseJSON.message;
+                        }
+                        Toast.error(errorMsg);
+                        self.loadProperties();
+                    }
+                });
+            });
+        },
+
+        // 닫기
+        close: function() {
+            var modal = bootstrap.Modal.getInstance(document.getElementById('wasSettingModal'));
+            if (modal) modal.hide();
+        },
+
+        // CRUD 배지 클래스
+        getCrudBadgeClass: function(crud) {
+            switch(crud) {
+                case 'C': return 'bg-success';
+                case 'U': return 'bg-warning text-dark';
+                case 'D': return 'bg-danger';
+                default: return 'bg-secondary';
+            }
+        },
+
+        // CRUD 한글 라벨
+        getCrudLabel: function(crud) {
+            switch(crud) {
+                case 'C': return '추가';
+                case 'U': return '수정';
+                case 'D': return '삭제';
+                default: return '';
+            }
+        },
+
+    };
+</script>
+</th:block>
+</body>
+</html>

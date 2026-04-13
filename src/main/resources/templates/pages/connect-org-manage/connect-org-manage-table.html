@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<div th:fragment="table" class="table-responsive">
+    <table class="table table-sm table-hover sp-data-grid" id="orgTable">
+        <thead class="table-light">
+        <tr>
+            <th class="col-w-40"><input type="checkbox" id="orgSelectAll"></th>
+            <th class="col-w-80">CRUD</th>
+            <th class="col-w-120 sortable" data-sort="orgId">기관ID</th>
+            <th class="col-w-160 sortable" data-sort="orgName">기관명</th>
+            <th class="sortable" data-sort="orgDesc">기관설명</th>
+            <th class="col-w-90 sortable" data-sort="startTime">시작<br/>시간</th>
+            <th class="col-w-90 sortable" data-sort="endTime">종료<br/>시간</th>
+            <th class="col-w-140 sortable" data-sort="xmlRootTag">XML<br/>ROOT TAG</th>
+            <th class="col-w-110">GATEWAY</th>
+            <th class="col-w-140">전문처리핸들러</th>
+        </tr>
+        </thead>
+        <tbody id="orgTableBody">
+        <tr>
+            <td colspan="10" class="text-center py-4 text-body-secondary">데이터를 불러오는 중...</td>
+        </tr>
+        </tbody>
+    </table>
+</div>
+</body>
+</html>

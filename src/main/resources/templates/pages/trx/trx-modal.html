@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+
+<!-- 거래중지 확인 모달 (Y/N) -->
+<div th:fragment="confirmModal" id="trxStopConfirmModal" class="modal fade sp-z-1300" tabindex="-1" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
+    <div class="modal-dialog modal-dialog-centered sp-modal-xs">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h5 class="modal-title">확인</h5>
+            <button class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body p-3 text-center">
+            <p id="trxStopConfirmText" class="m-0 fs-sm">처리하시겠습니까?</p>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-secondary btn-sm" onclick="TrxStopConfirmModal.confirm()">Yes</button>
+            <button class="btn btn-secondary btn-sm" onclick="TrxStopConfirmModal.close()">No</button>
+        </div>
+    </div>
+    </div>
+</div>
+
+<!-- 거래중지 사유 입력 모달 -->
+<div th:fragment="reasonModal" id="trxStopReasonModal" class="modal fade sp-z-1260" tabindex="-1" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
+    <div class="modal-dialog modal-dialog-centered sp-modal-xs">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h5 class="modal-title">거래중지 사유</h5>
+            <button class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body p-3">
+            <label for="trxStopReasonInput" class="fs-sm fw-semibold mb-2 d-block">중지 사유를 입력해주세요.</label>
+            <textarea id="trxStopReasonInput" class="form-control w-100 fs-sm" rows="3"
+                      placeholder="중지 사유 입력"></textarea>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-danger btn-sm" onclick="TrxStopReasonModal.submit()">확인</button>
+            <button class="btn btn-secondary btn-sm" onclick="TrxStopReasonModal.close()"><i class="bi bi-x-lg"></i> 취소</button>
+        </div>
+    </div>
+    </div>
+</div>
+
+<!-- 거래중지 접근 허용자 등록 모달 (개별 거래) -->
+<div th:fragment="accessUserModal" id="trxStopAccessUserModal" class="modal fade sp-z-1270" tabindex="-1" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
+    <div class="modal-dialog modal-dialog-centered sp-modal-xl" data-min-height="80vh">
+    <div class="modal-content d-flex flex-column" data-min-height="80vh">
+        <div class="modal-header">
+            <h5 class="modal-title">거래중지 접근 허용자 등록</h5>
+            <button class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body sp-modal-body-flex">
+            <!-- 허용자 리스트 Header -->
+            <div class="page-header mb-2">
+                <h4 class="page-title fs-sm">
+                    <i class="bi bi-exclamation-circle-fill text-danger"></i>
+                    허용자 리스트
+                </h4>
+            </div>
+
+            <!-- Table -->
+            <div class="sp-modal-inner-scroll">
+                <table class="table table-sm table-hover sp-data-grid m-0 w-100" id="auModalTable">
+                    <thead class="table-light">
+                        <tr>
+                            <th class="col-w-40"><input type="checkbox" id="auModalCheckAll" onclick="TrxStopAccessUserModal.toggleCheckAll(this)"></th>
+                            <th class="col-w-60">CRUD</th>
+                            <th class="sortable" data-sort="custUserId">허용자 ID</th>
+                            <th class="col-w-120 sortable" data-sort="useYn">사용여부</th>
+                        </tr>
+                    </thead>
+                    <tbody id="auModalTableBody">
+                        <tr>
+                            <td colspan="4" class="text-center py-4 text-body-secondary">
+                                데이터를 불러오는 중...
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Pagination Info -->
+            <div class="d-flex justify-content-end align-items-center mt-1">
+                <span id="auModalPageInfo" class="sp-modal-page-info"></span>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-secondary btn-sm" onclick="TrxStopAccessUserModal.addRow()">행 추가</button>
+            <button class="btn btn-secondary btn-sm" onclick="TrxStopAccessUserModal.deleteSelected()">선택행 삭제</button>
+            <button class="btn btn-primary btn-sm" onclick="TrxStopAccessUserModal.save()">변경사항 저장</button>
+            <button class="btn btn-secondary btn-sm" onclick="TrxStopAccessUserModal.close()"><i class="bi bi-x-lg"></i> 닫기</button>
+        </div>
+    </div>
+    </div>
+</div>
+
+<!-- 중지거래 접근 허용자 전체 목록 모달 -->
+<div th:fragment="accessUserListModal" id="trxStopAccessUserListModal" class="modal fade sp-z-1270" tabindex="-1" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
+    <div class="modal-dialog modal-dialog-centered sp-modal-lg" data-min-height="75vh">
+    <div class="modal-content d-flex flex-column" data-min-height="75vh">
+        <div class="modal-header">
+            <h5 class="modal-title">중지거래 접근 허용자</h5>
+            <button class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body sp-modal-body-flex">
+            <!-- 검색조건 Header -->
+            <div class="page-header mb-2">
+                <h4 class="page-title fs-sm">
+                    <i class="bi bi-exclamation-circle-fill text-danger"></i>
+                    검색조건
+                </h4>
+            </div>
+
+            <!-- Search Box -->
+            <div class="card border p-2 mb-3">
+                <div class="d-flex flex-wrap align-items-center gap-2 mb-1">
+                    <label class="form-label mb-0 small fw-medium">거래/서비스ID</label>
+                    <input type="text" id="auListSearchTrxId" class="form-control form-control-sm flex-fixed-150 fs-sm"
+                           onkeypress="if(event.key === 'Enter') TrxStopAccessUserListModal.search()">
+                    <label class="form-label mb-0 small fw-medium ms-2">접근허용고객 사용자ID</label>
+                    <input type="text" id="auListSearchCustUserId" class="form-control form-control-sm flex-fixed-150 fs-sm"
+                           onkeypress="if(event.key === 'Enter') TrxStopAccessUserListModal.search()">
+                    <div class="flex-grow-1"></div>
+                    <button class="btn btn-primary btn-sm fs-sm" onclick="TrxStopAccessUserListModal.search()">
+                        <i class="bi bi-search"></i> 조회
+                    </button>
+                </div>
+            </div>
+
+            <!-- 리스트 Header -->
+            <div class="page-header mb-2">
+                <h4 class="page-title fs-sm">
+                    <i class="bi bi-exclamation-circle-fill text-danger"></i>
+                    리스트
+                </h4>
+            </div>
+
+            <!-- Table -->
+            <div class="sp-modal-inner-scroll">
+                <table class="table table-sm table-hover sp-data-grid m-0" id="auListTable">
+                    <thead class="table-light">
+                        <tr>
+                            <th class="col-w-40"><input type="checkbox" id="auListCheckAll" onclick="TrxStopAccessUserListModal.toggleCheckAll(this)"></th>
+                            <th class="col-w-60">CRUD</th>
+                            <th class="sortable" data-sort="trxId">중지거래 접근 허용자</th>
+                            <th class="sortable" data-sort="custUserId">접근허용고객 사용자ID</th>
+                            <th class="col-w-100 sortable" data-sort="useYn">사용여부</th>
+                        </tr>
+                    </thead>
+                    <tbody id="auListTableBody">
+                        <tr>
+                            <td colspan="5" class="text-center py-4 text-body-secondary">
+                                조회 버튼을 클릭하여 데이터를 불러오세요.
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Pagination -->
+            <div class="d-flex justify-content-between align-items-center mt-2">
+                <ul id="auListPagination" class="pagination m-0"></ul>
+                <span id="auListPageInfo" class="sp-modal-page-info"></span>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-secondary btn-sm" onclick="TrxStopAccessUserListModal.reload()">Reload</button>
+            <button class="btn btn-secondary btn-sm" onclick="TrxStopAccessUserListModal.addRow()">행 추가</button>
+            <button class="btn btn-secondary btn-sm" onclick="TrxStopAccessUserListModal.deleteSelected()">선택행 삭제</button>
+            <button class="btn btn-primary btn-sm" onclick="TrxStopAccessUserListModal.save()">변경사항 저장</button>
+            <button class="btn btn-secondary btn-sm" onclick="TrxStopAccessUserListModal.close()"><i class="bi bi-x-lg"></i> 닫기</button>
+        </div>
+    </div>
+    </div>
+</div>
+
+<!-- 운영모드 일괄 수정 모달 -->
+<div th:fragment="operModeModal" id="trxStopOperModeModal" class="modal fade sp-z-1250" tabindex="-1" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
+    <div class="modal-dialog modal-dialog-centered sp-modal-xs">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h5 class="modal-title">운영모드 일괄 수정</h5>
+            <button class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body p-3">
+            <div class="d-flex align-items-center gap-2">
+                <label for="operModeSelect" class="fs-sm fw-semibold text-nowrap">Operating</label>
+                <select id="operModeSelect" class="form-control sp-oper-mode-select">
+                    <option value="">전체</option>
+                    <option value="D">개발환경</option>
+                    <option value="R">리얼환경</option>
+                    <option value="T">테스트환경</option>
+                </select>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-primary btn-sm" onclick="TrxStopOperModeModal.execute()">일괄수행</button>
+            <button class="btn btn-secondary btn-sm" onclick="TrxStopOperModeModal.close()"><i class="bi bi-x-lg"></i> 닫기</button>
+        </div>
+    </div>
+    </div>
+</div>
+
+</body>
+</html>

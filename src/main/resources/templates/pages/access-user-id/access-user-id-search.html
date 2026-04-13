@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<!-- Access User Search Fragment -->
+<div th:fragment="search" class="card border p-2 mb-3">
+    <div class="d-flex flex-wrap align-items-center gap-2 mb-1">
+        <!-- Left Side Components -->
+        <label class="form-label mb-0 small fw-medium fs-xs">거래/서비스ID</label>
+        <input type="text" id="searchTrxId" class="form-control form-control-sm flex-fixed-180"
+               placeholder=""
+               onkeypress="if(event.key === 'Enter') window.AccessUser.search()">
+
+        <label class="form-label mb-0 small fw-medium fs-xs ms-2">구분유형</label>
+        <select id="searchGubunType" class="form-select form-select-sm flex-fixed-120">
+            <option value="">전체</option>
+            <option value="T">거래</option>
+            <option value="S">서비스</option>
+        </select>
+
+        <label class="form-label mb-0 small fw-medium fs-xs ms-2 text-nowrap">접근허용 사용자ID</label>
+        <input type="text" id="searchCustUserId" class="form-control form-control-sm flex-fixed-180"
+               placeholder=""
+               onkeypress="if(event.key === 'Enter') window.AccessUser.search()">
+
+        <!-- Spacer to push right side to the end -->
+        <div class="flex-grow-1"></div>
+
+        <!-- Right Side Components -->
+        <select id="limitRows" class="form-select form-select-sm sp-limit-select">
+            <option value="10">10</option>
+            <option value="20" selected>20</option>
+            <option value="50">50</option>
+            <option value="100">100</option>
+            <option value="200">200</option>
+            <option value="1000">1000</option>
+        </select>
+        <label class="form-label mb-0 small fw-medium fs-xs ms-1 me-2">건씩</label>
+
+        <button class="btn btn-primary btn-sm" onclick="window.AccessUser.search()">
+            <i class="bi bi-search"></i> 조회
+        </button>
+    </div>
+</div>
+</body>
+</html>

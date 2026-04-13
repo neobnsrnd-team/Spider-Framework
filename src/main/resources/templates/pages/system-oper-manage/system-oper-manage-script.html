@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<th:block th:fragment="script">
+<script th:inline="javascript">
+const ReloadPage = {
+    currentReloadType: null,
+    reloadTypes: [],
+    instances: [],
+    results: [],
+
+    init() {
+        this.loadReloadTypes();
+        this.loadWasGroups();
+        this.bindEvents();
+    },
+
+    bindEvents() {
+        document.getElementById('wasGroupSelect').addEventListener('change', () => {
+            if (this.currentReloadType) {
+                this.loadInstances();
+            }
+        });
+
+        document.getElementById('btnReload').addEventListener('click', () => {
+            this.executeReload();
+        });
+
+        // Close error modal handled by data-bs-dismiss="modal"
+
+        // WAS 카드 영역 이벤트 위임 (inline onclick 대체)
+        document.getElementById('wasCardGrid').addEventListener('click', (e) => {
+            const btn = e.target.closest('[data-error-instance]');
+            if (btn) {
+                this.showErrorDetail();
+            }
+        });
+    },
+
+    loadReloadTypes() {
+        $.ajax({
+            url: API_BASE_URL + '/reload/types',
+            method: 'GET',
+            success: (response) => {
+                if (response.success && response.data) {
+                    this.reloadTypes = response.data;
+                    this.renderReloadTypes();
+                }
+            },
+            error: (xhr) => {
+                console.error('Reload 타입 조회 실패:', xhr);
+            }
+        });
+    },
+
+    renderReloadTypes() {
+        const list = document.getElementById('reloadTypeList');
+        list.innerHTML = this.reloadTypes.map(type =>
+            `<li data-code="${HtmlUtils.escape(type.code)}" data-label="${HtmlUtils.escape(type.label)}" data-desc="${HtmlUtils.escape(type.description)}">${HtmlUtils.escape(type.label)}</li>`
+        ).join('');
+
+        list.querySelectorAll('li').forEach(li => {
+            li.addEventListener('click', () => {
+                this.selectReloadType(li);
+            });
+        });
+
+        // 첫 번째 항목 자동 선택 (레거시와 동일)
+        const firstItem = list.querySelector('li');
+        if (firstItem) {
+            this.selectReloadType(firstItem);
+        }
+    },
+
+    selectReloadType(li) {
+        // 하이라이트 변경
+        document.querySelectorAll('.reload-list-items li').forEach(item => item.classList.remove('active'));
+        li.classList.add('active');
+
+        // 상세 정보 표시
+        this.currentReloadType = li.dataset.code;
+        document.getElementById('reloadDetailInfo').classList.remove('d-hidden');
+        document.getElementById('reloadTargetLabel').textContent = li.dataset.label;
+        document.getElementById('reloadTargetDesc').textContent = li.dataset.desc;
+
+        // 결과 초기화
+        this.results = [];
+
+        // WAS 인스턴스 로드
+        this.loadInstances();
+
+        // Reload 버튼 활성화
+        document.getElementById('btnReload').disabled = false;
+    },
+
+    loadWasGroups() {
+        $.ajax({
+            url: API_BASE_URL + '/reload/groups',
+            method: 'GET',
+            success: (response) => {
+                if (response.success && response.data) {
+                    const select = document.getElementById('wasGroupSelect');
+                    select.innerHTML = '<option value="">전체</option>';
+                    response.data.forEach(group => {
+                        const option = document.createElement('option');
+                        option.value = group.wasGroupId;
+                        option.textContent = group.wasGroupName;
+                        select.appendChild(option);
+                    });
+                }
+            },
+            error: (xhr) => {
+                console.error('WAS 그룹 조회 실패:', xhr);
+            }
+        });
+    },
+
+    loadInstances() {
+        const wasGroupId = document.getElementById('wasGroupSelect').value;
+        const url = wasGroupId
+            ? API_BASE_URL + '/reload/instances?wasGroupId=' + encodeURIComponent(wasGroupId)
+            : API_BASE_URL + '/reload/instances';
+
+        $.ajax({
+            url: url,
+            method: 'GET',
+            success: (response) => {
+                if (response.success && response.data) {
+                    this.instances = response.data;
+                    this.renderWasCards();
+                }
+            },
+            error: (xhr) => {
+                console.error('WAS 인스턴스 조회 실패:', xhr);
+            }
+        });
+    },
+
+    getInstanceTypeClass(instanceType) {
+        switch (instanceType) {
+            case '1': return 'type-web';
+            case '2': return 'type-ap';
+            case '3': return 'type-hub';
+            default: return 'type-web';
+        }
+    },
+
+    getInstanceTypeLabel(instanceType) {
+        switch (instanceType) {
+            case '1': return 'Web';
+            case '2': return 'AP';
+            case '3': return '통합';
+            default: return 'Web';
+        }
+    },
+
+    renderWasCards() {
+        const grid = document.getElementById('wasCardGrid');
+        grid.innerHTML = this.instances.map(inst => {
+            const typeClass = this.getInstanceTypeClass(inst.instanceType);
+            const typeLabel = this.getInstanceTypeLabel(inst.instanceType);
+            const escapedId = HtmlUtils.escape(inst.instanceId);
+            const result = this.results.find(r => r.instanceId === inst.instanceId);
+
+            let resultHtml = '';
+            if (result) {
+                if (result.success) {
+                    resultHtml = `<div class="sp-select-card-result success">결과 : 성공</div>`;
+                } else {
+                    resultHtml = `<div class="sp-select-card-result error">결과 : <a data-error-instance="${escapedId}">오류</a></div>
+                                  <button class="sp-select-card-detail-btn" data-error-instance="${escapedId}">상세</button>`;
+                }
+            }
+
+            return `<div class="sp-select-card">
+                <div class="sp-select-card-icon ${typeClass}">${typeLabel}</div>
+                <div class="sp-select-card-checkbox">
+                    <input type="checkbox" value="${escapedId}" class="was-checkbox">
+                </div>
+                <div class="sp-select-card-name">${escapedId}</div>
+                ${resultHtml}
+            </div>`;
+        }).join('');
+    },
+
+    executeReload() {
+        if (!this.currentReloadType) {
+            Toast.warning('Reload 대상을 선택해주세요.');
+            return;
+        }
+
+        const checkedBoxes = document.querySelectorAll('.was-checkbox:checked');
+        const instanceIds = Array.from(checkedBoxes).map(cb => cb.value);
+
+        if (instanceIds.length === 0) {
+            Toast.warning('Reload할 WAS 인스턴스를 선택해주세요.');
+            return;
+        }
+
+        const btn = document.getElementById('btnReload');
+        btn.disabled = true;
+        btn.innerHTML = '<i class="bi bi-arrow-repeat sp-spin"></i> Reload 중...';
+
+        $.ajax({
+            url: API_BASE_URL + '/reload/execute',
+            method: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify({
+                reloadType: this.currentReloadType,
+                instanceIds: instanceIds
+            }),
+            success: (response) => {
+                if (response.success && response.data) {
+                    this.results = response.data.results;
+                    this.renderWasCards();
+                } else {
+                    Toast.error(response.message || 'Reload 실행에 실패했습니다.');
+                }
+            },
+            error: (xhr) => {
+                const msg = xhr.responseJSON?.message || 'Reload 실행 중 오류가 발생했습니다.';
+                Toast.info(msg);
+            },
+            complete: () => {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="bi bi-search"></i> Was별 Reload';
+            }
+        });
+    },
+
+    showErrorDetail() {
+        const errorResults = this.results.filter(r => !r.success);
+
+        const tbody = document.getElementById('errorDetailBody');
+        tbody.innerHTML = errorResults.map(r =>
+            `<tr><td>${HtmlUtils.escape(r.instanceId)}</td><td>${HtmlUtils.escape(r.errorMessage) || '알 수 없는 오류'}</td></tr>`
+        ).join('');
+
+        bootstrap.Modal.getOrCreateInstance(document.getElementById('reloadErrorModal')).show();
+    }
+};
+
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => ReloadPage.init());
+} else {
+    ReloadPage.init();
+}
+</script>
+</th:block>
+</body>
+</html>

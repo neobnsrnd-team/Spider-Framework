@@ -1,0 +1,267 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+# PR에 테스트 결과 코멘트/체크 게시에 필요한 권한
+permissions:
+  contents: read
+  checks: write
+  pull-requests: write
+
+jobs:
+  # ──────────────────────────────────────────────
+  # Job 1: Spring Build + Unit Tests
+  # ──────────────────────────────────────────────
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          cache: maven
+
+      - name: Build with Maven
+        run: mvn -B compile --file pom.xml
+
+      - name: Check code formatting (Spotless)
+        run: mvn -B spotless:check --file pom.xml
+
+      - name: Run Spring unit tests (with JaCoCo)
+        run: mvn -B test --file pom.xml
+
+      - name: Package application
+        run: mvn -B package -DskipTests --file pom.xml
+
+      - name: Publish build test results
+        uses: EnricoMi/publish-unit-test-result-action@v2
+        if: always()
+        with:
+          files: target/surefire-reports/*.xml
+          check_name: "Build — Unit Tests"
+
+      - name: Upload JAR artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-jar
+          path: target/*.jar
+          retention-days: 1
+
+  # ──────────────────────────────────────────────
+  # Job 2: Playwright E2E Tests (Oracle container)
+  # ──────────────────────────────────────────────
+  # gvenzl/setup-oracle-free action:
+  #   - 서비스 컨테이너 대비 3초 간격 healthcheck (vs GHA 10초+)
+  #   - volume mount로 init 스크립트 직접 실행 (docker cp 우회 불필요)
+  #   - 로컬 e2e/docker/ 와 동일한 init-oracle.sh + SQL 파일 사용
+  playwright:
+    runs-on: ubuntu-latest
+    needs: build
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Download JAR artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: app-jar
+          path: target/
+
+      # init-oracle.sh(GRANT + SQL 실행) + SQL 파일을 한 디렉토리에 모아 startup-scripts로 전달
+      # SQL 파일은 .data 확장자로 복사 → entrypoint의 SYS 자동 실행 방지, init-oracle.sh가 APP_USER로 실행
+      - name: Prepare Oracle init scripts
+        run: |
+          mkdir -p /tmp/oracle-init
+          cp e2e/docker/init-oracle.sh /tmp/oracle-init/01_init.sh
+          chmod +x /tmp/oracle-init/01_init.sh
+          cp docs/sql/oracle/01_create_tables.sql /tmp/oracle-init/02_create_tables.data
+          cp docs/sql/oracle/03_insert_initial_data.sql /tmp/oracle-init/03_insert_data.data
+          cp e2e/docker/e2e-seed.sql /tmp/oracle-init/04_e2e_seed.data
+
+      - name: Setup Oracle Database
+        uses: gvenzl/setup-oracle-free@v1
+        with:
+          app-user: spider
+          app-user-password: spider1234
+          oracle-password: test1234
+          tag: 23-slim-faststart
+          container-runtime: docker
+          startup-scripts: /tmp/oracle-init
+
+      # Spring Boot는 JAR 실행 디렉터리의 application.yml을 클래스패스보다 우선 로드한다.
+      # 'ci' 프로파일 활성화 → classpath의 application-ci.yml(Oracle 설정)과 병합된다.
+      - name: Write application.yml to working directory
+        run: |
+          printf '%s\n' \
+            'spring:' \
+            '  profiles:' \
+            '    active: ci' \
+            '  thymeleaf:' \
+            '    cache: false' \
+            '    prefix: classpath:/templates/' \
+            '    suffix: .html' \
+            '    encoding: UTF-8' \
+            '    mode: HTML' \
+            'server:' \
+            '  port: 8080' \
+            'logging:' \
+            '  level:' \
+            '    root: WARN' \
+            '    com.example.admin_demo: INFO' \
+            'file:' \
+            '  upload-dir: /tmp/uploads' \
+            'xml-property:' \
+            '  directory: /tmp/xml-properties' \
+            'scheduling:' \
+            '  batch-his-cleanup:' \
+            '    enabled: false' \
+            > application.yml
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: Start Spring Boot application
+        run: java -jar target/*.jar > /tmp/spring-app.log 2>&1 &
+
+      - name: Wait for server to be ready
+        run: |
+          echo "Waiting for Spring Boot to start..."
+          for i in $(seq 1 24); do
+            sleep 5
+            STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8080/login 2>/dev/null || echo "000")
+            echo "Attempt $i: HTTP $STATUS"
+            if [ "$STATUS" = "200" ] || [ "$STATUS" = "302" ]; then
+              echo "Server is UP!"
+              exit 0
+            fi
+          done
+          echo "Server did not start in time. Last log:"
+          tail -50 /tmp/spring-app.log
+          exit 1
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install Node dependencies
+        run: npm ci
+
+      - name: Cache Playwright browsers
+        id: playwright-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ hashFiles('package-lock.json') }}
+
+      - name: Install Playwright browsers
+        if: steps.playwright-cache.outputs.cache-hit != 'true'
+        run: npx playwright install --with-deps chromium
+
+      - name: Install Playwright browser deps (cached)
+        if: steps.playwright-cache.outputs.cache-hit == 'true'
+        run: npx playwright install-deps chromium
+
+      - name: Run Playwright E2E tests
+        run: npx playwright test --project=auth-setup --project=smoke --project=api --project=pages
+
+      - name: Publish Playwright test results
+        uses: EnricoMi/publish-unit-test-result-action@v2
+        if: always()
+        with:
+          files: playwright-results/results.xml
+          check_name: "Playwright — E2E Tests"
+
+      - name: Upload Playwright report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 7
+
+      - name: Upload Spring Boot log on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: spring-boot-log-playwright
+          path: /tmp/spring-app.log
+          retention-days: 3
+
+  # ──────────────────────────────────────────────
+  # Job 3: Code Quality (SonarCloud + ESLint)
+  # ──────────────────────────────────────────────
+  code-quality:
+    runs-on: ubuntu-latest
+    needs: build
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # SonarCloud에 필요한 전체 히스토리
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          cache: maven
+
+      - name: Build and generate JaCoCo report
+        run: mvn -B test jacoco:report --file pom.xml
+
+      - name: SonarCloud analysis (main branch)
+        if: github.event_name == 'push' && env.SONAR_TOKEN != ''
+        run: >
+          mvn -B sonar:sonar
+          -Dsonar.host.url=https://sonarcloud.io
+          -Dsonar.organization=neobnsrnd-team
+          -Dsonar.projectKey=neobnsrnd-team_spider-admin
+          -Dsonar.token=${{ secrets.SONAR_TOKEN }}
+          --file pom.xml
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: SonarCloud analysis (PR)
+        if: github.event_name == 'pull_request' && env.SONAR_TOKEN != ''
+        run: >
+          mvn -B sonar:sonar
+          -Dsonar.host.url=https://sonarcloud.io
+          -Dsonar.organization=neobnsrnd-team
+          -Dsonar.projectKey=neobnsrnd-team_spider-admin
+          -Dsonar.token=${{ secrets.SONAR_TOKEN }}
+          -Dsonar.pullrequest.key=${{ github.event.pull_request.number }}
+          -Dsonar.pullrequest.branch=${{ github.head_ref }}
+          -Dsonar.pullrequest.base=${{ github.base_ref }}
+          --file pom.xml
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install Node dependencies
+        run: npm ci
+
+      - name: Run ESLint
+        run: npm run lint

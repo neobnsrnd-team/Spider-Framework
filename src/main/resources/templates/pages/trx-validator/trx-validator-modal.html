@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<div th:fragment="modal">
+    <!-- Validator Detail/Create Modal -->
+    <div class="modal fade" id="validatorModal" tabindex="-1" aria-labelledby="validatorModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="validatorModalLabel">Validator 상세</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="validatorForm">
+                        <div class="form-section">
+                            <!-- Row 1: Site 구분, Validator ID -->
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                    <label class="form-label">Site 구분</label>
+                                    <select class="form-select" id="vModalBizDomain" name="bizDomain">
+                                    </select>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Validator ID <span class="text-danger">*</span></label>
+                                    <input type="text" class="form-control" id="vModalValidatorId" name="validatorId"
+                                           maxlength="50" required>
+                                </div>
+                            </div>
+
+                            <!-- Row 2: Validator 명, Application 명 -->
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                    <label class="form-label">Validator 명 <span class="text-danger">*</span></label>
+                                    <input type="text" class="form-control" id="vModalValidatorName" name="validatorName"
+                                           maxlength="100" required>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Application 명 <span class="text-danger">*</span></label>
+                                    <input type="text" class="form-control" id="vModalJavaClassName" name="javaClassName"
+                                           maxlength="100" required>
+                                </div>
+                            </div>
+
+                            <!-- Row 3: Validator 설명 (full width) -->
+                            <div class="row mb-3">
+                                <div class="col-12">
+                                    <label class="form-label">Validator 설명</label>
+                                    <textarea class="form-control resize-vertical" id="vModalValidatorDesc" name="validatorDesc"
+                                              rows="3" maxlength="500"></textarea>
+                                </div>
+                            </div>
+
+                            <!-- Row 4: 사용여부 -->
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                    <label class="form-label">사용여부</label>
+                                    <select class="form-select" id="vModalUseYn" name="useYn"></select>
+                                </div>
+                                <div class="col-md-6"></div>
+                            </div>
+
+                            <!-- Row 5: 최종수정자 ID, 최종수정일시 (상세 모드에서만 표시) -->
+                            <div class="row mb-3 d-hidden" id="systemInfoRow">
+                                <div class="col-md-6">
+                                    <label class="form-label">최종수정자 ID</label>
+                                    <input type="text" class="form-control" id="vModalLastUpdateUserId" readonly>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">최종수정일시</label>
+                                    <input type="text" class="form-control" id="vModalLastUpdateDtime" readonly>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <!-- Modal Footer -->
+                <div class="modal-footer justify-content-end">
+                    <button th:if="${userAuthorities != null and userAuthorities.contains('VALIDATOR:W')}"
+                            type="button" class="btn btn-primary btn-sm d-hidden" id="btnValidatorSave">
+                        <i class="bi bi-floppy"></i> 저장
+                    </button>
+                    <button th:if="${userAuthorities != null and userAuthorities.contains('VALIDATOR:W')}"
+                            type="button" class="btn btn-danger btn-sm d-hidden" id="btnValidatorDelete">
+                        <i class="bi bi-trash"></i> 삭제
+                    </button>
+                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal"><i class="bi bi-x-lg"></i> 닫기</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        (function () {
+            // 정적 콤보 초기화
+            ComboManager.simple.populateSelect('#vModalUseYn', 'USE_YN');
+
+            window.ValidatorModal = {
+                mode: 'detail',
+                currentValidatorId: null,
+
+                _showModal: function () {
+                    const modal = bootstrap.Modal.getOrCreateInstance(document.getElementById('validatorModal'));
+                    modal.show();
+                },
+
+                _hideModal: function () {
+                    const modalEl = document.getElementById('validatorModal');
+                    const modal = bootstrap.Modal.getInstance(modalEl);
+                    if (modal) {
+                        modal.hide();
+                    }
+                },
+
+                loadBizDomainOptions: function (callback) {
+                    ComboManager.db.getList('/api/codes/by-group/FR20003').then(options => {
+                        const $select = $('#vModalBizDomain');
+                        $select.empty();
+                        options.forEach(opt => {
+                            $select.append(`<option value="${opt.value}">${opt.label}</option>`);
+                        });
+                        if (callback) callback();
+                    });
+                },
+
+                openForDetail: function (rowData) {
+                    this.mode = 'detail';
+                    this.currentValidatorId = rowData.validatorId;
+
+                    var hasWrite = validator_access;
+
+                    $('#validatorModalLabel').text('Validator 상세');
+
+                    this.loadBizDomainOptions(() => {
+                        this._fillForm(rowData);
+                        this._setFieldsReadonly(!hasWrite);
+                        if (hasWrite) {
+                            // Validator ID는 수정 시 변경 불가
+                            $('#vModalValidatorId').prop('readonly', true);
+                            $('#vModalValidatorId').prop('disabled', true);
+                        }
+                    });
+
+                    $('#systemInfoRow').removeClass('d-hidden');
+                    $('#btnValidatorSave').toggleClass('d-hidden', !hasWrite);
+                    $('#btnValidatorDelete').toggleClass('d-hidden', !hasWrite);
+
+                    this._showModal();
+                },
+
+                openForCreate: function () {
+                    this.mode = 'create';
+                    this.currentValidatorId = null;
+
+                    $('#validatorModalLabel').text('Validator 등록');
+
+                    $('#validatorForm')[0].reset();
+
+                    this.loadBizDomainOptions(() => {
+                        const $select = $('#vModalBizDomain');
+                        const defaultOpt = $select.find('option').filter(function() {
+                            return $(this).text() === '공통';
+                        });
+                        if (defaultOpt.length > 0) {
+                            $select.val(defaultOpt.val());
+                        }
+                    });
+                    this._setFieldsReadonly(false);
+
+                    $('#vModalValidatorId').prop('readonly', false);
+
+                    $('#systemInfoRow').addClass('d-hidden');
+                    $('#btnValidatorSave').removeClass('d-hidden');
+                    $('#btnValidatorDelete').addClass('d-hidden');
+
+                    this._showModal();
+                },
+
+                _fillForm: function (data) {
+                    $('#vModalBizDomain').val(data.bizDomain || '');
+                    $('#vModalValidatorId').val(data.validatorId || '');
+                    $('#vModalValidatorName').val(data.validatorName || '');
+                    $('#vModalJavaClassName').val(data.javaClassName || '');
+                    $('#vModalValidatorDesc').val(data.validatorDesc || '');
+                    $('#vModalUseYn').val(data.useYn || 'Y');
+                    $('#vModalLastUpdateUserId').val(data.lastUpdateUserId || '');
+                    $('#vModalLastUpdateDtime').val(this._formatDatetime(data.lastUpdateDtime));
+                },
+
+                _setFieldsReadonly: function (readonly) {
+                    $('#vModalValidatorId').prop('readonly', readonly);
+                    $('#vModalValidatorId').prop('disabled', readonly);
+                    $('#vModalBizDomain').prop('disabled', readonly);
+                    $('#vModalValidatorName').prop('readonly', readonly);
+                    $('#vModalJavaClassName').prop('readonly', readonly);
+                    $('#vModalValidatorDesc').prop('readonly', readonly);
+                    $('#vModalUseYn').prop('disabled', readonly);
+                },
+
+                _formatDatetime: function (dateStr) {
+                    if (!dateStr || dateStr.length < 14) return dateStr || '';
+                    return dateStr.substring(0, 4) + '/' +
+                           dateStr.substring(4, 6) + '/' +
+                           dateStr.substring(6, 8) + ' ' +
+                           dateStr.substring(8, 10) + ':' +
+                           dateStr.substring(10, 12) + ':' +
+                           dateStr.substring(12, 14);
+                },
+
+                save: function () {
+                    // Validate form
+                    if (!this._validateForm()) {
+                        return;
+                    }
+
+                    const formData = {
+                        bizDomain: $('#vModalBizDomain').val(),
+                        validatorName: $('#vModalValidatorName').val(),
+                        javaClassName: $('#vModalJavaClassName').val(),
+                        validatorDesc: $('#vModalValidatorDesc').val(),
+                        useYn: $('#vModalUseYn').val()
+                    };
+
+                    if (this.mode === 'create') {
+                        formData.validatorId = $('#vModalValidatorId').val();
+                        $.ajax({
+                            url: API_BASE_URL + '/validators',
+                            method: 'POST',
+                            contentType: 'application/json',
+                            data: JSON.stringify(formData),
+                            success: (response) => {
+                                if (response.success) {
+                                    Toast.success('Validator가 등록되었습니다.');
+                                    this._hideModal();
+                                    if (window.ValidatorPage) {
+                                        ValidatorPage.load();
+                                    }
+                                } else {
+                                    Toast.error(response.message || 'Validator 등록에 실패했습니다.');
+                                }
+                            },
+                            error: (xhr) => {
+                                const errorMsg = xhr.responseJSON?.message || 'Validator 등록에 실패했습니다.';
+                                Toast.error(errorMsg);
+                            }
+                        });
+                    } else {
+                        $.ajax({
+                            url: API_BASE_URL + '/validators/' + encodeURIComponent(this.currentValidatorId),
+                            method: 'PUT',
+                            contentType: 'application/json',
+                            data: JSON.stringify(formData),
+                            success: (response) => {
+                                if (response.success) {
+                                    Toast.success('Validator가 수정되었습니다.');
+                                    this._hideModal();
+                                    if (window.ValidatorPage) {
+                                        ValidatorPage.load();
+                                    }
+                                } else {
+                                    Toast.error(response.message || 'Validator 수정에 실패했습니다.');
+                                }
+                            },
+                            error: (xhr) => {
+                                const errorMsg = xhr.responseJSON?.message || 'Validator 수정에 실패했습니다.';
+                                Toast.error(errorMsg);
+                            }
+                        });
+                    }
+                },
+
+                delete: function () {
+                    Toast.confirm('정말 삭제하시겠습니까?', () => {
+                        $.ajax({
+                            url: API_BASE_URL + '/validators/' + encodeURIComponent(this.currentValidatorId),
+                            method: 'DELETE',
+                            success: (response) => {
+                                if (response.success) {
+                                    Toast.success('Validator가 삭제되었습니다.');
+                                    this._hideModal();
+                                    if (window.ValidatorPage) {
+                                        ValidatorPage.load();
+                                    }
+                                } else {
+                                    Toast.error(response.message || 'Validator 삭제에 실패했습니다.');
+                                }
+                            },
+                            error: (xhr) => {
+                                const errorMsg = xhr.responseJSON?.message || 'Validator 삭제에 실패했습니다.';
+                                Toast.error(errorMsg);
+                            }
+                        });
+                    });
+                },
+
+                _validateForm: function () {
+                    if (this.mode === 'create') {
+                        const validatorId = $('#vModalValidatorId').val().trim();
+                        if (!validatorId) {
+                            Toast.warning('Validator ID를 입력해주세요.');
+                            $('#vModalValidatorId').focus();
+                            return false;
+                        }
+                    }
+
+                    const validatorName = $('#vModalValidatorName').val().trim();
+                    if (!validatorName) {
+                        Toast.warning('Validator 명을 입력해주세요.');
+                        $('#vModalValidatorName').focus();
+                        return false;
+                    }
+
+                    const javaClassName = $('#vModalJavaClassName').val().trim();
+                    if (!javaClassName) {
+                        Toast.warning('Application 명을 입력해주세요.');
+                        $('#vModalJavaClassName').focus();
+                        return false;
+                    }
+
+                    return true;
+                }
+            };
+
+            $(document).off('click', '#btnValidatorSave').on('click', '#btnValidatorSave', function () {
+                ValidatorModal.save();
+            });
+
+            $(document).off('click', '#btnValidatorDelete').on('click', '#btnValidatorDelete', function () {
+                ValidatorModal.delete();
+            });
+        })();
+    </script>
+</div>
+</body>
+</html>

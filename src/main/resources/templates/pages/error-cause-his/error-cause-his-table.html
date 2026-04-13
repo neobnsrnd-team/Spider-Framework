@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<!-- ErrorHis Table Fragment -->
+<div th:fragment="table">
+    <div class="table-responsive">
+        <table class="table table-sm table-hover sp-data-grid" id="errorHisTable">
+            <thead class="table-light">
+            <tr>
+                <th class="col-w-pct-12" data-sort="errorCode">오류코드</th>
+                <th class="col-w-pct-12" data-sort="errorSerNo">오류 발생 일련번호</th>
+                <th class="col-w-pct-10" data-sort="custUserId">고객ID</th>
+                <th class="col-w-pct-12" data-sort="custPhoneNo">고객 전화번호</th>
+                <th class="col-w-pct-20" data-sort="errorMessage">고객 출력 메세지</th>
+                <th class="col-w-pct-15" data-sort="errorUrl">메뉴명</th>
+                <th class="col-w-pct-19" data-sort="errorInstanceId">발생 인스턴스ID</th>
+            </tr>
+            </thead>
+            <tbody id="errorHisTableBody">
+            <!-- JavaScript로 동적 렌더링 -->
+            </tbody>
+        </table>
+    </div>
+</div>
+</body>
+</html>

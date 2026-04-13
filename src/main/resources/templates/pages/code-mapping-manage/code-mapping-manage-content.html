@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<div th:fragment="content" class="org-code-container">
+
+    <!-- 검색조건 헤더 -->
+    <div class="page-header">
+        <h4 class="page-title">
+            <i class="bi bi-exclamation-circle-fill text-danger"></i> 검색조건
+        </h4>
+    </div>
+
+    <!-- 검색 조건 -->
+    <div class="card border p-2 mb-3">
+        <div class="d-flex flex-wrap align-items-center gap-2 mb-1 justify-content-between">
+            <div class="d-flex align-items-center gap-2 flex-grow-1 flex-wrap">
+                <label class="form-label mb-0 small fw-medium">기관</label>
+                <select id="orgCodeOrgSelect" class="form-select form-select-sm col-w-180">
+                    <option value="">전체</option>
+                </select>
+                <label class="form-label mb-0 small fw-medium ms-2">코드그룹</label>
+                <select id="orgCodeGroupSelect" class="form-select form-select-sm col-w-180">
+                    <option value="">전체</option>
+                </select>
+            </div>
+            <div class="d-flex align-items-center gap-2 flex-shrink-0">
+                <select id="limitRows" class="form-select form-select-sm sp-limit-select">
+                    <option value="10" selected>10</option>
+                    <option value="20">20</option>
+                    <option value="50">50</option>
+                    <option value="100">100</option>
+                </select>
+                <label class="form-label mb-0 small fw-medium">건씩</label>
+                <button class="btn btn-primary btn-sm" onclick="OrgCodePage.search()">
+                    <i class="bi bi-search"></i> 조회
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 리스트 헤더 + 툴바 (같은 줄) -->
+    <div class="page-header mt-3">
+        <h4 class="page-title">
+            <i class="bi bi-exclamation-circle-fill text-danger"></i> 리스트
+        </h4>
+        <div class="page-header-actions">
+            <button class="btn btn-outline-secondary btn-sm" id="btnExcel">
+                <i class="bi bi-file-earmark-excel"></i> 엑셀
+            </button>
+            <button class="btn btn-outline-secondary btn-sm" id="btnPrint">
+                <i class="bi bi-file-earmark-text"></i> 출력
+            </button>
+        </div>
+    </div>
+
+    <!-- 목록 테이블 -->
+    <div class="table-responsive">
+        <table id="orgCodeTable" class="table table-sm table-hover sp-data-grid">
+            <thead class="table-light">
+            <tr>
+                <th class="sortable" data-sort="codeGroupId">코드그룹ID</th>
+                <th class="sortable" data-sort="codeGroupName">코드그룹명</th>
+                <th class="sortable" data-sort="code">표준코드</th>
+                <th class="sortable" data-sort="codeName">표준코드명</th>
+                <th class="sortable" data-sort="orgCode">기관코드</th>
+                <th class="sortable col-w-80" data-sort="priority">우선순위</th>
+                <th class="sortable" data-sort="orgId">기관</th>
+            </tr>
+            </thead>
+            <tbody id="orgCodeTableBody">
+            <tr><td colspan="7" class="sp-empty-state">조회 중...</td></tr>
+            </tbody>
+        </table>
+    </div>
+
+    <!-- 페이지네이션 -->
+    <th:block th:replace="~{fragments/page-content-layout :: pagination}" />
+
+    <!-- 하단 버튼 -->
+    <div class="bottom-actions">
+        <button class="btn btn-primary btn-sm" id="btnOrgCodeRegister">+ 등록</button>
+    </div>
+
+    <!-- 등록/수정 팝업 모달 -->
+    <div th:replace="~{pages/code-mapping-manage/code-mapping-manage-modal :: modal}"></div>
+
+    <!-- Script -->
+    <th:block th:replace="~{pages/code-mapping-manage/code-mapping-manage-script :: script}" />
+</div>
+</body>
+</html>

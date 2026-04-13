@@ -1,0 +1,619 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<th:block th:fragment="script">
+    <script>
+        (function() {
+            if (window.ListenerConnectorMappingList && typeof window.ListenerConnectorMappingList.load === 'function') {
+                window.ListenerConnectorMappingList.init();
+                return;
+            }
+
+            const cssEscape = (window.CSS && typeof window.CSS.escape === 'function')
+                ? window.CSS.escape
+                : (value) => String(value).replace(/[^a-zA-Z0-9_\-]/g, '\\$&');
+
+            window.ListenerConnectorMappingList = {
+                currentPage: 1,
+                pageSize: 10,
+                totalElements: 0,
+                gatewayOptions: [],
+                systemCache: {},
+                selectedKey: null,
+                sortBy: null,
+                sortDirection: null,
+                currentRows: [],
+
+                init() {
+                    this.bindEvents();
+                    this.loadGatewayOptions()
+                        .finally(() => this.load(1));
+                },
+
+                bindEvents() {
+                    const headers = document.querySelectorAll('#listenerConnectorMappingTable thead th[data-sort]');
+                    headers.forEach(header => {
+                        header.classList.add('sortable');
+                        if (header.dataset.sortBound === 'true') return;
+                        header.dataset.sortBound = 'true';
+                        header.addEventListener('click', () => {
+                            const sortKey = header.dataset.sort;
+                            if (!sortKey) return;
+                            if (this.sortBy === sortKey) {
+                                if (this.sortDirection === 'ASC') {
+                                    this.sortDirection = 'DESC';
+                                } else {
+                                    this.sortBy = null;
+                                    this.sortDirection = null;
+                                }
+                            } else {
+                                this.sortBy = sortKey;
+                                this.sortDirection = 'ASC';
+                            }
+                            this.updateSortIndicators();
+                            this.load(1); // 서버 사이드 정렬
+                        });
+                    });
+
+                    const pageSizeSelect = document.getElementById('mappingPageSize');
+                    if (pageSizeSelect) {
+                        pageSizeSelect.addEventListener('change', (e) => {
+                            this.pageSize = parseInt(e.target.value, 10) || 20;
+                            this.load(1);
+                        });
+                    }
+
+                    const refreshBtn = document.getElementById('btnRefresh');
+                    if (refreshBtn) {
+                        refreshBtn.addEventListener('click', () => this.load(this.currentPage));
+                    }
+
+                    document.getElementById('btnExcel')?.addEventListener('click', () => this.exportExcel());
+                    document.getElementById('btnPrint')?.addEventListener('click', () => this.printTable());
+
+                    const tbody = document.getElementById('listenerConnectorMappingTableBody');
+                    if (tbody) {
+                        tbody.addEventListener('click', (e) => {
+                            const tr = e.target.closest('tr[data-key]');
+                            if (!tr) return;
+                            this.setSelectedRow(tr.dataset.key);
+                            const [listenerGwId, listenerSystemId, identifier] = tr.dataset.key.split('|');
+                            this.loadAndOpenEditModal(listenerGwId, listenerSystemId, identifier);
+                        });
+                    }
+
+                    const listenerGwSelect = document.getElementById('modalListenerGwId');
+                    if (listenerGwSelect) {
+                        listenerGwSelect.addEventListener('change', (e) => {
+                            const gwId = e.target.value;
+                            this.loadSystemsForGateway(gwId)
+                                .then(systems => this.renderSystemOptions('modalListenerSystemId', systems, '선택하세요'));
+                        });
+                    }
+
+                    const connectorGwSelect = document.getElementById('modalConnectorGwId');
+                    if (connectorGwSelect) {
+                        connectorGwSelect.addEventListener('change', (e) => {
+                            const gwId = e.target.value;
+                            this.loadSystemsForGateway(gwId)
+                                .then(systems => this.renderSystemOptions('modalConnectorSystemId', systems, '선택하세요'));
+                        });
+                    }
+
+                },
+
+                loadGatewayOptions() {
+                    const params = new URLSearchParams({
+                        page: '1',
+                        size: '500'
+                    });
+                    const apiUrl = `/api/gateways/page?${params}`;
+
+                    return fetch(apiUrl, {credentials: 'same-origin'})
+                        .then(res => res.json())
+                        .then(res => {
+                            if (!res.success) throw new Error(res.message || '게이트웨이 조회 실패');
+                            const data = res.data || {};
+                            this.gatewayOptions = data.content || [];
+                            this.renderGatewaySelectOptions();
+                        })
+                        .catch(err => {
+                            console.error('[ListenerConnectorMappingList.loadGatewayOptions]', err);
+                            Toast.error('게이트웨이 목록을 불러오지 못했습니다.');
+                        });
+                },
+
+                renderGatewaySelectOptions() {
+                    this.renderGatewayOptions('searchListenerGateway', true);
+                    this.renderGatewayOptions('searchConnectorGateway', true);
+                    this.renderGatewayOptions('modalListenerGwId', false);
+                    this.renderGatewayOptions('modalConnectorGwId', false);
+                },
+
+                renderGatewayOptions(selectId, includeAll, selectedValue) {
+                    const select = document.getElementById(selectId);
+                    if (!select) return;
+                    const currentValue = selectedValue !== undefined ? selectedValue : select.value;
+                    const options = [];
+                    if (includeAll) {
+                        options.push('<option value="">전체</option>');
+                    } else {
+                        options.push('<option value="">선택하세요</option>');
+                    }
+
+                    this.gatewayOptions.forEach(gw => {
+                        const value = HtmlUtils.escape(gw.gwId);
+                        const label = HtmlUtils.escape(gw.gwName ? `${gw.gwName} (${gw.gwId})` : gw.gwId);
+                        options.push(`<option value="${value}" ${gw.gwId === currentValue ? 'selected' : ''}>${label}</option>`);
+                    });
+
+                    select.innerHTML = options.join('');
+                },
+
+                loadSystemsForGateway(gwId) {
+                    if (!gwId) {
+                        return Promise.resolve([]);
+                    }
+                    if (this.systemCache[gwId]) {
+                        return Promise.resolve(this.systemCache[gwId]);
+                    }
+
+                    const apiUrl = `/api/gateways/${encodeURIComponent(gwId)}`;
+                    return fetch(apiUrl, {credentials: 'same-origin'})
+                        .then(res => res.json())
+                        .then(res => {
+                            if (!res.success) throw new Error(res.message || '시스템 조회 실패');
+                            const systems = res.data?.systems || [];
+                            this.systemCache[gwId] = systems;
+                            return systems;
+                        })
+                        .catch(err => {
+                            console.error('[ListenerConnectorMappingList.loadSystemsForGateway]', err);
+                            Toast.error('시스템 목록을 불러오지 못했습니다.');
+                            return [];
+                        });
+                },
+
+                renderSystemOptions(selectId, systems, placeholder, selectedValue) {
+                    const select = document.getElementById(selectId);
+                    if (!select) return;
+                    const currentValue = selectedValue !== undefined ? selectedValue : select.value;
+                    const options = [`<option value="">${placeholder || '선택하세요'}</option>`];
+                    systems.forEach(sys => {
+                        const value = HtmlUtils.escape(sys.systemId);
+                        const label = HtmlUtils.escape(sys.systemId);
+                        options.push(`<option value="${value}" ${sys.systemId === currentValue ? 'selected' : ''}>${label}</option>`);
+                    });
+                    select.innerHTML = options.join('');
+                },
+
+                load(page) {
+                    this.currentPage = page || 1;
+
+                    const listenerGwId = document.getElementById('searchListenerGateway')?.value || '';
+                    const connectorGwId = document.getElementById('searchConnectorGateway')?.value || '';
+
+                    const params = new URLSearchParams({
+                        page: String(this.currentPage),
+                        size: String(this.pageSize)
+                    });
+
+                    if (listenerGwId) params.set('listenerGwId', listenerGwId);
+                    if (connectorGwId) params.set('connectorGwId', connectorGwId);
+                    if (this.sortBy) params.set('sortBy', this.sortBy);
+                    if (this.sortDirection) params.set('sortDirection', this.sortDirection);
+
+                    const apiUrl = `/api/interface-mnt/listener-connector-mappings?${params}`;
+
+                    fetch(apiUrl, {credentials: 'same-origin'})
+                        .then(res => res.json())
+                        .then(res => {
+                            if (!res.success) throw new Error(res.message || '조회 실패');
+                            const data = res.data || {};
+                            this.totalElements = data.totalElements || 0;
+                            this.currentRows = data.content || [];
+                            this.renderTable(this.currentRows); // 서버에서 정렬된 데이터 사용
+                            this.updateSortIndicators();
+                            this.renderPagination(data);
+                        })
+                        .catch(err => {
+                            console.error('[ListenerConnectorMappingList.load]', err);
+                            Toast.error('데이터 조회 중 오류가 발생했습니다: ' + err.message);
+                            this.renderTableError();
+                            this.renderPagination({ totalElements: 0, totalPages: 1, currentPage: 1, size: this.pageSize });
+                        });
+                },
+
+                renderTable(items) {
+                    const tbody = document.getElementById('listenerConnectorMappingTableBody');
+                    if (!tbody) return;
+                    this.selectedKey = null;
+
+                    if (!items || items.length === 0) {
+                        tbody.innerHTML = `
+                            <tr>
+                                <td colspan="6" class="text-center py-4 text-body-secondary">
+                                    조회된 데이터가 없습니다
+                                </td>
+                            </tr>`;
+                        return;
+                    }
+
+                    const rows = items.map(item => {
+                        const key = `${HtmlUtils.escape(item.listenerGwId)}|${HtmlUtils.escape(item.listenerSystemId)}|${HtmlUtils.escape(item.identifier)}`;
+                        return `
+                            <tr data-key="${key}">
+                                <td>${HtmlUtils.escape(item.listenerGwId)}</td>
+                                <td>${HtmlUtils.escape(item.listenerSystemId)}</td>
+                                <td>${HtmlUtils.escape(item.connectorGwId)}</td>
+                                <td>${HtmlUtils.escape(item.connectorSystemId)}</td>
+                                <td>${HtmlUtils.escape(item.identifier)}</td>
+                                <td>${HtmlUtils.escape(item.description || '')}</td>
+                            </tr>`;
+                    }).join('');
+                    tbody.innerHTML = rows;
+                },
+
+                getSortedRows() {
+                    if (!this.sortBy || !this.sortDirection) {
+                        return this.currentRows || [];
+                    }
+                    const direction = this.sortDirection === 'DESC' ? -1 : 1;
+                    const rows = [...(this.currentRows || [])];
+                    return rows.sort((a, b) => {
+                        const aVal = a?.[this.sortBy] ?? '';
+                        const bVal = b?.[this.sortBy] ?? '';
+                        return this.compareValues(aVal, bVal) * direction;
+                    });
+                },
+
+                compareValues(aVal, bVal) {
+                    const aEmpty = aVal === null || aVal === undefined || aVal === '';
+                    const bEmpty = bVal === null || bVal === undefined || bVal === '';
+                    if (aEmpty && bEmpty) return 0;
+                    if (aEmpty) return 1;
+                    if (bEmpty) return -1;
+                    return String(aVal).localeCompare(String(bVal), 'ko', { numeric: true, sensitivity: 'base' });
+                },
+
+                updateSortIndicators() {
+                    const headers = document.querySelectorAll('#listenerConnectorMappingTable thead th.sortable');
+                    headers.forEach(header => header.classList.remove('sort-asc', 'sort-desc'));
+                    if (!this.sortBy || !this.sortDirection) return;
+                    const active = document.querySelector(`#listenerConnectorMappingTable thead th[data-sort="${this.sortBy}"]`);
+                    if (active) {
+                        active.classList.add(this.sortDirection === 'ASC' ? 'sort-asc' : 'sort-desc');
+                    }
+                },
+
+                renderTableError() {
+                    const tbody = document.getElementById('listenerConnectorMappingTableBody');
+                    if (!tbody) return;
+                    tbody.innerHTML = `
+                        <tr>
+                            <td colspan="6" class="text-center py-4 text-danger">
+                                데이터 조회 중 오류가 발생했습니다
+                            </td>
+                        </tr>`;
+                },
+
+                renderPagination(pageData) {
+                    const container = document.getElementById('pagination');
+                    if (!container) return;
+
+                    const totalPages = pageData.totalPages || 0;
+                    const currentPage = pageData.currentPage || 1;
+                    const total = pageData.totalElements || 0;
+                    const size = pageData.size || this.pageSize;
+                    const start = total === 0 ? 0 : (currentPage - 1) * size + 1;
+                    const end = Math.min(currentPage * size, total);
+
+                    const pageInfo = document.getElementById('pageInfo');
+                    if (pageInfo) {
+                        pageInfo.textContent = `${start} - ${end} of ${total} items`;
+                    }
+
+                    const maxButtons = 5;
+                    let startPage = Math.max(1, currentPage - Math.floor(maxButtons / 2));
+                    let endPage = Math.min(totalPages, startPage + maxButtons - 1);
+
+                    if (endPage - startPage + 1 < maxButtons) {
+                        startPage = Math.max(1, endPage - maxButtons + 1);
+                    }
+
+                    let html = `
+                        <li class="page-item ${currentPage === 1 ? 'disabled' : ''}">
+                            <a class="page-link" href="#" onclick="ListenerConnectorMappingList.load(1); return false;">
+                                <i class="bi bi-chevron-double-left"></i>
+                            </a>
+                        </li>
+                        <li class="page-item ${currentPage === 1 ? 'disabled' : ''}">
+                            <a class="page-link" href="#" onclick="ListenerConnectorMappingList.load(${currentPage - 1}); return false;">
+                                <i class="bi bi-chevron-left"></i>
+                            </a>
+                        </li>
+                    `;
+
+                    for (let i = startPage; i <= endPage; i++) {
+                        html += `
+                            <li class="page-item ${i === currentPage ? 'active' : ''}">
+                                <a class="page-link" href="#" onclick="ListenerConnectorMappingList.load(${i}); return false;">${i}</a>
+                            </li>
+                        `;
+                    }
+
+                    html += `
+                        <li class="page-item ${currentPage === totalPages || totalPages === 0 ? 'disabled' : ''}">
+                            <a class="page-link" href="#" onclick="ListenerConnectorMappingList.load(${currentPage + 1}); return false;">
+                                <i class="bi bi-chevron-right"></i>
+                            </a>
+                        </li>
+                        <li class="page-item ${currentPage === totalPages || totalPages === 0 ? 'disabled' : ''}">
+                            <a class="page-link" href="#" onclick="ListenerConnectorMappingList.load(${totalPages}); return false;">
+                                <i class="bi bi-chevron-double-right"></i>
+                            </a>
+                        </li>
+                    `;
+
+                    container.innerHTML = html;
+                },
+
+                setSelectedRow(key) {
+                    const tbody = document.getElementById('listenerConnectorMappingTableBody');
+                    if (!tbody) return;
+                    tbody.querySelectorAll('tr').forEach(tr => tr.classList.remove('mapping-row-selected'));
+                    const target = tbody.querySelector(`tr[data-key="${cssEscape(key)}"]`);
+                    if (target) {
+                        target.classList.add('mapping-row-selected');
+                        this.selectedKey = key;
+                    } else {
+                        this.selectedKey = null;
+                    }
+                },
+
+                loadAndOpenEditModal(listenerGwId, listenerSystemId, identifier) {
+                    const apiUrl = `/api/interface-mnt/listener-connector-mappings/${encodeURIComponent(listenerGwId)}/${encodeURIComponent(listenerSystemId)}/${encodeURIComponent(identifier)}`;
+
+                    fetch(apiUrl, {credentials: 'same-origin'})
+                        .then(res => res.json())
+                        .then(res => {
+                            if (!res.success) throw new Error(res.message || '조회 실패');
+                            ListenerConnectorMappingModal.openEditModal(res.data);
+                        })
+                        .catch(err => {
+                            console.error('[ListenerConnectorMappingList.loadAndOpenEditModal]', err);
+                            Toast.error('데이터 조회 중 오류가 발생했습니다: ' + err.message);
+                        });
+                },
+
+                exportExcel() {
+                    const params = new URLSearchParams();
+                    const listenerGwId = document.getElementById('searchListenerGateway')?.value || '';
+                    const connectorGwId = document.getElementById('searchConnectorGateway')?.value || '';
+                    if (listenerGwId) params.set('listenerGwId', listenerGwId);
+                    if (connectorGwId) params.set('connectorGwId', connectorGwId);
+                    if (this.sortBy) {
+                        params.set('sortBy', this.sortBy);
+                        params.set('sortDirection', this.sortDirection || 'ASC');
+                    }
+                    const qs = params.toString();
+                    window.location.href = '/api/interface-mnt/listener-connector-mappings/export' + (qs ? '?' + qs : '');
+                },
+
+                printTable() {
+                    const columns = [
+                        { key: 'listenerGwId', label: '리스너 GATEWAY' },
+                        { key: 'listenerSystemId', label: '리스너 SYSTEM' },
+                        { key: 'connectorGwId', label: '응답커넥터 GATEWAY' },
+                        { key: 'connectorSystemId', label: '응답커넥터 SYSTEM' },
+                        { key: 'identifier', label: '식별자' },
+                        { key: 'description', label: '설명' }
+                    ];
+                    PrintUtil.print({ title: '리스너 응답커넥터 맵핑 목록', columns: columns, data: this.currentRows });
+                },
+
+                deleteSelected() {
+                    if (!this.selectedKey) {
+                        Toast.warning('삭제할 항목을 선택하세요');
+                        return;
+                    }
+                    const [listenerGwId, listenerSystemId, identifier] = this.selectedKey.split('|');
+                    Toast.confirm('선택한 매핑을 삭제하시겠습니까?', () => {
+                        const apiUrl = `/api/interface-mnt/listener-connector-mappings/${encodeURIComponent(listenerGwId)}/${encodeURIComponent(listenerSystemId)}/${encodeURIComponent(identifier)}`;
+                        fetch(apiUrl, {method: 'DELETE', credentials: 'same-origin'})
+                            .then(res => res.json())
+                            .then(res => {
+                                if (!res.success) throw new Error(res.message || '삭제 실패');
+                                Toast.success('삭제되었습니다');
+                                this.load(this.currentPage);
+                            })
+                            .catch(err => {
+                                console.error('[ListenerConnectorMappingList.deleteSelected]', err);
+                                Toast.error('삭제 중 오류가 발생했습니다: ' + err.message);
+                            });
+                    });
+                }
+            };
+
+            window.ListenerConnectorMappingModal = {
+                openCreateModal() {
+                    document.getElementById('modalMode').value = 'create';
+                    document.getElementById('mappingModalTitle').textContent = '리스너-커넥터 매핑 등록';
+
+                    document.getElementById('modalIdentifier').value = '';
+                    document.getElementById('modalDescription').value = '';
+                    document.getElementById('originalListenerGwId').value = '';
+                    document.getElementById('originalListenerSystemId').value = '';
+                    document.getElementById('originalIdentifier').value = '';
+                    document.getElementById('modalDeleteBtn')?.classList.add('d-hidden');
+
+                    ListenerConnectorMappingList.renderGatewayOptions('modalListenerGwId', false, '');
+                    ListenerConnectorMappingList.renderGatewayOptions('modalConnectorGwId', false, '');
+                    ListenerConnectorMappingList.renderSystemOptions('modalListenerSystemId', [], '선택하세요', '');
+                    ListenerConnectorMappingList.renderSystemOptions('modalConnectorSystemId', [], '선택하세요', '');
+
+                    document.getElementById('modalListenerGwId').disabled = false;
+                    document.getElementById('modalListenerSystemId').disabled = false;
+                    document.getElementById('modalIdentifier').disabled = false;
+
+                    this.showModal();
+                },
+
+                async openEditModal(data) {
+                    document.getElementById('modalMode').value = 'edit';
+                    document.getElementById('mappingModalTitle').textContent = '리스너-커넥터 매핑 수정';
+                    document.getElementById('originalListenerGwId').value = data.listenerGwId || '';
+                    document.getElementById('originalListenerSystemId').value = data.listenerSystemId || '';
+                    document.getElementById('originalIdentifier').value = data.identifier || '';
+                    document.getElementById('modalDeleteBtn')?.classList.remove('d-hidden');
+
+                    ListenerConnectorMappingList.renderGatewayOptions('modalListenerGwId', false, data.listenerGwId);
+                    ListenerConnectorMappingList.renderGatewayOptions('modalConnectorGwId', false, data.connectorGwId);
+
+                    const listenerSystems = await ListenerConnectorMappingList.loadSystemsForGateway(data.listenerGwId);
+                    const connectorSystems = await ListenerConnectorMappingList.loadSystemsForGateway(data.connectorGwId);
+
+                    ListenerConnectorMappingList.renderSystemOptions('modalListenerSystemId', listenerSystems, '선택하세요', data.listenerSystemId);
+                    ListenerConnectorMappingList.renderSystemOptions('modalConnectorSystemId', connectorSystems, '선택하세요', data.connectorSystemId);
+
+                    document.getElementById('modalListenerGwId').value = data.listenerGwId || '';
+                    document.getElementById('modalListenerSystemId').value = data.listenerSystemId || '';
+                    document.getElementById('modalIdentifier').value = data.identifier || '';
+                    document.getElementById('modalConnectorGwId').value = data.connectorGwId || '';
+                    document.getElementById('modalConnectorSystemId').value = data.connectorSystemId || '';
+                    document.getElementById('modalDescription').value = data.description || '';
+
+                    // PK는 수정 불가
+                    document.getElementById('modalListenerGwId').disabled = true;
+                    document.getElementById('modalListenerSystemId').disabled = true;
+                    document.getElementById('modalIdentifier').disabled = true;
+
+                    // W 권한 없으면 모든 필드 읽기 전용 (상세 보기 모드)
+                    const hasWriteAuth = !!document.querySelector('.bottom-actions');
+                    if (!hasWriteAuth) {
+                        document.getElementById('modalConnectorGwId').disabled = true;
+                        document.getElementById('modalConnectorSystemId').disabled = true;
+                        document.getElementById('modalDescription').disabled = true;
+                    }
+
+                    this.showModal();
+                },
+
+                showModal() {
+                    bootstrap.Modal.getOrCreateInstance(document.getElementById('mappingModal')).show();
+                },
+
+                closeModal() {
+                    bootstrap.Modal.getInstance(document.getElementById('mappingModal'))?.hide();
+                },
+
+                save() {
+                    const mode = document.getElementById('modalMode').value;
+                    const listenerGwId = document.getElementById('modalListenerGwId').value.trim();
+                    const listenerSystemId = document.getElementById('modalListenerSystemId').value.trim();
+                    const identifier = document.getElementById('modalIdentifier').value.trim();
+                    const connectorGwId = document.getElementById('modalConnectorGwId').value.trim();
+                    const connectorSystemId = document.getElementById('modalConnectorSystemId').value.trim();
+                    const description = document.getElementById('modalDescription').value.trim();
+                    const originalListenerGwId = document.getElementById('originalListenerGwId').value.trim();
+                    const originalListenerSystemId = document.getElementById('originalListenerSystemId').value.trim();
+                    const originalIdentifier = document.getElementById('originalIdentifier').value.trim();
+
+                    if (!listenerGwId || !listenerSystemId || !identifier || !connectorGwId || !connectorSystemId) {
+                        Toast.warning('필수 항목을 모두 입력하세요');
+                        return;
+                    }
+
+                    const payload = {
+                        listenerGwId,
+                        listenerSystemId,
+                        identifier,
+                        connectorGwId,
+                        connectorSystemId,
+                        description
+                    };
+
+                    if (mode === 'create') {
+                        this.saveCreate(payload);
+                        return;
+                    }
+
+                    this.saveUpdate(originalListenerGwId, originalListenerSystemId, originalIdentifier, payload);
+                },
+
+                saveCreate(payload) {
+                    const apiUrl = '/api/interface-mnt/listener-connector-mappings';
+                    fetch(apiUrl, {
+                        method: 'POST',
+                        credentials: 'same-origin',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify(payload)
+                    })
+                        .then(res => res.json())
+                        .then(res => {
+                            if (!res.success) throw new Error(res.message || '저장 실패');
+                            Toast.success('저장되었습니다');
+                            ListenerConnectorMappingModal.closeModal();
+                            ListenerConnectorMappingList.load(ListenerConnectorMappingList.currentPage);
+                        })
+                        .catch(err => {
+                            console.error('[ListenerConnectorMappingModal.saveCreate]', err);
+                            Toast.error('저장 중 오류가 발생했습니다: ' + err.message);
+                        });
+                },
+
+                saveUpdate(listenerGwId, listenerSystemId, identifier, payload) {
+                    const apiUrl = `/api/interface-mnt/listener-connector-mappings/${encodeURIComponent(listenerGwId)}/${encodeURIComponent(listenerSystemId)}/${encodeURIComponent(identifier)}`;
+                    fetch(apiUrl, {
+                        method: 'PUT',
+                        credentials: 'same-origin',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify(payload)
+                    })
+                        .then(res => res.json())
+                        .then(res => {
+                            if (!res.success) throw new Error(res.message || '저장 실패');
+                            Toast.success('저장되었습니다');
+                            ListenerConnectorMappingModal.closeModal();
+                            ListenerConnectorMappingList.load(ListenerConnectorMappingList.currentPage);
+                        })
+                        .catch(err => {
+                            console.error('[ListenerConnectorMappingModal.saveUpdate]', err);
+                            Toast.error('저장 중 오류가 발생했습니다: ' + err.message);
+                        });
+                },
+
+                deleteCurrent() {
+                    const listenerGwId = document.getElementById('originalListenerGwId').value.trim();
+                    const listenerSystemId = document.getElementById('originalListenerSystemId').value.trim();
+                    const identifier = document.getElementById('originalIdentifier').value.trim();
+
+                    if (!listenerGwId || !listenerSystemId || !identifier) {
+                        Toast.warning('삭제할 대상을 찾을 수 없습니다.');
+                        return;
+                    }
+
+                    Toast.confirm('현재 매핑을 삭제하시겠습니까?', () => {
+                        const apiUrl = `/api/interface-mnt/listener-connector-mappings/${encodeURIComponent(listenerGwId)}/${encodeURIComponent(listenerSystemId)}/${encodeURIComponent(identifier)}`;
+                        fetch(apiUrl, {method: 'DELETE', credentials: 'same-origin'})
+                            .then(res => res.json())
+                            .then(res => {
+                                if (!res.success) throw new Error(res.message || '삭제 실패');
+                                Toast.success('삭제되었습니다');
+                                ListenerConnectorMappingModal.closeModal();
+                                ListenerConnectorMappingList.load(ListenerConnectorMappingList.currentPage);
+                            })
+                            .catch(err => {
+                                console.error('[ListenerConnectorMappingModal.deleteCurrent]', err);
+                                Toast.error('삭제 중 오류가 발생했습니다: ' + err.message);
+                            });
+                    });
+                }
+            };
+
+            window.ListenerConnectorMappingList.init();
+        })();
+    </script>
+</th:block>
+</body>
+</html>

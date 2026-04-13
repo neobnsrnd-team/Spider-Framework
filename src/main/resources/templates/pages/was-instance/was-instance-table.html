@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<div th:fragment="table">
+    <div class="table-responsive">
+        <table class="table table-sm table-hover sp-data-grid" id="wasInstanceTable">
+            <colgroup>
+                <col class="col-w-80">
+                <col class="col-w-120">
+                <col class="col-w-120">
+                <col class="col-w-200">
+                <col class="col-w-150">
+                <col class="col-w-120">
+                <col class="col-w-80">
+                <col class="col-w-100">
+                <col class="col-w-120">
+                <col class="col-w-120">
+            </colgroup>
+            <thead class="table-light">
+            <tr>
+                <th>CRUD</th>
+                <th>인스턴스ID</th>
+                <th>인스턴스명</th>
+                <th>인스턴스 설명</th>
+                <th>인스턴스 구분</th>
+                <th>IP</th>
+                <th>PORT</th>
+                <th>유형</th>
+                <th>운영모드</th>
+                <th>프로퍼티</th>
+            </tr>
+            </thead>
+            <tbody id="wasInstanceTableBody">
+            <tr>
+                <td colspan="10" class="text-center py-4 text-body-secondary">
+                    데이터를 불러오는 중...
+                </td>
+            </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+</body>
+</html>

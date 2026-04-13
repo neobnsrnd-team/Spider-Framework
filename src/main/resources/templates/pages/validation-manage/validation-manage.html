@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<div th:fragment="content">
+
+    <!-- Search Section Header -->
+    <div class="page-header">
+        <h4 class="page-title">
+            <i class="bi bi-exclamation-circle-fill text-danger"></i>
+            검색조건
+        </h4>
+    </div>
+
+    <!-- Search Container (동적 생성) -->
+    <div id="searchContainer"></div>
+
+    <!-- List Section Header -->
+    <div class="page-header mt-3">
+        <h4 class="page-title">
+            <i class="bi bi-exclamation-circle-fill text-danger"></i>
+            리스트
+        </h4>
+
+        <!-- Toolbar -->
+        <th:block th:replace="~{fragments/page-content-layout :: toolbar}" />
+    </div>
+
+    <!-- Table Container (동적 생성) -->
+    <div id="tableContainer"></div>
+
+    <!-- Pagination -->
+    <th:block th:replace="~{fragments/page-content-layout :: pagination}" />
+
+    <!-- Bottom Action Buttons -->
+    <div class="bottom-actions" th:if="${userAuthorities != null and userAuthorities.contains('VALIDATION:W')}">
+        <button class="btn btn-primary btn-sm" id="btnAdd">
+            + 등록
+        </button>
+    </div>
+
+    <!-- 권한 플래그 (모달에서 사용) -->
+    <script th:inline="javascript">
+        var validation_access = /*[[${userAuthorities != null and userAuthorities.contains('VALIDATION:W')}]]*/ false;
+    </script>
+
+    <!-- Validation Modal -->
+    <div th:replace="~{pages/validation-manage/validation-modal :: modal}"></div>
+
+    <!-- Page Script -->
+    <script th:inline="javascript">
+        var PAGE_CONFIG = {
+            pageId: 'validations',
+            apiEndpoint: API_BASE_URL + '/validations/page',
+
+            search: {
+                fields: [
+                    {
+                        type: 'text',
+                        id: 'validationId',
+                        label: '키워드',
+                        labelStyle: 'min-width: 55px;',
+                        placeholder: '키워드',
+                        width: '160px'
+                    },
+                    {
+                        type: 'text',
+                        id: 'validationDesc',
+                        label: '키워드 설명',
+                        labelStyle: 'min-width: 70px; margin-left: 10px;',
+                        placeholder: '키워드 설명',
+                        width: '160px'
+                    }
+                ],
+                limit: { default: 20, showLarge: true }
+            },
+
+            table: {
+                id: 'validationTable',
+                columns: [
+                    { key: 'validationId', label: '키워드', width: '140px', sortable: true },
+                    { key: 'validationDesc', label: '키워드 설명', width: '170px', sortable: true },
+                    { key: 'fieldEventText', label: '키입력 이벤트 제어코드', width: '200px', sortable: true },
+                    { key: 'maskText', label: '마스크업 스타일', width: '130px', sortable: true },
+                    { key: 'charTypeText', label: '문자열 속성', width: '110px', sortable: true },
+                    { key: 'javaClassName', label: 'Validation 클래스', width: '220px', sortable: true }
+                ],
+                emptyMessage: '조회 버튼을 클릭하여 데이터를 불러오세요.',
+                noDataMessage: '조회된 데이터가 없습니다.'
+            },
+
+            containers: {
+                search: '#searchContainer',
+                table: '#tableContainer',
+                pagination: '#pagination',
+                pageInfo: '#pageInfo'
+            },
+
+            autoLoad: true
+        };
+
+        window.ValidationPage = {
+            currentPage: 1,
+            totalItems: 0,
+            itemsPerPage: 20,
+            sortBy: null,
+            sortDirection: null,
+
+            init: function() {
+                SearchForm.render('#searchContainer', PAGE_CONFIG.search, () => {
+                    this.currentPage = 1;
+                    this.load();
+                });
+
+                const tableConfig = {
+                    ...PAGE_CONFIG.table,
+                    onSort: (sortBy, sortDirection) => {
+                        this.sortBy = sortBy;
+                        this.sortDirection = sortDirection;
+                        this.currentPage = 1;
+                        this.load();
+                    }
+                };
+
+                DataTable.render('#tableContainer', tableConfig, (row) => {
+                    if (window.ValidationModal) {
+                        window.ValidationModal.openForDetail(row);
+                    }
+                });
+
+                Pagination.init('#pagination', '#pageInfo', (page) => {
+                    this.currentPage = page;
+                    this.load();
+                });
+
+                $('#btnRefresh').off('click').on('click', () => { this.load(); });
+                $('#btnExcel').off('click').on('click', () => { this.exportExcel(); });
+                $('#btnPrint').off('click').on('click', () => { this.printTable(); });
+                $('#btnAdd').off('click').on('click', () => {
+                    if (window.ValidationModal) {
+                        window.ValidationModal.openForCreate();
+                    }
+                });
+
+                if (PAGE_CONFIG.autoLoad) {
+                    this.load();
+                }
+            },
+
+            load: function() {
+                const params = SearchForm.getParams('#searchContainer');
+                params.page = this.currentPage;
+                params.size = params.size || this.itemsPerPage;
+
+                if (this.sortBy) {
+                    params.sortBy = this.sortBy;
+                    params.sortDirection = this.sortDirection || 'ASC';
+                }
+
+                $.ajax({
+                    url: PAGE_CONFIG.apiEndpoint,
+                    method: 'GET',
+                    data: params,
+                    success: (response) => {
+                        if (response.success && response.data) {
+                            const pageData = response.data;
+                            DataTable.setData('#tableContainer', pageData.content || []);
+                            this.totalItems = pageData.totalElements || 0;
+                            this.itemsPerPage = params.size;
+                            Pagination.update('#pagination', {
+                                currentPage: this.currentPage,
+                                totalItems: this.totalItems,
+                                itemsPerPage: this.itemsPerPage
+                            });
+                        } else {
+                            DataTable.setData('#tableContainer', []);
+                            Pagination.reset('#pagination');
+                        }
+                    },
+                    error: (xhr) => {
+                        console.error('Failed to load validations:', xhr);
+                        Toast.error('Validation 목록을 불러오는데 실패했습니다.');
+                        DataTable.setData('#tableContainer', []);
+                        Pagination.reset('#pagination');
+                    }
+                });
+            },
+
+            printTable: function() {
+                const printColumns = PAGE_CONFIG.table.columns
+                    .filter(col => !col.render)
+                    .map(col => ({ key: col.key, label: col.label }));
+                const data = DataTable.getData('#tableContainer');
+                PrintUtil.print({ title: 'Validation 목록', columns: printColumns, data: data });
+            },
+
+            exportExcel: function() {
+                const params = SearchForm.getParams('#searchContainer');
+                delete params.page;
+                delete params.size;
+                if (this.sortBy) {
+                    params.sortBy = this.sortBy;
+                    params.sortDirection = this.sortDirection || 'ASC';
+                }
+                const qs = $.param(params);
+                window.location.href = API_BASE_URL + '/validations/export' + (qs ? '?' + qs : '');
+            }
+        };
+
+        $(document).ready(function() {
+            ValidationPage.init();
+        });
+    </script>
+</div>
+</body>
+</html>

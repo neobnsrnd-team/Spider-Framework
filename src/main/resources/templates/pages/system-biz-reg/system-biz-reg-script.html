@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<!-- Monitor Page Scripts -->
+<th:block th:fragment="script">
+<script>
+    const Monitors = {
+        currentPage: 1,
+        totalItems: 0,
+        itemsPerPage: 10,
+        monitorsData: [],
+        selectedMonitors: [],
+        sortBy: null,
+        sortDirection: null,
+
+        /**
+         * 초기화
+         */
+        init: function() {
+            console.log('Monitors.init()');
+            this.attachEventHandlers();
+            this.attachSortHandlers();
+        },
+
+        /**
+         * 이벤트 핸들러 등록
+         */
+        attachEventHandlers: function() {
+            // 등록 버튼
+            $('#btnAddMonitor').off('click').on('click', () => {
+                MonitorModal.openCreateModal();
+            });
+
+            // 선택 삭제 버튼
+            $('#btnDeleteSelected').off('click').on('click', () => {
+                this.deleteSelected();
+            });
+
+            // 검색 엔터키
+            $('#searchValue').off('keypress').on('keypress', (e) => {
+                if (e.which === 13) {
+                    this.load();
+                }
+            });
+
+            // 건수 변경 시
+            $('#limitRows').off('change').on('change', () => {
+                this.currentPage = 1;
+                this.load();
+            });
+
+            // 엑셀 다운로드
+            $('#btnExcel').off('click').on('click', () => {
+                this.exportExcel();
+            });
+
+            // 출력
+            $('#btnPrint').off('click').on('click', () => {
+                this.print();
+            });
+
+            // 테이블 행 클릭 이벤트 (이벤트 위임)
+            $('#monitorTable tbody').off('click').on('click', 'tr', (e) => {
+                // 체크박스 클릭은 무시
+                if ($(e.target).is(':checkbox')) {
+                    return;
+                }
+
+                const $row = $(e.currentTarget);
+                const monitorId = $row.data('monitor-id');
+
+                if (monitorId) {
+                    MonitorModal.openEditModal(monitorId);
+                }
+            });
+        },
+
+        /**
+         * 정렬 이벤트 핸들러 설정
+         */
+        attachSortHandlers: function() {
+            const self = this;
+            $('#monitorTable thead th[data-sort]').addClass('sortable').off('click').on('click', function() {
+                const sortKey = $(this).data('sort');
+                if (!sortKey) return;
+
+                // 3단계 순환: ASC → DESC → DEFAULT
+                if (self.sortBy === sortKey) {
+                    if (self.sortDirection === 'ASC') {
+                        self.sortDirection = 'DESC';
+                    } else if (self.sortDirection === 'DESC') {
+                        self.sortBy = null;
+                        self.sortDirection = null;
+                    }
+                } else {
+                    self.sortBy = sortKey;
+                    self.sortDirection = 'ASC';
+                }
+                self.currentPage = 1;
+                self.updateSortIndicators();
+                self.load();
+            });
+        },
+
+        /**
+         * 정렬 표시 업데이트
+         */
+        updateSortIndicators: function() {
+            const headers = $('#monitorTable thead th.sortable');
+            headers.removeClass('sort-asc sort-desc');
+
+            if (!this.sortBy || !this.sortDirection) {
+                return;
+            }
+
+            headers.filter(`[data-sort="${this.sortBy}"]`)
+                .addClass(this.sortDirection === 'ASC' ? 'sort-asc' : 'sort-desc');
+        },
+
+        /**
+         * 모니터 목록 조회
+         */
+        load: function(page = 1) {
+            this.currentPage = page;
+            const limitRows = parseInt($('#limitRows').val()) || 20;
+            this.itemsPerPage = limitRows;
+
+            const params = {
+                page: page,  // 1-based index
+                size: limitRows
+            };
+
+            // 검색 조건 추가
+            const searchField = $('#searchField').val();
+            const searchValue = $('#searchValue').val();
+            if (searchField && searchValue) {
+                params.searchField = searchField;
+                params.searchValue = searchValue;
+            }
+
+            // 정렬 파라미터 추가
+            if (this.sortBy) {
+                params.sortBy = this.sortBy;
+                params.sortDirection = this.sortDirection;
+            }
+
+            $.ajax({
+                url: API_BASE_URL + '/monitors/page',
+                method: 'GET',
+                data: params,
+                success: (response) => {
+                    console.log('API Response:', response);
+
+                    if (response.success) {
+                        const pageData = response.data;
+                        const monitors = pageData.content || [];
+                        this.monitorsData = monitors;
+                        this.renderTable(monitors);
+                        this.totalItems = pageData.totalElements || 0;
+                        this.renderPagination();
+                    } else {
+                        console.error('Invalid response format:', response);
+                        this.renderTable([]);
+                        this.totalItems = 0;
+                        this.renderPagination();
+                    }
+                },
+                error: (xhr) => {
+                    console.error('Failed to load monitors:', xhr);
+                    Toast.error('모니터 목록을 불러오는데 실패했습니다.');
+                    this.renderTable([]);
+                    this.totalItems = 0;
+                    this.renderPagination();
+                }
+            });
+        },
+
+        /**
+         * 테이블 렌더링
+         */
+        renderTable: function(monitors) {
+            const tbody = $('#monitorTableBody');
+            tbody.empty();
+
+            if (!monitors || monitors.length === 0) {
+                tbody.append(`
+                    <tr>
+                        <td colspan="4" class="text-center py-4 text-body-secondary">
+                            조회된 데이터가 없습니다.
+                        </td>
+                    </tr>
+                `);
+                return;
+            }
+
+            monitors.forEach(monitor => {
+                const refreshTermDisplay = this.getRefreshTermDisplay(monitor.refreshTerm);
+
+                // 모니터 쿼리 표시 (길면 생략)
+                let monitorQuery = monitor.monitorQuery || '';
+                if (monitorQuery.length > 50) {
+                    monitorQuery = monitorQuery.substring(0, 50) + '...';
+                }
+
+                tbody.append(`
+                    <tr data-monitor-id="${monitor.monitorId || ''}" class="cursor-pointer">
+                        <td>${monitor.monitorId || ''}</td>
+                        <td>${monitor.monitorName || ''}</td>
+                        <td class="sp-text-start-padded">${monitorQuery}</td>
+                        <td>${refreshTermDisplay}</td>
+                    </tr>
+                `);
+            });
+        },
+
+        /**
+         * 새로고침 주기 표시 변환
+         */
+        getRefreshTermDisplay: function(code) {
+            const refreshTermMap = {
+                '': '선택',
+                '1': '1분',
+                '5': '5분',
+                '10': '10분',
+                '30': '30분',
+                '60': '1시간',
+                '180': '3시간',
+                '360': '6시간'
+            };
+            return refreshTermMap[code] || code;
+        },
+
+        /**
+         * 날짜 포맷팅 (YYYYMMDDHH24MISS -> YYYY/MM/DD HH24:MI:SS)
+         */
+        formatDateTime: function(dateTimeStr) {
+            if (!dateTimeStr || dateTimeStr.length !== 14) {
+                return dateTimeStr || '';
+            }
+            const year = dateTimeStr.substring(0, 4);
+            const month = dateTimeStr.substring(4, 6);
+            const day = dateTimeStr.substring(6, 8);
+            const hour = dateTimeStr.substring(8, 10);
+            const minute = dateTimeStr.substring(10, 12);
+            const second = dateTimeStr.substring(12, 14);
+
+            return `${year}/${month}/${day} ${hour}:${minute}:${second}`;
+        },
+
+        /**
+         * 페이징 렌더링
+         */
+        renderPagination: function() {
+            const totalPages = Math.ceil(this.totalItems / this.itemsPerPage);
+            const pagination = $('#pagination');
+            pagination.empty();
+
+            // 첫 페이지 버튼
+            pagination.append(`
+                <li class="page-item ${this.currentPage === 1 ? 'disabled' : ''}">
+                    <a class="page-link" href="#" onclick="Monitors.changePage(1); return false;">
+                        <i class="bi bi-chevron-double-left"></i>
+                    </a>
+                </li>
+                <li class="page-item ${this.currentPage === 1 ? 'disabled' : ''}">
+                    <a class="page-link" href="#" onclick="Monitors.changePage(${this.currentPage - 1}); return false;">
+                        <i class="bi bi-chevron-left"></i>
+                    </a>
+                </li>
+            `);
+
+            // 페이지 번호
+            const maxButtons = 5;
+            let startPage = Math.max(1, this.currentPage - Math.floor(maxButtons / 2));
+            let endPage = Math.min(totalPages, startPage + maxButtons - 1);
+
+            if (endPage - startPage + 1 < maxButtons) {
+                startPage = Math.max(1, endPage - maxButtons + 1);
+            }
+
+            for (let i = startPage; i <= endPage; i++) {
+                pagination.append(`
+                    <li class="page-item ${i === this.currentPage ? 'active' : ''}">
+                        <a class="page-link" href="#" onclick="Monitors.changePage(${i}); return false;">${i}</a>
+                    </li>
+                `);
+            }
+
+            // 마지막 페이지 버튼
+            pagination.append(`
+                <li class="page-item ${this.currentPage === totalPages || totalPages === 0 ? 'disabled' : ''}">
+                    <a class="page-link" href="#" onclick="Monitors.changePage(${this.currentPage + 1}); return false;">
+                        <i class="bi bi-chevron-right"></i>
+                    </a>
+                </li>
+                <li class="page-item ${this.currentPage === totalPages || totalPages === 0 ? 'disabled' : ''}">
+                    <a class="page-link" href="#" onclick="Monitors.changePage(${totalPages}); return false;">
+                        <i class="bi bi-chevron-double-right"></i>
+                    </a>
+                </li>
+            `);
+
+            // 페이지 정보
+            const start = this.totalItems === 0 ? 0 : (this.currentPage - 1) * this.itemsPerPage + 1;
+            const end = Math.min(this.currentPage * this.itemsPerPage, this.totalItems);
+            $('#pageInfo').text(`${start} - ${end} of ${this.totalItems} items`);
+        },
+
+        /**
+         * 페이지 변경
+         */
+        changePage: function(page) {
+            const totalPages = Math.ceil(this.totalItems / this.itemsPerPage);
+            if (page < 1 || page > totalPages) return;
+            this.load(page);
+        },
+
+        /**
+         * 전체 선택 토글
+         */
+        toggleSelectAll: function(checkbox) {
+            $('.row-checkbox').prop('checked', checkbox.checked);
+        },
+
+        /**
+         * 선택 삭제
+         */
+        exportExcel: function() {
+            const params = {};
+            const searchField = $('#searchField').val();
+            const searchValue = $('#searchValue').val();
+            if (searchField && searchValue) {
+                params.searchField = searchField;
+                params.searchValue = searchValue;
+            }
+            if (this.sortBy) {
+                params.sortBy = this.sortBy;
+                params.sortDirection = this.sortDirection || 'ASC';
+            }
+            const qs = $.param(params);
+            window.location.href = API_BASE_URL + '/monitors/export' + (qs ? '?' + qs : '');
+        },
+
+        print: function() {
+            const columns = [
+                { key: 'monitorId', label: '모니터ID' },
+                { key: 'monitorName', label: '모니터명' },
+                { key: 'monitorQuery', label: '모니터쿼리' },
+                { key: 'refreshTerm', label: '새로고침주기' }
+            ];
+            PrintUtil.print({ title: '현황판 목록', columns: columns, data: this.monitorsData });
+        },
+
+        deleteSelected: function() {
+            const selectedIds = [];
+            $('.row-checkbox:checked').each(function() {
+                selectedIds.push($(this).val());
+            });
+
+            if (selectedIds.length === 0) {
+                Toast.warning('삭제할 모니터를 선택하세요.');
+                return;
+            }
+
+            Toast.confirm(`선택한 ${selectedIds.length}개의 모니터를 삭제하시겠습니까?`, () => {
+                // 각 모니터를 순차적으로 삭제
+                let deletePromises = selectedIds.map(id => {
+                    return $.ajax({
+                        url: API_BASE_URL + '/monitors/' + id,
+                        method: 'DELETE'
+                    });
+                });
+
+                Promise.all(deletePromises)
+                    .then(() => {
+                        Toast.success('선택한 모니터가 삭제되었습니다.');
+                        this.load(this.currentPage);
+                    })
+                    .catch((xhr) => {
+                        console.error('Failed to delete monitors:', xhr);
+                        Toast.error('일부 모니터 삭제에 실패했습니다.');
+                        this.load(this.currentPage);
+                    });
+            });
+        }
+    };
+
+    // 페이지 로드 시 초기화
+    $(document).ready(function() {
+        console.log('Monitor page loaded');
+        Monitors.init();
+
+        // 초기 데이터 로드
+        Monitors.load();
+    });
+</script>
+</th:block>
+</body>
+</html>

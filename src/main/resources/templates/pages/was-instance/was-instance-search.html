@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<div th:fragment="search" class="card border p-2 mb-3">
+    <div class="d-flex flex-wrap align-items-center gap-2 mb-1 sp-search-row">
+        <div class="d-flex align-items-center gap-2 sp-search-fields">
+            <div class="sp-search-field-group">
+                <label class="form-label mb-0 small fw-medium">인스턴스명</label>
+                <select id="instanceNameSearchType" class="form-select form-select-sm sp-search-type-select">
+                    <option value="like">포함</option>
+                    <option value="equal">일치</option>
+                    <option value="start">시작</option>
+                </select>
+                <input type="text" id="instanceName" class="form-control form-control-sm sp-search-input" />
+            </div>
+
+            <div class="sp-search-field-group">
+                <label class="form-label mb-0 small fw-medium">인스턴스 타입</label>
+                <select id="instanceTypeFilter" class="form-select form-select-sm sp-search-filter">
+                    <option value="">전체</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="d-flex align-items-center gap-2 sp-search-actions">
+            <select id="limitRows" class="form-select form-select-sm sp-limit-select">
+                <option value="10" selected>10</option>
+                <option value="20">20</option>
+                <option value="50">50</option>
+                <option value="100">100</option>
+            </select>
+            <span class="sp-search-suffix">건씩</span>
+            <button type="button" class="btn btn-sm btn-primary" onclick="loadWasInstances(true)">조회</button>
+        </div>
+    </div>
+
+    <div class="d-flex flex-wrap align-items-center gap-2 mb-1">
+        <div class="d-flex align-items-center gap-2 sp-search-fields">
+            <div class="sp-search-field-group">
+                <label class="form-label mb-0 small fw-medium">운영모드</label>
+                <select id="operModeTypeFilter" class="form-select form-select-sm sp-search-filter">
+                    <option value="">전체</option>
+                </select>
+            </div>
+
+            <div class="sp-search-field-group">
+                <label class="form-label mb-0 small fw-medium">WAS 그룹ID</label>
+                <select id="wasGroupSearchType" class="form-select form-select-sm sp-search-type-select">
+                    <option value="like">포함</option>
+                    <option value="equal">일치</option>
+                    <option value="start">시작</option>
+                </select>
+                <input type="text" id="wasGroupId" class="form-control form-control-sm sp-search-input" />
+            </div>
+        </div>
+    </div>
+</div>
+</body>
+</html>

@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<div th:fragment="orgsModal">
+    <div id="gatewayOrgsModal" class="modal fade" tabindex="-1" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
+        <div class="modal-dialog modal-dialog-centered sp-modal-sm">
+        <div class="modal-content">
+        <div class="modal-header">
+            <span class="modal-title">관련기관</span>
+            <button class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+
+        <div class="modal-body">
+            <div class="table-responsive sp-scrollable-sm">
+                <table class="table table-sm table-hover sp-data-grid">
+                    <thead class="table-light">
+                    <tr>
+                        <th class="col-w-pct-20 sortable" data-sort="orgId">기관ID</th>
+                        <th class="col-w-pct-10 sortable" data-sort="ioType">수신/송신</th>
+                        <th class="col-w-pct-10 sortable" data-sort="reqResType">요청/응답</th>
+                        <th class="col-w-pct-10 sortable" data-sort="trxType">거래유형</th>
+                    </tr>
+                    </thead>
+                    <tbody id="gatewayOrgsBody">
+                    <tr>
+                        <td colspan="4" class="text-center py-4 text-body-secondary">
+                            데이터를 불러오는 중...
+                        </td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="modal-footer">
+            <button class="btn btn-secondary btn-sm" data-bs-dismiss="modal"><i class="bi bi-x-lg"></i> 닫기</button>
+        </div>
+        </div>
+        </div>
+    </div>
+</div>
+</body>
+</html>

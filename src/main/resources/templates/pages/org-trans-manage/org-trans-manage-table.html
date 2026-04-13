@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<div th:fragment="table" class="table-responsive">
+    <table class="table table-sm table-hover sp-data-grid" id="gatewayMappingTable">
+        <thead class="table-light">
+        <tr>
+            <th class="col-w-40"><input type="checkbox" id="mappingSelectAll"></th>
+            <th class="col-w-80">CRUD</th>
+            <th class="col-w-120 sortable" data-sort="orgId">기관 ID</th>
+            <th class="col-w-160 sortable" data-sort="ioType">어댑터/리스너</th>
+            <th class="col-w-110 sortable" data-sort="reqResType">요청/응답</th>
+            <th class="col-w-140 sortable" data-sort="trxType">거래유형</th>
+            <th class="sortable" data-sort="gwId">GATEWAY ID</th>
+        </tr>
+        </thead>
+        <tbody id="gatewayMappingTableBody">
+        <tr>
+            <td colspan="7" class="text-center py-4 text-body-secondary">
+                데이터를 불러오는 중...
+            </td>
+        </tr>
+        </tbody>
+    </table>
+</div>
+</body>
+</html>

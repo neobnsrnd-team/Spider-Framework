@@ -1,0 +1,471 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<div th:fragment="modal">
+    <!-- Component Detail/Create Modal -->
+    <div class="modal fade" id="componentModal" tabindex="-1" aria-labelledby="componentModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-xl">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="componentModalLabel">컴포넌트 상세</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="componentForm">
+
+                        <!-- ── 기본 정보 ── -->
+                        <div class="form-section">
+                            <!-- Row 1: 컴포넌트 ID, 컴포넌트명 -->
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                    <label class="form-label">컴포넌트 ID <span class="text-danger">*</span></label>
+                                    <input type="text" class="form-control" id="cmpModalComponentId" name="componentId"
+                                           maxlength="50" required>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">컴포넌트명 <span class="text-danger">*</span></label>
+                                    <input type="text" class="form-control" id="cmpModalComponentName" name="componentName"
+                                           maxlength="100" required>
+                                </div>
+                            </div>
+
+                            <!-- Row 2: 컴포넌트 유형, 생성 유형 -->
+                            <div class="row mb-3">
+                                <div class="col-md-3">
+                                    <label class="form-label">컴포넌트 유형 <span class="text-danger">*</span></label>
+                                    <input type="text" class="form-control" id="cmpModalComponentType" name="componentType"
+                                           maxlength="1" required>
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label">생성 유형</label>
+                                    <input type="text" class="form-control" id="cmpModalComponentCreateType"
+                                           name="componentCreateType" maxlength="1">
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label">Biz Group ID</label>
+                                    <input type="text" class="form-control" id="cmpModalBizGroupId" name="bizGroupId"
+                                           maxlength="20">
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label">사용여부 <span class="text-danger">*</span></label>
+                                    <select class="form-select" id="cmpModalUseYn" name="useYn"></select>
+                                </div>
+                            </div>
+
+                            <!-- Row 3: 클래스명 -->
+                            <div class="row mb-3">
+                                <div class="col-md-8">
+                                    <label class="form-label">클래스명 <span class="text-danger">*</span></label>
+                                    <input type="text" class="form-control" id="cmpModalComponentClassName"
+                                           name="componentClassName" maxlength="100" required>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">메서드명 <span class="text-danger">*</span></label>
+                                    <input type="text" class="form-control" id="cmpModalComponentMethodName"
+                                           name="componentMethodName" maxlength="50" required>
+                                </div>
+                            </div>
+
+                            <!-- Row 4: 컴포넌트 설명 -->
+                            <div class="row mb-3">
+                                <div class="col-12">
+                                    <label class="form-label">컴포넌트 설명</label>
+                                    <textarea class="form-control resize-vertical" id="cmpModalComponentDesc"
+                                              name="componentDesc" rows="2" maxlength="300"></textarea>
+                                </div>
+                            </div>
+
+                            <!-- Row 5: 시스템 정보 (상세 모드에서만 표시) -->
+                            <div class="row mb-3 d-hidden" id="cmpSystemInfoRow">
+                                <div class="col-md-6">
+                                    <label class="form-label">최종수정자 ID</label>
+                                    <input type="text" class="form-control" id="cmpModalLastUpdateUserId" readonly>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">최종수정일시</label>
+                                    <input type="text" class="form-control" id="cmpModalLastUpdateDtime" readonly>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- ── 파라미터 목록 ── -->
+                        <div class="form-section mt-3">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <h6 class="mb-0 fw-semibold">파라미터 목록</h6>
+                                <button type="button" class="btn btn-outline-primary btn-sm" id="btnAddParam">
+                                    <i class="bi bi-plus"></i> 파라미터 추가
+                                </button>
+                            </div>
+                            <div class="table-responsive">
+                                <table class="table table-sm table-bordered mb-0" id="paramTable">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th style="width: 60px;">순서</th>
+                                            <th style="width: 180px;">파라미터 키 <span class="text-danger">*</span></th>
+                                            <th>파라미터 설명</th>
+                                            <th style="width: 180px;">기본값</th>
+                                            <th style="width: 60px;"></th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="paramTableBody">
+                                        <!-- 동적 행 생성 -->
+                                    </tbody>
+                                </table>
+                            </div>
+                            <p class="text-muted small mt-1 mb-0" id="paramEmptyMsg">등록된 파라미터가 없습니다.</p>
+                        </div>
+
+                    </form>
+                </div>
+                <!-- Modal Footer -->
+                <div class="modal-footer justify-content-end">
+                    <button th:if="${userAuthorities != null and userAuthorities.contains('COMPONENT:W')}"
+                            type="button" class="btn btn-primary btn-sm d-hidden" id="btnComponentSave">
+                        <i class="bi bi-floppy"></i> 저장
+                    </button>
+                    <button th:if="${userAuthorities != null and userAuthorities.contains('COMPONENT:W')}"
+                            type="button" class="btn btn-danger btn-sm d-hidden" id="btnComponentDelete">
+                        <i class="bi bi-trash"></i> 삭제
+                    </button>
+                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal"><i class="bi bi-x-lg"></i> 닫기</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        (function () {
+            // 정적 콤보 초기화
+            ComboManager.simple.populateSelect('#cmpModalUseYn', 'USE_YN');
+
+            window.ComponentModal = {
+                mode: 'detail',
+                currentComponentId: null,
+
+                // ── 모달 제어 ──────────────────────────────────────────
+
+                _showModal: function () {
+                    const modal = bootstrap.Modal.getOrCreateInstance(document.getElementById('componentModal'));
+                    modal.show();
+                },
+
+                _hideModal: function () {
+                    const modalEl = document.getElementById('componentModal');
+                    const modal = bootstrap.Modal.getInstance(modalEl);
+                    if (modal) modal.hide();
+                },
+
+                // ── 진입점 ────────────────────────────────────────────
+
+                openForDetail: function (componentId) {
+                    this.mode = 'detail';
+                    this.currentComponentId = componentId;
+
+                    $.ajax({
+                        url: API_BASE_URL + '/components/' + encodeURIComponent(componentId),
+                        method: 'GET',
+                        success: (response) => {
+                            if (response.success && response.data) {
+                                const data = response.data;
+                                const hasWrite = component_access;
+
+                                $('#componentModalLabel').text('컴포넌트 상세');
+                                this._fillForm(data);
+                                this._fillParams(data.params || []);
+                                this._setFieldsReadonly(!hasWrite);
+
+                                if (hasWrite) {
+                                    $('#cmpModalComponentId').prop('readonly', true).prop('disabled', true);
+                                }
+
+                                $('#cmpSystemInfoRow').removeClass('d-hidden');
+                                $('#btnComponentSave').toggleClass('d-hidden', !hasWrite);
+                                $('#btnComponentDelete').toggleClass('d-hidden', !hasWrite);
+                                $('#btnAddParam').toggleClass('d-hidden', !hasWrite);
+
+                                this._showModal();
+                            } else {
+                                Toast.error('컴포넌트 정보를 불러오는데 실패했습니다.');
+                            }
+                        },
+                        error: () => Toast.error('컴포넌트 정보를 불러오는데 실패했습니다.')
+                    });
+                },
+
+                openForCreate: function () {
+                    this.mode = 'create';
+                    this.currentComponentId = null;
+
+                    $('#componentModalLabel').text('컴포넌트 등록');
+                    $('#componentForm')[0].reset();
+                    $('#paramTableBody').empty();
+                    this._updateParamEmptyMsg();
+                    this._setFieldsReadonly(false);
+
+                    $('#cmpModalComponentId').prop('readonly', false).prop('disabled', false);
+                    $('#cmpSystemInfoRow').addClass('d-hidden');
+                    $('#btnComponentSave').removeClass('d-hidden');
+                    $('#btnComponentDelete').addClass('d-hidden');
+                    $('#btnAddParam').removeClass('d-hidden');
+
+                    this._showModal();
+                },
+
+                // ── 폼 채우기 ─────────────────────────────────────────
+
+                _fillForm: function (data) {
+                    $('#cmpModalComponentId').val(data.componentId || '');
+                    $('#cmpModalComponentName').val(data.componentName || '');
+                    $('#cmpModalComponentDesc').val(data.componentDesc || '');
+                    $('#cmpModalComponentType').val(data.componentType || '');
+                    $('#cmpModalComponentClassName').val(data.componentClassName || '');
+                    $('#cmpModalComponentMethodName').val(data.componentMethodName || '');
+                    $('#cmpModalComponentCreateType').val(data.componentCreateType || '');
+                    $('#cmpModalBizGroupId').val(data.bizGroupId || '');
+                    $('#cmpModalUseYn').val(data.useYn || 'Y');
+                    $('#cmpModalLastUpdateUserId').val(data.lastUpdateUserId || '');
+                    $('#cmpModalLastUpdateDtime').val(this._formatDatetime(data.lastUpdateDtime));
+                },
+
+                _setFieldsReadonly: function (readonly) {
+                    ['#cmpModalComponentId', '#cmpModalComponentName', '#cmpModalComponentDesc',
+                     '#cmpModalComponentType', '#cmpModalComponentClassName', '#cmpModalComponentMethodName',
+                     '#cmpModalComponentCreateType', '#cmpModalBizGroupId'].forEach(id => {
+                        $(id).prop('readonly', readonly);
+                    });
+                    $('#cmpModalUseYn').prop('disabled', readonly);
+
+                    // 파라미터 테이블 입력 필드 읽기 전용 처리
+                    $('#paramTableBody input').prop('readonly', readonly);
+                    $('#paramTableBody .btn-remove-param').toggleClass('d-none', readonly);
+                },
+
+                // ── 파라미터 행 관리 ──────────────────────────────────
+
+                _fillParams: function (params) {
+                    $('#paramTableBody').empty();
+                    params.forEach(p => this._addParamRow(p));
+                    this._updateParamEmptyMsg();
+                },
+
+                _addParamRow: function (param) {
+                    const seq = ($('#paramTableBody tr').length + 1);
+                    const paramSeqNo = (param && param.paramSeqNo != null) ? param.paramSeqNo : seq;
+                    const row = `
+                        <tr>
+                            <td class="text-center align-middle">
+                                <span class="param-seq">${paramSeqNo}</span>
+                            </td>
+                            <td>
+                                <input type="text" class="form-control form-control-sm param-key"
+                                       value="${this._esc(param ? param.paramKey : '')}"
+                                       maxlength="100" placeholder="파라미터 키" required>
+                            </td>
+                            <td>
+                                <input type="text" class="form-control form-control-sm param-desc"
+                                       value="${this._esc(param ? (param.paramDesc || '') : '')}"
+                                       maxlength="300" placeholder="파라미터 설명">
+                            </td>
+                            <td>
+                                <input type="text" class="form-control form-control-sm param-default"
+                                       value="${this._esc(param ? (param.defaultParamValue || '') : '')}"
+                                       maxlength="500" placeholder="기본값">
+                            </td>
+                            <td class="text-center align-middle">
+                                <button type="button" class="btn btn-outline-danger btn-sm btn-remove-param">
+                                    <i class="bi bi-dash"></i>
+                                </button>
+                            </td>
+                        </tr>`;
+                    $('#paramTableBody').append(row);
+                    this._updateParamEmptyMsg();
+                },
+
+                _collectParams: function () {
+                    const params = [];
+                    $('#paramTableBody tr').each(function (idx) {
+                        params.push({
+                            paramSeqNo: idx + 1,
+                            paramKey: $(this).find('.param-key').val().trim(),
+                            paramDesc: $(this).find('.param-desc').val().trim() || null,
+                            defaultParamValue: $(this).find('.param-default').val().trim() || null
+                        });
+                    });
+                    return params;
+                },
+
+                _updateParamEmptyMsg: function () {
+                    const hasRows = $('#paramTableBody tr').length > 0;
+                    $('#paramEmptyMsg').toggleClass('d-none', hasRows);
+                },
+
+                // ── 저장 / 삭제 ───────────────────────────────────────
+
+                save: function () {
+                    if (!this._validateForm()) return;
+
+                    const params = this._collectParams();
+                    const formData = {
+                        componentName: $('#cmpModalComponentName').val().trim(),
+                        componentDesc: $('#cmpModalComponentDesc').val().trim() || null,
+                        componentType: $('#cmpModalComponentType').val().trim(),
+                        componentClassName: $('#cmpModalComponentClassName').val().trim(),
+                        componentMethodName: $('#cmpModalComponentMethodName').val().trim(),
+                        componentCreateType: $('#cmpModalComponentCreateType').val().trim() || null,
+                        bizGroupId: $('#cmpModalBizGroupId').val().trim() || null,
+                        useYn: $('#cmpModalUseYn').val(),
+                        params: params.length > 0 ? params : []
+                    };
+
+                    if (this.mode === 'create') {
+                        formData.componentId = $('#cmpModalComponentId').val().trim();
+                        $.ajax({
+                            url: API_BASE_URL + '/components',
+                            method: 'POST',
+                            contentType: 'application/json',
+                            data: JSON.stringify(formData),
+                            success: (response) => {
+                                if (response.success) {
+                                    Toast.success('컴포넌트가 등록되었습니다.');
+                                    this._hideModal();
+                                    if (window.ComponentPage) ComponentPage.load();
+                                } else {
+                                    Toast.error(response.message || '컴포넌트 등록에 실패했습니다.');
+                                }
+                            },
+                            error: (xhr) => {
+                                Toast.error(xhr.responseJSON?.message || '컴포넌트 등록에 실패했습니다.');
+                            }
+                        });
+                    } else {
+                        $.ajax({
+                            url: API_BASE_URL + '/components/' + encodeURIComponent(this.currentComponentId),
+                            method: 'PUT',
+                            contentType: 'application/json',
+                            data: JSON.stringify(formData),
+                            success: (response) => {
+                                if (response.success) {
+                                    Toast.success('컴포넌트가 수정되었습니다.');
+                                    this._hideModal();
+                                    if (window.ComponentPage) ComponentPage.load();
+                                } else {
+                                    Toast.error(response.message || '컴포넌트 수정에 실패했습니다.');
+                                }
+                            },
+                            error: (xhr) => {
+                                Toast.error(xhr.responseJSON?.message || '컴포넌트 수정에 실패했습니다.');
+                            }
+                        });
+                    }
+                },
+
+                delete: function () {
+                    Toast.confirm('정말 삭제하시겠습니까?', () => {
+                        $.ajax({
+                            url: API_BASE_URL + '/components/' + encodeURIComponent(this.currentComponentId),
+                            method: 'DELETE',
+                            success: (response) => {
+                                if (response.success) {
+                                    Toast.success('컴포넌트가 삭제되었습니다.');
+                                    this._hideModal();
+                                    if (window.ComponentPage) ComponentPage.load();
+                                } else {
+                                    Toast.error(response.message || '컴포넌트 삭제에 실패했습니다.');
+                                }
+                            },
+                            error: (xhr) => {
+                                Toast.error(xhr.responseJSON?.message || '컴포넌트 삭제에 실패했습니다.');
+                            }
+                        });
+                    });
+                },
+
+                // ── 유효성 검증 ───────────────────────────────────────
+
+                _validateForm: function () {
+                    if (this.mode === 'create') {
+                        if (!$('#cmpModalComponentId').val().trim()) {
+                            Toast.warning('컴포넌트 ID를 입력해주세요.');
+                            $('#cmpModalComponentId').focus();
+                            return false;
+                        }
+                    }
+                    if (!$('#cmpModalComponentName').val().trim()) {
+                        Toast.warning('컴포넌트명을 입력해주세요.');
+                        $('#cmpModalComponentName').focus();
+                        return false;
+                    }
+                    if (!$('#cmpModalComponentType').val().trim()) {
+                        Toast.warning('컴포넌트 유형을 입력해주세요.');
+                        $('#cmpModalComponentType').focus();
+                        return false;
+                    }
+                    if (!$('#cmpModalComponentClassName').val().trim()) {
+                        Toast.warning('클래스명을 입력해주세요.');
+                        $('#cmpModalComponentClassName').focus();
+                        return false;
+                    }
+                    if (!$('#cmpModalComponentMethodName').val().trim()) {
+                        Toast.warning('메서드명을 입력해주세요.');
+                        $('#cmpModalComponentMethodName').focus();
+                        return false;
+                    }
+                    // 파라미터 행 유효성: paramKey 필수
+                    let paramValid = true;
+                    $('#paramTableBody tr').each(function () {
+                        if (!$(this).find('.param-key').val().trim()) {
+                            Toast.warning('파라미터 키를 입력해주세요.');
+                            $(this).find('.param-key').focus();
+                            paramValid = false;
+                            return false;
+                        }
+                    });
+                    return paramValid;
+                },
+
+                // ── 유틸 ──────────────────────────────────────────────
+
+                _formatDatetime: function (dateStr) {
+                    if (!dateStr || dateStr.length < 14) return dateStr || '';
+                    return dateStr.substring(0, 4) + '/' +
+                           dateStr.substring(4, 6) + '/' +
+                           dateStr.substring(6, 8) + ' ' +
+                           dateStr.substring(8, 10) + ':' +
+                           dateStr.substring(10, 12) + ':' +
+                           dateStr.substring(12, 14);
+                },
+
+                _esc: function (str) {
+                    if (!str) return '';
+                    return String(str)
+                        .replace(/&/g, '&amp;')
+                        .replace(/"/g, '&quot;')
+                        .replace(/</g, '&lt;')
+                        .replace(/>/g, '&gt;')
+                        .replace(/'/g, '&#39;');
+                }
+            };
+
+            // ── 이벤트 바인딩 ──────────────────────────────────────────
+
+            $(document).off('click', '#btnComponentSave').on('click', '#btnComponentSave', function () {
+                ComponentModal.save();
+            });
+
+            $(document).off('click', '#btnComponentDelete').on('click', '#btnComponentDelete', function () {
+                ComponentModal.delete();
+            });
+
+            $(document).off('click', '#btnAddParam').on('click', '#btnAddParam', function () {
+                ComponentModal._addParamRow(null);
+            });
+
+            $(document).off('click', '.btn-remove-param').on('click', '.btn-remove-param', function () {
+                $(this).closest('tr').remove();
+                ComponentModal._updateParamEmptyMsg();
+            });
+        })();
+    </script>
+</div>
+</body>
+</html>

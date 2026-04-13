@@ -1,0 +1,655 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<script th:fragment="script">
+    // Access User Management Namespace
+    window.AccessUser = (function() {
+        let accessors = [];
+        let currentPage = 1;
+        let totalItems = 0;
+        let itemsPerPage = 20; // 기본값 20으로 변경
+        let sortBy = null;
+        let sortDirection = null;
+
+        // Initialize
+        function init() {
+            // Initialize page size selector
+            const limitRows = document.getElementById('limitRows');
+            if (limitRows) {
+                limitRows.value = itemsPerPage;
+                limitRows.addEventListener('change', function() {
+                    itemsPerPage = parseInt(this.value);
+                    currentPage = 1;
+                    search();
+                });
+            }
+
+            // Initialize refresh button
+            const btnRefresh = document.getElementById('btnRefresh');
+            if (btnRefresh) {
+                btnRefresh.addEventListener('click', search);
+            }
+
+            // Attach sort handlers
+            attachSortHandlers();
+
+            search();
+        }
+
+        // Attach sort event handlers
+        function attachSortHandlers() {
+            const sortableHeaders = document.querySelectorAll('#accessorTable thead th[data-sort]');
+            sortableHeaders.forEach(header => {
+                header.classList.add('sortable');
+                header.addEventListener('click', function() {
+                    const sortKey = this.getAttribute('data-sort');
+                    if (!sortKey) return;
+
+                    // 3단계 순환: ASC → DESC → DEFAULT
+                    if (sortBy === sortKey) {
+                        if (sortDirection === 'ASC') {
+                            sortDirection = 'DESC';
+                        } else if (sortDirection === 'DESC') {
+                            sortBy = null;
+                            sortDirection = null;
+                        }
+                    } else {
+                        sortBy = sortKey;
+                        sortDirection = 'ASC';
+                    }
+
+                    currentPage = 1;
+                    updateSortIndicators();
+                    search();
+                });
+            });
+        }
+
+        // Update sort indicators
+        function updateSortIndicators() {
+            const headers = document.querySelectorAll('#accessorTable thead th.sortable');
+            headers.forEach(header => {
+                header.classList.remove('sort-asc', 'sort-desc');
+            });
+
+            if (!sortBy || !sortDirection) {
+                return;
+            }
+
+            const sortedHeader = document.querySelector(`#accessorTable thead th[data-sort="${sortBy}"]`);
+            if (sortedHeader) {
+                if (sortDirection === 'ASC') {
+                    sortedHeader.classList.add('sort-asc');
+                } else {
+                    sortedHeader.classList.add('sort-desc');
+                }
+            }
+        }
+
+        // Search accessors with pagination
+        function search() {
+            const searchParams = new URLSearchParams({
+                page: currentPage,
+                size: itemsPerPage
+            });
+
+            const trxId = document.getElementById('searchTrxId').value;
+            const gubunType = document.getElementById('searchGubunType').value;
+            const custUserId = document.getElementById('searchCustUserId').value;
+
+            if (trxId) searchParams.append('trxId', trxId);
+            if (gubunType) searchParams.append('gubunType', gubunType);
+            if (custUserId) searchParams.append('custUserId', custUserId);
+
+            // 정렬 파라미터 추가
+            if (sortBy) {
+                searchParams.append('sortBy', sortBy);
+                searchParams.append('sortDirection', sortDirection);
+            }
+
+            fetch(`${API_BASE_URL}/access-users/page?${searchParams.toString()}`)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    if (data.success) {
+                        const pageData = data.data;
+                        accessors = pageData.content || [];
+                        totalItems = pageData.totalElements || 0;
+                        renderTable(accessors);
+                        renderPagination();
+                    } else {
+                        Toast.error(data.message || '검색 실패');
+                    }
+                })
+                .catch(error => {
+                    Toast.error('검색 중 오류가 발생했습니다: ' + error.message);
+                });
+        }
+
+        // Render pagination controls
+        function renderPagination() {
+            const totalPages = Math.ceil(totalItems / itemsPerPage);
+            const pagination = document.getElementById('pagination');
+            if (!pagination) return;
+
+            let paginationHtml = '';
+
+            // First page button
+            paginationHtml += `
+                <li class="page-item ${currentPage === 1 ? 'disabled' : ''}">
+                    <a class="page-link" href="#" onclick="window.AccessUser.changePage(1); return false;">
+                        <i class="bi bi-chevron-double-left"></i>
+                    </a>
+                </li>
+            `;
+
+            // Previous page button
+            paginationHtml += `
+                <li class="page-item ${currentPage === 1 ? 'disabled' : ''}">
+                    <a class="page-link" href="#" onclick="window.AccessUser.changePage(${currentPage - 1}); return false;">
+                        <i class="bi bi-chevron-left"></i>
+                    </a>
+                </li>
+            `;
+
+            // Page number buttons
+            const maxButtons = 5;
+            let startPage = Math.max(1, currentPage - Math.floor(maxButtons / 2));
+            let endPage = Math.min(totalPages, startPage + maxButtons - 1);
+
+            if (endPage - startPage + 1 < maxButtons) {
+                startPage = Math.max(1, endPage - maxButtons + 1);
+            }
+
+            for (let i = startPage; i <= endPage; i++) {
+                paginationHtml += `
+                    <li class="page-item ${i === currentPage ? 'active' : ''}">
+                        <a class="page-link" href="#" onclick="window.AccessUser.changePage(${i}); return false;">${i}</a>
+                    </li>
+                `;
+            }
+
+            // Next page button
+            paginationHtml += `
+                <li class="page-item ${currentPage === totalPages || totalPages === 0 ? 'disabled' : ''}">
+                    <a class="page-link" href="#" onclick="window.AccessUser.changePage(${currentPage + 1}); return false;">
+                        <i class="bi bi-chevron-right"></i>
+                    </a>
+                </li>
+            `;
+
+            // Last page button
+            paginationHtml += `
+                <li class="page-item ${currentPage === totalPages || totalPages === 0 ? 'disabled' : ''}">
+                    <a class="page-link" href="#" onclick="window.AccessUser.changePage(${totalPages}); return false;">
+                        <i class="bi bi-chevron-double-right"></i>
+                    </a>
+                </li>
+            `;
+
+            pagination.innerHTML = paginationHtml;
+
+            // Update page info
+            const start = totalItems === 0 ? 0 : (currentPage - 1) * itemsPerPage + 1;
+            const end = Math.min(currentPage * itemsPerPage, totalItems);
+            const pageInfo = document.getElementById('pageInfo');
+            if (pageInfo) {
+                pageInfo.textContent = `${start} - ${end} of ${totalItems} items`;
+            }
+        }
+
+        // Change page
+        function changePage(page) {
+            const totalPages = Math.ceil(totalItems / itemsPerPage);
+            if (page < 1 || page > totalPages) return;
+            currentPage = page;
+            search();
+        }
+
+        // Render table
+        function renderTable(data) {
+            const tbody = document.getElementById('accessorTableBody');
+            if (!tbody) return;
+            tbody.innerHTML = '';
+
+            if (data.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="6" class="text-center py-4 text-body-secondary">
+                            조회된 데이터가 없습니다.
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+
+            data.forEach((accessor, index) => {
+                const row = createTableRow(accessor, index);
+                tbody.appendChild(row);
+            });
+        }
+
+        // Show read-only field alert
+        function showReadOnlyAlert() {
+            Toast.info('해당 필드는 수정이 불가능합니다.');
+        }
+
+        // Show primary key alert
+        function showPrimaryKeyAlert() {
+            Toast.info('Primary key 필드는 추가시에만 입력이 가능합니다.');
+        }
+
+        // Create table row
+        function createTableRow(accessor, index) {
+            const tr = document.createElement('tr');
+            tr.setAttribute('data-index', index);
+            // 복합 PK를 JSON으로 저장
+            tr.setAttribute('data-pk', JSON.stringify({
+                gubunType: accessor.gubunType,
+                trxId: accessor.trxId,
+                custUserId: accessor.custUserId
+            }));
+
+            // 원본 데이터를 JSON으로 저장 (UI와 데이터 로직 분리)
+            tr.setAttribute('data-original-accessor', JSON.stringify(accessor));
+
+            const gubunTypeLabel = accessor.gubunType === 'T' ? '거래' : '서비스';
+            const useYnOptions = [
+                { value: 'Y', label: '사용' },
+                { value: 'N', label: '미사용' }
+            ];
+
+            tr.innerHTML = `
+                <td class="text-center">
+                    <input type="checkbox" class="row-checkbox" data-index="${index}">
+                </td>
+                <td class="text-center cursor-pointer" onclick="window.AccessUser.showReadOnlyAlert()">
+                    <span></span>
+                </td>
+                <td class="cursor-pointer" onclick="window.AccessUser.showPrimaryKeyAlert()">
+                    <span class="text-readonly">${gubunTypeLabel}</span>
+                </td>
+                <td class="cursor-pointer" onclick="window.AccessUser.showPrimaryKeyAlert()">
+                    <span class="text-readonly">${accessor.trxId || ''}</span>
+                </td>
+                <td class="cursor-pointer" onclick="window.AccessUser.showPrimaryKeyAlert()">
+                    <span class="text-readonly">${accessor.custUserId || ''}</span>
+                </td>
+                <td>
+                    <select class="editable-field" data-field="useYn" onchange="window.AccessUser.markAsModified(this)">
+                        ${useYnOptions.map(opt =>
+                            `<option value="${opt.value}" ${accessor.useYn === opt.value ? 'selected' : ''}>${opt.label}</option>`
+                        ).join('')}
+                    </select>
+                </td>
+            `;
+
+            return tr;
+        }
+
+        // Mark row as modified
+        function markAsModified(element) {
+            const row = element.closest('tr');
+            if (!row.classList.contains('row-new')) {
+                row.classList.add('row-modified');
+            }
+            // Update original data
+            const data = extractRowData(row);
+            row.setAttribute('data-original', JSON.stringify(data));
+        }
+
+        // Toggle check all
+        function toggleCheckAll(checkbox) {
+            const checkboxes = document.querySelectorAll('.row-checkbox');
+            checkboxes.forEach(cb => cb.checked = checkbox.checked);
+        }
+
+        // Add new row
+        function addNewRow() {
+            const tbody = document.getElementById('accessorTableBody');
+            const tr = document.createElement('tr');
+            tr.classList.add('row-new');
+            tr.setAttribute('data-is-new', 'true');
+
+            tr.innerHTML = `
+                <td class="text-center">
+                    <input type="checkbox" class="row-checkbox">
+                </td>
+                <td class="text-center">
+                    <span class="badge bg-success">추가</span>
+                </td>
+                <td>
+                    <select class="editable-field" data-field="gubunType" onchange="window.AccessUser.markAsModified(this)">
+                        <option value="T">거래</option>
+                        <option value="S">서비스</option>
+                    </select>
+                </td>
+                <td>
+                    <input type="text" class="editable-field" placeholder="중지거래 접근 허용자" data-field="trxId" required>
+                </td>
+                <td>
+                    <input type="text" class="editable-field" placeholder="접근허용고객 사용자ID" data-field="custUserId" onchange="window.AccessUser.markAsModified(this)" required>
+                </td>
+                <td>
+                    <select class="editable-field" data-field="useYn" onchange="window.AccessUser.markAsModified(this)">
+                        <option value="Y">사용</option>
+                        <option value="N">미사용</option>
+                    </select>
+                </td>
+            `;
+
+            tbody.appendChild(tr);
+        }
+
+        // Mark selected rows for deletion
+        function deleteSelectedRows() {
+            const checkboxes = document.querySelectorAll('.row-checkbox:checked');
+            if (checkboxes.length === 0) {
+                Toast.warning('삭제할 항목을 선택해주세요.');
+                return;
+            }
+
+            let deleteCount = 0;
+            checkboxes.forEach(checkbox => {
+                const row = checkbox.closest('tr');
+                const isNew = row.getAttribute('data-is-new') === 'true';
+
+                if (isNew) {
+                    // 신규 행은 바로 DOM에서 제거 (아직 DB에 없음)
+                    row.remove();
+                    deleteCount++;
+                } else if (!row.classList.contains('row-deleted')) {
+                    // 기존 행은 삭제 마킹
+                    row.classList.add('row-deleted');
+                    row.classList.remove('row-modified'); // 수정 마크 제거
+
+                    // CRUD 컬럼에 "삭제" 배지 표시
+                    const crudCell = row.querySelectorAll('td')[1];
+                    crudCell.innerHTML = '<span class="badge bg-danger">삭제</span>';
+
+                    // 체크박스 해제
+                    checkbox.checked = false;
+                    deleteCount++;
+                }
+            });
+
+            if (deleteCount > 0) {
+                Toast.success(`${deleteCount}개 항목이 삭제 예정으로 표시되었습니다. "변경사항 저장" 버튼을 눌러 저장하세요.`);
+            }
+        }
+
+        // Save all changes (modified, new, and deleted rows)
+        function saveAllChanges() {
+            const modifiedRows = document.querySelectorAll('#accessorTableBody tr.row-modified, #accessorTableBody tr.row-new');
+            const deletedRows = document.querySelectorAll('#accessorTableBody tr.row-deleted');
+
+            if (modifiedRows.length === 0 && deletedRows.length === 0) {
+                Toast.warning('변경된 내용이 없습니다.');
+                return;
+            }
+
+            // 필수 값 검증 (신규 행) — confirm 이전에 수행
+            let validationError = false;
+            modifiedRows.forEach(row => {
+                if (validationError) return;
+                const data = extractRowData(row);
+                const isNew = row.getAttribute('data-is-new') === 'true';
+                if (isNew) {
+                    if (!data.trxId || data.trxId.trim() === '') {
+                        Toast.warning('중지거래 접근 허용자는 필수입니다.');
+                        validationError = true;
+                        return;
+                    }
+                    if (!data.custUserId || data.custUserId.trim() === '') {
+                        Toast.warning('접근허용고객 사용자ID는 필수입니다.');
+                        validationError = true;
+                        return;
+                    }
+                }
+            });
+            if (validationError) return;
+
+            const totalChanges = modifiedRows.length + deletedRows.length;
+            Toast.confirm(`${totalChanges}개의 변경사항을 저장하시겠습니까?`, function() {
+                _doSaveAllChanges(modifiedRows, deletedRows);
+            });
+        }
+
+        function _doSaveAllChanges(modifiedRows, deletedRows) {
+            // 저장 버튼 비활성화 (중복 클릭 방지)
+            const saveButton = document.getElementById('btnSaveChanges');
+            if (saveButton) {
+                saveButton.disabled = true;
+                saveButton.textContent = '저장 중...';
+            }
+
+            const updates = [];
+            const creates = [];
+            const deletes = [];
+
+            // 수정/추가 행 처리
+            modifiedRows.forEach(row => {
+                const data = extractRowData(row);
+                const isNew = row.getAttribute('data-is-new') === 'true';
+
+                if (isNew) {
+                    creates.push(data);
+                } else {
+                    updates.push(data);
+                }
+            });
+
+            // 삭제 행 처리
+            deletedRows.forEach(row => {
+                const pkStr = row.getAttribute('data-pk');
+                if (pkStr) {
+                    deletes.push(JSON.parse(pkStr));
+                }
+            });
+
+            let successCount = 0;
+            let errorCount = 0;
+            const promises = [];
+
+            // 신규 생성
+            creates.forEach(data => {
+                console.log('Creating access user:', data);
+                promises.push(
+                    fetch(API_BASE_URL + '/access-users', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(data)
+                    })
+                    .then(response => {
+                        if (!response.ok) {
+                            return response.json().then(errorData => {
+                                console.error('Create failed:', errorData);
+                                throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+                            }).catch(() => {
+                                throw new Error(`HTTP error! status: ${response.status}`);
+                            });
+                        }
+                        return response.json();
+                    })
+                    .then((result) => {
+                        console.log('Create success:', result);
+                        successCount++;
+                    })
+                    .catch((error) => {
+                        console.error('Create error:', error);
+                        errorCount++;
+                    })
+                );
+            });
+
+            // 기존 수정 (body에 PK 3개 포함)
+            updates.forEach(data => {
+                console.log('Updating access user:', data);
+                promises.push(
+                    fetch(API_BASE_URL + '/access-users', {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(data)
+                    })
+                    .then(response => {
+                        if (!response.ok) {
+                            return response.json().then(errorData => {
+                                console.error('Update failed:', errorData);
+                                throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+                            }).catch(() => {
+                                throw new Error(`HTTP error! status: ${response.status}`);
+                            });
+                        }
+                        return response.json();
+                    })
+                    .then((result) => {
+                        console.log('Update success:', result);
+                        successCount++;
+                    })
+                    .catch((error) => {
+                        console.error('Update error:', error);
+                        errorCount++;
+                    })
+                );
+            });
+
+            // 삭제 (복합 PK 경로)
+            deletes.forEach(pk => {
+                console.log('Deleting access user:', pk);
+                promises.push(
+                    fetch(`${API_BASE_URL}/access-users/${encodeURIComponent(pk.gubunType)}/${encodeURIComponent(pk.trxId)}/${encodeURIComponent(pk.custUserId)}`, {
+                        method: 'DELETE'
+                    })
+                    .then(response => {
+                        if (!response.ok) {
+                            return response.json().then(errorData => {
+                                console.error('Delete failed:', errorData);
+                                throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+                            }).catch(() => {
+                                throw new Error(`HTTP error! status: ${response.status}`);
+                            });
+                        }
+                        return response.json();
+                    })
+                    .then((result) => {
+                        console.log('Delete success:', result);
+                        successCount++;
+                    })
+                    .catch((error) => {
+                        console.error('Delete error:', error);
+                        errorCount++;
+                    })
+                );
+            });
+
+            Promise.all(promises).finally(() => {
+                // 저장 버튼 활성화
+                const saveButton = document.getElementById('btnSaveChanges');
+                if (saveButton) {
+                    saveButton.disabled = false;
+                    saveButton.textContent = '변경사항 저장';
+                }
+
+                if (errorCount === 0) {
+                    Toast.success(`${successCount}개 항목이 저장되었습니다.`);
+                } else {
+                    Toast.success(`저장 완료: ${successCount}개\n실패: ${errorCount}개\n\n※ 실패 원인은 브라우저 콘솔(F12)에서 확인하세요.`);
+                }
+                // 저장 후 첫 페이지로 이동하여 새로고침
+                currentPage = 1;
+                search();
+            });
+        }
+
+        // Extract row data
+        function extractRowData(row) {
+            const isNew = row.getAttribute('data-is-new') === 'true';
+            const data = {};
+
+            if (isNew) {
+                // 신규 행: input/select 필드에서 값 읽기
+                data.trxId = row.querySelector('[data-field="trxId"]')?.value || '';
+                data.gubunType = row.querySelector('[data-field="gubunType"]')?.value || '';
+                data.custUserId = row.querySelector('[data-field="custUserId"]')?.value || '';
+                data.useYn = row.querySelector('[data-field="useYn"]')?.value || 'Y';
+            } else {
+                // 기존 행: 원본 데이터에서 읽기 (UI와 데이터 로직 분리)
+                const originalAccessor = JSON.parse(row.getAttribute('data-original-accessor') || '{}');
+
+                data.trxId = originalAccessor.trxId;
+                data.gubunType = originalAccessor.gubunType;
+                data.custUserId = originalAccessor.custUserId;
+
+                // useYn만 수정 가능하므로 select에서 현재 값 읽기
+                data.useYn = row.querySelector('[data-field="useYn"]')?.value || 'Y';
+            }
+
+            return data;
+        }
+
+        // Open reload modal
+        function openReloadModal() {
+            WasSelectReloadModal.open({
+                title: '접근허용자 정보 Reload',
+                onExecute: function(instanceIds) {
+                    // TODO: 접근허용자 Reload API 구현 후 연동
+                    console.log('Reloading WAS instances:', instanceIds);
+                    Toast.info(instanceIds.join(', ') + ' Reload 요청이 전송되었습니다.');
+                    WasSelectReloadModal.resetButton();
+                }
+            });
+        }
+
+        // Public API
+        return {
+            init,
+            search,
+            changePage,
+            toggleCheckAll,
+            markAsModified,
+            addNewRow,
+            deleteSelectedRows,
+            saveAllChanges,
+            openReloadModal,
+            showReadOnlyAlert,
+            showPrimaryKeyAlert
+        };
+    })();
+
+    // Initialize immediately (for AJAX-loaded pages, DOMContentLoaded may have already fired)
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', function() {
+            window.AccessUser.init();
+            WasSelectReloadModal.init();
+            bindToolbarButtons();
+        });
+    } else {
+        // DOM already loaded, run init immediately
+        window.AccessUser.init();
+        WasSelectReloadModal.init();
+        bindToolbarButtons();
+    }
+
+    function bindToolbarButtons() {
+        $('#btnExcel').off('click').on('click', function() {
+            const params = {};
+            const trxId = document.getElementById('searchTrxId')?.value;
+            const gubunType = document.getElementById('searchGubunType')?.value;
+            const custUserId = document.getElementById('searchCustUserId')?.value;
+            if (trxId) params.trxId = trxId;
+            if (gubunType) params.gubunType = gubunType;
+            if (custUserId) params.custUserId = custUserId;
+            const qs = $.param(params);
+            window.location.href = API_BASE_URL + '/access-users/export' + (qs ? '?' + qs : '');
+        });
+        $('#btnPrint').off('click').on('click', function() {
+            window.print();
+        });
+    }
+</script>
+</body>
+</html>

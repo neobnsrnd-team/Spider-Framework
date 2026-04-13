@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<!-- Profile Page Scripts -->
+<th:block th:fragment="script">
+    <script>
+        // ==================== Security Utilities ====================
+
+        /**
+         * Convert error message to user-friendly format
+         */
+        function getUserFriendlyErrorMessage(error) {
+            let message = '요청 처리 중 오류가 발생했습니다.';
+
+            if (!error) return message;
+
+            if (error.response && error.response.data) {
+                const data = error.response.data;
+                if (data.message) {
+                    message = data.message;
+                }
+                if (data.errors && Array.isArray(data.errors)) {
+                    message = data.errors.map(e => e.message || e).join('\n');
+                }
+            } else if (error.responseJSON) {
+                if (error.responseJSON.message) {
+                    message = error.responseJSON.message;
+                }
+            } else if (error.message) {
+                if (error.message.includes('Network Error')) {
+                    message = '네트워크 연결을 확인해주세요.';
+                } else if (error.message.includes('timeout')) {
+                    message = '요청 시간이 초과되었습니다. 다시 시도해주세요.';
+                }
+            }
+
+            message = message.replace(/<[^>]*>/g, '');
+            return message;
+        }
+
+        // ==================== Validation Utilities ====================
+
+        var ProfileValidators = {
+            userName: function(value) {
+                if (!value) {
+                    return '사용자명을 입력하세요.';
+                }
+                if (value.length > 50) {
+                    return '사용자명은 50자 이하여야 합니다.';
+                }
+                return null;
+            },
+
+            password: function(value) {
+                if (!value) {
+                    return null; // Optional: only validate if user changed it
+                }
+                if (!/^[A-Za-z\d@$!%*#?&]{8,50}$/.test(value)
+                        || !/[A-Za-z]/.test(value)
+                        || !/\d/.test(value)
+                        || !/[@$!%*#?&]/.test(value)) {
+                    return '8~50자, 영문, 숫자, 특수문자(@$!%*#?&)를 모두 포함해야 합니다.';
+                }
+                return null;
+            },
+
+            confirmPassword: function(value) {
+                if (!value) {
+                    return '비밀번호 확인을 입력하세요.';
+                }
+                return null;
+            },
+
+            email: function(value) {
+                if (!value) {
+                    return null;
+                }
+                if (value.length > 100) {
+                    return '이메일은 100자 이하여야 합니다.';
+                }
+                const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+                if (!emailRegex.test(value)) {
+                    return '올바른 이메일 형식이 아닙니다.';
+                }
+                return null;
+            },
+
+            phone: function(value) {
+                if (!value) {
+                    return null;
+                }
+                if (!/^\d{1,13}$/.test(value)) {
+                    return '10-11자리 숫자를 입력하세요 (하이픈 제외).';
+                }
+                return null;
+            },
+
+            address: function(value) {
+                if (!value) {
+                    return null;
+                }
+                if (value.length > 200) {
+                    return '주소는 200자 이하여야 합니다.';
+                }
+                return null;
+            }
+        };
+
+        // ==================== Profile Object ====================
+
+        window.Profile = window.Profile || {
+            originalData: null,
+
+            load: function() {
+                $.ajax({
+                    url: API_BASE_URL + '/profile',
+                    method: 'GET',
+                    success: (response) => {
+                        console.log('Profile loaded:', response);
+
+                        if (response.success && response.data) {
+                            this.originalData = response.data;
+                            this.renderProfile(response.data);
+                        } else {
+                            console.error('Failed to load profile:', response.message);
+                            Toast.error('프로필 정보를 불러올 수 없습니다.');
+                        }
+                    },
+                    error: (xhr) => {
+                        console.error('Failed to load profile:', xhr);
+                        const errorMsg = getUserFriendlyErrorMessage(xhr);
+                        Toast.error('프로필 정보를 불러올 수 없습니다. ' + errorMsg);
+                    }
+                });
+            },
+
+            renderProfile: function(data) {
+                // Editable fields
+                $('#profileUserId').val(data.userId || '');
+                $('#profileUserName').val(data.userName || '');
+                $('#profilePhone').val(data.phone || '');
+                $('#profileEmail').val(data.email || '');
+                $('#profileAddress').val(data.address || '');
+                $('#profileClassName').val(data.className || '');
+
+                // Read-only fields
+                $('#profilePositionName').val(data.positionName || '');
+                $('#profileRoleName').val(data.roleName ? data.roleName + ' (' + data.roleId + ')' : '');
+                $('#profileUserStateName').val(data.userStateName || '');
+                $('#profileLastUpdateDtime').val(this.formatDateTime(data.lastUpdateDtime) || '');
+                $('#profileLastUpdateUserId').val(data.lastUpdateUserId || '');
+                $('#profileAccessIp').val(data.accessIp || '');
+
+                // Password: show masked placeholder (indicates existing password)
+                $('#profilePassword').val('********');
+                this.passwordChanged = false;
+                $('#profileConfirmPassword').val('');
+
+                // Clear errors
+                this.clearErrors();
+            },
+
+            formatDateTime: function(dateTimeStr) {
+                if (!dateTimeStr || dateTimeStr.length !== 14) {
+                    return dateTimeStr;
+                }
+                // yyyyMMddHHmmss -> yyyy-MM-dd HH:mm:ss
+                return dateTimeStr.substring(0, 4) + '-' +
+                       dateTimeStr.substring(4, 6) + '-' +
+                       dateTimeStr.substring(6, 8) + ' ' +
+                       dateTimeStr.substring(8, 10) + ':' +
+                       dateTimeStr.substring(10, 12) + ':' +
+                       dateTimeStr.substring(12, 14);
+            },
+
+            validateField: function(fieldName) {
+                const fieldId = '#profile' + fieldName.charAt(0).toUpperCase() + fieldName.slice(1);
+                const value = $(fieldId).val()?.trim();
+                const errorId = fieldName + 'Error';
+
+                let errorMessage = null;
+
+                if (ProfileValidators[fieldName]) {
+                    errorMessage = ProfileValidators[fieldName](value);
+                }
+
+                if (errorMessage) {
+                    $('#' + errorId).text(errorMessage).addClass('visible');
+                    $(fieldId).closest('td').addClass('has-error');
+                    return false;
+                } else {
+                    $('#' + errorId).removeClass('visible');
+                    $(fieldId).closest('td').removeClass('has-error');
+                    return true;
+                }
+            },
+
+            validateForm: function() {
+                let isValid = true;
+
+                // Required fields
+                if (!this.validateField('userName')) {
+                    isValid = false;
+                }
+
+                // Password validation (only if user changed it)
+                if (this.passwordChanged) {
+                    if (!this.validateField('password')) {
+                        isValid = false;
+                    }
+                }
+
+                // Confirm password is always required for any save
+                if (!this.validateField('confirmPassword')) {
+                    isValid = false;
+                }
+
+                // Optional fields
+                this.validateField('email');
+                this.validateField('phone');
+                this.validateField('address');
+
+                return isValid;
+            },
+
+            clearErrors: function() {
+                $('.error-message').removeClass('visible');
+                $('td').removeClass('has-error');
+            },
+
+            save: function() {
+                // Form validation
+                if (!this.validateForm()) {
+                    Toast.warning('입력 항목을 확인해주세요.');
+                    return;
+                }
+
+                const profileData = {
+                    userId: $('#profileUserId').val().trim(),
+                    userName: $('#profileUserName').val().trim(),
+                    newPassword: this.passwordChanged ? $('#profilePassword').val() : null,
+                    confirmPassword: $('#profileConfirmPassword').val(),
+                    email: $('#profileEmail').val().trim() || null,
+                    phone: $('#profilePhone').val().trim() || null,
+                    address: $('#profileAddress').val().trim() || null,
+                    className: $('#profileClassName').val() || null
+                };
+
+                $.ajax({
+                    url: API_BASE_URL + '/profile',
+                    method: 'PUT',
+                    contentType: 'application/json',
+                    data: JSON.stringify(profileData),
+                    success: (response) => {
+                        if (response.success) {
+                            Toast.success('개인정보가 수정되었습니다.');
+                            // Reload profile to show updated data
+                            this.load();
+                        } else {
+                            const errorMsg = getUserFriendlyErrorMessage(response);
+                            Toast.error('저장 실패: ' + errorMsg);
+                        }
+                    },
+                    error: (xhr) => {
+                        const errorMsg = getUserFriendlyErrorMessage(xhr);
+                        Toast.error('저장 실패: ' + errorMsg);
+                    }
+                });
+            }
+        };
+
+        // ==================== Event Bindings ====================
+
+        // Real-time validation
+        $('#profileUserName').on('blur', () => Profile.validateField('userName'));
+        // Track password change: clear masked value on first input
+        $('#profilePassword').on('focus', function() {
+            if (!Profile.passwordChanged) {
+                $(this).val('');
+                Profile.passwordChanged = true;
+            }
+        });
+        $('#profilePassword').on('blur', () => {
+            // If user cleared and left empty, restore masked placeholder
+            if (Profile.passwordChanged && !$('#profilePassword').val()) {
+                $('#profilePassword').val('********');
+                Profile.passwordChanged = false;
+            }
+            if (Profile.passwordChanged) {
+                Profile.validateField('password');
+            }
+        });
+        $('#profileConfirmPassword').on('blur', () => Profile.validateField('confirmPassword'));
+        $('#profileEmail').on('blur', () => Profile.validateField('email'));
+        $('#profilePhone').on('blur', () => Profile.validateField('phone'));
+        $('#profileAddress').on('blur', () => Profile.validateField('address'));
+
+        // ==================== Initialization ====================
+
+        // Load profile on page load
+        window.Profile.load();
+    </script>
+</th:block>
+</body>
+</html>

@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+
+<!-- 대응답 설정 모달 -->
+<div th:fragment="modal" id="proxySettingModal" class="modal fade" tabindex="-1" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
+    <div class="modal-dialog modal-dialog-centered sp-modal-lg">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h5 class="modal-title">대응답 설정</h5>
+            <button class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body sp-scrollable p-3">
+
+            <!-- === 상단: 검색 조건 === -->
+            <div class="mb-3">
+                <div class="section-header mb-2">
+                    <i class="bi bi-caret-right-fill"></i>
+                    <span class="sp-section-label">검색조건</span>
+                </div>
+                <div class="sp-form-row">
+                    <label>기관명</label>
+                    <input type="text" id="psOrgName" class="form-control col-w-180" readonly>
+                    <input type="hidden" id="psOrgId">
+                    <label>거래ID</label>
+                    <input type="text" id="psTrxId" class="form-control col-w-180" readonly>
+                </div>
+                <div class="sp-form-row">
+                    <label>테스트명</label>
+                    <input type="text" id="psTestName" class="form-control col-w-180" placeholder="테스트명">
+                    <label>등록자</label>
+                    <input type="text" id="psUserId" class="form-control col-w-180" placeholder="등록자">
+                    <button class="btn btn-primary btn-sm" onclick="ProxySettingModal.search()">조회</button>
+                </div>
+            </div>
+
+            <!-- === 중간: 기본 대응답 정보 === -->
+            <div class="mb-3">
+                <div class="section-header mb-2">
+                    <i class="bi bi-caret-right-fill"></i>
+                    <span class="sp-section-label">기본 대응답 정보</span>
+                </div>
+                <div class="ps-info-box" id="psDefaultProxyInfo">
+                    <div class="ps-info-row">
+                        <span class="ps-info-label">기본 대응답 테스트데이터:</span>
+                        <table class="sp-data-grid mt-1">
+                            <thead>
+                                <tr>
+                                    <th class="col-w-100">일련번호</th>
+                                    <th>테스트명</th>
+                                </tr>
+                            </thead>
+                            <tbody id="psDefaultTestInfoBody">
+                                <tr>
+                                    <td colspan="2" class="text-center text-body-secondary">미설정</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="ps-info-row">
+                        <span class="ps-info-label">동적 대응답 필드ID:</span>
+                        <span id="psProxyFieldArea" class="d-inline-flex align-items-center gap-2">
+                            <input type="text" id="psProxyFieldId" class="form-control col-w-200 fs-sm" placeholder="필드ID"
+                                   th:readonly="${userAuthorities == null or !userAuthorities.contains('PROXY_TESTDATA:W')}">
+                            <button id="psProxyFieldBtn" class="btn btn-primary btn-sm" onclick="ProxySettingModal.saveProxyField()"
+                                    th:if="${userAuthorities != null and userAuthorities.contains('PROXY_TESTDATA:W')}">등록</button>
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- === 하단: 조회 결과 테이블 === -->
+            <div class="mb-3">
+                <div class="section-header mb-2">
+                    <i class="bi bi-caret-right-fill"></i>
+                    <span class="sp-section-label">테스트 데이터 목록</span>
+                </div>
+                <div class="sp-scrollable-300">
+                    <table class="sp-data-grid" id="psTable">
+                        <thead>
+                            <tr>
+                                <th class="col-w-80">일련번호</th>
+                                <th>테스트명</th>
+                                <th class="col-w-250">대응답 값</th>
+                                <th class="col-w-100">기본 대응답</th>
+                                <th class="col-w-100">등록자</th>
+                            </tr>
+                        </thead>
+                        <tbody id="psTableBody">
+                            <tr>
+                                <td colspan="5" class="sp-empty-state">조회된 데이터가 없습니다.</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- === 하단 버튼 === -->
+        <div class="modal-footer d-flex justify-content-end p-3">
+            <button class="btn btn-secondary btn-sm" data-bs-dismiss="modal"><i class="bi bi-x-lg"></i> 닫기</button>
+        </div>
+    </div>
+    </div>
+</div>
+
+</body>
+</html>

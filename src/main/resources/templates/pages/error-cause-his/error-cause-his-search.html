@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<!-- ErrorHis Search Fragment -->
+<div th:fragment="search" class="card border p-2 mb-3">
+    <!-- 첫 번째 행: 날짜 범위 -->
+    <div class="d-flex flex-wrap align-items-center gap-2 mb-1">
+        <label class="form-label mb-0 small fw-medium fs-xs">오류발생일시</label>
+        <input type="date" id="searchStartDate" class="form-control form-control-sm flex-fixed-150">
+        <span class="mx-1">~</span>
+        <input type="date" id="searchEndDate" class="form-control form-control-sm flex-fixed-150">
+
+        <!-- Spacer -->
+        <div class="flex-grow-1"></div>
+
+        <!-- Right Side Components -->
+        <select id="limitRows" class="form-select form-select-sm sp-limit-select">
+            <option value="10" selected>10</option>
+            <option value="20">20</option>
+            <option value="50">50</option>
+            <option value="100">100</option>
+            <option value="200">200</option>
+            <option value="1000">1000</option>
+        </select>
+        <label class="form-label mb-0 small fw-medium ms-1 me-2 fs-xs">건씩</label>
+
+        <button class="btn btn-primary btn-sm" onclick="ErrorHis.search()">
+            <i class="bi bi-search"></i> 조회
+        </button>
+    </div>
+
+    <!-- 두 번째 행: 검색 조건들 -->
+    <div class="d-flex flex-wrap align-items-center gap-2 mb-1 mt-2">
+        <label class="form-label mb-0 small fw-medium fs-xs">오류코드</label>
+        <input type="text" id="searchErrorCode" class="form-control form-control-sm flex-fixed-150"
+               placeholder="오류코드 입력"
+               onkeypress="if(event.key === 'Enter') ErrorHis.search()">
+
+        <label class="form-label mb-0 small fw-medium ms-3 fs-xs">고객ID</label>
+        <input type="text" id="searchCustUserId" class="form-control form-control-sm flex-fixed-150"
+               placeholder="고객ID 입력"
+               onkeypress="if(event.key === 'Enter') ErrorHis.search()">
+
+        <label class="form-label mb-0 small fw-medium ms-3 fs-xs">고객 전화번호</label>
+        <input type="text" id="searchCustPhoneNo" class="form-control form-control-sm flex-fixed-150"
+               placeholder="전화번호 입력"
+               onkeypress="if(event.key === 'Enter') ErrorHis.search()">
+
+        <!-- Spacer -->
+        <div class="flex-grow-1"></div>
+    </div>
+</div>
+</body>
+</html>

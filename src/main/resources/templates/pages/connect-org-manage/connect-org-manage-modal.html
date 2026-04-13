@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+
+<!-- Modal / Status styles for this page (now in app.css) -->
+<th:block th:fragment="styles">
+</th:block>
+
+<!-- Gateway Mapping Modal -->
+<div th:fragment="gatewayModal">
+    <div id="gatewayModal" class="modal fade" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
+        <div class="modal-dialog modal-dialog-centered modal-xl">
+            <div class="modal-content">
+        <div class="modal-header py-2">
+            <span>기관통신 GateWay 맵핑관리</span>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+
+        <div class="modal-body">
+            <div class="page-header mb-2">
+                <h4 class="page-title"><i class="bi bi-exclamation-circle-fill text-danger"></i> 검색조건</h4>
+            </div>
+
+            <div class="card border p-2 mb-2">
+                <div class="d-flex flex-wrap align-items-center gap-2 mb-1 justify-content-between">
+                    <div class="d-flex align-items-center gap-2 flex-grow-1">
+                        <label class="form-label mb-0 small fw-medium">기관</label>
+                        <select id="gwOrgId" class="form-select form-select-sm col-w-200"></select>
+
+                        <label class="form-label mb-0 small fw-medium ms-2">어댑터/리스너</label>
+                        <select id="gwIoType" class="form-select form-select-sm col-w-160">
+                            <option value="">전체</option>
+                            <option value="O">어댑터(송신)</option>
+                            <option value="I">리스너(수신)</option>
+                        </select>
+
+                        <label class="form-label mb-0 small fw-medium ms-2">요청/응답</label>
+                        <select id="gwReqResType" class="form-select form-select-sm col-w-130">
+                            <option value="">전체</option>
+                            <option value="Q">요청</option>
+                            <option value="S">응답</option>
+                        </select>
+                    </div>
+
+                    <div class="d-flex align-items-center gap-2 flex-shrink-0">
+                        <select id="gwPageSize" class="form-select form-select-sm sp-limit-select">
+                            <option value="10">10</option>
+                            <option value="20" selected>20</option>
+                            <option value="50">50</option>
+                        </select>
+                        <span class="fs-sm sp-search-label">검색</span>
+                        <button class="btn btn-sm btn-primary" onclick="InterfaceMnt.Gateway.search()">조회</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="page-header mt-2">
+                <h4 class="page-title"><i class="bi bi-exclamation-circle-fill text-danger"></i> 리스트</h4>
+            </div>
+
+            <div class="modal-toolbar">
+                <div class="left">
+                    <button class="btn btn-xs btn-outline-secondary" onclick="InterfaceMnt.Gateway.addRow()">행 추가</button>
+                    <button class="btn btn-xs btn-outline-secondary" onclick="InterfaceMnt.Gateway.deleteSelected()">선택행 삭제</button>
+                </div>
+            </div>
+
+            <div class="table-responsive sp-scrollable">
+                <table class="table table-sm table-hover sp-data-grid" id="gatewayTable">
+                    <thead class="table-light">
+                    <tr>
+                        <th class="col-w-40"><input type="checkbox" id="gwSelectAll"></th>
+                        <th class="col-w-80">CRUD</th>
+                        <th class="col-w-120 sortable" data-sort="orgId">기관</th>
+                        <th class="col-w-160 sortable" data-sort="ioType">어댑터<br/>리스너</th>
+                        <th class="col-w-110 sortable" data-sort="reqResType">요청/응답</th>
+                        <th class="col-w-120 sortable" data-sort="trxType">거래유형</th>
+                        <th class="sortable" data-sort="gwId">GATEWAY</th>
+                    </tr>
+                    </thead>
+                    <tbody id="gatewayTableBody">
+                    <tr><td colspan="7" class="text-center py-4 text-body-secondary">데이터를 불러오는 중...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="modal-footer py-2">
+            <button class="btn btn-xs btn-outline-secondary" onclick="InterfaceMnt.Gateway.saveChanges()">변경사항 저장</button>
+            <button class="btn btn-xs btn-primary" onclick="InterfaceMnt.Gateway.register()">GATEWAY 등록</button>
+            <button class="btn btn-xs btn-outline-secondary" data-bs-dismiss="modal"><i class="bi bi-x-lg"></i> 닫기</button>
+        </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Message Handler Modal -->
+<div th:fragment="handlerModal">
+    <div id="handlerModal" class="modal fade" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
+        <div class="modal-dialog modal-dialog-centered modal-xl">
+            <div class="modal-content">
+        <div class="modal-header py-2">
+            <span>전문처리 핸들러 관리</span>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+
+        <div class="modal-body">
+            <div class="page-header mb-2">
+                <h4 class="page-title"><i class="bi bi-exclamation-circle-fill text-danger"></i> 검색조건</h4>
+            </div>
+
+            <div class="card border p-2 mb-2">
+                <div class="d-flex flex-wrap align-items-center gap-2 mb-1 justify-content-between">
+                    <div class="d-flex align-items-center gap-2 flex-grow-1">
+                        <label class="form-label mb-0 small fw-medium">기관명</label>
+                        <select id="hdOrgId" class="form-select form-select-sm col-w-200"></select>
+
+                        <label class="form-label mb-0 small fw-medium ms-2">거래유형</label>
+                        <select id="hdTrxType" class="form-select form-select-sm col-w-160">
+                            <option value="">전체</option>
+                        </select>
+                    </div>
+
+                    <div class="d-flex align-items-center gap-2 flex-shrink-0">
+                        <select id="hdPageSize" class="form-select form-select-sm sp-limit-select">
+                            <option value="10">10</option>
+                            <option value="20" selected>20</option>
+                            <option value="50">50</option>
+                        </select>
+                        <span class="fs-sm sp-search-label">검색</span>
+                        <button class="btn btn-sm btn-primary" onclick="InterfaceMnt.Handler.search()">조회</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="page-header mt-2">
+                <h4 class="page-title"><i class="bi bi-exclamation-circle-fill text-danger"></i> 리스트</h4>
+            </div>
+
+            <div class="modal-toolbar">
+                <div class="left">
+                    <button class="btn btn-xs btn-outline-secondary" onclick="InterfaceMnt.Handler.addRow()">행 추가</button>
+                    <button class="btn btn-xs btn-outline-secondary" onclick="InterfaceMnt.Handler.deleteSelected()">선택행 삭제</button>
+                </div>
+            </div>
+
+            <div class="table-responsive sp-scrollable">
+                <table class="table table-sm table-hover sp-data-grid" id="handlerTable">
+                    <thead class="table-light">
+                    <tr>
+                        <th class="col-w-40"><input type="checkbox" id="hdSelectAll"></th>
+                        <th class="col-w-80">CRUD</th>
+                        <th class="col-w-120 sortable" data-sort="orgId">기관명</th>
+                        <th class="col-w-130 sortable" data-sort="trxType">거래유형</th>
+                        <th class="col-w-120 sortable" data-sort="ioType">어댑터<br/>리스너</th>
+                        <th class="col-w-110 sortable" data-sort="operModeType">운영모드</th>
+                        <th class="col-w-250 sortable" data-sort="handler">전문처리핸들러</th>
+                        <th class="col-w-200 sortable" data-sort="handlerDesc">전문처리핸들러설명</th>
+                        <th class="col-w-70 sortable" data-sort="stopYn">상태</th>
+                        <th class="col-w-90">상태<br/>변경</th>
+                    </tr>
+                    </thead>
+                    <tbody id="handlerTableBody">
+                    <tr><td colspan="10" class="text-center py-4 text-body-secondary">데이터를 불러오는 중...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="modal-footer py-2">
+            <button class="btn btn-xs btn-outline-secondary" onclick="InterfaceMnt.Handler.saveChanges()">변경사항 저장</button>
+            <button class="btn btn-xs btn-outline-secondary" data-bs-dismiss="modal"><i class="bi bi-x-lg"></i> 닫기</button>
+        </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Gateway Management Modal -->
+<div th:fragment="gatewayManageModal">
+    <div id="gatewayManageModal" class="modal fade" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
+        <div class="modal-dialog modal-dialog-centered sp-modal-xl">
+            <div class="modal-content">
+        <div class="modal-header py-2">
+            <span>Gateway 관리</span>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+
+        <div class="modal-body">
+            <div class="page-header mb-2">
+                <h4 class="page-title"><i class="bi bi-exclamation-circle-fill text-danger"></i> 상세정보</h4>
+            </div>
+            <div class="gw-info-alert">
+                * GATEWAY ID는 한번 등록 후 삭제만 가능하며, 동일 ID로 재등록할 수 없습니다.
+            </div>
+
+            <div class="gw-field-section">
+                <div class="gw-field-row">
+                    <label class="form-label mb-0 small fw-medium">GW ID</label>
+                    <input id="gwManageId" type="text" class="editable-field col-w-200">
+
+                    <label class="form-label mb-0 small fw-medium">G/W 명</label>
+                    <input id="gwManageName" type="text" class="editable-field flex-grow-1">
+                </div>
+                <div class="gw-field-row">
+                    <label class="form-label mb-0 small fw-medium">G/W 속성</label>
+                    <textarea id="gwManageProps" class="editable-field flex-grow-1"></textarea>
+                </div>
+                <div class="gw-field-row">
+                    <label class="form-label mb-0 small fw-medium">G/W 설명</label>
+                    <textarea id="gwManageDesc" class="editable-field flex-grow-1"></textarea>
+                </div>
+                <div class="gw-field-row">
+                    <label class="form-label mb-0 small fw-medium">APP명</label>
+                    <input id="gwManageAppName" type="text" class="editable-field col-w-250">
+
+                    <label class="form-label mb-0 small fw-medium">송/수신구분</label>
+                    <select id="gwManageIoType" class="editable-field col-w-160">
+                        <option value="O">어댑터(송신)</option>
+                        <option value="I">리스너(수신)</option>
+                    </select>
+
+                    <label class="form-label mb-0 small fw-medium">THREAD 수</label>
+                    <input id="gwManageThread" type="number" class="editable-field col-w-130" min="1" max="999">
+                </div>
+            </div>
+
+            <div class="page-header mt-2">
+                <h4 class="page-title"><i class="bi bi-exclamation-circle-fill text-danger"></i> GATEWAY SYSTEM</h4>
+            </div>
+
+            <div class="modal-toolbar">
+                <div class="left">
+                    <button class="btn btn-xs btn-outline-secondary" onclick="InterfaceMnt.GatewayManage.addRow()">행 추가</button>
+                    <button class="btn btn-xs btn-outline-secondary" onclick="InterfaceMnt.GatewayManage.deleteSelected()">선택행 삭제</button>
+                </div>
+            </div>
+
+            <div class="table-responsive sp-scrollable">
+                <table class="table table-sm table-hover sp-data-grid" id="gatewaySystemTable">
+                    <thead class="table-light">
+                    <tr>
+                        <th class="col-w-40"><input type="checkbox" id="gwSystemSelectAll"></th>
+                        <th class="col-w-80">CRUD</th>
+                        <th class="col-w-120">System ID</th>
+                        <th class="col-w-120">IP</th>
+                        <th class="col-w-90">PORT</th>
+                        <th class="col-w-150">설명</th>
+                        <th class="col-w-90">운영모드</th>
+                        <th class="col-w-70">상태</th>
+                        <th class="col-w-80">Reload</th>
+                        <th class="col-w-120">WAS</th>
+                    </tr>
+                    </thead>
+                    <tbody id="gatewaySystemTableBody">
+                    <tr><td colspan="10" class="text-center py-4 text-body-secondary">데이터를 불러오는 중...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="modal-footer py-2">
+            <button class="btn btn-xs btn-outline-secondary" onclick="InterfaceMnt.GatewayManage.saveChanges()">변경사항 저장</button>
+            <button class="btn btn-xs btn-outline-secondary" data-bs-dismiss="modal"><i class="bi bi-x-lg"></i> 닫기</button>
+        </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+</body>
+</html>

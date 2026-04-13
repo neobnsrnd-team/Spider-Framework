@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<!-- TransDataFile Table Fragment -->
+<div th:fragment="table">
+    <div class="table-responsive">
+        <table class="table table-sm table-hover sp-data-grid" id="transDataFileTable">
+            <colgroup>
+                <col class="col-w-pct-15">
+                <col class="col-w-pct-45">
+                <col class="col-w-pct-15">
+                <col class="col-w-pct-25">
+            </colgroup>
+            <thead class="table-light">
+            <tr>
+                <th class="cursor-pointer" data-sort="fileType">
+                    이행대상 항목 <span class="sort-indicator" data-sort-indicator="fileType"></span>
+                </th>
+                <th class="cursor-pointer" data-sort="fileName">
+                    이행대상 파일명 <span class="sort-indicator" data-sort-indicator="fileName"></span>
+                </th>
+                <th class="cursor-pointer" data-sort="fileSize">
+                    파일 사이즈 <span class="sort-indicator" data-sort-indicator="fileSize"></span>
+                </th>
+                <th class="cursor-pointer" data-sort="createDate">
+                    이행파일 생성일 <span class="sort-indicator" data-sort-indicator="createDate"></span>
+                </th>
+            </tr>
+            </thead>
+            <tbody id="transDataFileTableBody">
+            <!-- JavaScript로 동적 렌더링 -->
+            </tbody>
+        </table>
+    </div>
+</div>
+</body>
+</html>

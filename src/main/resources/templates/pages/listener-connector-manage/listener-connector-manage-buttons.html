@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<th:block th:fragment="buttons">
+<div class="bottom-actions"
+     th:if="${userAuthorities != null and userAuthorities.contains('LISTENER_CONNECTOR_MAPPING:W')}">
+    <div class="bottom-actions-left"></div>
+    <div class="bottom-actions-right gap-2">
+        <button class="btn btn-primary btn-sm" type="button" onclick="ListenerConnectorMappingModal.openCreateModal()">
+            <i class="bi bi-plus-lg"></i> 등록
+        </button>
+    </div>
+</div>
+</th:block>
+</body>
+</html>

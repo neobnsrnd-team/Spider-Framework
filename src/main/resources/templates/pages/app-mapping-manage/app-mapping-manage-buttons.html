@@ -1,0 +1,14 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<div th:fragment="buttons" class="bottom-actions">
+    <div class="bottom-actions-left"></div>
+    <div class="bottom-actions-right gap-2">
+        <button class="btn btn-primary btn-sm" type="button" onclick="AppMappingModal.openCreateModal()"
+                th:if="${userAuthorities != null and userAuthorities.contains('APP_MAPPING:W')}">
+            <i class="bi bi-plus-lg"></i> 등록
+        </button>
+    </div>
+</div>
+</body>
+</html>

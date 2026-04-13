@@ -1,0 +1,490 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<th:block th:fragment="script">
+    <script>
+        (function() {
+            if (window.GatewayList && typeof window.GatewayList.init === 'function') {
+                window.GatewayList.init();
+                return;
+            }
+
+            window.GatewayList = {
+                currentPage: 1,
+                pageSize: 20,
+                totalElements: 0,
+                sortBy: null,
+                sortDirection: null,
+                currentRows: [],
+                relatedSortBy: null,
+                relatedSortDirection: null,
+                relatedRows: [],
+
+                init() {
+                    const pageSizeSelect = document.getElementById('gatewayPageSize');
+                    if (pageSizeSelect) {
+                        pageSizeSelect.addEventListener('change', (e) => {
+                            this.pageSize = parseInt(e.target.value, 10) || 20;
+                            this.load(1);
+                        });
+                    }
+
+                    this.bindSortEvents();
+                    this.bindRelatedSortEvents();
+
+                    const tbody = document.getElementById('gatewayTableBody');
+                    if (tbody) {
+                        tbody.addEventListener('click', (e) => {
+                            if (e.target.closest('button')) {
+                                return;
+                            }
+                            const row = e.target.closest('tr');
+                            const gwId = row?.dataset?.gwId;
+                            if (gwId && window.InterfaceMnt && InterfaceMnt.GatewayManage) {
+                                InterfaceMnt.GatewayManage.open(gwId);
+                            }
+                        });
+                    }
+
+                    const keywordInput = document.getElementById('gatewaySearchValue');
+                    if (keywordInput) {
+                        keywordInput.addEventListener('keypress', (e) => {
+                            if (e.key === 'Enter') {
+                                this.load(1);
+                            }
+                        });
+                    }
+
+                    const refreshBtn = document.getElementById('btnRefresh');
+                    if (refreshBtn) {
+                        refreshBtn.addEventListener('click', () => this.load(this.currentPage));
+                    }
+
+                    $('#btnExcel').off('click').on('click', () => {
+                        window.location.href = API_BASE_URL + '/gateways/export';
+                    });
+
+                    $('#btnPrint').off('click').on('click', () => {
+                        const columns = [
+                            { key: 'gwId', label: 'GATEWAY ID' },
+                            { key: 'gwDesc', label: 'G/W 설명' },
+                            { key: 'gwAppName', label: 'G/W 구현 APP명' },
+                            { key: 'ioType', label: '유형' },
+                            { key: 'threadCount', label: 'THREAD' },
+                            { key: 'gwName', label: 'G/W 명' }
+                        ];
+                        PrintUtil.print({ title: 'Gateway 목록', columns: columns, data: window.GatewayList.currentRows });
+                    });
+
+                    this.load(1);
+                },
+
+                bindSortEvents() {
+                    const headers = document.querySelectorAll('#gatewayTable thead th[data-sort]');
+                    headers.forEach(header => {
+                        header.classList.add('sortable');
+                        if (header.dataset.sortBound === 'true') return;
+                        header.dataset.sortBound = 'true';
+                        header.addEventListener('click', () => {
+                            const sortKey = header.dataset.sort;
+                            if (!sortKey) return;
+                            if (this.sortBy === sortKey) {
+                                this.sortDirection = this.sortDirection === 'ASC' ? 'DESC' : 'ASC';
+                            } else {
+                                this.sortBy = sortKey;
+                                this.sortDirection = 'ASC';
+                            }
+                            this.updateSortIndicators();
+                            this.load(1); // 서버 사이드 정렬
+                        });
+                    });
+                },
+
+                bindRelatedSortEvents() {
+                    const headers = document.querySelectorAll('#gatewayOrgsModal thead th[data-sort]');
+                    headers.forEach(header => {
+                        header.classList.add('sortable');
+                        if (header.dataset.sortBound === 'true') return;
+                        header.dataset.sortBound = 'true';
+                        header.addEventListener('click', () => {
+                            const sortKey = header.dataset.sort;
+                            if (!sortKey) return;
+                            if (this.relatedSortBy === sortKey) {
+                                this.relatedSortDirection = this.relatedSortDirection === 'ASC' ? 'DESC' : 'ASC';
+                            } else {
+                                this.relatedSortBy = sortKey;
+                                this.relatedSortDirection = 'ASC';
+                            }
+                            this.updateRelatedSortIndicators();
+                            this.renderRelatedOrgs(this.getSortedRelatedRows());
+                        });
+                    });
+                },
+
+                load(page) {
+                    this.currentPage = page || 1;
+
+                    const sizeSelect = document.getElementById('gatewayPageSize');
+                    if (sizeSelect) {
+                        this.pageSize = parseInt(sizeSelect.value, 10) || this.pageSize;
+                    }
+
+                    const searchField = document.getElementById('gatewaySearchField')?.value || '';
+                    const searchValue = document.getElementById('gatewaySearchValue')?.value.trim() || '';
+                    const ioType = document.getElementById('gatewayIoType')?.value || '';
+
+                    const params = new URLSearchParams({
+                        page: String(this.currentPage),
+                        size: String(this.pageSize)
+                    });
+
+                    if (searchValue) {
+                        params.set('searchField', searchField);
+                        params.set('searchValue', searchValue);
+                    }
+                    if (ioType) {
+                        params.set('ioType', ioType);
+                    }
+                    if (this.sortBy) {
+                        params.set('sortBy', this.sortBy);
+                    }
+                    if (this.sortDirection) {
+                        params.set('sortDirection', this.sortDirection);
+                    }
+
+                    fetch(`/api/gateways/page?${params.toString()}`, {
+                        credentials: 'same-origin'
+                    })
+                        .then(res => res.json())
+                        .then(res => {
+                            if (!res.success) {
+                                throw new Error(res.message || 'Gateway 조회 실패');
+                            }
+                            const data = res.data || {};
+                            this.totalElements = data.totalElements || 0;
+                            this.currentRows = data.content || [];
+                            this.renderTable(this.currentRows); // 서버에서 정렬된 데이터 사용
+                            this.updateSortIndicators();
+                            this.renderPagination(data);
+                        })
+                        .catch(err => {
+                            console.error('[GatewayList.load] Error:', err);
+                            Toast.error('Gateway 목록을 불러오는데 실패했습니다.');
+                        });
+                },
+
+                renderTable(rows) {
+                    const tbody = document.getElementById('gatewayTableBody');
+                    if (!tbody) return;
+
+                    if (!rows.length) {
+                        tbody.innerHTML = '<tr><td colspan="6" class="text-center py-4 text-body-secondary">조회된 데이터가 없습니다.</td></tr>';
+                        return;
+                    }
+
+                    tbody.innerHTML = rows.map(row => {
+                        const ioTypeLabel = row.ioType === 'I' ? '리스너(수신)' : '어댑터(송신)';
+                        return `
+                            <tr data-gw-id="${HtmlUtils.escape(row.gwId)}" class="cursor-pointer">
+                                <td>${HtmlUtils.escape(row.gwId)}</td>
+                                <td>${HtmlUtils.escape(row.gwDesc)}</td>
+                                <td>${HtmlUtils.escape(row.gwAppName)}</td>
+                                <td>${HtmlUtils.escape(ioTypeLabel)}</td>
+                                <td class="text-center">${row.threadCount ?? '-'}</td>
+                                <td class="text-center">
+                                    <button class="btn btn-primary btn-sm" onclick="GatewayList.showRelatedOrgs('${HtmlUtils.escape(row.gwId)}')">기관보기</button>
+                                </td>
+                            </tr>
+                        `;
+                    }).join('');
+                },
+
+                getSortedRows() {
+                    if (!this.sortBy || !this.sortDirection) {
+                        return this.currentRows || [];
+                    }
+                    const direction = this.sortDirection === 'DESC' ? -1 : 1;
+                    const rows = [...(this.currentRows || [])];
+                    return rows.sort((a, b) => {
+                        const aVal = this.getSortValue(a, this.sortBy);
+                        const bVal = this.getSortValue(b, this.sortBy);
+                        return this.compareValues(aVal, bVal) * direction;
+                    });
+                },
+
+                getSortValue(row, key) {
+                    if (!row) return '';
+                    switch (key) {
+                        case 'ioType':
+                            return this.ioTypeLabel(row.ioType);
+                        case 'threadCount':
+                            return this.toNumber(row.threadCount);
+                        default:
+                            return row[key] ?? '';
+                    }
+                },
+
+                compareValues(aVal, bVal) {
+                    const aEmpty = aVal === null || aVal === undefined || aVal === '';
+                    const bEmpty = bVal === null || bVal === undefined || bVal === '';
+                    if (aEmpty && bEmpty) return 0;
+                    if (aEmpty) return 1;
+                    if (bEmpty) return -1;
+                    if (typeof aVal === 'number' && typeof bVal === 'number') {
+                        return aVal - bVal;
+                    }
+                    return String(aVal).localeCompare(String(bVal), 'ko', { numeric: true, sensitivity: 'base' });
+                },
+
+                toNumber(value) {
+                    if (value === null || value === undefined || value === '') return null;
+                    const num = Number(value);
+                    return Number.isNaN(num) ? null : num;
+                },
+
+                updateSortIndicators() {
+                    const headers = document.querySelectorAll('#gatewayTable thead th.sortable');
+                    headers.forEach(header => header.classList.remove('sort-asc', 'sort-desc'));
+                    if (!this.sortBy || !this.sortDirection) return;
+                    const active = document.querySelector(`#gatewayTable thead th[data-sort="${this.sortBy}"]`);
+                    if (active) {
+                        active.classList.add(this.sortDirection === 'ASC' ? 'sort-asc' : 'sort-desc');
+                    }
+                },
+
+                renderPagination(pageData) {
+                    const container = document.getElementById('pagination');
+                    if (!container) return;
+
+                    const totalPages = pageData.totalPages || 0;
+                    const currentPage = pageData.currentPage || 1;
+                    const total = pageData.totalElements || 0;
+                    const size = pageData.size || this.pageSize;
+                    const start = total === 0 ? 0 : (currentPage - 1) * size + 1;
+                    const end = Math.min(currentPage * size, total);
+
+                    const pageInfo = document.getElementById('pageInfo');
+                    if (pageInfo) {
+                        pageInfo.textContent = `${start} - ${end} of ${total} items`;
+                    }
+
+                    const maxButtons = 5;
+                    let startPage = Math.max(1, currentPage - Math.floor(maxButtons / 2));
+                    let endPage = Math.min(totalPages, startPage + maxButtons - 1);
+
+                    if (endPage - startPage + 1 < maxButtons) {
+                        startPage = Math.max(1, endPage - maxButtons + 1);
+                    }
+
+                    let html = `
+                        <li class="page-item ${currentPage === 1 ? 'disabled' : ''}">
+                            <a class="page-link" href="#" onclick="GatewayList.load(1); return false;">
+                                <i class="bi bi-chevron-double-left"></i>
+                            </a>
+                        </li>
+                        <li class="page-item ${currentPage === 1 ? 'disabled' : ''}">
+                            <a class="page-link" href="#" onclick="GatewayList.load(${currentPage - 1}); return false;">
+                                <i class="bi bi-chevron-left"></i>
+                            </a>
+                        </li>
+                    `;
+
+                    for (let i = startPage; i <= endPage; i++) {
+                        html += `
+                            <li class="page-item ${i === currentPage ? 'active' : ''}">
+                                <a class="page-link" href="#" onclick="GatewayList.load(${i}); return false;">${i}</a>
+                            </li>
+                        `;
+                    }
+
+                    html += `
+                        <li class="page-item ${currentPage === totalPages || totalPages === 0 ? 'disabled' : ''}">
+                            <a class="page-link" href="#" onclick="GatewayList.load(${currentPage + 1}); return false;">
+                                <i class="bi bi-chevron-right"></i>
+                            </a>
+                        </li>
+                        <li class="page-item ${currentPage === totalPages || totalPages === 0 ? 'disabled' : ''}">
+                            <a class="page-link" href="#" onclick="GatewayList.load(${totalPages}); return false;">
+                                <i class="bi bi-chevron-double-right"></i>
+                            </a>
+                        </li>
+                    `;
+
+                    container.innerHTML = html;
+                },
+
+                showRelatedOrgs(gwId) {
+                    const modalEl = document.getElementById('gatewayOrgsModal');
+                    const tbody = document.getElementById('gatewayOrgsBody');
+
+                    if (!modalEl || !tbody) {
+                        Toast.warning('관련기관 정보를 표시할 영역이 없습니다.');
+                        return;
+                    }
+
+                    bootstrap.Modal.getOrCreateInstance(modalEl).show();
+                    tbody.innerHTML = '<tr><td colspan="4" class="text-center py-4 text-body-secondary">데이터를 불러오는 중...</td></tr>';
+
+                    fetch(`/api/transports?gatewayId=${encodeURIComponent(gwId)}`, {
+                        credentials: 'same-origin'
+                    })
+                        .then(res => res.json())
+                        .then(res => {
+                            if (!res.success) {
+                                throw new Error(res.message || '관련기관 조회 실패');
+                            }
+                            const rows = res.data || [];
+                            this.relatedRows = rows;
+                            if (!rows.length) {
+                                tbody.innerHTML = '<tr><td colspan="4" class="text-center py-4 text-body-secondary">조회된 기관이 없습니다.</td></tr>';
+                                return;
+                            }
+                            this.renderRelatedOrgs(this.getSortedRelatedRows());
+                            this.updateRelatedSortIndicators();
+                        })
+                        .catch(err => {
+                            console.error('[GatewayList.showRelatedOrgs] Error:', err);
+                            tbody.innerHTML = '<tr><td colspan="4" class="text-center py-4 text-body-secondary">관련기관을 불러오는데 실패했습니다.</td></tr>';
+                        });
+                },
+
+                ioTypeLabel(code) {
+                    if (code === 'I') return '수신';
+                    if (code === 'O') return '송신';
+                    return code || '-';
+                },
+
+                reqResLabel(code) {
+                    if (code === 'Q') return '요청';
+                    if (code === 'S') return '응답';
+                    return code || '-';
+                },
+
+                trxTypeLabel(code) {
+                    const fallback = {
+                        '1': 'ONLINE',
+                        '2': 'BATCH',
+                        '3': 'ASYNC',
+                        '4': 'ASYNC 비온라인',
+                        '5': '전문변환',
+                        '6': 'POS',
+                        '7': 'FHM',
+                        '8': 'RETRY'
+                    };
+                    return fallback[code] || code || '-';
+                },
+
+                getSortedRelatedRows() {
+                    if (!this.relatedSortBy || !this.relatedSortDirection) {
+                        return this.relatedRows || [];
+                    }
+                    const direction = this.relatedSortDirection === 'DESC' ? -1 : 1;
+                    const rows = [...(this.relatedRows || [])];
+                    return rows.sort((a, b) => {
+                        const aVal = this.getRelatedSortValue(a, this.relatedSortBy);
+                        const bVal = this.getRelatedSortValue(b, this.relatedSortBy);
+                        return this.compareValues(aVal, bVal) * direction;
+                    });
+                },
+
+                getRelatedSortValue(row, key) {
+                    if (!row) return '';
+                    switch (key) {
+                        case 'ioType':
+                            return this.ioTypeLabel(row.ioType);
+                        case 'reqResType':
+                            return this.reqResLabel(row.reqResType);
+                        case 'trxType':
+                            return this.trxTypeLabel(row.trxType);
+                        default:
+                            return row[key] ?? '';
+                    }
+                },
+
+                updateRelatedSortIndicators() {
+                    const headers = document.querySelectorAll('#gatewayOrgsModal thead th.sortable');
+                    headers.forEach(header => header.classList.remove('sort-asc', 'sort-desc'));
+                    if (!this.relatedSortBy || !this.relatedSortDirection) return;
+                    const active = document.querySelector(`#gatewayOrgsModal thead th[data-sort="${this.relatedSortBy}"]`);
+                    if (active) {
+                        active.classList.add(this.relatedSortDirection === 'ASC' ? 'sort-asc' : 'sort-desc');
+                    }
+                },
+
+                renderRelatedOrgs(rows) {
+                    const tbody = document.getElementById('gatewayOrgsBody');
+                    if (!tbody) return;
+                    if (!rows || !rows.length) {
+                        tbody.innerHTML = '<tr><td colspan="4" class="text-center py-4 text-body-secondary">조회된 기관이 없습니다.</td></tr>';
+                        return;
+                    }
+                    tbody.innerHTML = rows.map(row => `
+                        <tr>
+                            <td>${HtmlUtils.escape(row.orgId)}</td>
+                            <td>${HtmlUtils.escape(this.ioTypeLabel(row.ioType))}</td>
+                            <td>${HtmlUtils.escape(this.reqResLabel(row.reqResType))}</td>
+                            <td>${HtmlUtils.escape(this.trxTypeLabel(row.trxType))}</td>
+                        </tr>
+                    `).join('');
+                },
+
+                closeRelatedOrgs() {
+                    const modalEl = document.getElementById('gatewayOrgsModal');
+                    const instance = modalEl && bootstrap.Modal.getInstance(modalEl);
+                    if (instance) instance.hide();
+                },
+
+                openRegister() {
+                    if (window.InterfaceMnt && InterfaceMnt.GatewayManage) {
+                        InterfaceMnt.GatewayManage.open();
+                    } else {
+                        Toast.error('Gateway 관리 모달을 불러오는데 실패했습니다.');
+                    }
+                },
+
+                exportExcel() {
+                    const params = new URLSearchParams();
+                    const searchField = document.getElementById('gatewaySearchField')?.value || '';
+                    const searchValue = document.getElementById('gatewaySearchValue')?.value.trim() || '';
+                    const ioType = document.getElementById('gatewayIoType')?.value || '';
+                    if (searchValue) {
+                        params.set('searchField', searchField);
+                        params.set('searchValue', searchValue);
+                    }
+                    if (ioType) params.set('ioType', ioType);
+                    if (this.sortBy) {
+                        params.set('sortBy', this.sortBy);
+                        params.set('sortDirection', this.sortDirection || 'ASC');
+                    }
+                    const qs = params.toString();
+                    window.location.href = '/api/gateways/export' + (qs ? '?' + qs : '');
+                },
+
+                printTable() {
+                    const columns = [
+                        { key: 'gwId', label: 'GATEWAY' },
+                        { key: 'gwDesc', label: 'G/W 설명' },
+                        { key: 'gwAppName', label: 'G/W 구현 APP명' },
+                        { key: 'ioType', label: '어댑터/리스너' },
+                        { key: 'threadCount', label: 'THREAD' }
+                    ];
+                    PrintUtil.print({ title: 'Gateway 목록', columns: columns, data: this.currentRows });
+                }
+            };
+
+            // 엑셀/인쇄 버튼 바인딩
+            const btnExcel = document.getElementById('btnExcel');
+            if (btnExcel) {
+                btnExcel.addEventListener('click', () => window.GatewayList.exportExcel());
+            }
+            const btnPrint = document.getElementById('btnPrint');
+            if (btnPrint) {
+                btnPrint.addEventListener('click', () => window.GatewayList.printTable());
+            }
+
+            window.GatewayList.init();
+        })();
+    </script>
+</th:block>
+</body>
+</html>

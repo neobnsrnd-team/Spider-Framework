@@ -1,0 +1,23 @@
+services:
+  oracle:
+    image: gvenzl/oracle-free:23-slim-faststart
+    container_name: spider-oracle-e2e
+    ports:
+      - "1521:1521"
+    environment:
+      ORACLE_PASSWORD: test1234
+      APP_USER: spider
+      APP_USER_PASSWORD: spider1234
+    volumes:
+      # Init shell script (executed by gvenzl entrypoint)
+      - ./init-oracle.sh:/container-entrypoint-initdb.d/01_init.sh
+      # SQL files (referenced by init-oracle.sh, not directly executed)
+      - ../../docs/sql/oracle/01_create_tables.sql:/e2e-init/01_create_tables.sql
+      - ../../docs/sql/oracle/03_insert_initial_data.sql:/e2e-init/02_insert_initial_data.sql
+      - ./e2e-seed.sql:/e2e-init/03_e2e_seed.sql
+    healthcheck:
+      test: ["CMD-SHELL", "healthcheck.sh"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 60s

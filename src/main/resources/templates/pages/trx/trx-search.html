@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<!-- TrxStop Search Fragment -->
+<div th:fragment="search" class="card border p-2 mb-3">
+    <div class="d-flex flex-wrap align-items-center gap-2 mb-1">
+        <!-- Search type + keyword -->
+        <select id="searchField" class="form-select form-select-sm flex-fixed-100">
+            <option value="trxName">거래명</option>
+            <option value="trxId">거래ID</option>
+        </select>
+        <input type="text" id="searchValue" class="form-control form-control-sm flex-fixed-180"
+               placeholder=""
+               onkeypress="if(event.key === 'Enter') TrxStopPage.search()">
+
+        <!-- 운영모드 -->
+        <label class="form-label mb-0 small fw-medium ms-2">운영모드</label>
+        <select id="operModeTypeFilter" class="form-select form-select-sm flex-fixed-120">
+            <option value="">전체</option>
+            <option value="D">개발환경</option>
+            <option value="R">리얼환경</option>
+            <option value="T">테스트환경</option>
+        </select>
+
+        <!-- 현재상태 -->
+        <label class="form-label mb-0 small fw-medium ms-2">현재상태</label>
+        <select id="trxStopYnFilter" class="form-select form-select-sm flex-fixed-100">
+            <option value="">전체</option>
+            <option value="N">거래중</option>
+            <option value="Y">거래중지</option>
+        </select>
+
+        <!-- Spacer -->
+        <div class="flex-grow-1"></div>
+
+        <!-- Page size -->
+        <select id="limitRows" class="form-select form-select-sm sp-limit-select">
+            <option value="10" selected>10</option>
+            <option value="20">20</option>
+            <option value="50">50</option>
+            <option value="100">100</option>
+        </select>
+        <label class="form-label mb-0 small fw-medium ms-1 me-2 fs-xs">건씩</label>
+
+        <button class="btn btn-primary btn-sm" onclick="TrxStopPage.search()">
+            <i class="bi bi-search"></i> 조회
+        </button>
+    </div>
+</div>
+</body>
+</html>

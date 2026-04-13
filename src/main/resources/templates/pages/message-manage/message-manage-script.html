@@ -1,0 +1,3544 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<!-- Message Page Scripts -->
+<th:block th:fragment="script">
+    <!-- Styles moved to app.css (sp-field-tbody, sp-resize-h/v, sp-cg-picker, etc.) -->
+    <script th:inline="javascript">
+        const HAS_MESSAGE_WRITE = /*[[${userAuthorities != null and userAuthorities.contains('MESSAGE:W')}]]*/ false;
+    </script>
+    <script>
+        (function() {
+        // ==================== Security Utilities ====================
+
+        function getUserFriendlyErrorMessage(error) {
+            let message = '요청 처리 중 오류가 발생했습니다.';
+
+            if (!error) return message;
+
+            if (error.response && error.response.data) {
+                const data = error.response.data;
+                if (data.message) {
+                    message = data.message;
+                }
+                if (data.errors && Array.isArray(data.errors)) {
+                    message = data.errors.map(e => e.message || e).join('\n');
+                }
+            } else if (error.responseJSON) {
+                if (error.responseJSON.message) {
+                    message = error.responseJSON.message;
+                }
+            } else if (error.message) {
+                if (error.message.includes('Network Error')) {
+                    message = '네트워크 연결을 확인해주세요.';
+                } else if (error.message.includes('timeout')) {
+                    message = '요청 시간이 초과되었습니다.';
+                }
+            }
+
+            message = message.replace(/<[^>]*>/g, '');
+            return message;
+        }
+
+        /**
+         * Debounce 함수 - API 호출 최적화
+         */
+        function debounce(func, wait) {
+            let timeout;
+            return function executedFunction(...args) {
+                const later = () => {
+                    clearTimeout(timeout);
+                    func(...args);
+                };
+                clearTimeout(timeout);
+                timeout = setTimeout(later, wait);
+            };
+        }
+
+        // ==================== Validation Utilities ====================
+
+        const Validators = {
+            /**
+             * 전문ID 검증
+             */
+            messageId: function(value) {
+                if (!value) {
+                    return '전문ID를 입력하세요.';
+                }
+                if (value.length > 50) {
+                    return '전문ID는 50자 이하여야 합니다.';
+                }
+                if (!/^[a-zA-Z0-9_-]+$/.test(value)) {
+                    return '영문, 숫자, 언더스코어(_), 하이픈(-)만 사용 가능합니다.';
+                }
+                return null;
+            },
+
+            /**
+             * 전문명 검증
+             */
+            messageName: function(value) {
+                if (!value) {
+                    return '전문명을 입력하세요.';
+                }
+                if (value.length > 100) {
+                    return '전문명은 100자 이하여야 합니다.';
+                }
+                return null;
+            },
+
+            /**
+             * 전문타입 검증
+             */
+            messageType: function(value) {
+                if (!value) {
+                    return '전문타입을 선택하세요.';
+                }
+                return null;
+            },
+
+            /**
+             * 기관ID 검증
+             */
+            orgId: function(value) {
+                if (!value) {
+                    return '기관ID를 선택하세요.';
+                }
+                return null;
+            },
+
+            /**
+             * 상위전문ID 검증 (선택)
+             */
+            parentMessageId: function(value) {
+                if (!value) {
+                    return null; // 선택사항
+                }
+                if (value.length > 50) {
+                    return '상위전문ID는 50자 이하여야 합니다.';
+                }
+                return null;
+            },
+
+            /**
+             * SITE구분 검증 (필수)
+             */
+            bizDomain: function(value) {
+                if (!value) {
+                    return 'SITE구분을 선택하세요.';
+                }
+                return null;
+            }
+        };
+
+        // ==================== Messages Object ====================
+
+        window.Messages = window.Messages || {
+            currentPage: 1,
+            totalItems: 0,
+            itemsPerPage: 10,
+            sortBy: null,
+            sortDirection: null,
+            messagesData: [],
+            orgs: [],
+
+            init: function() {
+                this.loadOrgs();
+                this.loadMessageTypes();
+                this.loadValidationRules();
+                this.bindEvents();
+            },
+
+            loadMessageTypes: function() {
+                $.ajax({
+                    url: API_BASE_URL + '/messages/types',
+                    method: 'GET',
+                    success: (response) => {
+                        if (response.success && response.data) {
+                            const select = $('#messageTypeFilter');
+                            select.find('option:not(:first)').remove();
+                            response.data.forEach(type => {
+                                select.append(`<option value="${HtmlUtils.escape(type.code)}">${HtmlUtils.escape(type.name)}</option>`);
+                            });
+                        }
+                    },
+                    error: (xhr) => {
+                        console.error('Failed to load message types:', xhr);
+                    }
+                });
+            },
+
+            loadValidationRules: function() {
+                $.ajax({
+                    url: API_BASE_URL + '/messages/validation-rules',
+                    method: 'GET',
+                    success: (response) => {
+                        if (response.success && response.data) {
+                            VALIDATION_RULE_OPTIONS = response.data;
+                        }
+                    },
+                    error: (xhr) => console.error('Failed to load validation rules:', xhr)
+                });
+            },
+
+            loadOrgs: function() {
+                $.ajax({
+                    url: API_BASE_URL + '/orgs/list',
+                    method: 'GET',
+                    success: (response) => {
+                        if (response.success && response.data) {
+                            this.orgs = response.data;
+                            this.renderOrgOptions();
+                        }
+                    },
+                    error: (xhr) => {
+                        console.error('Failed to load orgs:', xhr);
+                    }
+                });
+            },
+
+            renderOrgOptions: function() {
+                // 모달용 select
+                const modalOrgId = $('#modalOrgId');
+                modalOrgId.find('option:not(:first)').remove();
+                this.orgs.forEach(org => {
+                    const orgId = HtmlUtils.escape(org.orgId);
+                    const orgName = HtmlUtils.escape(org.orgName);
+                    modalOrgId.append(`<option value="${orgId}">${orgName} (${orgId})</option>`);
+                });
+
+                // 검색조건 기관명 select
+                const orgFilter = $('#orgIdFilter');
+                orgFilter.find('option:not(:first)').remove();
+                this.orgs.forEach(org => {
+                    const orgId = HtmlUtils.escape(org.orgId);
+                    const orgName = HtmlUtils.escape(org.orgName);
+                    orgFilter.append(`<option value="${orgId}">${orgName}</option>`);
+                });
+            },
+
+            bindEvents: function() {
+                $('#messageTable thead th[data-sort]').off('click').on('click', function() {
+                    const sortKey = $(this).data('sort');
+                    if (!sortKey) return;
+
+                    if (window.Messages.sortBy === sortKey) {
+                        window.Messages.sortDirection = window.Messages.sortDirection === 'ASC' ? 'DESC' : 'ASC';
+                    } else {
+                        window.Messages.sortBy = sortKey;
+                        window.Messages.sortDirection = 'ASC';
+                    }
+                    $('#sortSelect').val('');
+                    window.Messages.updateSortIndicators();
+                    window.Messages.load();
+                });
+
+                $('#limitRows').change(function() {
+                    window.Messages.itemsPerPage = parseInt($(this).val()) || 10;
+                    window.Messages.currentPage = 1;
+                    window.Messages.load();
+                });
+
+                $('#orgIdFilter').change(function() {
+                    window.Messages.loadParentMessages($(this).val());
+                });
+            },
+
+            loadParentMessages: function(orgId) {
+                const select = $('#parentMessageIdFilter');
+                select.find('option:not(:first)').remove();
+                if (!orgId) return;
+
+                $.ajax({
+                    url: API_BASE_URL + '/messages/headers',
+                    method: 'GET',
+                    data: { orgId: orgId },
+                    success: (response) => {
+                        if (response.success && response.data) {
+                            response.data.forEach(msg => {
+                                const id = HtmlUtils.escape(msg.messageId);
+                                const name = HtmlUtils.escape(msg.messageName);
+                                select.append(`<option value="${id}">${id} (${name})</option>`);
+                            });
+                        }
+                    },
+                    error: (xhr) => {
+                        console.error('Failed to load parent messages:', xhr);
+                    }
+                });
+            },
+
+            toggleLock: function(index) {
+                const msg = this.messagesData[index];
+                if (!msg) return;
+
+                const newLockYn = msg.lockYn === 'Y' ? 'N' : 'Y';
+                const confirmMsg = newLockYn === 'Y'
+                    ? '해당 전문을 잠그시겠습니까?'
+                    : '해당 전문의 잠금을 해제하시겠습니까?';
+
+                Toast.confirm(confirmMsg, () => {
+                    const url = API_BASE_URL + '/messages/' + encodeURIComponent(msg.messageId) +
+                                '?orgId=' + encodeURIComponent(msg.orgId);
+
+                    $.ajax({
+                        url: url,
+                        method: 'PUT',
+                        contentType: 'application/json',
+                        data: JSON.stringify({ lockYn: newLockYn }),
+                        success: (response) => {
+                            if (response.success) {
+                                msg.lockYn = newLockYn;
+                                const btn = $(`button[data-action="toggleLock"][data-index="${index}"]`);
+                                if (newLockYn === 'Y') {
+                                    btn.text('Y').removeClass('sp-lock-inactive').addClass('sp-lock-active');
+                                } else {
+                                    btn.text('N').removeClass('sp-lock-active').addClass('sp-lock-inactive');
+                                }
+                                Toast.success('처리가 완료 되었습니다.');
+                            } else {
+                                Toast.error('잠금 상태 변경 실패\n' + (response.message || '알 수 없는 오류'));
+                            }
+                        },
+                        error: (xhr) => {
+                            Toast.error('잠금 상태 변경 실패\n' + getUserFriendlyErrorMessage(xhr));
+                        }
+                    });
+                });
+            },
+
+            onSortSelectChange: function() {
+                const val = $('#sortSelect').val();
+                if (val) {
+                    this.sortBy = val;
+                    this.sortDirection = 'ASC';
+                } else {
+                    this.sortBy = null;
+                    this.sortDirection = null;
+                }
+                this.updateSortIndicators();
+                this.currentPage = 1;
+                this.load();
+            },
+
+            load: function() {
+                const searchParams = {
+                    searchField: $('#searchField').val(),
+                    searchValue: $('#searchValue').val(),
+                    orgIdFilter: $('#orgIdFilter').val(),
+                    headerYnFilter: $('#headerYnFilter').val(),
+                    parentMessageIdFilter: $('#parentMessageIdFilter').val(),
+                    messageTypeFilter: $('#messageTypeFilter').val(),
+                    page: this.currentPage,
+                    size: this.itemsPerPage,
+                    sortBy: this.sortBy || undefined,
+                    sortDirection: this.sortDirection || undefined
+                };
+
+                $.ajax({
+                    url: API_BASE_URL + '/messages/page',
+                    method: 'GET',
+                    data: searchParams,
+                    success: (response) => {
+                        if (response.success) {
+                            const pageData = response.data;
+                            this.totalItems = pageData.totalElements;
+                            this.messagesData = pageData.content;
+                            this.renderTable(pageData.content);
+                            this.renderPagination();
+                        } else {
+                            Toast.error('조회 실패: ' + (response.message || '알 수 없는 오류'));
+                        }
+                    },
+                    error: (xhr) => {
+                        console.error('Failed to load messages:', xhr);
+                        const errorMsg = getUserFriendlyErrorMessage(xhr);
+                        Toast.info(errorMsg);
+                    }
+                });
+            },
+
+            renderTable: function(messages) {
+                const tbody = $('#messageTableBody');
+                tbody.empty();
+
+                if (!messages || messages.length === 0) {
+                    const actionColCount = HAS_MESSAGE_WRITE ? 9 : 5;
+                    tbody.append(`
+                        <tr>
+                            <td colspan="${actionColCount}" class="text-center py-4 text-body-secondary">
+                                조회된 데이터가 없습니다.
+                            </td>
+                        </tr>
+                    `);
+                    return;
+                }
+
+                const getOrgName = (orgId) => {
+                    const org = window.Messages.orgs.find(o => o.orgId === orgId);
+                    return org ? HtmlUtils.escape(org.orgName) : HtmlUtils.escape(orgId);
+                };
+
+                messages.forEach((msg, index) => {
+                    const lockBtnClass = msg.lockYn === 'Y' ? 'sp-lock-active' : 'sp-lock-inactive';
+                    const lockBtnLabel = msg.lockYn === 'Y' ? 'Y' : 'N';
+
+                    const actionCols = HAS_MESSAGE_WRITE ? `
+                        <td class="text-center">
+                            <button class="btn btn-outline-secondary btn-sm" data-action="backup" data-index="${index}">백업</button>
+                        </td>
+                        <td class="text-center">
+                            <button class="btn btn-outline-secondary btn-sm" data-action="restore" data-index="${index}">복원</button>
+                        </td>
+                        <td class="text-center">
+                            <button class="btn btn-outline-secondary btn-sm ${lockBtnClass}" data-action="toggleLock" data-index="${index}">${lockBtnLabel}</button>
+                        </td>
+                        <td class="text-center">
+                            <button class="btn btn-outline-secondary btn-sm" data-action="reload" data-index="${index}">Reload</button>
+                        </td>` : '';
+
+                    const row = $(`
+                        <tr data-message-index="${index}" class="cursor-pointer">
+                            <td>${getOrgName(msg.orgId)}</td>
+                            <td>${HtmlUtils.escape(msg.messageId)}</td>
+                            <td>${HtmlUtils.escape(msg.messageName)}</td>
+                            <td>${HtmlUtils.escape(msg.parentMessageId || '')}</td>
+                            <td class="text-center">${msg.curVersion ?? ''}</td>
+                            ${actionCols}
+                        </tr>
+                    `);
+
+                    row.on('click', function(e) {
+                        if ($(e.target).is('button') || $(e.target).closest('button').length) return;
+                        const msgIndex = $(this).data('message-index');
+                        const msgData = window.Messages.messagesData[msgIndex];
+                        window.MessageDetailModal.open(msgData.orgId, msgData.messageId);
+                    });
+
+                    row.find('button[data-action="toggleLock"]').on('click', function(e) {
+                        e.stopPropagation();
+                        window.Messages.toggleLock(parseInt($(this).data('index')));
+                    });
+
+                    row.find('button[data-action="reload"]').on('click', function(e) {
+                        e.stopPropagation();
+                        const msgIndex = parseInt($(this).data('index'));
+                        const msgData = window.Messages.messagesData[msgIndex];
+                        WasSelectReloadModal.open({
+                            onExecute: function(instanceIds) {
+                                $.ajax({
+                                    url: API_BASE_URL + '/reload/execute',
+                                    method: 'POST',
+                                    contentType: 'application/json',
+                                    data: JSON.stringify({
+                                        reloadType: 'message',
+                                        instanceIds: instanceIds,
+                                        additionalParams: {
+                                            orgId: msgData.orgId,
+                                            messageId: msgData.messageId
+                                        }
+                                    }),
+                                    success: function(response) {
+                                        if (response.success && response.data) {
+                                            WasSelectReloadModal.showResults(response.data.results);
+                                        } else {
+                                            WasSelectReloadModal.resetButton();
+                                            Toast.error(response.message || 'Reload 실행에 실패했습니다.');
+                                        }
+                                    },
+                                    error: function(xhr) {
+                                        WasSelectReloadModal.resetButton();
+                                        Toast.error(xhr.responseJSON?.message || 'Reload 실행 중 오류가 발생했습니다.');
+                                    }
+                                });
+                            }
+                        });
+                    });
+
+                    row.find('button[data-action="backup"]').on('click', function(e) {
+                        e.stopPropagation();
+                        const msgIndex = parseInt($(this).data('index'));
+                        const msgData = window.Messages.messagesData[msgIndex];
+                        window.MessageDetailModal.currentOrgId = msgData.orgId;
+                        window.MessageDetailModal.currentMessageId = msgData.messageId;
+                        window.MessageDetailModal.openBackupModal();
+                    });
+
+                    row.find('button[data-action="restore"]').on('click', function(e) {
+                        e.stopPropagation();
+                        const msgIndex = parseInt($(this).data('index'));
+                        const msgData = window.Messages.messagesData[msgIndex];
+                        window.MessageDetailModal.currentOrgId = msgData.orgId;
+                        window.MessageDetailModal.currentMessageId = msgData.messageId;
+                        window.MessageDetailModal.openRestoreModal();
+                    });
+
+                    tbody.append(row);
+                });
+            },
+
+            renderPagination: function() {
+                const totalPages = Math.ceil(this.totalItems / this.itemsPerPage);
+                const pagination = $('#pagination');
+                pagination.empty();
+
+                pagination.append(`
+                    <li class="page-item ${this.currentPage === 1 ? 'disabled' : ''}">
+                        <a class="page-link" href="#" onclick="window.Messages.changePage(1); return false;">
+                            <i class="bi bi-chevron-double-left"></i>
+                        </a>
+                    </li>
+                    <li class="page-item ${this.currentPage === 1 ? 'disabled' : ''}">
+                        <a class="page-link" href="#" onclick="window.Messages.changePage(${this.currentPage - 1}); return false;">
+                            <i class="bi bi-chevron-left"></i>
+                        </a>
+                    </li>
+                `);
+
+                const maxButtons = 5;
+                let startPage = Math.max(1, this.currentPage - Math.floor(maxButtons / 2));
+                let endPage = Math.min(totalPages, startPage + maxButtons - 1);
+
+                if (endPage - startPage + 1 < maxButtons) {
+                    startPage = Math.max(1, endPage - maxButtons + 1);
+                }
+
+                for (let i = startPage; i <= endPage; i++) {
+                    pagination.append(`
+                        <li class="page-item ${i === this.currentPage ? 'active' : ''}">
+                            <a class="page-link" href="#" onclick="window.Messages.changePage(${i}); return false;">${i}</a>
+                        </li>
+                    `);
+                }
+
+                pagination.append(`
+                    <li class="page-item ${this.currentPage === totalPages || totalPages === 0 ? 'disabled' : ''}">
+                        <a class="page-link" href="#" onclick="window.Messages.changePage(${this.currentPage + 1}); return false;">
+                            <i class="bi bi-chevron-right"></i>
+                        </a>
+                    </li>
+                    <li class="page-item ${this.currentPage === totalPages || totalPages === 0 ? 'disabled' : ''}">
+                        <a class="page-link" href="#" onclick="window.Messages.changePage(${totalPages}); return false;">
+                            <i class="bi bi-chevron-double-right"></i>
+                        </a>
+                    </li>
+                `);
+
+                const start = this.totalItems === 0 ? 0 : (this.currentPage - 1) * this.itemsPerPage + 1;
+                const end = Math.min(this.currentPage * this.itemsPerPage, this.totalItems);
+                $('#pageInfo').text(`${start} - ${end} of ${this.totalItems} items`);
+            },
+
+            changePage: function(page) {
+                const totalPages = Math.ceil(this.totalItems / this.itemsPerPage);
+                if (page < 1 || page > totalPages) return;
+                this.currentPage = page;
+                this.load();
+            },
+
+            updateSortIndicators: function() {
+                const headers = $('#messageTable thead th[data-sort]');
+                headers.removeClass('sort-asc sort-desc');
+
+                if (!this.sortBy || !this.sortDirection) {
+                    return;
+                }
+
+                headers.filter(`[data-sort="${this.sortBy}"]`)
+                    .addClass(this.sortDirection === 'ASC' ? 'sort-asc' : 'sort-desc');
+            },
+
+            resetSearch: function() {
+                $('#searchField').val('messageId');
+                $('#searchValue').val('');
+                $('#orgIdFilter').val('');
+                $('#headerYnFilter').val('');
+                $('#parentMessageIdFilter').find('option:not(:first)').remove();
+                $('#parentMessageIdFilter').val('');
+                $('#sortSelect').val('');
+                $('#messageTypeFilter').val('');
+                this.currentPage = 1;
+                this.sortBy = null;
+                this.sortDirection = null;
+                this.updateSortIndicators();
+                this.load();
+            }
+        };
+
+        // ==================== Shared Field Table Utilities ====================
+
+        /**
+         * 필드 테이블 공통 렌더링
+         * @param {Array}   fields      - 필드 목록
+         * @param {string}  messageType - 전문유형 ('X' = XML)
+         * @param {{thead:string, theadXml:string, tbody:string}} ids - jQuery 선택자
+         * @param {boolean} editable    - 셀 편집 기능 포함 여부 (data-row-index, editable-cell, crud-cell)
+         */
+        function renderFieldTable(fields, messageType, ids, editable) {
+            const isXml = messageType === 'X';
+            const colCount = isXml ? 15 : 19;
+
+            $(ids.thead).toggle(!isXml);
+            $(ids.theadXml).toggleClass('d-hidden', !isXml);
+
+            const tbody = $(ids.tbody);
+            tbody.empty();
+
+            if (!fields || fields.length === 0) {
+                tbody.append(`<tr><td colspan="${colCount}" class="text-center py-3 text-body-secondary">등록된 필드가 없습니다.</td></tr>`);
+                return;
+            }
+
+            fields.forEach((field, index) => {
+                const rowAttr = editable ? `data-row-index="${index}"` : '';
+                const crud = editable
+                    ? `<td class="crud-cell text-center"></td>`
+                    : `<td class="text-center"></td>`;
+                // editable 여부에 따라 셀 속성 생성
+                const ec = (name, center) => {
+                    const cls = center ? ' text-center' : '';
+                    return editable ? `class="editable-cell${cls}" data-field="${name}"` : (center ? 'class="text-center"' : '');
+                };
+
+                if (isXml) {
+                    tbody.append(`<tr ${rowAttr}>
+                        <td class="text-center"><input type="checkbox"></td>
+                        ${crud}
+                        <td ${ec('sortOrder', true)}>${field.sortOrder ?? ''}</td>
+                        <td ${ec('messageFieldName', false)}>${HtmlUtils.escape(field.messageFieldName)}</td>
+                        <td ${ec('messageFieldId', false)}>${HtmlUtils.escape(field.messageFieldId)}</td>
+                        <td ${ec('messageFieldDesc', false)}>${HtmlUtils.escape(field.messageFieldDesc ?? '')}</td>
+                        <td ${ec('requiredYn', true)}>${HtmlUtils.escape(field.requiredYn)}</td>
+                        <td ${ec('useMode', true)}>${HtmlUtils.escape(field.useMode)}</td>
+                        <td ${ec('fieldTag', false)}>${HtmlUtils.escape(field.fieldTag)}</td>
+                        <td ${ec('codeGroup', false)}>${HtmlUtils.escape(field.codeGroupName || field.codeGroup || '')}</td>
+                        <td ${ec('codeMappingYn', true)}>${HtmlUtils.escape(field.codeMappingYn)}</td>
+                        <td ${ec('defaultValue', false)}>${HtmlUtils.escape(field.defaultValue)}</td>
+                        <td ${ec('remark', false)}>${HtmlUtils.escape(field.remark)}</td>
+                        <td ${ec('logYn', true)}>${HtmlUtils.escape(field.logYn)}</td>
+                        <td ${ec('validationRuleId', false)}>${HtmlUtils.escape(field.validationRuleId)}</td>
+                    </tr>`);
+                } else {
+                    tbody.append(`<tr ${rowAttr}>
+                        <td class="text-center"><input type="checkbox"></td>
+                        ${crud}
+                        <td ${ec('sortOrder', true)}>${field.sortOrder ?? ''}</td>
+                        <td ${ec('messageFieldName', false)}>${HtmlUtils.escape(field.messageFieldName)}</td>
+                        <td ${ec('messageFieldId', false)}>${HtmlUtils.escape(field.messageFieldId)}</td>
+                        <td ${ec('dataType', true)}>${HtmlUtils.escape(field.dataType)}</td>
+                        <td ${ec('dataLength', true)}>${field.dataLength ?? ''}</td>
+                        <td ${ec('align', true)}>${HtmlUtils.escape(field.align)}</td>
+                        <td ${ec('messageFieldDesc', false)}>${HtmlUtils.escape(field.messageFieldDesc ?? '')}</td>
+                        <td ${ec('requiredYn', true)}>${HtmlUtils.escape(field.requiredYn)}</td>
+                        <td ${ec('scale', true)}>${field.scale ?? ''}</td>
+                        <td ${ec('filler', true)}>${HtmlUtils.escape(field.filler)}</td>
+                        <td ${ec('useMode', true)}>${HtmlUtils.escape(field.useMode)}</td>
+                        <td ${ec('codeGroup', false)}>${HtmlUtils.escape(field.codeGroupName || field.codeGroup || '')}</td>
+                        <td ${ec('codeMappingYn', true)}>${HtmlUtils.escape(field.codeMappingYn)}</td>
+                        <td ${ec('defaultValue', false)}>${HtmlUtils.escape(field.defaultValue)}</td>
+                        <td ${ec('remark', false)}>${HtmlUtils.escape(field.remark)}</td>
+                        <td ${ec('logYn', true)}>${HtmlUtils.escape(field.logYn)}</td>
+                        <td ${ec('validationRuleId', false)}>${HtmlUtils.escape(field.validationRuleId)}</td>
+                    </tr>`);
+                }
+            });
+        }
+
+        /**
+         * 상위전문 옵션 로드 공통 유틸리티
+         * @param {string}  selectId      - jQuery 선택자 (예: '#modalParentMessageId')
+         * @param {string}  orgId         - 기관ID
+         * @param {string}  selectedValue - 로드 후 선택할 값 (optional)
+         * @param {boolean} showIdInText  - true: "ID (Name)" 형식, false: "Name" 만
+         */
+        function loadParentMessageOptions(selectId, orgId, selectedValue, showIdInText) {
+            const select = $(selectId);
+            select.empty().append('<option value="">선택</option>');
+            if (!orgId) return;
+
+            $.ajax({
+                url: API_BASE_URL + '/messages/headers',
+                method: 'GET',
+                data: { orgId: orgId },
+                success: (response) => {
+                    if (response.success && response.data) {
+                        response.data.forEach(msg => {
+                            const id = HtmlUtils.escape(msg.messageId);
+                            const name = HtmlUtils.escape(msg.messageName);
+                            const text = showIdInText ? `${id} (${name})` : name;
+                            select.append(`<option value="${id}">${text}</option>`);
+                        });
+                        if (selectedValue) select.val(selectedValue);
+                    }
+                },
+                error: (xhr) => {
+                    console.error('Failed to load parent messages:', xhr);
+                }
+            });
+        }
+
+        // ==================== Shared Field Row Add Utility ====================
+
+        /**
+         * 필드 테이블에 신규 행을 추가하는 공통 유틸리티
+         * @param {Array}  fields     - 현재 필드 배열 (push 후 index 계산에 사용)
+         * @param {string} messageType - 전문유형 ('X' = XML)
+         * @param {string} tbodyId    - 대상 tbody jQuery 선택자
+         * @param {string} countId    - 건수 표시 span jQuery 선택자
+         */
+        function addFieldRowToTable(fields, messageType, tbodyId, countId) {
+            const isXml = messageType === 'X';
+
+            const newField = {
+                sortOrder: 1,
+                messageFieldName: '',
+                messageFieldId: '',
+                dataType: 'C',
+                dataLength: '',
+                align: 'L',
+                remark: '',
+                requiredYn: '',
+                scale: '',
+                filler: '',
+                useMode: 'U',
+                codeGroup: '',
+                codeMappingYn: 'Y',
+                defaultValue: '',
+                logYn: 'Y',
+                validationRuleId: '',
+                fieldTag: '',
+                messageFieldDesc: '',
+                codeGroupName: ''
+            };
+
+            fields.push(newField);
+            const index = fields.length - 1;
+
+            const tbody = $(tbodyId);
+            // 빈 상태 안내 행 제거
+            tbody.find('tr td[colspan]').closest('tr').remove();
+
+            const ec = (name, center) => {
+                const cls = center ? ' text-center' : '';
+                return `class="editable-cell${cls}" data-field="${name}"`;
+            };
+
+            let row;
+            if (isXml) {
+                row = `<tr data-row-index="${index}">
+                    <td class="text-center"><input type="checkbox"></td>
+                    <td class="crud-cell added text-center">추가</td>
+                    <td ${ec('sortOrder', true)}>${newField.sortOrder}</td>
+                    <td ${ec('messageFieldName', false)}></td>
+                    <td ${ec('messageFieldId', false)}></td>
+                    <td ${ec('messageFieldDesc', false)}></td>
+                    <td ${ec('requiredYn', true)}></td>
+                    <td ${ec('useMode', true)}>${newField.useMode}</td>
+                    <td ${ec('fieldTag', false)}></td>
+                    <td ${ec('codeGroup', false)}></td>
+                    <td ${ec('codeMappingYn', true)}>${newField.codeMappingYn}</td>
+                    <td ${ec('defaultValue', false)}></td>
+                    <td ${ec('remark', false)}></td>
+                    <td ${ec('logYn', true)}>${newField.logYn}</td>
+                    <td ${ec('validationRuleId', false)}></td>
+                </tr>`;
+            } else {
+                row = `<tr data-row-index="${index}">
+                    <td class="text-center"><input type="checkbox"></td>
+                    <td class="crud-cell added text-center">추가</td>
+                    <td ${ec('sortOrder', true)}>${newField.sortOrder}</td>
+                    <td ${ec('messageFieldName', false)}></td>
+                    <td ${ec('messageFieldId', false)}></td>
+                    <td ${ec('dataType', true)}>${newField.dataType}</td>
+                    <td ${ec('dataLength', true)}></td>
+                    <td ${ec('align', true)}>${newField.align}</td>
+                    <td ${ec('messageFieldDesc', false)}></td>
+                    <td ${ec('requiredYn', true)}></td>
+                    <td ${ec('scale', true)}></td>
+                    <td ${ec('filler', true)}></td>
+                    <td ${ec('useMode', true)}>${newField.useMode}</td>
+                    <td ${ec('codeGroup', false)}></td>
+                    <td ${ec('codeMappingYn', true)}>${newField.codeMappingYn}</td>
+                    <td ${ec('defaultValue', false)}></td>
+                    <td ${ec('remark', false)}></td>
+                    <td ${ec('logYn', true)}>${newField.logYn}</td>
+                    <td ${ec('validationRuleId', false)}></td>
+                </tr>`;
+            }
+
+            tbody.append(row);
+            if (countId) $(countId).text(fields.length);
+        }
+
+        // ==================== Shared Field Row Delete Utility ====================
+
+        /**
+         * 선택된 행을 fields 배열에서 null 처리하고 DOM에서 제거
+         * (data-row-index는 유지하여 나머지 행의 인덱스 참조 보장)
+         */
+        function deleteSelectedFieldRows(fields, tbodySelector, countId) {
+            const $tbody = $(tbodySelector);
+            const $checked = $tbody.find('tr[data-row-index] td:first-child input[type="checkbox"]:checked')
+                                   .closest('tr[data-row-index]');
+
+            if ($checked.length === 0) {
+                Toast.warning('삭제할 행을 선택해주세요.');
+                return;
+            }
+
+            $checked.each(function() {
+                const idx = parseInt($(this).data('row-index'));
+                if (!isNaN(idx)) fields[idx] = null;
+                $(this).remove();
+            });
+
+            // selectAll 체크 해제
+            $tbody.closest('div').find('input[type="checkbox"].selectAllFields,' +
+                                       'input[type="checkbox"].selectAllModalFields').prop('checked', false);
+
+            if (countId) $(countId).text($tbody.find('tr[data-row-index]').length);
+
+            if ($tbody.find('tr[data-row-index]').length === 0) {
+                const colCount = $tbody.closest('table').find('thead:visible tr:first th').length || 19;
+                $tbody.append(`<tr><td colspan="${colCount}" class="text-center py-3 text-body-secondary">등록된 필드가 없습니다.</td></tr>`);
+            }
+        }
+
+        // ==================== Shared Field Cell Edit Utility ====================
+
+        const DATA_TYPE_OPTIONS   = ['C', 'N', 'H', 'B', 'F', 'K', 'D', 'V', 'S'];
+        const YN_OPTIONS          = ['N', 'Y'];
+        const USE_MODE_OPTIONS    = ['U', 'S', 'D'];
+        const ALIGN_OPTIONS       = ['L', 'R'];
+        let   VALIDATION_RULE_OPTIONS = []; // GET /api/messages/validation-rules 로 로드
+
+        function getCellEditType(fieldName) {
+            if (fieldName === 'sortOrder' || fieldName === 'dataLength' || fieldName === 'scale') return 'number';
+            if (fieldName === 'dataType')         return 'select-dataType';
+            if (fieldName === 'align')             return 'select-align';
+            if (fieldName === 'requiredYn' || fieldName === 'codeMappingYn' || fieldName === 'logYn') return 'select-yn';
+            if (fieldName === 'useMode')           return 'select-useMode';
+            if (fieldName === 'validationRuleId')  return 'select-validation';
+            if (fieldName === 'codeGroup')         return 'popup-codeGroup';
+            return 'text';
+        }
+
+        /**
+         * 필드 테이블 셀 편집 이벤트 공통 바인딩
+         * @param {string}   tbodySelector - 대상 tbody jQuery 선택자
+         * @param {Function} getFields     - 현재 fields 배열 반환 함수 () => Array
+         * @param {Function} onFieldUpdate - 값 변경 후 콜백 (rowIndex, fieldName, newValue)
+         */
+        function bindFieldCellEvents(tbodySelector, getFields, onFieldUpdate) {
+            const $tbody = $(tbodySelector);
+
+            // CRUD 셀: 수정 불가
+            $tbody.off('click', '.crud-cell').on('click', '.crud-cell', function() {
+                Toast.info('해당 필드는 수정이 불가능합니다');
+            });
+
+            // 편집 가능 셀
+            $tbody.off('click', '.editable-cell').on('click', '.editable-cell', function() {
+                const $cell = $(this);
+                if ($cell.find('input, select').length > 0) return;
+
+                const fieldName    = $cell.data('field');
+                const rowIndex     = parseInt($cell.closest('tr').data('row-index'));
+                const fields       = getFields();
+                const currentValue = fields[rowIndex] != null ? String(fields[rowIndex][fieldName] ?? '') : '';
+                const type         = getCellEditType(fieldName);
+
+                function commit(newValue) {
+                    if (fields[rowIndex] != null) fields[rowIndex][fieldName] = newValue;
+                    $cell.empty().text(newValue);
+                    if (type === 'number') $cell.addClass('cell-edited');
+                    if (onFieldUpdate) onFieldUpdate(rowIndex, fieldName, newValue);
+                }
+
+                if (type === 'number') {
+                    const $input = $('<input>', {
+                        type: 'number', class: 'cell-edit-input w-70 text-center', value: currentValue, min: 0
+                    });
+                    $cell.removeClass('cell-edited').empty().append($input);
+                    $input.focus().select();
+                    $input.on('blur', function() { commit($input.val()); });
+                    $input.on('keydown', function(e) {
+                        if (e.key === 'Enter') { $input.off('blur'); commit($input.val()); }
+                        else if (e.key === 'Escape') {
+                            $input.off('blur');
+                            $cell.empty().text(currentValue);
+                            if (currentValue !== '') $cell.addClass('cell-edited');
+                        }
+                    });
+
+                } else if (type.startsWith('select')) {
+                    let options;
+                    if      (type === 'select-dataType')   options = DATA_TYPE_OPTIONS;
+                    else if (type === 'select-align')      options = ALIGN_OPTIONS;
+                    else if (type === 'select-yn')         options = YN_OPTIONS;
+                    else if (type === 'select-useMode')    options = USE_MODE_OPTIONS;
+                    else if (type === 'select-validation') options = [''].concat(VALIDATION_RULE_OPTIONS);
+                    else                                   options = [];
+
+                    const $select = $('<select>', { class: 'cell-edit-input' });
+                    options.forEach(opt =>
+                        $select.append($('<option>', { value: opt, text: opt === '' ? '선택안함' : opt, selected: opt === currentValue }))
+                    );
+                    $cell.empty().append($select);
+                    $select.focus();
+                    let committed = false;
+                    function doCommit() {
+                        if (committed) return;
+                        committed = true;
+                        commit($select.val());
+                    }
+                    $select.on('change', doCommit).on('blur', doCommit);
+
+                } else if (type === 'popup-codeGroup') {
+                    CodeGroupPickerModal.open(function(selected) {
+                        if (fields[rowIndex] != null) {
+                            fields[rowIndex]['codeGroup']     = selected.codeGroupId;
+                            fields[rowIndex]['codeGroupName'] = selected.codeGroupName;
+                        }
+                        $cell.text(selected.codeGroupName || '');
+                        if (onFieldUpdate) onFieldUpdate(rowIndex, 'codeGroup', selected.codeGroupId);
+                    });
+
+                } else { // text
+                    const $input = $('<input>', { type: 'text', class: 'cell-edit-input', value: currentValue });
+                    $cell.empty().append($input);
+                    $input.focus().select();
+                    $input.on('blur', function() { commit($input.val()); });
+                    $input.on('keydown', function(e) {
+                        if (e.key === 'Enter') { $input.off('blur'); commit($input.val()); }
+                        else if (e.key === 'Escape') { $input.off('blur'); $cell.empty().text(currentValue); }
+                    });
+                }
+            });
+        }
+
+        // ==================== Code Group Picker Modal ====================
+
+        window.CodeGroupPickerModal = {
+            _callback: null,
+            _selectedRow: null,
+            _currentPage: 1,
+            _totalPages: 1,
+            _sortBy: null,
+            _sortDir: 'asc',
+
+            init: function() {
+                const self = this;
+
+                // 컬럼 정렬
+                $('#codeGroupPickerModal').on('click', 'th[data-cg-sort]', function() {
+                    const field = $(this).data('cg-sort');
+                    if (self._sortBy === field) {
+                        self._sortDir = self._sortDir === 'asc' ? 'desc' : 'asc';
+                    } else {
+                        self._sortBy  = field;
+                        self._sortDir = 'asc';
+                    }
+                    self._updateSortIndicators();
+                    self._currentPage = 1;
+                    self.load();
+                });
+
+                $('#cgPickerClose, #cgPickerCloseBtn').on('click', function() { self.close(); });
+
+                $('#codeGroupPickerModal').on('click', function(e) {
+                    if (e.target === this) self.close();
+                });
+
+                $('#cgPickerSearchBtn').on('click', function() {
+                    self._currentPage = 1;
+                    self.load();
+                });
+
+                $('#cgPickerSearchValue').on('keydown', function(e) {
+                    if (e.key === 'Enter') { self._currentPage = 1; self.load(); }
+                });
+
+                $('#cgPickerPageSize').on('change', function() {
+                    self._currentPage = 1;
+                    self.load();
+                });
+
+                // 행 단일 클릭: 하이라이트
+                $('#cgPickerTableBody').on('click', 'tr[data-cg-id]', function() {
+                    $('#cgPickerTableBody tr').removeClass('cg-selected');
+                    $(this).addClass('cg-selected');
+                    self._selectedRow = {
+                        codeGroupId:   $(this).data('cg-id'),
+                        codeGroupName: $(this).data('cg-name')
+                    };
+                });
+
+                // 행 더블클릭: 즉시 선택
+                $('#cgPickerTableBody').on('dblclick', 'tr[data-cg-id]', function() {
+                    self._selectedRow = {
+                        codeGroupId:   $(this).data('cg-id'),
+                        codeGroupName: $(this).data('cg-name')
+                    };
+                    self._confirmSelect();
+                });
+
+                // 추가 버튼
+                $('#cgPickerSelectBtn').on('click', function() {
+                    if (!self._selectedRow) { Toast.warning('코드그룹을 선택해주세요.'); return; }
+                    self._confirmSelect();
+                });
+
+                // 전문필드 코드 초기화 버튼
+                $('#cgPickerResetBtn').on('click', function() {
+                    if (self._callback) self._callback({ codeGroupId: '', codeGroupName: '' });
+                    self.close();
+                });
+            },
+
+            _confirmSelect: function() {
+                if (this._callback) this._callback(this._selectedRow);
+                this.close();
+            },
+
+            open: function(callback) {
+                this._callback     = callback;
+                this._selectedRow  = null;
+                this._currentPage  = 1;
+                this._sortBy       = null;
+                this._sortDir      = 'asc';
+                $('#cgPickerSearchValue').val('');
+                $('#cgPickerTableBody').html('<tr><td colspan="5" class="text-center py-3 text-body-secondary">조회 버튼을 클릭하세요</td></tr>');
+                $('#cgPickerPagination').empty();
+                $('#cgPickerInfo').text('');
+                this._updateSortIndicators();
+                $('#codeGroupPickerModal').addClass('active');
+                this.load();
+            },
+
+            close: function() {
+                $('#codeGroupPickerModal').removeClass('active');
+                this._selectedRow = null;
+                this._callback    = null;
+            },
+
+            _updateSortIndicators: function() {
+                $('#codeGroupPickerModal th[data-cg-sort]').each((_, th) => {
+                    $(th).find('.sort-indicator').remove();
+                    if ($(th).data('cg-sort') === this._sortBy) {
+                        $(th).append('<span class="sort-indicator">' + (this._sortDir === 'asc' ? '▲' : '▼') + '</span>');
+                    }
+                });
+            },
+
+            load: function() {
+                const self        = this;
+                const searchField = $('#cgPickerSearchField').val();
+                const keyword     = $('#cgPickerSearchValue').val().trim();
+                const size        = parseInt($('#cgPickerPageSize').val()) || 10;
+
+                const params = { page: this._currentPage, size: size };
+                if (keyword) { params.searchField = searchField; params.searchValue = keyword; }
+                if (this._sortBy) { params.sortBy = this._sortBy; params.sortDirection = this._sortDir.toUpperCase(); }
+
+                $('#cgPickerTableBody').html('<tr><td colspan="5" class="text-center py-2 text-body-secondary">로딩 중...</td></tr>');
+
+                $.ajax({
+                    url: API_BASE_URL + '/code-groups/page',
+                    method: 'GET',
+                    data: params,
+                    success: function(response) {
+                        if (response.success && response.data) {
+                            self.render(response.data);
+                        } else {
+                            $('#cgPickerTableBody').html('<tr><td colspan="5" class="text-center py-2 text-body-secondary">데이터를 불러올 수 없습니다</td></tr>');
+                        }
+                    },
+                    error: function() {
+                        $('#cgPickerTableBody').html('<tr><td colspan="5" class="text-center py-2 text-danger">오류가 발생했습니다</td></tr>');
+                    }
+                });
+            },
+
+            render: function(pageData) {
+                const tbody   = $('#cgPickerTableBody');
+                const items   = pageData.content || [];
+                tbody.empty();
+
+                if (items.length === 0) {
+                    tbody.html('<tr><td colspan="5" class="text-center py-3 text-body-secondary">검색 결과가 없습니다</td></tr>');
+                } else {
+                    items.forEach((item, i) => {
+                        tbody.append(`<tr data-cg-id="${HtmlUtils.escape(item.codeGroupId)}" data-cg-name="${HtmlUtils.escape(item.codeGroupName)}">
+                            <td class="fw-bold text-cg-id">${HtmlUtils.escape(item.codeGroupId)}</td>
+                            <td>${HtmlUtils.escape(item.codeGroupName || '')}</td>
+                            <td>${HtmlUtils.escape(item.codeGroupDesc || '')}</td>
+                            <td class="text-center">${HtmlUtils.escape(item.bizGroupId || '')}</td>
+                            <td class="text-center">${item.codeCount ?? 0}</td>
+                        </tr>`);
+                    });
+                }
+
+                const total   = pageData.totalElements || 0;
+                const curPage = pageData.currentPage   || this._currentPage;
+                const size    = pageData.size          || 10;
+                this._totalPages  = pageData.totalPages || 1;
+                this._currentPage = curPage;
+
+                this.renderPagination(curPage, this._totalPages);
+
+                const from = total === 0 ? 0 : (curPage - 1) * size + 1;
+                const to   = Math.min(curPage * size, total);
+                $('#cgPickerInfo').text(`${from} - ${to} of ${total} items`);
+            },
+
+            renderPagination: function(curPage, totalPages) {
+                const self      = this;
+                const container = $('#cgPickerPagination');
+                container.empty();
+                if (totalPages <= 1) return;
+
+                const blockSize  = 10;
+                const blockStart = Math.floor((curPage - 1) / blockSize) * blockSize + 1;
+                const blockEnd   = Math.min(blockStart + blockSize - 1, totalPages);
+
+                const btn = (label, page, active) => {
+                    const $b = $('<button>', {
+                        html:     label,
+                        disabled: active,
+                        class:    active ? 'btn btn-sm btn-primary' : 'btn btn-sm btn-outline-secondary'
+                    });
+                    if (!active) $b.on('click', function() { self._currentPage = page; self.load(); });
+                    return $b;
+                };
+
+                if (blockStart > 1)        container.append(btn('◀', blockStart - 1, false));
+                for (let p = blockStart; p <= blockEnd; p++) container.append(btn(p, p, p === curPage));
+                if (blockEnd < totalPages) container.append(btn('▶', blockEnd + 1, false));
+            }
+        };
+
+        // ==================== Shared Modal Resize Utility ====================
+
+        function initModalResize(containerId, handleIds, minW, minH) {
+            function onResizeStart(e, direction) {
+                e.preventDefault();
+                e.stopPropagation();
+                const container = document.getElementById(containerId);
+                const rect = container.getBoundingClientRect();
+                container.style.position = 'fixed';
+                container.style.left   = rect.left   + 'px';
+                container.style.width  = rect.width  + 'px';
+                container.style.top    = rect.top    + 'px';
+                container.style.height = rect.height + 'px';
+                container.style.maxHeight = 'none';
+                container.style.maxWidth  = 'none';
+                container.style.margin    = '0';
+                let resizeState = {
+                    direction,
+                    startX: e.clientX, startY: e.clientY,
+                    startTop: rect.top, startLeft: rect.left,
+                    startWidth: rect.width, startHeight: rect.height,
+                    startBottom: rect.top + rect.height,
+                    startRight:  rect.left + rect.width
+                };
+                const isVertical = direction === 'top' || direction === 'bottom';
+                document.body.classList.add('user-select-none');
+                document.body.classList.add(isVertical ? 'cursor-ns-resize' : 'cursor-ew-resize');
+
+                function onMove(ev) {
+                    if (!resizeState) return;
+                    const c = document.getElementById(containerId);
+                    const { startX, startY, startTop, startLeft,
+                            startWidth, startHeight, startBottom, startRight } = resizeState;
+                    if (direction === 'top') {
+                        const deltaY = ev.clientY - startY;
+                        let newH = Math.max(minH, startHeight - deltaY);
+                        let newTop = startBottom - newH;
+                        if (newTop < 0) { newH = startBottom; newTop = 0; }
+                        c.style.top    = newTop + 'px';
+                        c.style.height = newH   + 'px';
+                    } else if (direction === 'bottom') {
+                        const deltaY = ev.clientY - startY;
+                        let newH = Math.max(minH, startHeight + deltaY);
+                        newH = Math.min(newH, window.innerHeight - startTop - 8);
+                        c.style.height = newH + 'px';
+                    } else if (direction === 'left') {
+                        const deltaX = ev.clientX - startX;
+                        let newW = Math.max(minW, startWidth - deltaX);
+                        let newLeft = startRight - newW;
+                        if (newLeft < 0) { newW = startRight; newLeft = 0; }
+                        c.style.left  = newLeft + 'px';
+                        c.style.width = newW    + 'px';
+                    } else if (direction === 'right') {
+                        const deltaX = ev.clientX - startX;
+                        let newW = Math.max(minW, startWidth + deltaX);
+                        newW = Math.min(newW, window.innerWidth - startLeft - 8);
+                        c.style.width = newW + 'px';
+                    }
+                }
+                function onUp() {
+                    resizeState = null;
+                    document.body.classList.remove('user-select-none', 'cursor-ns-resize', 'cursor-ew-resize');
+
+                    document.removeEventListener('mousemove', onMove);
+                    document.removeEventListener('mouseup', onUp);
+                }
+                document.addEventListener('mousemove', onMove);
+                document.addEventListener('mouseup', onUp);
+            }
+
+            Object.entries(handleIds).forEach(([dir, id]) => {
+                const el = document.getElementById(id);
+                if (el) el.addEventListener('mousedown', (e) => onResizeStart(e, dir));
+            });
+        }
+
+        // ==================== Shared Field Table Sort Utility ====================
+
+        /**
+         * 필드 테이블 컬럼 정렬 초기화
+         * data-sort-field 속성이 있는 th 클릭 시 tbody 행을 정렬합니다.
+         * data-row-index는 변경하지 않고 DOM 행만 재배치하므로 셀 편집·CRUD 추적에 영향 없음.
+         *
+         * @param {string}   theadSelector - thead jQuery 선택자
+         * @param {string}   tbodySelector - tbody jQuery 선택자
+         * @param {Function} getFields     - 현재 fields 배열 반환 함수 () => Array
+         */
+        function initFieldTableSort(theadSelector, tbodySelector, getFields) {
+            let sortField = null;
+            let sortDir   = 'asc';
+
+            $(theadSelector).off('click.sort').on('click.sort', 'th[data-sort-field]', function() {
+                const field = $(this).data('sort-field');
+                if (sortField === field) {
+                    sortDir = sortDir === 'asc' ? 'desc' : 'asc';
+                } else {
+                    sortField = field;
+                    sortDir   = 'asc';
+                }
+
+                // 정렬 방향 아이콘 업데이트
+                $(theadSelector).find('th[data-sort-field]').each(function() {
+                    $(this).find('.sort-indicator').remove();
+                    if ($(this).data('sort-field') === sortField) {
+                        $(this).append(`<span class="sort-indicator">${sortDir === 'asc' ? '▲' : '▼'}</span>`);
+                    }
+                });
+
+                // fields 배열 값 기준으로 DOM 행 재배치 (data-row-index 유지)
+                const fields = getFields();
+                const tbody  = $(tbodySelector);
+                const rows   = tbody.find('tr[data-row-index]').toArray();
+
+                rows.sort((a, b) => {
+                    const ai   = parseInt($(a).data('row-index'));
+                    const bi   = parseInt($(b).data('row-index'));
+                    const aObj = fields[ai];
+                    const bObj = fields[bi];
+                    const aVal = aObj != null ? (aObj[field] ?? '') : '';
+                    const bVal = bObj != null ? (bObj[field] ?? '') : '';
+
+                    const aNum = parseFloat(aVal);
+                    const bNum = parseFloat(bVal);
+                    if (!isNaN(aNum) && !isNaN(bNum)) {
+                        return sortDir === 'asc' ? aNum - bNum : bNum - aNum;
+                    }
+                    return sortDir === 'asc'
+                        ? String(aVal).localeCompare(String(bVal))
+                        : String(bVal).localeCompare(String(aVal));
+                });
+
+                rows.forEach(row => tbody.append(row));
+            });
+        }
+
+        // ==================== MessageModal Object ====================
+
+        window.MessageModal = window.MessageModal || {
+            mode: 'create',
+            currentOrgId: null,
+            currentMessageId: null,
+            _resizeInitialized: false,
+            modalFields: [],
+            _originalModalFieldCount: 0,
+
+            init: function() {
+                this.bindValidationEvents();
+                const self = this;
+                bindFieldCellEvents(
+                    '#modalMessageFieldsBody',
+                    () => self.modalFields,
+                    null
+                );
+                initFieldTableSort('#modalFieldHeadDefault', '#modalMessageFieldsBody', () => self.modalFields);
+                initFieldTableSort('#modalFieldHeadXml',     '#modalMessageFieldsBody', () => self.modalFields);
+
+                // selectAll 체크박스
+                $(document).off('change.modalSelectAll', '.selectAllModalFields')
+                           .on('change.modalSelectAll', '.selectAllModalFields', function() {
+                    const checked = $(this).prop('checked');
+                    $('#modalMessageFieldsBody tr[data-row-index] td:first-child input[type="checkbox"]')
+                        .prop('checked', checked);
+                });
+                // 개별 체크박스 변경 시 selectAll 상태 동기화
+                $('#modalMessageFieldsBody').off('change.rowCheck').on('change.rowCheck',
+                    'tr[data-row-index] td:first-child input[type="checkbox"]', function() {
+                    const total   = $('#modalMessageFieldsBody tr[data-row-index]').length;
+                    const checked = $('#modalMessageFieldsBody tr[data-row-index] td:first-child input[type="checkbox"]:checked').length;
+                    $('.selectAllModalFields').prop('checked', total > 0 && total === checked);
+                });
+            },
+
+            deleteSelectedRows: function() {
+                deleteSelectedFieldRows(this.modalFields, '#modalMessageFieldsBody', '#modalMessageFieldCount');
+            },
+
+            /**
+             * 실시간 검증 이벤트 바인딩
+             */
+            bindValidationEvents: function() {
+                // 각 필드 blur 이벤트에 검증 연결
+                $('#modalMessageId').on('blur', () => this.validateField('messageId'));
+                $('#modalMessageName').on('blur', () => this.validateField('messageName'));
+                $('#modalMessageType').on('change', () => {
+                    this.validateField('messageType');
+                    const isXml = $('#modalMessageType').val() === 'X';
+                    $('#modalFieldHeadDefault').toggle(!isXml);
+                    $('#modalFieldHeadXml').toggleClass('d-hidden', !isXml);
+                });
+                $('#modalOrgId').on('change', () => {
+                    this.validateField('orgId');
+                    this.loadModalParentMessages($('#modalOrgId').val());
+                });
+                $('#modalParentMessageId').on('change', () => this.validateField('parentMessageId'));
+                $('#modalBizDomain').on('change', () => this.validateField('bizDomain'));
+            },
+
+            /**
+             * 개별 필드 검증
+             */
+            validateField: function(fieldName) {
+                const fieldIdMap = {
+                    'messageId': '#modalMessageId',
+                    'messageName': '#modalMessageName',
+                    'messageType': '#modalMessageType',
+                    'orgId': '#modalOrgId',
+                    'parentMessageId': '#modalParentMessageId',
+                    'bizDomain': '#modalBizDomain'
+                };
+
+                const fieldId = fieldIdMap[fieldName];
+                if (!fieldId) return true;
+
+                const value = $(fieldId).val()?.trim();
+                const errorId = fieldName + 'Error';
+
+                let errorMessage = null;
+
+                // Validators 실행
+                if (Validators[fieldName]) {
+                    errorMessage = Validators[fieldName](value);
+                }
+
+                // 에러 메시지 표시/숨김
+                if (errorMessage) {
+                    $('#' + errorId).text(errorMessage).addClass('visible');
+                    $(fieldId).closest('.form-group').addClass('has-error');
+                    return false;
+                } else {
+                    $('#' + errorId).removeClass('visible').text('');
+                    $(fieldId).closest('.form-group').removeClass('has-error');
+                    return true;
+                }
+            },
+
+            open: function(mode, messageData) {
+                this.mode = mode;
+                this.clearErrors();
+
+                // 이전 리사이즈 상태 초기화
+                const _c = document.getElementById('modalContainer');
+                if (_c) {
+                    _c.style.position = 'relative';
+                    _c.style.top      = '';
+                    _c.style.left     = '';
+                    _c.style.width    = '92vw';
+                    _c.style.height   = '';
+                    _c.style.maxHeight = '90vh';
+                    _c.style.maxWidth  = '900px';
+                    _c.style.margin    = '';
+                }
+                if (!this._resizeInitialized) {
+                    this._initResize();
+                    this._resizeInitialized = true;
+                }
+
+                if (mode === 'create') {
+                    $('#modalTitle').text('전문 등록');
+                    $('#btnDelete').addClass('d-hidden');
+                    $('#modalOrgId').prop('disabled', false);
+                    $('#modalMessageId').prop('disabled', false);
+                    $('#modalBtnExcelSave, #modalBtnHeaderInclude').hide();
+                    this.clearForm();
+                } else {
+                    $('#modalTitle').text('전문 상세');
+                    $('#btnDelete').removeClass('d-hidden');
+                    $('#modalOrgId').prop('disabled', true);
+                    $('#modalMessageId').prop('disabled', true);
+                    $('#modalBtnExcelSave, #modalBtnHeaderInclude').show();
+                    this.loadData(messageData);
+                    this.loadFieldsInModal(messageData.orgId, messageData.messageId);
+                }
+
+                bootstrap.Modal.getOrCreateInstance(document.getElementById('messageModal')).show();
+            },
+
+            close: function() {
+                bootstrap.Modal.getInstance(document.getElementById('messageModal')).hide();
+                this.clearErrors();
+            },
+
+            clearForm: function() {
+                $('#modalOrgId').val('');
+                $('#modalMessageId').val('');
+                $('#modalMessageName').val('');
+                $('#modalMessageDesc').val('');
+                $('#modalMessageType').val('');
+                $('#modalParentMessageId').val('');
+                $('#modalBizDomain').val('');
+                $('#modalHeaderYn').val('N');
+                $('#modalRequestYn').val('Q');
+                $('#modalTrxType').val('1');
+                $('#modalLogLevel').val('A');
+                $('#modalPreLoadYn').val('N');
+                $('#modalValidationUseYn').val('N');
+                $('#modalLockYn').val('N');
+                $('#modalCurVersion').val('1');
+                this.clearErrors();
+                // Clear field tables
+                $('#modalParentFieldsCard').addClass('d-hidden');
+                $('#modalParentFieldsBody').empty();
+                $('#modalMessageFieldsBody').empty();
+                $('#modalParentFieldCount').text('0');
+                $('#modalMessageFieldCount').text('0');
+                $('#modalFieldHeadDefault').show();
+                $('#modalFieldHeadXml').addClass('d-hidden');
+                this.modalFields = [];
+                this._originalModalFieldCount = 0;
+            },
+
+            clearErrors: function() {
+                $('.error-message').removeClass('visible').text('');
+                $('.form-group').removeClass('has-error');
+            },
+
+            loadData: function(data) {
+                this.currentOrgId = data.orgId;
+                this.currentMessageId = data.messageId;
+
+                $('#modalOrgId').val(data.orgId || '');
+                $('#modalMessageId').val(data.messageId || '');
+                $('#modalMessageName').val(data.messageName || '');
+                $('#modalMessageDesc').val(data.messageDesc || '');
+                $('#modalMessageType').val(data.messageType || '');
+                this.loadModalParentMessages(data.orgId, data.parentMessageId || '');
+                $('#modalBizDomain').val(data.bizDomain || '');
+                $('#modalHeaderYn').val(data.headerYn || 'N');
+                $('#modalRequestYn').val(data.requestYn || 'Q');
+                $('#modalTrxType').val(data.trxType || '1');
+                $('#modalLogLevel').val(data.logLevel || 'A');
+                $('#modalPreLoadYn').val(data.preLoadYn || 'N');
+                $('#modalValidationUseYn').val(data.validationUseYn || 'N');
+                $('#modalLockYn').val(data.lockYn || 'N');
+                $('#modalCurVersion').val(data.curVersion || 1);
+            },
+
+            addFieldRow: function() {
+                const messageType = $('#modalMessageType').val() || '';
+                const isXml = messageType === 'X';
+                $('#modalFieldHeadDefault').toggle(!isXml);
+                $('#modalFieldHeadXml').toggleClass('d-hidden', !isXml);
+                addFieldRowToTable(this.modalFields, messageType, '#modalMessageFieldsBody', '#modalMessageFieldCount');
+            },
+
+            _initResize: function() {
+                initModalResize('modalContainer', {
+                    top:    'modalResizeTop',
+                    bottom: 'modalResizeBottom',
+                    left:   'modalResizeLeft',
+                    right:  'modalResizeRight'
+                }, 480, 300);
+            },
+
+            loadModalParentMessages: function(orgId, selectedValue) {
+                loadParentMessageOptions('#modalParentMessageId', orgId, selectedValue, true);
+            },
+
+            validateForm: function() {
+                let isValid = true;
+                this.clearErrors();
+
+                // 필수 필드 검증
+                const requiredFields = ['orgId', 'messageId', 'messageName', 'messageType', 'bizDomain'];
+                requiredFields.forEach(field => {
+                    if (!this.validateField(field)) {
+                        isValid = false;
+                    }
+                });
+
+                // 선택 필드 검증 (길이 제한 등)
+                const optionalFields = ['parentMessageId'];
+                optionalFields.forEach(field => {
+                    if (!this.validateField(field)) {
+                        isValid = false;
+                    }
+                });
+
+                return isValid;
+            },
+
+            save: function() {
+                if (!this.validateForm()) {
+                    Toast.info('입력 항목을 확인해주세요.');
+                    return;
+                }
+
+                const messageData = {
+                    orgId: $('#modalOrgId').val().trim(),
+                    messageId: $('#modalMessageId').val().trim(),
+                    messageName: $('#modalMessageName').val().trim(),
+                    messageDesc: $('#modalMessageDesc').val().trim(),
+                    messageType: $('#modalMessageType').val(),
+                    parentMessageId: $('#modalParentMessageId').val().trim(),
+                    bizDomain: $('#modalBizDomain').val().trim(),
+                    headerYn: $('#modalHeaderYn').val(),
+                    requestYn: $('#modalRequestYn').val(),
+                    trxType: $('#modalTrxType').val() || '1',
+                    logLevel: $('#modalLogLevel').val(),
+                    preLoadYn: $('#modalPreLoadYn').val(),
+                    validationUseYn: $('#modalValidationUseYn').val() || 'N',
+                    lockYn: $('#modalLockYn').val() || 'N',
+                    curVersion: parseInt($('#modalCurVersion').val()) || 1
+                };
+
+                const method = this.mode === 'create' ? 'POST' : 'PUT';
+                let url = API_BASE_URL + '/messages';
+                if (this.mode === 'edit') {
+                    url = API_BASE_URL + '/messages/' + encodeURIComponent(this.currentMessageId) +
+                          '?orgId=' + encodeURIComponent(this.currentOrgId);
+                }
+
+                $.ajax({
+                    url: url,
+                    method: method,
+                    contentType: 'application/json',
+                    data: JSON.stringify(messageData),
+                    success: (response) => {
+                        if (response.success) {
+                            const savedOrgId      = messageData.orgId;
+                            const savedMessageId  = messageData.messageId;
+                            const startIdx        = this._originalModalFieldCount;
+                            const newFields       = (this.modalFields || []).slice(startIdx).filter(f => f !== null);
+
+                            if (newFields.length === 0) {
+                                Toast.success(this.mode === 'create' ? '전문이 등록되었습니다.' : '전문이 수정되었습니다.');
+                                this.close();
+                                window.Messages.load();
+                                return;
+                            }
+
+                            // 필수값 검증 (전문필드ID, 전문필드명)
+                            let isFieldValid = true;
+                            newFields.forEach((f) => {
+                                const rowIdx = this.modalFields.indexOf(f);
+                                ['messageFieldId', 'messageFieldName'].forEach(function(key) {
+                                    if (!f[key] || !String(f[key]).trim()) {
+                                        const $cell = $('#modalMessageFieldsBody tr[data-row-index="' + rowIdx + '"] td[data-field="' + key + '"]');
+                                        $cell.addClass('field-cell-error');
+                                        $cell.off('mousedown.fieldErr click.fieldErr').on('mousedown.fieldErr click.fieldErr', function() {
+                                            $(this).removeClass('field-cell-error');
+                                        });
+                                        isFieldValid = false;
+                                    }
+                                });
+                            });
+                            if (!isFieldValid) return;
+
+                            const toInt = (v) => { const n = parseInt(v); return isNaN(n) ? null : n; };
+                            const fieldBodies = newFields.map(f => ({
+                                orgId:            savedOrgId,
+                                messageId:        savedMessageId,
+                                messageFieldId:   f.messageFieldId,
+                                sortOrder:        toInt(f.sortOrder),
+                                messageFieldName: f.messageFieldName || '',
+                                messageFieldDesc: f.messageFieldDesc || '',
+                                dataType:         f.dataType        || '',
+                                dataLength:       toInt(f.dataLength) ?? 0,
+                                scale:            toInt(f.scale),
+                                align:            f.align           || '',
+                                filler:           f.filler          || '',
+                                useMode:          f.useMode         || '',
+                                requiredYn:       f.requiredYn      || '',
+                                fieldTag:         f.fieldTag        || '',
+                                codeGroup:        f.codeGroup       || '',
+                                codeMappingYn:    f.codeMappingYn   || '',
+                                defaultValue:     f.defaultValue    || '',
+                                remark:           f.remark          || '',
+                                logYn:            f.logYn           || '',
+                                validationRuleId: f.validationRuleId || ''
+                            }));
+
+                            $.ajax({
+                                url:         API_BASE_URL + '/messages/' + encodeURIComponent(savedMessageId) + '/fields/batch',
+                                method:      'POST',
+                                contentType: 'application/json',
+                                data:        JSON.stringify({ fields: fieldBodies }),
+                                success: () => {
+                                    Toast.success(this.mode === 'create' ? '전문이 등록되었습니다.' : '전문이 수정되었습니다.');
+                                    this.close();
+                                    window.Messages.load();
+                                },
+                                error: (xhr) => {
+                                    Toast.error('필드 저장 실패\n' + getUserFriendlyErrorMessage(xhr));
+                                }
+                            });
+                        } else {
+                            const errorMsg = getUserFriendlyErrorMessage(response);
+                            Toast.error('저장 실패\n' + errorMsg);
+                        }
+                    },
+                    error: (xhr) => {
+                        const errorMsg = getUserFriendlyErrorMessage(xhr);
+                        Toast.error('저장 실패\n' + errorMsg);
+                    }
+                });
+            },
+
+            delete: function() {
+                Toast.confirm('정말 삭제하시겠습니까?\n이 작업은 되돌릴 수 없습니다.', () => {
+                    const url = API_BASE_URL + '/messages/' + encodeURIComponent(this.currentMessageId) +
+                                '?orgId=' + encodeURIComponent(this.currentOrgId);
+
+                    $.ajax({
+                        url: url,
+                        method: 'DELETE',
+                        success: (response) => {
+                            if (response.success) {
+                                Toast.success('전문이 삭제되었습니다.');
+                                this.close();
+                                window.Messages.load();
+                            } else {
+                                const errorMsg = getUserFriendlyErrorMessage(response);
+                                Toast.error('삭제 실패\n' + errorMsg);
+                            }
+                        },
+                        error: (xhr) => {
+                            const errorMsg = getUserFriendlyErrorMessage(xhr);
+                            Toast.error('삭제 실패\n' + errorMsg);
+                        }
+                    });
+                });
+            },
+
+            viewDetail: function() {
+                window.MessageDetailModal.open(this.currentOrgId, this.currentMessageId);
+            },
+
+            loadFieldsInModal: function(orgId, messageId) {
+                $.ajax({
+                    url: API_BASE_URL + '/messages/' + encodeURIComponent(messageId) + '/detail',
+                    method: 'GET',
+                    data: { orgId: orgId },
+                    success: (response) => {
+                        if (response.success && response.data) {
+                            this.renderFieldsInModal(response.data);
+                        }
+                    },
+                    error: (xhr) => {
+                        console.error('Failed to load fields:', xhr);
+                    }
+                });
+            },
+
+            renderFieldsInModal: function(data) {
+                const messageType = data.messageType || $('#modalMessageType').val() || '';
+
+                // 상위 전문 필드 (등록 모달 전용)
+                if (data.parentFields && data.parentFields.length > 0) {
+                    $('#modalParentFieldsCard').removeClass('d-hidden');
+                    $('#modalParentFieldCount').text(data.parentFields.length);
+                    const parentBody = $('#modalParentFieldsBody');
+                    parentBody.empty();
+                    data.parentFields.forEach((f, i) => {
+                        parentBody.append(`<tr>
+                            <td class="text-center">${i + 1}</td>
+                            <td>${HtmlUtils.escape(f.messageFieldId)}</td>
+                            <td>${HtmlUtils.escape(f.messageFieldName) || '-'}</td>
+                            <td class="text-center">${f.dataType || '-'}</td>
+                            <td class="text-center">${f.dataLength || '-'}</td>
+                            <td class="text-center">${f.requiredYn === 'Y' ? 'Y' : 'N'}</td>
+                            <td>${HtmlUtils.escape(f.defaultValue) || '-'}</td>
+                        </tr>`);
+                    });
+                } else {
+                    $('#modalParentFieldsCard').addClass('d-hidden');
+                }
+
+                const fields = data.fields || [];
+                this.modalFields = fields;
+                this._originalModalFieldCount = fields.length;
+                $('#modalMessageFieldCount').text(fields.length);
+                renderFieldTable(fields, messageType, {
+                    thead: '#modalFieldHeadDefault',
+                    theadXml: '#modalFieldHeadXml',
+                    tbody: '#modalMessageFieldsBody'
+                }, true);
+            }
+        };
+
+        // ==================== MessageDetailModal Object ====================
+
+        window.MessageDetailModal = window.MessageDetailModal || {
+            currentFields: [],
+            currentOrgId: null,
+            currentMessageId: null,
+            _resizeInitialized: false,
+            isExcelPasteMode: false,
+            _pasteHandler: null,
+            isFieldReorderMode: false,
+
+            open: function(orgId, messageId, title) {
+                this.currentOrgId = orgId;
+                this.currentMessageId = messageId;
+                // 이전 리사이즈 상태 초기화
+                const _c = document.getElementById('detailModalContainer');
+                if (_c) {
+                    _c.style.position = 'relative';
+                    _c.style.top = '';
+                    _c.style.left = '';
+                    _c.style.width = '97vw';
+                    _c.style.height = '';
+                    _c.style.maxHeight = '96vh';
+                    _c.style.maxWidth = '';
+                    _c.style.margin = '';
+                }
+                if (!this._resizeInitialized) {
+                    this._initResize();
+                    this._resizeInitialized = true;
+                }
+
+                $('#detailModalTitle').text(title || '전문 수정');
+
+                $.ajax({
+                    url: API_BASE_URL + '/messages/' + encodeURIComponent(messageId) + '/detail',
+                    method: 'GET',
+                    data: { orgId: orgId },
+                    success: (response) => {
+                        if (!response.success) {
+                            Toast.warning('전문 상세 정보를 불러올 수 없습니다.');
+                            return;
+                        }
+
+                        const data = response.data;
+                        this.currentFields = data.fields || [];
+                        this.renderDetail(data);
+                        this.renderFieldsTable(this.currentFields, data.messageType);
+                        bootstrap.Modal.getOrCreateInstance(document.getElementById('messageDetailModal')).show();
+                    },
+                    error: (xhr) => {
+                        const errorMsg = getUserFriendlyErrorMessage(xhr);
+                        Toast.error('조회 실패\n' + errorMsg);
+                    }
+                });
+            },
+
+            close: function() {
+                bootstrap.Modal.getInstance(document.getElementById('messageDetailModal')).hide();
+                const _c = document.getElementById('detailModalContainer');
+                if (_c) {
+                    _c.style.position = 'relative';
+                    _c.style.top = '';
+                    _c.style.left = '';
+                    _c.style.width = '97vw';
+                    _c.style.height = '';
+                    _c.style.maxHeight = '96vh';
+                    _c.style.maxWidth = '';
+                    _c.style.margin = '';
+                }
+            },
+
+            delete: function() {
+                if (!this.currentOrgId || !this.currentMessageId) return;
+
+                Toast.confirm('전문 [' + this.currentMessageId + ']을(를) 삭제하시겠습니까?\n이 작업은 되돌릴 수 없습니다.', () => {
+                    const url = API_BASE_URL + '/messages/' + encodeURIComponent(this.currentMessageId) +
+                                '?orgId=' + encodeURIComponent(this.currentOrgId);
+
+                    $.ajax({
+                        url: url,
+                        method: 'DELETE',
+                        success: (response) => {
+                            if (response.success) {
+                                Toast.success('처리가 완료 되었습니다.');
+                                this.close();
+                                window.Messages.load();
+                            } else {
+                                Toast.error('삭제 실패\n' + (response.message || '알 수 없는 오류'));
+                            }
+                        },
+                        error: (xhr) => {
+                            Toast.error('삭제 실패\n' + getUserFriendlyErrorMessage(xhr));
+                        }
+                    });
+                });
+            },
+
+            save: function() {
+                if (!this.currentOrgId || !this.currentMessageId) return;
+
+                // 필수값 검증
+                const requiredFields = ['detailMessageName', 'detailMessageType', 'detailSiteType'];
+                let isValid = true;
+                requiredFields.forEach(id => {
+                    const $el = $('#' + id);
+                    if (!$el.val()?.trim()) {
+                        $el.addClass('detail-field-error');
+                        $el.off('input.validation change.validation')
+                           .one('input.validation change.validation', function() {
+                               $(this).removeClass('detail-field-error');
+                           });
+                        isValid = false;
+                    } else {
+                        $el.removeClass('detail-field-error');
+                    }
+                });
+                if (!isValid) return;
+
+                // 추가 행 중 전문필드ID 누락 검증
+                const compareKeys = ['sortOrder','messageFieldName','messageFieldId','dataType',
+                                     'dataLength','align','requiredYn','scale','filler','useMode',
+                                     'codeGroup','codeMappingYn','defaultValue','remark','logYn',
+                                     'validationRuleId','fieldTag','messageFieldDesc'];
+                const deletedFieldIds = [];
+                const newFields       = [];
+                const updatedFields   = [];
+                const maxLen = Math.max(this.currentFields.length, (this.originalFields || []).length);
+                let isFieldValid = true;
+
+                for (let i = 0; i < maxLen; i++) {
+                    const cur  = this.currentFields[i]  ?? null;
+                    const orig = (this.originalFields || [])[i] ?? null;
+
+                    if (cur === null && orig !== null) {
+                        deletedFieldIds.push(orig.messageFieldId);
+                    } else if (cur !== null && orig === null) {
+                        // 새로 추가된 행 필수값 검증 (전체 순회 후 판단)
+                        const textKeys = ['messageFieldId', 'messageFieldName'];
+                        textKeys.forEach(function(key) {
+                            if (!cur[key] || !String(cur[key]).trim()) {
+                                const $cell = $('#messageFieldsTableBody tr[data-row-index="' + i + '"] td[data-field="' + key + '"]');
+                                $cell.addClass('field-cell-error');
+                                $cell.off('mousedown.fieldErr click.fieldErr').on('mousedown.fieldErr click.fieldErr', function() {
+                                    $(this).removeClass('field-cell-error');
+                                });
+                                isFieldValid = false;
+                            }
+                        });
+                        newFields.push(cur);
+                    } else if (cur !== null && orig !== null) {
+                        let hasChanges = false;
+                        for (const key of compareKeys) {
+                            if (String(cur[key] ?? '') !== String(orig[key] ?? '')) {
+                                hasChanges = true; break;
+                            }
+                        }
+                        if (hasChanges) updatedFields.push(cur);
+                    }
+                }
+
+                if (!isFieldValid) return;
+
+                const orgId     = this.currentOrgId;
+                const messageId = this.currentMessageId;
+                const self      = this;
+                const baseUrl   = API_BASE_URL + '/messages/' + encodeURIComponent(messageId);
+
+                // 1단계: 전문 기본정보 저장
+                const headerData = {
+                    messageName:     $('#detailMessageName').val().trim(),
+                    messageDesc:     $('#detailMessageDesc').val().trim(),
+                    messageType:     $('#detailMessageType').val(),
+                    parentMessageId: $('#detailParentMessageId').val() || null,
+                    headerYn:        $('#detailIsHeader').val(),
+                    requestYn:       $('#detailReqResType').val(),
+                    preLoadYn:       $('#detailPreload').val(),
+                    logLevel:        $('#detailLogLevel').val(),
+                    bizDomain:       $('#detailSiteType').val()
+                };
+
+                $.ajax({
+                    url: baseUrl + '?orgId=' + encodeURIComponent(orgId),
+                    method: 'PUT',
+                    contentType: 'application/json',
+                    data: JSON.stringify(headerData),
+                    success: function(response) {
+                        if (!response.success) {
+                            Toast.error('저장 실패\n' + (response.message || '알 수 없는 오류'));
+                            return;
+                        }
+                        // 2단계: 필드 변경사항 저장
+                        self._saveFieldChanges(orgId, messageId, deletedFieldIds, newFields, updatedFields);
+                    },
+                    error: function(xhr) {
+                        Toast.error('저장 실패\n' + getUserFriendlyErrorMessage(xhr));
+                    }
+                });
+            },
+
+            _saveFieldChanges: function(orgId, messageId, deletedFieldIds, newFields, updatedFields) {
+                const baseUrl = API_BASE_URL + '/messages/' + encodeURIComponent(messageId);
+                const self    = this;
+
+                if (deletedFieldIds.length === 0 && newFields.length === 0 && updatedFields.length === 0) {
+                    Toast.success('처리가 완료되었습니다.');
+                    self.close();
+                    window.Messages.load();
+                    return;
+                }
+
+                function toFieldBody(f, includeIds) {
+                    // 빈 문자열도 NaN → null 방지
+                    const toInt = (v) => { const n = parseInt(v); return isNaN(n) ? null : n; };
+                    const body = {
+                        sortOrder:       toInt(f.sortOrder),
+                        messageFieldName: f.messageFieldName || '',
+                        messageFieldDesc: f.messageFieldDesc || '',
+                        dataType:        f.dataType        || '',
+                        dataLength:      toInt(f.dataLength) ?? 0,  // NOT NULL 컬럼: XML이면 0
+                        scale:           toInt(f.scale),
+                        align:           f.align           || '',
+                        filler:          f.filler          || '',
+                        useMode:         f.useMode         || '',
+                        requiredYn:      f.requiredYn      || '',
+                        fieldTag:        f.fieldTag        || '',
+                        codeGroup:       f.codeGroup       || '',
+                        codeMappingYn:   f.codeMappingYn   || '',
+                        defaultValue:    f.defaultValue    || '',
+                        remark:          f.remark          || '',
+                        logYn:           f.logYn           || '',
+                        validationRuleId: f.validationRuleId || ''
+                    };
+                    if (includeIds) {
+                        body.orgId           = orgId;
+                        body.messageId       = messageId;
+                        body.messageFieldId  = f.messageFieldId;
+                    }
+                    return body;
+                }
+
+                const promises = [];
+
+                // 삭제
+                deletedFieldIds.forEach(function(fieldId) {
+                    promises.push($.ajax({
+                        url:    baseUrl + '/fields/' + encodeURIComponent(fieldId) + '?orgId=' + encodeURIComponent(orgId),
+                        method: 'DELETE'
+                    }));
+                });
+
+                // 추가 (batch)
+                if (newFields.length > 0) {
+                    promises.push($.ajax({
+                        url:         baseUrl + '/fields/batch',
+                        method:      'POST',
+                        contentType: 'application/json',
+                        data:        JSON.stringify({ fields: newFields.map(f => toFieldBody(f, true)) })
+                    }));
+                }
+
+                // 수정
+                updatedFields.forEach(function(f) {
+                    promises.push($.ajax({
+                        url:         baseUrl + '/fields/' + encodeURIComponent(f.messageFieldId) + '?orgId=' + encodeURIComponent(orgId),
+                        method:      'PUT',
+                        contentType: 'application/json',
+                        data:        JSON.stringify(toFieldBody(f, false))
+                    }));
+                });
+
+                $.when.apply($, promises)
+                    .done(function() {
+                        Toast.success('처리가 완료되었습니다.');
+                        self.close();
+                        window.Messages.load();
+                    })
+                    .fail(function(xhr) {
+                        Toast.error('저장 실패\n' + getUserFriendlyErrorMessage(xhr));
+                    });
+            },
+
+            _initResize: function() {
+                initModalResize('detailModalContainer', {
+                    top:    'detailResizeTop',
+                    bottom: 'detailResizeBottom',
+                    left:   'detailResizeLeft',
+                    right:  'detailResizeRight'
+                }, 480, 300);
+            },
+
+            loadHeaderMessages: function(orgId, selectedValue) {
+                loadParentMessageOptions('#detailParentMessageId', orgId, selectedValue, false);
+            },
+
+            renderDetail: function(data) {
+                // 기관명 조회 전용 표시
+                const org = (window.Messages.orgs || []).find(o => o.orgId === data.orgId);
+                const orgDisplay = org ? HtmlUtils.escape(org.orgName) : HtmlUtils.escape(data.orgId || '');
+                $('#detailOrgId').text(orgDisplay);
+
+                // 상위전문ID 동적 로딩
+                this.loadHeaderMessages(data.orgId, data.parentMessageId);
+                $('#detailMessageId').text(data.messageId || '');
+                $('#detailMessageName').val(data.messageName || '');
+                $('#detailMessageDesc').val(data.messageDesc || '');
+
+                $('#detailLogLevel').val(data.logLevel || 'N');
+                $('#detailIsHeader').val(data.headerYn || 'N');
+                $('#detailMessageType').val(data.messageType || '');
+                $('#detailReqResType').val(data.requestYn || '');
+                $('#detailPreload').val(data.preLoadYn || 'N');
+                $('#detailSiteType').val(data.bizDomain || '');
+
+                // 전문유형 변경 시 필드 테이블 다시 그리기
+                $('#detailMessageType').off('change.fieldTable').on('change.fieldTable', () => {
+                    this.renderFieldsTable(this.currentFields, $('#detailMessageType').val());
+                });
+            },
+
+            renderFieldsTable: function(fields, messageType) {
+                // 변경 감지를 위한 원본 스냅샷 저장 (detail modal 전용)
+                this.originalFields = JSON.parse(JSON.stringify(fields || []));
+                renderFieldTable(fields, messageType, {
+                    thead: '#fieldHeadDefault',
+                    theadXml: '#fieldHeadXml',
+                    tbody: '#messageFieldsTableBody'
+                }, true);
+                this.bindFieldEditEvents();
+            },
+
+            bindFieldEditEvents: function() {
+                const self = this;
+                bindFieldCellEvents(
+                    '#messageFieldsTableBody',
+                    () => self.currentFields,
+                    (rowIndex) => self.updateRowCrud(rowIndex)
+                );
+                initFieldTableSort('#fieldHeadDefault', '#messageFieldsTableBody', () => self.currentFields);
+                initFieldTableSort('#fieldHeadXml',     '#messageFieldsTableBody', () => self.currentFields);
+
+                // selectAll 체크박스 (.off().on() 으로 중복 방지)
+                $('.selectAllFields').off('change.detailSelectAll').on('change.detailSelectAll', function() {
+                    const checked = $(this).prop('checked');
+                    $('#messageFieldsTableBody tr[data-row-index] td:first-child input[type="checkbox"]')
+                        .prop('checked', checked);
+                });
+                $('#messageFieldsTableBody').off('change.rowCheck').on('change.rowCheck',
+                    'tr[data-row-index] td:first-child input[type="checkbox"]', function() {
+                    const total   = $('#messageFieldsTableBody tr[data-row-index]').length;
+                    const checked = $('#messageFieldsTableBody tr[data-row-index] td:first-child input[type="checkbox"]:checked').length;
+                    $('.selectAllFields').prop('checked', total > 0 && total === checked);
+                });
+            },
+
+            deleteSelectedRows: function() {
+                deleteSelectedFieldRows(this.currentFields, '#messageFieldsTableBody', null);
+            },
+
+            updateRowCrud: function(rowIndex) {
+                const $row = $('#messageFieldsTableBody tr[data-row-index="' + rowIndex + '"]');
+                const $crudCell = $row.find('.crud-cell');
+                const original = this.originalFields[rowIndex];
+
+                // 신규 추가 행(original 없음)은 "추가" 표시 유지
+                if (original == null) return;
+
+                const current = this.currentFields[rowIndex];
+
+                let hasChanges = false;
+                for (const key in original) {
+                    const curVal = current[key] != null ? String(current[key]) : '';
+                    const origVal = original[key] != null ? String(original[key]) : '';
+                    if (curVal !== origVal) {
+                        hasChanges = true;
+                        break;
+                    }
+                }
+
+                if (hasChanges) {
+                    $crudCell.text('수정').addClass('modified');
+                } else {
+                    $crudCell.text('').removeClass('modified');
+                }
+            },
+
+            addFieldRow: function() {
+                const messageType = $('#detailMessageType').val() || '';
+                addFieldRowToTable(this.currentFields, messageType, '#messageFieldsTableBody', null);
+            },
+
+            exportFieldsToExcel: function() {
+                const fields = this.currentFields.filter(f => f != null);
+                if (fields.length === 0) {
+                    Toast.warning('내보낼 필드가 없습니다.');
+                    return;
+                }
+                const messageType = $('#detailMessageType').val();
+                const isXml = messageType === 'X';
+
+                let headers, rows;
+                if (isXml) {
+                    headers = ['순번', '전문필드명', '전문필드ID', '특이사항', '필수여부', '입력구분', 'Field태그', '코드그룹', '코드매핑여부', '초기값', '비고', '로그여부', 'Validation Rule'];
+                    rows = fields.map(f => [
+                        f.sortOrder ?? '', f.messageFieldName || '', f.messageFieldId || '',
+                        f.messageFieldDesc || '', f.requiredYn || '', f.useMode || '',
+                        f.fieldTag || '', f.codeGroupName || f.codeGroup || '', f.codeMappingYn || '',
+                        f.defaultValue || '', f.remark || '', f.logYn || '', f.validationRuleId || ''
+                    ]);
+                } else {
+                    headers = ['순번', '전문필드명', '전문필드ID', '데이터타입', '길이', '정렬', '특이사항', '필수여부', 'Scale', 'Filler', '입력구분', '코드그룹', '코드매핑여부', '초기값', '비고', '로그여부', 'Validation Rule'];
+                    rows = fields.map(f => [
+                        f.sortOrder ?? '', f.messageFieldName || '', f.messageFieldId || '',
+                        f.dataType || '', f.dataLength ?? '', f.align || '',
+                        f.messageFieldDesc || '', f.requiredYn || '', f.scale ?? '', f.filler || '',
+                        f.useMode || '', f.codeGroupName || f.codeGroup || '', f.codeMappingYn || '',
+                        f.defaultValue || '', f.remark || '', f.logYn || '', f.validationRuleId || ''
+                    ]);
+                }
+
+                const BOM = '\uFEFF';
+                const csv = BOM + [headers, ...rows].map(r =>
+                    r.map(c => '"' + String(c).replace(/"/g, '""') + '"').join(',')
+                ).join('\n');
+
+                const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = (this.currentMessageId || 'message') + '_fields.csv';
+                a.click();
+                URL.revokeObjectURL(url);
+            },
+
+            loadWithHeaderFields: function() {
+                const orgId = this.currentOrgId;
+                const messageId = this.currentMessageId;
+                if (!orgId || !messageId) return;
+
+                // 헤더전문포함조회: 별도 읽기전용 모달에서 상위→현재 전체 필드 표시
+                const modal = bootstrap.Modal.getOrCreateInstance(document.getElementById('headerFieldsModal'));
+                modal.show();
+                $('#headerFieldsBody').html('<tr><td colspan="7" class="text-center py-3">로딩 중...</td></tr>');
+
+                $.ajax({
+                    url: API_BASE_URL + '/messages/' + encodeURIComponent(messageId) + '/header-fields',
+                    method: 'GET',
+                    data: { orgId: orgId },
+                    success: function(response) {
+                        const $body = $('#headerFieldsBody').empty();
+                        if (!response.success || !response.data || response.data.length === 0) {
+                            $body.append('<tr><td colspan="7" class="text-center text-body-secondary">필드가 없습니다.</td></tr>');
+                            return;
+                        }
+                        let prevMsgId = '';
+                        response.data.forEach(function(f) {
+                            // 전문ID가 바뀌면 구분선 표시
+                            const isBoundary = f.messageId !== prevMsgId;
+                            const borderCls = isBoundary && prevMsgId ? 'style="border-top:2px solid var(--sp-primary);"' : '';
+                            prevMsgId = f.messageId;
+                            $body.append(
+                                '<tr ' + borderCls + '>' +
+                                '<td class="text-center">' + (f.sortOrder || '') + '</td>' +
+                                '<td>' + HtmlUtils.escape(f.messageId || '') + '</td>' +
+                                '<td>' + HtmlUtils.escape(f.messageFieldId || '') + '</td>' +
+                                '<td>' + HtmlUtils.escape(f.messageFieldName || '') + '</td>' +
+                                '<td>' + HtmlUtils.escape(f.messageFieldDesc || '') + '</td>' +
+                                '<td class="text-center">' + HtmlUtils.escape(f.dataType || '') + '</td>' +
+                                '<td class="text-center">' + (f.dataLength || '') + '</td>' +
+                                '</tr>'
+                            );
+                        });
+                    },
+                    error: function(xhr) {
+                        $('#headerFieldsBody').html('<tr><td colspan="7" class="text-center text-danger">조회 실패: ' + getUserFriendlyErrorMessage(xhr) + '</td></tr>');
+                    }
+                });
+            },
+
+            // ── Excel 붙여넣기 (Excel → 페이지) ──
+            toggleExcelPaste: function() {
+                if (this.isExcelPasteMode) {
+                    this._exitExcelPaste();
+                } else {
+                    this._enterExcelPaste();
+                }
+            },
+
+            _enterExcelPaste: function() {
+                const self = this;
+                this.isExcelPasteMode = true;
+
+                // 시각적 표시
+                const $scroll = $('#messageFieldsTableBody').closest('.sp-field-table-scroll');
+                $scroll.css({'outline': '3px solid #dc3545', 'outline-offset': '-3px'});
+
+                // 버튼 상태 변경
+                const $btn = $('#btnExcelPaste');
+                $btn.html('붙여넣기 완료').removeClass('btn-outline-secondary').addClass('btn-success');
+
+                // 전문 유형에 따른 필드 매핑 키
+                function getFieldKeys() {
+                    const isXml = $('#detailMessageType').val() === 'X';
+                    return isXml
+                        ? ['sortOrder','messageFieldName','messageFieldId','messageFieldDesc','requiredYn','useMode','fieldTag','codeGroup','codeMappingYn','defaultValue','remark','logYn','validationRuleId']
+                        : ['sortOrder','messageFieldName','messageFieldId','dataType','dataLength','align','messageFieldDesc','requiredYn','scale','filler','useMode','codeGroup','codeMappingYn','defaultValue','remark','logYn','validationRuleId'];
+                }
+
+                // paste 이벤트 핸들러
+                this._pasteHandler = function(e) {
+                    if (!self.isExcelPasteMode) return;
+                    const cd = (e.originalEvent || e).clipboardData || window.clipboardData;
+                    if (!cd) return;
+                    const text = cd.getData('text/plain');
+                    if (!text || !text.trim()) return;
+                    e.preventDefault();
+
+                    const fieldKeys = getFieldKeys();
+                    const messageType = $('#detailMessageType').val();
+                    const rows = text.trim().split('\n');
+                    let addedCount = 0;
+
+                    rows.forEach(function(row) {
+                        if (!row.trim()) return;
+                        const cells = row.split('\t');
+
+                        const newField = {
+                            sortOrder: self.currentFields.filter(f => f != null).length + addedCount + 1,
+                            messageFieldName: '', messageFieldId: '',
+                            dataType: 'C', dataLength: '', align: 'L',
+                            messageFieldDesc: '', requiredYn: '', scale: '', filler: '',
+                            useMode: 'U', codeGroup: '', codeMappingYn: 'Y',
+                            defaultValue: '', remark: '', logYn: '', validationRuleId: '',
+                            fieldTag: '', fieldDomainId: ''
+                        };
+
+                        cells.forEach(function(cell, idx) {
+                            if (idx < fieldKeys.length) {
+                                newField[fieldKeys[idx]] = cell.trim();
+                            }
+                        });
+
+                        self.currentFields.push(newField);
+                        addedCount++;
+                    });
+
+                    if (addedCount > 0) {
+                        renderFieldTable(self.currentFields, messageType, {
+                            thead: '#fieldHeadDefault',
+                            theadXml: '#fieldHeadXml',
+                            tbody: '#messageFieldsTableBody'
+                        }, true);
+                        self.bindFieldEditEvents();
+                        Toast.success(addedCount + '건의 필드가 붙여넣기되었습니다.');
+                    }
+                };
+
+                $(document).on('paste.excelPaste', this._pasteHandler);
+                Toast.info('Excel에서 데이터를 복사(Ctrl+C)한 후,\n이 페이지에서 붙여넣기(Ctrl+V)하세요.\n\n완료 후 "붙여넣기 완료" 버튼을 클릭하세요.');
+            },
+
+            _exitExcelPaste: function() {
+                this.isExcelPasteMode = false;
+                $(document).off('paste.excelPaste');
+                this._pasteHandler = null;
+
+                const $scroll = $('#messageFieldsTableBody').closest('.sp-field-table-scroll');
+                $scroll.css({'outline': '', 'outline-offset': ''});
+
+                const $btn = $('#btnExcelPaste');
+                $btn.text('Excel복사').removeClass('btn-success').addClass('btn-outline-secondary');
+            },
+
+            // ── 열(Column) 순서 변경 ──
+            toggleFieldReorder: function() {
+                if (this.isFieldReorderMode) {
+                    this._exitFieldReorder();
+                } else {
+                    this._enterFieldReorder();
+                }
+            },
+
+            _enterFieldReorder: function() {
+                this.isFieldReorderMode = true;
+
+                $('#btnFieldReorder').text('순서 변경 완료').removeClass('btn-outline-secondary').addClass('btn-warning');
+
+                // 현재 보이는 thead 선택
+                const isXml = $('#detailMessageType').val() === 'X';
+                const $thead = $(isXml ? '#fieldHeadXml' : '#fieldHeadDefault');
+
+                // data-sort-field가 있는 th만 드래그 가능 (체크박스, CRUD 열 제외)
+                $thead.find('th[data-sort-field]').attr('draggable', 'true').css('cursor', 'grab');
+
+                let dragSrcColIdx = null;
+
+                $thead.on('dragstart.colReorder', 'th[data-sort-field]', function(e) {
+                    dragSrcColIdx = $(this).index();
+                    $(this).css('opacity', '0.4');
+                    e.originalEvent.dataTransfer.effectAllowed = 'move';
+                    e.originalEvent.dataTransfer.setData('text/plain', String(dragSrcColIdx));
+                });
+
+                $thead.on('dragend.colReorder', 'th', function() {
+                    $(this).css('opacity', '');
+                    $thead.find('.col-drag-left, .col-drag-right').removeClass('col-drag-left col-drag-right');
+                });
+
+                $thead.on('dragover.colReorder', 'th[data-sort-field]', function(e) {
+                    e.preventDefault();
+                    e.originalEvent.dataTransfer.dropEffect = 'move';
+                    $thead.find('.col-drag-left, .col-drag-right').removeClass('col-drag-left col-drag-right');
+                    const rect = this.getBoundingClientRect();
+                    const midX = rect.left + rect.width / 2;
+                    $(this).addClass(e.originalEvent.clientX < midX ? 'col-drag-left' : 'col-drag-right');
+                });
+
+                $thead.on('dragleave.colReorder', 'th', function() {
+                    $(this).removeClass('col-drag-left col-drag-right');
+                });
+
+                $thead.on('drop.colReorder', 'th[data-sort-field]', function(e) {
+                    e.preventDefault();
+                    const toColIdx = $(this).index();
+                    $thead.find('.col-drag-left, .col-drag-right').removeClass('col-drag-left col-drag-right');
+                    if (dragSrcColIdx === null || dragSrcColIdx === toColIdx) return;
+
+                    // 헤더 열 이동
+                    const $headRow = $thead.find('tr');
+                    const $srcTh = $headRow.children().eq(dragSrcColIdx).detach();
+                    if (dragSrcColIdx < toColIdx) {
+                        $headRow.children().eq(toColIdx - 1).after($srcTh);
+                    } else {
+                        $headRow.children().eq(toColIdx).before($srcTh);
+                    }
+
+                    // 바디 열 이동
+                    $('#messageFieldsTableBody tr').each(function() {
+                        const $srcTd = $(this).children().eq(dragSrcColIdx).detach();
+                        if (dragSrcColIdx < toColIdx) {
+                            $(this).children().eq(toColIdx - 1).after($srcTd);
+                        } else {
+                            $(this).children().eq(toColIdx).before($srcTd);
+                        }
+                    });
+
+                    dragSrcColIdx = null;
+                });
+            },
+
+            _exitFieldReorder: function() {
+                this.isFieldReorderMode = false;
+
+                $('#btnFieldReorder').text('전문 필드 순서 변경').removeClass('btn-warning').addClass('btn-outline-secondary');
+
+                // 이벤트 정리
+                $('#fieldHeadDefault, #fieldHeadXml').off('.colReorder');
+                $('#fieldHeadDefault th, #fieldHeadXml th').removeAttr('draggable').css('cursor', '');
+            },
+
+            // ── 유사전문복사 ──
+            _similarFields: [],  // 상세 뷰에서 사용하는 필드 캐시
+
+            openSimilarMessageSearch: function() {
+                const self = this;
+                const modal = bootstrap.Modal.getOrCreateInstance(document.getElementById('similarMessageModal'));
+                modal.show();
+
+                // 기관 드롭다운 로드
+                const $orgSelect = $('#similarOrgId');
+                if ($orgSelect.find('option').length <= 1) {
+                    (window.Messages.orgs || []).forEach(function(org) {
+                        $orgSelect.append('<option value="' + HtmlUtils.escape(org.orgId) + '">' + HtmlUtils.escape(org.orgName) + '</option>');
+                    });
+                }
+                if (self.currentOrgId) $orgSelect.val(self.currentOrgId);
+
+                // 항상 목록 뷰로 초기화
+                self._showSimilarListView();
+                $('#similarSearchMessageId').val('');
+
+                // ASIS 동작: 모달 열릴 때 자동 조회
+                self.searchSimilarMessages();
+            },
+
+            _showSimilarListView: function() {
+                $('#similarListView').show();
+                $('#similarDetailView').hide();
+                $('#btnSimilarCopySelected, #btnSimilarBackToList').hide();
+            },
+
+            _showSimilarDetailView: function() {
+                $('#similarListView').hide();
+                $('#similarDetailView').show();
+                $('#btnSimilarCopySelected, #btnSimilarBackToList').css('display', '');
+            },
+
+            similarBackToList: function() {
+                this._showSimilarListView();
+            },
+
+            searchSimilarMessages: function() {
+                const orgId = $('#similarOrgId').val();
+                const messageId = $('#similarSearchMessageId').val();
+                const pageSize = parseInt($('#similarPageSize').val()) || 10;
+
+                const self = this;
+                $.ajax({
+                    url: API_BASE_URL + '/messages/page',
+                    method: 'GET',
+                    data: { orgIdFilter: orgId || '', searchField: messageId ? 'messageId' : '', searchValue: messageId || '', page: 1, size: pageSize },
+                    success: function(response) {
+                        if (!response.success) return;
+                        const $body = $('#similarMsgBody').empty();
+                        const items = response.data.content || [];
+                        if (items.length === 0) {
+                            $body.append('<tr><td colspan="4" class="text-center text-body-secondary">조회 결과가 없습니다.</td></tr>');
+                            return;
+                        }
+                        items.forEach(function(msg) {
+                            $body.append(
+                                '<tr class="cursor-pointer" data-org-id="' + HtmlUtils.escape(msg.orgId) + '" data-message-id="' + HtmlUtils.escape(msg.messageId) + '" data-message-name="' + HtmlUtils.escape(msg.messageName || '') + '">' +
+                                '<td>' + HtmlUtils.escape(msg.orgId) + '</td>' +
+                                '<td>' + HtmlUtils.escape(msg.messageId) + '</td>' +
+                                '<td>' + HtmlUtils.escape(msg.messageName || '') + '</td>' +
+                                '<td class="text-center"><button class="btn btn-xs btn-outline-primary similar-copy-all">전체복사</button></td>' +
+                                '</tr>'
+                            );
+                        });
+
+                        // 행 클릭 → 상세 뷰 전환
+                        $body.off('click.similar').on('click.similar', 'tr', function(e) {
+                            if ($(e.target).hasClass('similar-copy-all')) return;
+                            const $row = $(this);
+                            self._openSimilarDetail($row.data('org-id'), $row.data('message-id'), $row.data('message-name'));
+                        });
+
+                        // 전체복사 버튼 → 즉시 복사 후 모달 닫기
+                        $body.off('click.copyAll').on('click.copyAll', '.similar-copy-all', function(e) {
+                            e.stopPropagation();
+                            const $row = $(this).closest('tr');
+                            self._executeSimilarFullCopy($row.data('org-id'), $row.data('message-id'));
+                        });
+                    },
+                    error: function(xhr) { Toast.error('조회 실패\n' + getUserFriendlyErrorMessage(xhr)); }
+                });
+            },
+
+            // 전체복사: API 호출 → 마스터 정보 + 필드 교체 → 모달 닫기
+            _executeSimilarFullCopy: function(orgId, messageId) {
+                const self = this;
+                $.ajax({
+                    url: API_BASE_URL + '/messages/' + encodeURIComponent(messageId) + '/detail',
+                    method: 'GET',
+                    data: { orgId: orgId },
+                    success: function(response) {
+                        if (!response.success || !response.data) return;
+                        const detail = response.data;
+                        const fields = detail.fields || [];
+
+                        // 마스터 정보 교체
+                        if (detail.messageType) $('#detailMessageType').val(detail.messageType);
+                        if (detail.logLevel) $('#detailLogLevel').val(detail.logLevel);
+                        if (detail.headerYn) $('#detailHeaderYn').val(detail.headerYn);
+                        if (detail.requestYn) $('#detailRequestYn').val(detail.requestYn);
+                        if (detail.preLoadYn) $('#detailPreLoadYn').val(detail.preLoadYn);
+                        if (detail.bizDomain) $('#detailBizDomain').val(detail.bizDomain);
+
+                        // 필드 전체 교체
+                        self._replaceCurrentFields(fields);
+                        bootstrap.Modal.getInstance(document.getElementById('similarMessageModal'))?.hide();
+                    },
+                    error: function(xhr) { Toast.error('조회 실패\n' + getUserFriendlyErrorMessage(xhr)); }
+                });
+            },
+
+            // 상세 뷰 열기: 필드 목록 로드 + 뷰 전환
+            _openSimilarDetail: function(orgId, messageId, messageName) {
+                const self = this;
+                $('#similarDetailOrgId').val(orgId);
+                $('#similarDetailMsgId').val(messageId);
+                $('#similarDetailMsgName').val(messageName || '');
+                $('#similarFieldBody').html('<tr><td colspan="10" class="text-center py-3">로딩 중...</td></tr>');
+
+                self._showSimilarDetailView();
+
+                $.ajax({
+                    url: API_BASE_URL + '/messages/' + encodeURIComponent(messageId) + '/detail',
+                    method: 'GET',
+                    data: { orgId: orgId },
+                    success: function(response) {
+                        if (!response.success || !response.data) return;
+                        const fields = response.data.fields || [];
+                        self._similarFields = fields;
+
+                        const $tbody = $('#similarFieldBody').empty();
+                        if (fields.length === 0) {
+                            $tbody.append('<tr><td colspan="10" class="text-center text-body-secondary">필드가 없습니다.</td></tr>');
+                            return;
+                        }
+                        fields.forEach(function(f, idx) {
+                            $tbody.append(
+                                '<tr data-field-idx="' + idx + '">' +
+                                '<td><input type="checkbox" class="similar-field-chk" checked></td>' +
+                                '<td class="text-center">' + (f.sortOrder || '') + '</td>' +
+                                '<td>' + HtmlUtils.escape(f.messageFieldId || '') + '</td>' +
+                                '<td>' + HtmlUtils.escape(f.messageFieldName || '') + '</td>' +
+                                '<td class="text-center">' + HtmlUtils.escape(f.dataType || '') + '</td>' +
+                                '<td class="text-center">' + (f.dataLength || '') + '</td>' +
+                                '<td class="text-center">' + HtmlUtils.escape(f.align || '') + '</td>' +
+                                '<td class="text-center">' + HtmlUtils.escape(f.requiredYn || '') + '</td>' +
+                                '<td>' + HtmlUtils.escape(f.defaultValue || '') + '</td>' +
+                                '<td>' + HtmlUtils.escape(f.remark || '') + '</td>' +
+                                '</tr>'
+                            );
+                        });
+
+                        // 전체선택 체크박스
+                        $('#similarFieldSelectAll').off('change').on('change', function() {
+                            $tbody.find('.similar-field-chk').prop('checked', $(this).prop('checked'));
+                        }).prop('checked', true);
+                    },
+                    error: function(xhr) {
+                        $('#similarFieldBody').html('<tr><td colspan="10" class="text-center text-danger">조회 실패</td></tr>');
+                    }
+                });
+            },
+
+            // 선택행 복사 버튼 (footer)
+            applySimilarSelectedFields: function() {
+                const self = this;
+                const selected = [];
+                $('#similarFieldBody .similar-field-chk:checked').each(function() {
+                    const idx = parseInt($(this).closest('tr').data('field-idx'));
+                    if (self._similarFields[idx]) selected.push(self._similarFields[idx]);
+                });
+                if (selected.length === 0) { Toast.warning('복사할 필드를 선택하세요.'); return; }
+
+                // 선택행 → 기존 필드에 추가
+                const baseOrder = self.currentFields.filter(function(f) { return f != null; }).length;
+                selected.forEach(function(f, idx) {
+                    self.currentFields.push(self._buildFieldObj(f, baseOrder + idx + 1));
+                });
+
+                self._rerenderFieldTable();
+                bootstrap.Modal.getInstance(document.getElementById('similarMessageModal'))?.hide();
+            },
+
+            // ── 표준전문조회복사 ──
+            _stdFields: [],  // 상세 뷰에서 사용하는 필드 캐시
+
+            openStdMessageSearch: function() {
+                var self = this;
+                var modal = bootstrap.Modal.getOrCreateInstance(document.getElementById('stdMessageSearchModal'));
+                modal.show();
+
+                // 항상 목록 뷰로 초기화
+                self._showStdListView();
+                $('#stdSearchValue').val('');
+                $('#stdSearchMsgBody').html('<tr><td colspan="6" class="text-center py-3 text-body-secondary">검색어를 입력하고 조회 버튼을 클릭하세요.</td></tr>');
+            },
+
+            _showStdListView: function() {
+                $('#stdSearchListView').show();
+                $('#stdSearchDetailView').hide();
+                $('#btnStdCopySelected, #btnStdBackToList').hide();
+            },
+
+            _showStdDetailView: function() {
+                $('#stdSearchListView').hide();
+                $('#stdSearchDetailView').show();
+                $('#btnStdCopySelected, #btnStdBackToList').css('display', '');
+            },
+
+            stdBackToList: function() {
+                this._showStdListView();
+            },
+
+            searchStdMessages: function() {
+                var searchField = $('#stdSearchField').val();
+                var searchValue = $('#stdSearchValue').val();
+                var pageSize = parseInt($('#stdSearchPageSize').val()) || 20;
+
+                if (!searchValue || !searchValue.trim()) {
+                    Toast.warning('검색어를 입력하세요.');
+                    return;
+                }
+
+                var self = this;
+                $.ajax({
+                    url: API_BASE_URL + '/messages/std-search',
+                    method: 'GET',
+                    data: { searchField: searchField, searchValue: searchValue.trim(), page: 1, size: pageSize },
+                    success: function(response) {
+                        if (!response.success) return;
+                        var $body = $('#stdSearchMsgBody').empty();
+                        var items = response.data.content || [];
+                        if (items.length === 0) {
+                            $body.append('<tr><td colspan="6" class="text-center text-body-secondary">조회 결과가 없습니다.</td></tr>');
+                            return;
+                        }
+
+                        var ioTypeLabel = function(code) {
+                            if (code === 'I') return '요청';
+                            if (code === 'O') return '응답';
+                            return code || '';
+                        };
+
+                        items.forEach(function(msg) {
+                            $body.append(
+                                '<tr class="cursor-pointer"' +
+                                ' data-org-id="' + HtmlUtils.escape(msg.orgId) + '"' +
+                                ' data-message-id="' + HtmlUtils.escape(msg.messageId) + '"' +
+                                ' data-message-name="' + HtmlUtils.escape(msg.messageName || '') + '"' +
+                                ' data-trx-id="' + HtmlUtils.escape(msg.trxId || '') + '">' +
+                                '<td>' + HtmlUtils.escape(msg.trxId || '') + '</td>' +
+                                '<td>' + HtmlUtils.escape(msg.trxName || '') + '</td>' +
+                                '<td>' + HtmlUtils.escape(msg.messageId || '') + '</td>' +
+                                '<td class="text-center">' + HtmlUtils.escape(ioTypeLabel(msg.ioType)) + '</td>' +
+                                '<td>' + HtmlUtils.escape(msg.messageName || '') + '</td>' +
+                                '<td class="text-center"><button class="btn btn-xs btn-outline-primary std-copy-all">전체복사</button></td>' +
+                                '</tr>'
+                            );
+                        });
+
+                        // 행 클릭 → 상세 뷰 전환
+                        $body.off('click.std').on('click.std', 'tr', function(e) {
+                            if ($(e.target).hasClass('std-copy-all')) return;
+                            var $row = $(this);
+                            self._openStdDetail($row.data('org-id'), $row.data('message-id'), $row.data('message-name'), $row.data('trx-id'));
+                        });
+
+                        // 전체복사 버튼 → 즉시 복사 후 모달 닫기
+                        $body.off('click.stdCopyAll').on('click.stdCopyAll', '.std-copy-all', function(e) {
+                            e.stopPropagation();
+                            var $row = $(this).closest('tr');
+                            self._executeStdFullCopy($row.data('org-id'), $row.data('message-id'));
+                        });
+                    },
+                    error: function(xhr) { Toast.error('조회 실패\n' + getUserFriendlyErrorMessage(xhr)); }
+                });
+            },
+
+            // 전체복사: API 호출 → 필드 교체 → 모달 닫기
+            _executeStdFullCopy: function(orgId, messageId) {
+                var self = this;
+                $.ajax({
+                    url: API_BASE_URL + '/messages/' + encodeURIComponent(messageId) + '/detail',
+                    method: 'GET',
+                    data: { orgId: orgId },
+                    success: function(response) {
+                        if (!response.success || !response.data) return;
+                        var detail = response.data;
+                        var fields = detail.fields || [];
+
+                        // 필드 전체 교체
+                        self._replaceCurrentFields(fields);
+                        bootstrap.Modal.getInstance(document.getElementById('stdMessageSearchModal'))?.hide();
+                    },
+                    error: function(xhr) { Toast.error('조회 실패\n' + getUserFriendlyErrorMessage(xhr)); }
+                });
+            },
+
+            // 상세 뷰 열기: 필드 목록 로드 + 뷰 전환
+            _openStdDetail: function(orgId, messageId, messageName, trxId) {
+                var self = this;
+                $('#stdDetailTrxId').val(trxId || '');
+                $('#stdDetailOrgId').val(orgId);
+                $('#stdDetailMsgId').val(messageId);
+                $('#stdDetailMsgName').val(messageName || '');
+                $('#stdSearchFieldBody').html('<tr><td colspan="10" class="text-center py-3">로딩 중...</td></tr>');
+
+                self._showStdDetailView();
+
+                $.ajax({
+                    url: API_BASE_URL + '/messages/' + encodeURIComponent(messageId) + '/detail',
+                    method: 'GET',
+                    data: { orgId: orgId },
+                    success: function(response) {
+                        if (!response.success || !response.data) return;
+                        var fields = response.data.fields || [];
+                        self._stdFields = fields;
+
+                        var $tbody = $('#stdSearchFieldBody').empty();
+                        if (fields.length === 0) {
+                            $tbody.append('<tr><td colspan="10" class="text-center text-body-secondary">필드가 없습니다.</td></tr>');
+                            return;
+                        }
+                        fields.forEach(function(f, idx) {
+                            $tbody.append(
+                                '<tr data-field-idx="' + idx + '">' +
+                                '<td><input type="checkbox" class="std-field-chk" checked></td>' +
+                                '<td class="text-center">' + (f.sortOrder || '') + '</td>' +
+                                '<td>' + HtmlUtils.escape(f.messageFieldId || '') + '</td>' +
+                                '<td>' + HtmlUtils.escape(f.messageFieldName || '') + '</td>' +
+                                '<td class="text-center">' + HtmlUtils.escape(f.dataType || '') + '</td>' +
+                                '<td class="text-center">' + (f.dataLength || '') + '</td>' +
+                                '<td class="text-center">' + HtmlUtils.escape(f.align || '') + '</td>' +
+                                '<td class="text-center">' + HtmlUtils.escape(f.requiredYn || '') + '</td>' +
+                                '<td>' + HtmlUtils.escape(f.defaultValue || '') + '</td>' +
+                                '<td>' + HtmlUtils.escape(f.remark || '') + '</td>' +
+                                '</tr>'
+                            );
+                        });
+
+                        // 전체선택 체크박스
+                        $('#stdFieldSelectAll').off('change').on('change', function() {
+                            $tbody.find('.std-field-chk').prop('checked', $(this).prop('checked'));
+                        }).prop('checked', true);
+                    },
+                    error: function(xhr) {
+                        $('#stdSearchFieldBody').html('<tr><td colspan="10" class="text-center text-danger">조회 실패</td></tr>');
+                    }
+                });
+            },
+
+            // 선택행 복사 버튼 (footer)
+            applyStdSelectedFields: function() {
+                var self = this;
+                var selected = [];
+                $('#stdSearchFieldBody .std-field-chk:checked').each(function() {
+                    var idx = parseInt($(this).closest('tr').data('field-idx'));
+                    if (self._stdFields[idx]) selected.push(self._stdFields[idx]);
+                });
+                if (selected.length === 0) { Toast.warning('복사할 필드를 선택하세요.'); return; }
+
+                // 선택행 → 기존 필드에 추가
+                var baseOrder = self.currentFields.filter(function(f) { return f != null; }).length;
+                selected.forEach(function(f, idx) {
+                    self.currentFields.push(self._buildFieldObj(f, baseOrder + idx + 1));
+                });
+
+                self._rerenderFieldTable();
+                bootstrap.Modal.getInstance(document.getElementById('stdMessageSearchModal'))?.hide();
+            },
+
+            // 필드 전체 교체 (전체복사용)
+            _replaceCurrentFields: function(fields) {
+                const self = this;
+                self.currentFields = [];
+                fields.forEach(function(f, idx) {
+                    self.currentFields.push(self._buildFieldObj(f, idx + 1));
+                });
+                self._rerenderFieldTable();
+            },
+
+            _buildFieldObj: function(f, sortOrder) {
+                return {
+                    sortOrder: sortOrder,
+                    messageFieldName: f.messageFieldName || '',
+                    messageFieldId: f.messageFieldId || '',
+                    dataType: f.dataType || 'C',
+                    dataLength: f.dataLength || '',
+                    align: f.align || 'L',
+                    messageFieldDesc: f.messageFieldDesc || '',
+                    requiredYn: f.requiredYn || '',
+                    scale: f.scale || '',
+                    filler: f.filler || '',
+                    useMode: f.useMode || 'U',
+                    codeGroup: f.codeGroup || '',
+                    codeMappingYn: f.codeMappingYn || 'Y',
+                    defaultValue: f.defaultValue || '',
+                    remark: f.remark || '',
+                    logYn: f.logYn || '',
+                    validationRuleId: f.validationRuleId || '',
+                    fieldTag: f.fieldTag || '',
+                    fieldDomainId: ''
+                };
+            },
+
+            _rerenderFieldTable: function() {
+                const messageType = $('#detailMessageType').val();
+                renderFieldTable(this.currentFields, messageType, {
+                    thead: '#fieldHeadDefault',
+                    theadXml: '#fieldHeadXml',
+                    tbody: '#messageFieldsTableBody'
+                }, true);
+                this.bindFieldEditEvents();
+            },
+
+            // ── 필드풀 검증 ──
+            openFieldPoolVerification: function() {
+                const fields = this.currentFields.filter(f => f != null);
+                if (fields.length === 0) { Toast.info('등록된 전문 필드가 존재하지 않습니다.'); return; }
+
+                const fieldIds = fields.map(f => f.messageFieldId).filter(Boolean);
+                if (fieldIds.length === 0) { Toast.warning('전문필드ID가 없습니다.'); return; }
+
+                const modal = bootstrap.Modal.getOrCreateInstance(document.getElementById('fieldPoolModal'));
+                modal.show();
+                $('#fieldPoolBody').html('<tr><td colspan="4" class="text-center">검증 중...</td></tr>');
+
+                $.ajax({
+                    url: API_BASE_URL + '/messages/field-pool/verify',
+                    method: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify({ messageFieldIds: fieldIds }),
+                    success: function(response) {
+                        const $body = $('#fieldPoolBody').empty();
+                        if (!response.success || !response.data || response.data.length === 0) {
+                            $body.append('<tr><td colspan="4" class="text-center text-body-secondary">검증 결과가 없습니다.</td></tr>');
+                            return;
+                        }
+                        response.data.forEach(function(item) {
+                            const domainYn = item.domainRegistryYn ? '<span class="text-success">등록</span>' : '<span class="text-danger">미등록</span>';
+                            const fieldYn = item.fieldRegistryYn ? '<span class="text-success">등록</span>' : '<span class="text-danger">미등록</span>';
+                            $body.append(
+                                '<tr><td class="text-center">' + HtmlUtils.escape(item.fieldDomainId || '-') + '</td>' +
+                                '<td class="text-center">' + domainYn + '</td>' +
+                                '<td class="text-center">' + HtmlUtils.escape(item.messageFieldId || '') + '</td>' +
+                                '<td class="text-center">' + fieldYn + '</td></tr>'
+                            );
+                        });
+                    },
+                    error: function(xhr) {
+                        $('#fieldPoolBody').html('<tr><td colspan="4" class="text-center text-danger">검증 실패: ' + getUserFriendlyErrorMessage(xhr) + '</td></tr>');
+                    }
+                });
+            },
+
+            // ── 테이블/컬럼 정보 ──
+            openTableInfo: function() {
+                const modal = bootstrap.Modal.getOrCreateInstance(document.getElementById('tableInfoModal'));
+                modal.show();
+                $('#tableColumnBody').empty();
+                $('#tableSearchInput').val('');
+            },
+
+            searchTableColumns: function() {
+                const tableName = $('#tableSearchInput').val().trim().toUpperCase();
+                if (!tableName) { Toast.warning('테이블명을 입력하세요.'); return; }
+
+                const self = this;
+                $.ajax({
+                    url: API_BASE_URL + '/messages/table-columns',
+                    method: 'GET',
+                    data: { tableName: tableName },
+                    success: function(response) {
+                        const $body = $('#tableColumnBody').empty();
+                        if (!response.success || !response.data || response.data.length === 0) {
+                            $body.append('<tr><td colspan="5" class="text-center text-body-secondary">조회 결과가 없습니다.</td></tr>');
+                            return;
+                        }
+                        response.data.forEach(function(col) {
+                            $body.append(
+                                '<tr>' +
+                                '<td><input type="checkbox" class="table-col-chk"></td>' +
+                                '<td>' + HtmlUtils.escape(col.columnName || '') + '</td>' +
+                                '<td class="text-center">' + HtmlUtils.escape(col.dataType || '') + '</td>' +
+                                '<td class="text-center">' + (col.dataLength || '') + '</td>' +
+                                '<td>' + HtmlUtils.escape(col.comments || '') + '</td>' +
+                                '</tr>'
+                            );
+                        });
+
+                        // 전체선택
+                        $('#tableColSelectAll').off('change').on('change', function() {
+                            $body.find('.table-col-chk').prop('checked', $(this).prop('checked'));
+                        });
+                    },
+                    error: function(xhr) {
+                        $('#tableColumnBody').html('<tr><td colspan="5" class="text-center text-danger">조회 실패: ' + getUserFriendlyErrorMessage(xhr) + '</td></tr>');
+                    }
+                });
+            },
+
+            applyTableColumns: function() {
+                const self = this;
+                const selected = [];
+                $('#tableColumnBody tr').each(function() {
+                    if ($(this).find('.table-col-chk').prop('checked')) {
+                        const $tds = $(this).find('td');
+                        selected.push({
+                            columnName: $tds.eq(1).text(),
+                            dataType: $tds.eq(2).text(),
+                            dataLength: $tds.eq(3).text(),
+                            comments: $tds.eq(4).text()
+                        });
+                    }
+                });
+
+                if (selected.length === 0) { Toast.warning('적용할 컬럼을 선택하세요.'); return; }
+
+                const baseOrder = self.currentFields.filter(f => f != null).length;
+                selected.forEach(function(col, idx) {
+                    // 컬럼명을 camelCase로 변환하여 필드ID로 사용
+                    const fieldId = col.columnName.toLowerCase().replace(/_([a-z])/g, function(m, c) { return c.toUpperCase(); });
+                    self.currentFields.push({
+                        sortOrder: baseOrder + idx + 1,
+                        messageFieldName: col.comments || col.columnName,
+                        messageFieldId: fieldId,
+                        dataType: col.dataType === 'NUMBER' ? 'N' : 'C',
+                        dataLength: col.dataLength || '',
+                        align: col.dataType === 'NUMBER' ? 'R' : 'L',
+                        messageFieldDesc: '', requiredYn: '', scale: '', filler: '',
+                        useMode: 'U', codeGroup: '', codeMappingYn: 'Y',
+                        defaultValue: '', remark: '', logYn: '', validationRuleId: '',
+                        fieldTag: '', fieldDomainId: ''
+                    });
+                });
+
+                const messageType = $('#detailMessageType').val();
+                renderFieldTable(self.currentFields, messageType, {
+                    thead: '#fieldHeadDefault',
+                    theadXml: '#fieldHeadXml',
+                    tbody: '#messageFieldsTableBody'
+                }, true);
+                self.bindFieldEditEvents();
+
+                bootstrap.Modal.getInstance(document.getElementById('tableInfoModal'))?.hide();
+                Toast.success(selected.length + '건의 컬럼이 필드로 추가되었습니다.');
+            },
+
+            openBackupModal: function() {
+                if (!this.currentOrgId || !this.currentMessageId) return;
+                document.getElementById('backupReason').value = '';
+                bootstrap.Modal.getOrCreateInstance(document.getElementById('backupReasonModal')).show();
+            },
+
+            executeBackup: function() {
+                const orgId = this.currentOrgId;
+                const messageId = this.currentMessageId;
+                const reason = document.getElementById('backupReason').value.trim();
+
+                $.ajax({
+                    url: API_BASE_URL + '/messages/' + encodeURIComponent(messageId) + '/backup',
+                    method: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify({ orgId: orgId, historyReason: reason }),
+                    success: (response) => {
+                        if (response.success) {
+                            Toast.success('백업이 완료되었습니다.');
+                            bootstrap.Modal.getInstance(document.getElementById('backupReasonModal')).hide();
+                            // If detail modal is open, refresh it; otherwise just reload the grid
+                            if ($('#messageDetailModal').hasClass('show')) {
+                                this.open(orgId, messageId, '전문 수정');
+                            }
+                            window.Messages.load();
+                        } else {
+                            Toast.error('백업 실패: ' + (response.message || '알 수 없는 오류'));
+                        }
+                    },
+                    error: (xhr) => {
+                        Toast.error('백업 실패\n' + getUserFriendlyErrorMessage(xhr));
+                    }
+                });
+            },
+
+            openRestoreModal: function() {
+                if (!this.currentOrgId || !this.currentMessageId) return;
+                const orgId = this.currentOrgId;
+                const messageId = this.currentMessageId;
+                const self = this;
+
+                $.ajax({
+                    url: API_BASE_URL + '/messages/' + encodeURIComponent(messageId) + '/versions',
+                    method: 'GET',
+                    data: { orgId: orgId },
+                    success: (response) => {
+                        if (response.success) {
+                            self.renderVersionList(response.data);
+                            bootstrap.Modal.getOrCreateInstance(document.getElementById('restoreVersionModal')).show();
+                        } else {
+                            Toast.error('버전 목록 조회 실패');
+                        }
+                    },
+                    error: (xhr) => {
+                        Toast.error('버전 목록 조회 실패\n' + getUserFriendlyErrorMessage(xhr));
+                    }
+                });
+            },
+
+            renderVersionList: function(versions) {
+                const tbody = document.getElementById('versionListBody');
+                // Clear existing rows safely
+                while (tbody.firstChild) { tbody.removeChild(tbody.firstChild); }
+                // Hide comparison section when re-rendering version list
+                document.getElementById('fieldComparisonSection').style.display = 'none';
+
+                if (!versions || versions.length === 0) {
+                    const emptyRow = document.createElement('tr');
+                    const emptyCell = document.createElement('td');
+                    emptyCell.setAttribute('colspan', '5');
+                    emptyCell.className = 'text-center';
+                    emptyCell.textContent = '저장된 버전이 없습니다';
+                    emptyRow.appendChild(emptyCell);
+                    tbody.appendChild(emptyRow);
+                    return;
+                }
+
+                const self = this;
+                versions.forEach(v => {
+                    const tr = document.createElement('tr');
+                    tr.style.cursor = 'pointer';
+                    tr.setAttribute('data-version', v.version);
+
+                    // Click handler to load field comparison
+                    tr.addEventListener('click', function() {
+                        // Highlight selected row
+                        tbody.querySelectorAll('tr').forEach(function(row) {
+                            row.classList.remove('table-active');
+                        });
+                        tr.classList.add('table-active');
+                        self.loadFieldComparison(v.version);
+                    });
+
+                    const tdVersion = document.createElement('td');
+                    tdVersion.className = 'text-center';
+                    tdVersion.textContent = v.version;
+                    tr.appendChild(tdVersion);
+
+                    const tdReason = document.createElement('td');
+                    tdReason.textContent = v.historyReason || '-';
+                    tr.appendChild(tdReason);
+
+                    const tdDate = document.createElement('td');
+                    tdDate.className = 'text-center';
+                    tdDate.textContent = v.lastUpdateDtime || '-';
+                    tr.appendChild(tdDate);
+
+                    const tdUser = document.createElement('td');
+                    tdUser.className = 'text-center';
+                    tdUser.textContent = v.lastUpdateUserId || '-';
+                    tr.appendChild(tdUser);
+
+                    const tdAction = document.createElement('td');
+                    tdAction.className = 'text-center';
+                    const btn = document.createElement('button');
+                    btn.className = 'btn btn-info btn-xs';
+                    btn.textContent = '복원';
+                    btn.addEventListener('click', function(e) {
+                        e.stopPropagation(); // Prevent row click from firing
+                        window.MessageDetailModal.executeRestore(v.version);
+                    });
+                    tdAction.appendChild(btn);
+                    tr.appendChild(tdAction);
+
+                    tbody.appendChild(tr);
+                });
+            },
+
+            loadFieldComparison: function(version) {
+                const orgId = this.currentOrgId;
+                const messageId = this.currentMessageId;
+                const self = this;
+
+                // Update version label
+                document.getElementById('comparisonVersionLabel').textContent = version;
+
+                // Show loading state in both tables
+                const currentBody = document.getElementById('currentFieldsCompareBody');
+                const versionBody = document.getElementById('versionFieldsCompareBody');
+                currentBody.replaceChildren();
+                versionBody.replaceChildren();
+
+                var loadingRow = document.createElement('tr');
+                var loadingCell = document.createElement('td');
+                loadingCell.setAttribute('colspan', '6');
+                loadingCell.className = 'text-center';
+                loadingCell.textContent = '로딩 중...';
+                loadingRow.appendChild(loadingCell);
+                currentBody.appendChild(loadingRow);
+
+                var loadingRow2 = document.createElement('tr');
+                var loadingCell2 = document.createElement('td');
+                loadingCell2.setAttribute('colspan', '6');
+                loadingCell2.className = 'text-center';
+                loadingCell2.textContent = '로딩 중...';
+                loadingRow2.appendChild(loadingCell2);
+                versionBody.appendChild(loadingRow2);
+
+                // Show comparison section
+                document.getElementById('fieldComparisonSection').style.display = 'block';
+
+                // Fetch current fields and version fields in parallel
+                var currentFieldsPromise = $.ajax({
+                    url: API_BASE_URL + '/messages/' + encodeURIComponent(messageId),
+                    method: 'GET',
+                    data: { orgId: orgId, includeFields: true }
+                });
+
+                var versionFieldsPromise = $.ajax({
+                    url: API_BASE_URL + '/messages/' + encodeURIComponent(messageId)
+                         + '/versions/' + encodeURIComponent(version) + '/fields',
+                    method: 'GET',
+                    data: { orgId: orgId }
+                });
+
+                $.when(currentFieldsPromise, versionFieldsPromise).then(
+                    function(currentRes, versionRes) {
+                        var currentFields = (currentRes[0].data && currentRes[0].data.fields) || [];
+                        var versionFields = (versionRes[0].data) || [];
+
+                        // Build a map of fieldId -> field for diff highlighting
+                        var currentFieldMap = {};
+                        currentFields.forEach(function(f) { currentFieldMap[f.messageFieldId] = f; });
+                        var versionFieldMap = {};
+                        versionFields.forEach(function(f) { versionFieldMap[f.messageFieldId] = f; });
+
+                        self.renderComparisonFields(currentBody, currentFields, versionFieldMap, 'current');
+                        self.renderComparisonFields(versionBody, versionFields, currentFieldMap, 'version');
+                    },
+                    function() {
+                        currentBody.replaceChildren();
+                        versionBody.replaceChildren();
+                        var errRow = document.createElement('tr');
+                        var errCell = document.createElement('td');
+                        errCell.setAttribute('colspan', '6');
+                        errCell.className = 'text-center text-danger';
+                        errCell.textContent = '필드 조회 실패';
+                        errRow.appendChild(errCell);
+                        currentBody.appendChild(errRow);
+
+                        var errRow2 = document.createElement('tr');
+                        var errCell2 = document.createElement('td');
+                        errCell2.setAttribute('colspan', '6');
+                        errCell2.className = 'text-center text-danger';
+                        errCell2.textContent = '필드 조회 실패';
+                        errRow2.appendChild(errCell2);
+                        versionBody.appendChild(errRow2);
+                    }
+                );
+            },
+
+            renderComparisonFields: function(tbody, fields, otherFieldMap, side) {
+                tbody.replaceChildren();
+
+                if (!fields || fields.length === 0) {
+                    var emptyRow = document.createElement('tr');
+                    var emptyCell = document.createElement('td');
+                    emptyCell.setAttribute('colspan', '6');
+                    emptyCell.className = 'text-center text-body-secondary';
+                    emptyCell.textContent = '필드가 없습니다';
+                    emptyRow.appendChild(emptyCell);
+                    tbody.appendChild(emptyRow);
+                    return;
+                }
+
+                fields.forEach(function(f) {
+                    var tr = document.createElement('tr');
+                    var otherField = otherFieldMap[f.messageFieldId];
+
+                    // Determine row diff status
+                    if (!otherField) {
+                        // Field exists only on this side
+                        tr.className = side === 'current' ? 'table-danger' : 'table-success';
+                    } else {
+                        // Check if any displayed column differs
+                        var hasDiff = (
+                            String(f.sortOrder || '') !== String(otherField.sortOrder || '') ||
+                            String(f.messageFieldName || '') !== String(otherField.messageFieldName || '') ||
+                            String(f.dataType || '') !== String(otherField.dataType || '') ||
+                            String(f.dataLength || '') !== String(otherField.dataLength || '') ||
+                            String(f.defaultValue || '') !== String(otherField.defaultValue || '')
+                        );
+                        if (hasDiff) {
+                            tr.className = 'table-warning';
+                        }
+                    }
+
+                    var tdOrder = document.createElement('td');
+                    tdOrder.className = 'text-center';
+                    tdOrder.textContent = f.sortOrder != null ? f.sortOrder : '';
+                    tr.appendChild(tdOrder);
+
+                    var tdFieldId = document.createElement('td');
+                    tdFieldId.textContent = f.messageFieldId || '';
+                    tr.appendChild(tdFieldId);
+
+                    var tdFieldName = document.createElement('td');
+                    tdFieldName.textContent = f.messageFieldName || '';
+                    tr.appendChild(tdFieldName);
+
+                    var tdDataType = document.createElement('td');
+                    tdDataType.className = 'text-center';
+                    tdDataType.textContent = f.dataType || '';
+                    tr.appendChild(tdDataType);
+
+                    var tdDataLength = document.createElement('td');
+                    tdDataLength.className = 'text-center';
+                    tdDataLength.textContent = f.dataLength != null ? f.dataLength : '';
+                    tr.appendChild(tdDataLength);
+
+                    var tdDefault = document.createElement('td');
+                    tdDefault.textContent = f.defaultValue || '';
+                    tr.appendChild(tdDefault);
+
+                    tbody.appendChild(tr);
+                });
+            },
+
+            openReloadModal: function() {
+                if (!this.currentOrgId || !this.currentMessageId) return;
+                var orgId = this.currentOrgId;
+                var messageId = this.currentMessageId;
+
+                WasSelectReloadModal.open({
+                    onExecute: function(instanceIds) {
+                        $.ajax({
+                            url: API_BASE_URL + '/reload/execute',
+                            method: 'POST',
+                            contentType: 'application/json',
+                            data: JSON.stringify({
+                                reloadType: 'message',
+                                instanceIds: instanceIds,
+                                additionalParams: {
+                                    orgId: orgId,
+                                    messageId: messageId
+                                }
+                            }),
+                            success: function(response) {
+                                if (response.success && response.data) {
+                                    WasSelectReloadModal.showResults(response.data.results);
+                                } else {
+                                    WasSelectReloadModal.resetButton();
+                                    Toast.error(response.message || 'Reload 실행에 실패했습니다.');
+                                }
+                            },
+                            error: function(xhr) {
+                                WasSelectReloadModal.resetButton();
+                                Toast.error(xhr.responseJSON?.message || 'Reload 실행 중 오류가 발생했습니다.');
+                            }
+                        });
+                    }
+                });
+            },
+
+            executeRestore: function(version) {
+                Toast.confirm('버전 ' + version + '으로 복원하시겠습니까?\n현재 전문 데이터와 필드가 선택한 버전으로 대체됩니다.', () => {
+                    const orgId = this.currentOrgId;
+                    const messageId = this.currentMessageId;
+
+                    $.ajax({
+                        url: API_BASE_URL + '/messages/' + encodeURIComponent(messageId) + '/restore',
+                        method: 'POST',
+                        contentType: 'application/json',
+                        data: JSON.stringify({ orgId: orgId, version: version }),
+                        success: (response) => {
+                            if (response.success) {
+                                Toast.success('복원이 완료되었습니다.');
+                                bootstrap.Modal.getInstance(document.getElementById('restoreVersionModal')).hide();
+                                this.open(orgId, messageId, '전문 수정');
+                                window.Messages.load();
+                            } else {
+                                Toast.error('복원 실패: ' + (response.message || '알 수 없는 오류'));
+                            }
+                        },
+                        error: (xhr) => {
+                            Toast.error('복원 실패\n' + getUserFriendlyErrorMessage(xhr));
+                        }
+                    });
+                });
+            }
+        };
+
+        // ==================== Toolbar Event Bindings & Initialization ====================
+        // 전문 관리 페이지(message.html)에서만 초기화 실행 (trx.html 등에서 include 시 스킵)
+        if (document.getElementById('messageTable')) {
+            $('#btnExcel').off('click').on('click', function() {
+                const params = {};
+                const searchField = $('#searchField').val();
+                const searchValue = $('#searchValue').val();
+                const orgIdFilter = $('#orgIdFilter').val();
+                const headerYnFilter = $('#headerYnFilter').val();
+                const parentMessageIdFilter = $('#parentMessageIdFilter').val();
+                const messageTypeFilter = $('#messageTypeFilter').val();
+                if (searchField && searchValue) { params.searchField = searchField; params.searchValue = searchValue; }
+                if (orgIdFilter) { params.orgIdFilter = orgIdFilter; }
+                if (headerYnFilter) { params.headerYnFilter = headerYnFilter; }
+                if (parentMessageIdFilter) { params.parentMessageIdFilter = parentMessageIdFilter; }
+                if (messageTypeFilter) { params.messageTypeFilter = messageTypeFilter; }
+                if (window.Messages.sortBy) { params.sortBy = window.Messages.sortBy; params.sortDirection = window.Messages.sortDirection || 'ASC'; }
+                const qs = $.param(params);
+                window.location.href = API_BASE_URL + '/messages/export' + (qs ? '?' + qs : '');
+            });
+
+            $('#btnPrint').off('click').on('click', function() {
+                const columns = [
+                    { key: 'orgId', label: '기관' },
+                    { key: 'messageId', label: '메시지ID' },
+                    { key: 'messageName', label: '메시지명' },
+                    { key: 'parentMessageId', label: '부모메시지ID' },
+                    { key: 'curVersion', label: '현재버전' }
+                ];
+                PrintUtil.print({ title: '메시지 목록', columns: columns, data: window.Messages.messagesData });
+            });
+
+            $('#btnRefresh').off('click').on('click', function() {
+                window.Messages.load();
+            });
+
+            window.Messages.init();
+            window.MessageModal.init();
+            window.CodeGroupPickerModal.init();
+            WasSelectReloadModal.init();
+            window.Messages.itemsPerPage = parseInt($('#limitRows').val()) || 10;
+            window.Messages.currentPage = 1;
+            $('#messageTable thead th[data-sort]').addClass('sortable');
+            window.Messages.updateSortIndicators();
+            window.Messages.load();
+        } else {
+            // 다른 페이지에서 MessageDetailModal만 사용하는 경우 CodeGroupPickerModal만 초기화
+            window.CodeGroupPickerModal.init();
+        }
+
+        // ==================== MessageExcelUpload ====================
+
+        window.MessageExcelUpload = window.MessageExcelUpload || {
+            modal: null,
+
+            init: function() {
+                var self = this;
+                this.modal = bootstrap.Modal.getOrCreateInstance(document.getElementById('excelUploadModal'));
+
+                $('#excelUploadFile').on('change', function() {
+                    self.onFileChange(this);
+                });
+
+                $('#btnExcelUploadSubmit').on('click', function() {
+                    self.upload();
+                });
+
+                // 모달 닫힐 때 초기화
+                document.getElementById('excelUploadModal').addEventListener('hidden.bs.modal', function() {
+                    self.reset();
+                });
+            },
+
+            open: function() {
+                if (!this.modal) {
+                    this.init();
+                }
+                this.reset();
+                this.modal.show();
+            },
+
+            reset: function() {
+                $('#excelUploadFile').val('');
+                $('#excelUploadFileInfo').hide();
+                $('#excelUploadFileInfoBody').empty();
+                $('#excelUploadResult').hide();
+                $('#excelUploadErrors').hide();
+                $('#excelUploadErrorList').empty();
+                $('#btnExcelUploadSubmit').prop('disabled', false);
+            },
+
+            onFileChange: function(input) {
+                var files = input.files;
+                if (!files || files.length === 0) {
+                    $('#excelUploadFileInfo').hide();
+                    return;
+                }
+
+                var file = files[0];
+                var fileName = HtmlUtils.escape(file.name);
+                var fileSize = this.formatFileSize(file.size);
+
+                // 확장자 검증
+                if (!file.name.toLowerCase().endsWith('.xlsx')) {
+                    Toast.info('xlsx 형식의 파일만 업로드 가능합니다.');
+                    $(input).val('');
+                    $('#excelUploadFileInfo').hide();
+                    return;
+                }
+
+                // 크기 검증 (10MB)
+                if (file.size > 10 * 1024 * 1024) {
+                    Toast.info('파일 크기가 10MB를 초과합니다.');
+                    $(input).val('');
+                    $('#excelUploadFileInfo').hide();
+                    return;
+                }
+
+                var tbody = $('#excelUploadFileInfoBody');
+                tbody.empty();
+                tbody.append(
+                    '<tr>' +
+                    '<td>' + fileName + '</td>' +
+                    '<td class="text-center">' + fileSize + '</td>' +
+                    '<td class="text-center"><span class="badge bg-secondary">대기</span></td>' +
+                    '</tr>'
+                );
+                $('#excelUploadFileInfo').show();
+                $('#excelUploadResult').hide();
+            },
+
+            formatFileSize: function(bytes) {
+                if (bytes === 0) return '0 B';
+                var k = 1024;
+                var sizes = ['B', 'KB', 'MB'];
+                var i = Math.floor(Math.log(bytes) / Math.log(k));
+                return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+            },
+
+            upload: function() {
+                var fileInput = document.getElementById('excelUploadFile');
+                if (!fileInput.files || fileInput.files.length === 0) {
+                    Toast.warning('먼저 파일을 선택하십시오.');
+                    return;
+                }
+
+                var file = fileInput.files[0];
+                var formData = new FormData();
+                formData.append('file', file);
+
+                var self = this;
+                $('#btnExcelUploadSubmit').prop('disabled', true);
+
+                // 상태 업데이트: 업로드 중
+                var statusCell = $('#excelUploadFileInfoBody tr:first td:last');
+                statusCell.html('<span class="badge bg-primary">업로드 중...</span>');
+
+                $.ajax({
+                    url: API_BASE_URL + '/messages/import',
+                    method: 'POST',
+                    data: formData,
+                    processData: false,
+                    contentType: false,
+                    success: function(response) {
+                        if (response.success) {
+                            var data = response.data;
+                            statusCell.html('<span class="badge bg-success">완료</span>');
+
+                            // 결과 표시
+                            $('#resultTotalRows').text(data.totalRows + '건');
+                            $('#resultCreated').text(data.created + '건');
+                            $('#resultUpdated').text(data.updated + '건');
+                            $('#resultSkipped').text(data.skipped + '건');
+                            $('#excelUploadResult').show();
+
+                            // 오류 표시
+                            if (data.errors && data.errors.length > 0) {
+                                var errorHtml = '';
+                                for (var i = 0; i < data.errors.length; i++) {
+                                    errorHtml += '<div>' + HtmlUtils.escape(data.errors[i]) + '</div>';
+                                }
+                                $('#excelUploadErrorList').html(errorHtml);
+                                $('#excelUploadErrors').show();
+                            } else {
+                                $('#excelUploadErrors').hide();
+                            }
+
+                            // 테이블 갱신
+                            if (window.Messages) {
+                                window.Messages.load();
+                            }
+                        } else {
+                            statusCell.html('<span class="badge bg-danger">실패</span>');
+                            Toast.error('업로드 실패: ' + (response.message || '알 수 없는 오류'));
+                        }
+                        $('#btnExcelUploadSubmit').prop('disabled', false);
+                    },
+                    error: function(xhr) {
+                        statusCell.html('<span class="badge bg-danger">실패</span>');
+                        var errorMsg = getUserFriendlyErrorMessage(xhr);
+                        Toast.error('업로드 실패: ' + errorMsg);
+                        $('#btnExcelUploadSubmit').prop('disabled', false);
+                    }
+                });
+            }
+        };
+
+        })();
+    </script>
+
+    <!-- ============================================================ -->
+    <!-- Code Group Picker Modal                                      -->
+    <!-- ============================================================ -->
+    <div id="codeGroupPickerModal" class="sp-cg-picker-overlay">
+        <div class="sp-cg-picker">
+
+            <!-- Header -->
+            <div class="sp-cg-picker-header">
+                <strong class="fs-base">코드그룹</strong>
+                <button type="button" id="cgPickerClose" class="sp-picker-close">×</button>
+            </div>
+
+            <!-- 검색조건 -->
+            <div class="sp-cg-picker-search">
+                <div class="sp-section-header gap-8px">
+                    <span class="text-danger fs-xs">&#9658;</span>
+                    <strong class="fs-sm">검색조건</strong>
+                </div>
+                <div id="cgPickerSearchBody" class="sp-section-body">
+                    <div class="d-flex align-items-center gap-6px flex-wrap">
+                        <select id="cgPickerSearchField" class="form-select form-select-sm fs-sm w-120">
+                            <option value="codeGroupId">코드그룹ID</option>
+                            <option value="codeGroupName">코드그룹명</option>
+                        </select>
+                        <input type="text" id="cgPickerSearchValue" class="form-control form-control-sm fs-sm w-220" placeholder="검색어 입력">
+                        <select id="cgPickerPageSize" class="form-select form-select-sm fs-sm w-70">
+                            <option value="10">10</option>
+                            <option value="20" selected>20</option>
+                            <option value="50">50</option>
+                            <option value="100">100</option>
+                            <option value="500">500</option>
+                            <option value="1000">1000</option>
+                        </select>
+                        <span class="fs-sm text-body-secondary">건씩</span>
+                        <button type="button" id="cgPickerSearchBtn" class="btn btn-sm btn-primary fs-sm">조회</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 리스트 -->
+            <div class="sp-cg-picker-list-section">
+                <div class="sp-section-header gap-8px flex-shrink-0">
+                    <span class="text-danger fs-xs">&#9658;</span>
+                    <strong class="fs-sm">리스트</strong>
+                </div>
+                <div class="sp-cg-picker-list-wrap">
+                    <table class="sp-cg-picker-table">
+                        <thead>
+                            <tr>
+                                <th data-cg-sort="codeGroupId" class="col-w-120">코드그룹ID</th>
+                                <th data-cg-sort="codeGroupName" class="col-w-200">코드그룹명</th>
+                                <th>코드설명</th>
+                                <th class="col-w-100">업무분류</th>
+                                <th class="col-w-80">속한코드수</th>
+                            </tr>
+                        </thead>
+                        <tbody id="cgPickerTableBody">
+                            <tr><td colspan="5" class="text-center py-3 text-body-secondary">조회 버튼을 클릭하세요</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+                <!-- 페이지네이션 -->
+                <div class="sp-cg-picker-pagination">
+                    <div id="cgPickerPagination" class="d-flex gap-1 align-items-center"></div>
+                    <div id="cgPickerInfo" class="fs-xs text-body-secondary"></div>
+                </div>
+            </div>
+
+            <!-- Footer -->
+            <div class="sp-cg-picker-footer">
+                <button type="button" id="cgPickerResetBtn" class="btn btn-sm btn-secondary">&#8658; 전문필드 코드 초기화</button>
+                <button type="button" id="cgPickerSelectBtn" class="btn btn-sm btn-primary">&#8658; 추가</button>
+                <button type="button" id="cgPickerCloseBtn" class="btn btn-sm btn-primary">&#8658; 닫기</button>
+            </div>
+
+        </div>
+    </div>
+
+</th:block>
+</body>
+</html>

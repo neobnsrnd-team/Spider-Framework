@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<div th:fragment="content">
+    <!-- Include Page Content Layout Styles -->
+
+    <!-- Search Section Header -->
+    <div class="page-header">
+        <h4 class="page-title">
+            <i class="bi bi-arrow-left-right text-primary"></i>
+            검색조건
+        </h4>
+    </div>
+
+    <!-- Search Box -->
+    <div th:replace="~{pages/trans-data-exec/trans-data-exec-search :: search}"></div>
+
+    <!-- List Section Header -->
+    <div class="page-header mt-3">
+        <h4 class="page-title">
+            <i class="bi bi-arrow-left-right text-primary"></i>
+            이행 데이터 현황
+        </h4>
+        <div class="page-header-actions" th:if="${userAuthorities != null and userAuthorities.contains('TRANS_DATA_EXEC:W')}">
+            <button type="button" class="btn btn-primary btn-sm" id="btnUpload">
+                <i class="bi bi-upload"></i> Upload
+            </button>
+            <button type="button" class="btn btn-success btn-sm" id="btnTransData">
+                <i class="bi bi-database"></i> 데이터 이행
+            </button>
+        </div>
+    </div>
+
+    <!-- Toolbar -->
+    <div th:replace="~{fragments/page-content-layout :: toolbar}"></div>
+
+    <!-- Table -->
+    <div th:replace="~{pages/trans-data-exec/trans-data-exec-table :: table}"></div>
+
+    <!-- Pagination -->
+    <div th:replace="~{fragments/page-content-layout :: pagination}"></div>
+
+    <!-- Detail Modal -->
+    <div th:replace="~{pages/trans-data-exec/trans-data-exec-modal :: modal}"></div>
+
+    <!-- Run Modal -->
+    <div th:replace="~{pages/trans-data-exec/trans-data-exec-run-modal :: modal}"></div>
+
+    <!-- Upload Modal -->
+    <div th:replace="~{pages/trans-data-exec/trans-data-exec-upload-modal :: modal}"></div>
+
+    <!-- TransData Script -->
+    <th:block th:replace="~{pages/trans-data-exec/trans-data-exec-script :: script}" />
+</div>
+</body>
+</html>

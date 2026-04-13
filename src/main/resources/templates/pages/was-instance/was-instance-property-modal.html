@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>WAS Property Modal</title>
+</head>
+<body>
+<!-- Property Modal Fragment -->
+<div th:fragment="modal">
+    <div id="propertyModal" class="modal fade" tabindex="-1" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
+        <div class="modal-dialog modal-dialog-centered sp-modal-xl">
+        <div class="modal-content">
+            <!-- Blue Header -->
+            <div class="modal-header">
+                <h3 id="modalTitle">PW21 프로퍼티 정보</h3>
+                <button class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+
+            <div class="modal-body">
+                <!-- Tabs -->
+                <div class="modal-tabs">
+                    <div class="modal-tab active">
+                        <i class="bi bi-exclamation-circle-fill"></i> 정보 조회 | 복제
+                    </div>
+                </div>
+
+                <!-- WAS Instance Selection -->
+                <div class="modal-form-row">
+                    <label class="modal-form-label">WAS 인스턴스</label>
+                    <select id="modalInstanceId" class="form-select flex-fixed-180">
+                        <option value="PW21">PW21</option>
+                    </select>
+
+                    <label class="modal-form-label">프로퍼티그룹ID</label>
+                    <select id="modalPropertyGroup" class="form-select flex-fixed-180">
+                        <option value="">선택 안 함</option>
+                    </select>
+                </div>
+
+                <!-- Property List Section -->
+                <div class="modal-section">
+                    <div class="modal-section-header">
+                        <span><i class="bi bi-exclamation-circle-fill"></i> 프로퍼티 리스트</span>
+                        <div>
+                            <button class="btn btn-outline-secondary btn-sm" onclick="exportProperties()">
+                                <i class="bi bi-file-earmark-excel"></i> 엑셀
+                            </button>
+                            <button class="btn btn-outline-secondary btn-sm" onclick="printProperties()">
+                                <i class="bi bi-printer"></i> 전체별 사례
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="property-table-container">
+                        <table class="property-table">
+                            <colgroup>
+                                <col class="col-w-40">
+                                <col class="col-w-80">
+                                <col class="col-w-200">
+                                <col class="col-w-280">
+                                <col class="col-w-150">
+                                <col class="col-w-150">
+                                <col>
+                            </colgroup>
+                            <thead>
+                            <tr>
+                                <th><input type="checkbox" id="selectAllProperties"></th>
+                                <th>CRUD</th>
+                                <th>프로퍼티그룹ID</th>
+                                <th>프로퍼티ID</th>
+                                <th>초기값</th>
+                                <th>설정된 값</th>
+                                <th>특이사항</th>
+                            </tr>
+                            </thead>
+                            <tbody id="propertyTableBody">
+                            <tr>
+                                <td colspan="7" class="text-center py-4 text-body-secondary">
+                                    프로퍼티 정보를 불러오는 중...
+                                </td>
+                            </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- WAS2I Section -->
+                <div class="modal-section">
+                    <div class="modal-section-header">
+                        <span><i class="bi bi-exclamation-circle-fill"></i> WAS2I 비교 및 복사</span>
+                    </div>
+                    <div class="was2i-section">
+                        <div class="was2i-controls">
+                            <label class="modal-form-label">WAS선택</label>
+                            <select class="form-select">
+                                <option value="">WAS선택</option>
+                            </select>
+                            <button class="btn btn-primary btn-sm">
+                                <i class="bi bi-balance-scale"></i> 전체 비교
+                            </button>
+                            <button class="btn btn-primary btn-sm">
+                                <i class="bi bi-list-check"></i> 부분 비교
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Footer with Save/Close buttons -->
+            <div class="modal-footer">
+                <div class="modal-footer-left">
+                </div>
+                <div class="modal-footer-right">
+                    <button class="btn btn-primary btn-sm" onclick="saveProperties()">
+                        <i class="bi bi-floppy"></i> 변경사항 저장
+                    </button>
+                    <button class="btn btn-secondary btn-sm" data-bs-dismiss="modal">
+                        <i class="bi bi-x-lg"></i> 닫기
+                    </button>
+                </div>
+            </div>
+        </div>
+        </div>
+    </div>
+</div>
+
+<!-- Property Modal Script Fragment -->
+<th:block th:fragment="script">
+    <script>
+        (function() {
+            function showPropertyModal(instanceId) {
+                // Show modal immediately with loading state
+                $('#modalTitle').text(`${instanceId} 프로퍼티 정보`);
+                $('#modalInstanceId').html(`<option value="${instanceId}">${instanceId}</option>`);
+                bootstrap.Modal.getOrCreateInstance(document.getElementById('propertyModal')).show();
+
+                // Load property data
+                $.ajax({
+                    url: `/api/was/property/instance/${instanceId}`,
+                    method: 'GET',
+                    success: function(response) {
+                        const properties = response.data || [];
+                        renderPropertyTable(properties);
+                    },
+                    error: function(xhr) {
+                        console.error('Failed to load properties:', xhr);
+                        const tbody = $('#propertyTableBody');
+                        tbody.empty();
+                        tbody.append(`
+                            <tr>
+                                <td colspan="7" class="text-center py-4 text-danger">
+                                    <i class="bi bi-exclamation-triangle-fill"></i>
+                                    프로퍼티 정보를 불러오는데 실패했습니다.
+                                </td>
+                            </tr>
+                        `);
+                    }
+                });
+            }
+
+            function renderPropertyTable(properties) {
+                console.log('==== renderPropertyTable called ====');
+                console.log('Properties count:', properties.length);
+                console.log('Properties data:', properties);
+
+                const tbody = $('#propertyTableBody');
+                tbody.empty();
+
+                if (!properties || properties.length === 0) {
+                    tbody.append(`
+                        <tr>
+                            <td colspan="7" class="text-center py-4 text-body-secondary">
+                                <i class="bi bi-info-circle"></i> 조회된 프로퍼티가 없습니다.
+                            </td>
+                        </tr>
+                    `);
+                    return;
+                }
+
+                properties.forEach((prop, index) => {
+                    console.log(`Property ${index}:`, prop);
+
+                    const initialValue = prop.defaultValue || 'USE_DEFAULT';
+                    const setValue = prop.propertyValue || '';
+                    const isModified = setValue && setValue !== initialValue;
+                    const rowClass = isModified ? 'highlight' : '';
+
+                    const row = `
+                        <tr class="${rowClass}">
+                            <td class="text-center"><input type="checkbox" name="propertyCheck" value="${index}"></td>
+                            <td class="text-center">수정</td>
+                            <td>${prop.propertyGroupId || '-'}</td>
+                            <td>${prop.propertyId || '-'}</td>
+                            <td>${initialValue}</td>
+                            <td>${setValue || '-'}</td>
+                            <td>${prop.propertyDesc || ''}</td>
+                        </tr>
+                    `;
+                    tbody.append(row);
+                });
+
+                console.log('Table rendered successfully with', properties.length, 'rows');
+
+                // Select All functionality
+                $('#selectAllProperties').off('change').on('change', function() {
+                    $('input[name="propertyCheck"]').prop('checked', $(this).prop('checked'));
+                });
+            }
+
+            function closePropertyModal() {
+                var instance = bootstrap.Modal.getInstance(document.getElementById('propertyModal'));
+                if (instance) instance.hide();
+            }
+
+            function saveProperties() {
+                const selectedProps = [];
+                $('input[name="propertyCheck"]:checked').each(function() {
+                    selectedProps.push($(this).val());
+                });
+
+                if (selectedProps.length === 0) {
+                    Toast.warning('변경할 프로퍼티를 선택해주세요.');
+                    return;
+                }
+
+                Toast.warning(`${selectedProps.length}개의 프로퍼티 저장 기능은 구현 예정입니다.`);
+            }
+
+            function exportProperties() {
+                const instanceId = $('#modalInstanceId').val();
+                window.location.href = `/api/was/property/instance/${instanceId}/export`;
+            }
+
+            function printProperties() {
+                window.print();
+            }
+
+            // Expose functions to window
+            window.showPropertyModal = showPropertyModal;
+            window.closePropertyModal = closePropertyModal;
+            window.saveProperties = saveProperties;
+            window.exportProperties = exportProperties;
+            window.printProperties = printProperties;
+        })();
+    </script>
+</th:block>
+</body>
+</html>

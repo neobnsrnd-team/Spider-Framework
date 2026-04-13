@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<div th:fragment="table">
+    <div class="table-responsive">
+        <table class="table table-sm table-hover sp-data-grid" id="wasGroupTable">
+            <colgroup>
+                <col class="col-w-150">
+                <col class="col-w-200">
+                <col class="col-w-250">
+                <col class="col-w-150">
+            </colgroup>
+            <thead class="table-light">
+            <tr>
+                <th class="sortable" data-sort="wasGroupId">WAS 그룹 ID</th>
+                <th class="sortable" data-sort="wasGroupName">WAS 그룹명</th>
+                <th class="sortable" data-sort="wasGroupDesc">WAS 그룹설명</th>
+                <th class="sortable" data-sort="instanceCount">인스턴스 갯수</th>
+            </tr>
+            </thead>
+            <tbody id="wasGroupTableBody">
+            <tr>
+                <td colspan="4" class="text-center py-4 text-body-secondary">
+                    데이터를 불러오는 중...
+                </td>
+            </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+</body>
+</html>

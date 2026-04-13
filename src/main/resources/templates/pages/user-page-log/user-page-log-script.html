@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<!-- AdminActionLog Page Scripts -->
+<th:block th:fragment="script">
+<script>
+    (function() {
+
+    var PAGE_CONFIG = {
+        apiEndpoint: '/api/admin-action-logs',
+
+        table: {
+            id: 'logTable',
+            columns: [
+                { key: 'userId',        label: '사용자ID',     width: '10%', sortable: true },
+                { key: 'accessDtime',   label: '접근 일시',    width: '12%', sortable: true },
+                { key: 'accessIp',      label: '접근 IP',      width: '12%', sortable: true },
+                {
+                    key: 'accessUrl',
+                    label: '접근 URL',
+                    width: '25%',
+                    sortable: true,
+                    render: function(val) {
+                        var escaped = HtmlUtils.escape(val || '');
+                        var preview = HtmlUtils.escape((val || '').substring(0, 60));
+                        var suffix  = (val || '').length > 60 ? '...' : '';
+                        return '<span title="' + escaped + '">' + preview + suffix + '</span>';
+                    }
+                },
+                {
+                    key: 'resultMessage',
+                    label: '결과 메세지',
+                    width: '15%',
+                    sortable: false,
+                    render: function(val) {
+                        var escaped = HtmlUtils.escape(val || '');
+                        var preview = HtmlUtils.escape((val || '').substring(0, 40));
+                        var suffix  = (val || '').length > 40 ? '...' : '';
+                        return '<span title="' + escaped + '">' + preview + suffix + '</span>';
+                    }
+                },
+                {
+                    key: 'inputData',
+                    label: '입력 데이터',
+                    width: '26%',
+                    sortable: false,
+                    render: function(val) {
+                        var escaped = HtmlUtils.escape(val || '');
+                        var preview = HtmlUtils.escape((val || '').substring(0, 50));
+                        var suffix  = (val || '').length > 50 ? '...' : '';
+                        return '<span title="' + escaped + '">' + preview + suffix + '</span>';
+                    }
+                }
+            ],
+            emptyMessage: '조회 버튼을 클릭하여 데이터를 불러오세요.',
+            noDataMessage: '조회된 데이터가 없습니다.'
+        },
+
+        search: {
+            rows: [
+                [
+                    {
+                        type: 'text',
+                        id: 'userId',
+                        label: '사용자 ID',
+                        width: '120px',
+                        placeholder: '사용자 ID'
+                    },
+                    {
+                        type: 'text',
+                        id: 'accessIp',
+                        label: '접근 IP',
+                        width: '130px',
+                        placeholder: '접근 IP'
+                    },
+                    {
+                        type: 'text',
+                        id: 'accessUrl',
+                        label: '접근 URL',
+                        width: '200px',
+                        placeholder: '접근 URL'
+                    }
+                ]
+            ],
+            limit: { default: 10, showLarge: true }
+        }
+    };
+
+    window.AdminActionLog = {
+        currentPage: 1,
+        totalItems: 0,
+        itemsPerPage: 10,
+        sortBy: null,
+        sortDirection: null,
+
+        init: function() {
+            // 검색 폼 렌더링
+            SearchForm.render('#searchContainer', PAGE_CONFIG.search, function() {
+                AdminActionLog.currentPage = 1;
+                AdminActionLog.load();
+            });
+
+            // 테이블 렌더링
+            var tableConfig = Object.assign({}, PAGE_CONFIG.table, {
+                onSort: function(sortBy, sortDirection) {
+                    AdminActionLog.sortBy        = sortBy;
+                    AdminActionLog.sortDirection = sortDirection;
+                    AdminActionLog.currentPage   = 1;
+                    AdminActionLog.load();
+                }
+            });
+
+            DataTable.render('#tableContainer', tableConfig, function(row) {
+                AdminActionLog.openDetailModal(row);
+            });
+
+            // 페이지네이션 초기화
+            Pagination.init('#pagination', '#pageInfo', function(page) {
+                AdminActionLog.currentPage = page;
+                AdminActionLog.load();
+            });
+
+            // 툴바 버튼
+            $('#btnRefresh').off('click').on('click', function() { AdminActionLog.load(); });
+            $('#btnExcel').off('click').on('click',   function() { AdminActionLog.exportLogs(); });
+            $('#btnPrint').off('click').on('click',   function() { AdminActionLog.printTable(); });
+
+            // 초기 조회
+            AdminActionLog.load();
+        },
+
+        load: function() {
+            var params = SearchForm.getParams('#searchContainer');
+            this.itemsPerPage = params.size || 10;
+
+            var requestParams = {
+                page: this.currentPage,
+                size: this.itemsPerPage
+            };
+
+            if (params.userId)    requestParams.userId    = params.userId;
+            if (params.accessIp)  requestParams.accessIp  = params.accessIp;
+            if (params.accessUrl) requestParams.accessUrl = params.accessUrl;
+            if (this.sortBy) {
+                requestParams.sortBy        = this.sortBy;
+                requestParams.sortDirection = this.sortDirection || 'ASC';
+            }
+
+            var self = this;
+            $.ajax({
+                url: PAGE_CONFIG.apiEndpoint,
+                method: 'GET',
+                data: requestParams,
+                success: function(response) {
+                    if (response.success && response.data) {
+                        var pageData = response.data;
+                        DataTable.setData('#tableContainer', pageData.content || []);
+                        self.totalItems  = pageData.totalElements || 0;
+                        Pagination.update('#pagination', {
+                            currentPage:  self.currentPage,
+                            totalItems:   self.totalItems,
+                            itemsPerPage: self.itemsPerPage
+                        });
+                    } else {
+                        DataTable.setData('#tableContainer', []);
+                        Pagination.reset('#pagination');
+                    }
+                },
+                error: function(xhr) {
+                    console.error('Failed to load admin action logs:', xhr);
+                    Toast.error('관리자 작업이력 목록을 불러오는데 실패했습니다.');
+                    DataTable.setData('#tableContainer', []);
+                    Pagination.reset('#pagination');
+                }
+            });
+        },
+
+        openDetailModal: function(log) {
+            document.getElementById('detailUserId').value        = log.userId         || '';
+            document.getElementById('detailAccessDtime').value   = log.accessDtime    || '';
+            document.getElementById('detailAccessIp').value      = log.accessIp       || '';
+            document.getElementById('detailAccessUrl').value     = log.accessUrl      || '';
+            document.getElementById('detailResultMessage').value = log.resultMessage   || '';
+
+            // inputData JSON 포맷팅
+            var inputData = log.inputData || '';
+            try {
+                inputData = JSON.stringify(JSON.parse(inputData), null, 2);
+            } catch (e) {
+                // JSON 파싱 실패 시 원본 그대로 표시
+            }
+            document.getElementById('detailInputData').value = inputData;
+
+            bootstrap.Modal.getOrCreateInstance(
+                document.getElementById('adminActionLogDetailModal')
+            ).show();
+        },
+
+        exportLogs: function() {
+            var params = SearchForm.getParams('#searchContainer');
+            var exportParams = {};
+            if (params.userId)    exportParams.userId    = params.userId;
+            if (params.accessIp)  exportParams.accessIp  = params.accessIp;
+            if (params.accessUrl) exportParams.accessUrl = params.accessUrl;
+            if (this.sortBy) {
+                exportParams.sortBy        = this.sortBy;
+                exportParams.sortDirection = this.sortDirection || 'ASC';
+            }
+            var qs = $.param(exportParams);
+            window.location.href = PAGE_CONFIG.apiEndpoint + '/export' + (qs ? '?' + qs : '');
+        },
+
+        printTable: function() {
+            var printColumns = PAGE_CONFIG.table.columns
+                .filter(function(col) { return !col.render; })
+                .map(function(col)    { return { key: col.key, label: col.label }; });
+            var data = DataTable.getData('#tableContainer');
+            PrintUtil.print({ title: '관리자 작업이력 로그', columns: printColumns, data: data });
+        }
+    };
+
+    $(document).ready(function() {
+        AdminActionLog.init();
+    });
+    })();
+</script>
+</th:block>
+</body>
+</html>

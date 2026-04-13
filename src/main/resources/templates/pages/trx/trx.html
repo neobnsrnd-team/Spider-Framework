@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<div th:fragment="content">
+    <!-- Include Page Content Layout Styles -->
+
+    <!-- Search Section Header -->
+    <div class="page-header">
+        <h4 class="page-title">
+            <i class="bi bi-exclamation-circle-fill text-danger"></i>
+            검색조건
+        </h4>
+    </div>
+
+    <!-- Search Box -->
+    <div th:replace="~{pages/trx/trx-search :: search}"></div>
+
+    <!-- List Section Header + Action Buttons -->
+    <div class="page-header mt-3 d-flex justify-content-between align-items-center">
+        <h4 class="page-title">
+            <i class="bi bi-exclamation-circle-fill text-danger"></i>
+            리스트
+        </h4>
+        <div class="d-flex gap-8px">
+            <button class="btn btn-danger btn-sm" onclick="TrxStopPage.batchStop()">
+                선택거래중지
+            </button>
+            <button class="btn btn-success btn-sm" onclick="TrxStopPage.batchStart()">
+                선택거래시작
+            </button>
+            <button class="btn btn-secondary btn-sm" onclick="TrxStopPage.openAccessUserList()">
+                접근허용자리스트
+            </button>
+        </div>
+    </div>
+
+    <!-- Toolbar -->
+    <div th:replace="~{fragments/page-content-layout :: toolbar}"></div>
+
+    <!-- Table -->
+    <div th:replace="~{pages/trx/trx-table :: table}"></div>
+
+    <!-- Pagination -->
+    <div th:replace="~{fragments/page-content-layout :: pagination}"></div>
+
+    <!-- Bottom Action Buttons -->
+    <div th:replace="~{pages/trx/trx-buttons :: buttons}"></div>
+
+    <!-- Modals -->
+    <div th:replace="~{pages/trx/trx-modal :: confirmModal}"></div>
+    <div th:replace="~{pages/trx/trx-modal :: reasonModal}"></div>
+    <div th:replace="~{pages/trx/trx-modal :: accessUserModal}"></div>
+    <div th:replace="~{pages/trx/trx-modal :: accessUserListModal}"></div>
+    <div th:replace="~{pages/trx/trx-modal :: operModeModal}"></div>
+    <div th:replace="~{modals/was-reload-modal :: modal}"></div>
+
+    <!-- Scripts -->
+    <th:block th:replace="~{pages/trx/trx-script :: script}" />
+</div>
+</body>
+</html>

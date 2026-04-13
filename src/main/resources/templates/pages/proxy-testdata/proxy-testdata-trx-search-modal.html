@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+
+<!-- 거래조회 모달 -->
+<div th:fragment="modal" id="trxSearchModal" class="modal fade" tabindex="-1" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
+    <div class="modal-dialog modal-dialog-centered sp-modal-lg">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h5 class="modal-title">거래조회</h5>
+            <button class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body p-3">
+
+            <!-- 검색 조건 -->
+            <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
+                <label>기관</label>
+                <select id="trxSearchOrgId" class="form-select col-w-180">
+                    <option value="">전체</option>
+                </select>
+                <label>거래ID</label>
+                <input type="text" id="trxSearchTrxId" class="form-control col-w-160"
+                       placeholder="거래ID"
+                       onkeypress="if(event.key==='Enter'){TrxSearchModal.search();}">
+                <label>거래명</label>
+                <input type="text" id="trxSearchTrxName" class="form-control col-w-160"
+                       placeholder="거래명"
+                       onkeypress="if(event.key==='Enter'){TrxSearchModal.search();}">
+                <button class="btn btn-sm btn-primary" onclick="TrxSearchModal.search()">조회</button>
+            </div>
+
+            <!-- 테이블 -->
+            <div class="sp-scrollable">
+                <table class="sp-data-grid">
+                    <thead>
+                    <tr>
+                        <th class="col-w-120">기관명</th>
+                        <th class="col-w-160">거래ID</th>
+                        <th>거래명</th>
+                        <th class="col-w-60">I/O</th>
+                        <th class="col-w-160">전문ID</th>
+                    </tr>
+                    </thead>
+                    <tbody id="trxSearchTableBody">
+                    <tr>
+                        <td colspan="5" class="sp-empty-state">데이터를 불러오는 중...</td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <div class="flex-grow-1"></div>
+            <button class="btn btn-secondary btn-sm" data-bs-dismiss="modal"><i class="bi bi-x-lg"></i> 닫기</button>
+        </div>
+    </div>
+    </div>
+</div>
+
+</body>
+</html>

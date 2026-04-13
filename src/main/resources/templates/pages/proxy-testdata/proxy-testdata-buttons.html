@@ -1,0 +1,12 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<!-- MessageTest Bottom Actions Fragment -->
+<div th:fragment="buttons" class="bottom-actions">
+    <button th:if="${userAuthorities != null and userAuthorities.contains('PROXY_TESTDATA:W')}"
+            class="btn btn-primary btn-sm ms-2" onclick="MessageTestModal.openRegister()">
+        + 등록
+    </button>
+</div>
+</body>
+</html>

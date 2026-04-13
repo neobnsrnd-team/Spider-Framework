@@ -1,0 +1,90 @@
+# ============================================
+# Application Base Configuration
+# ============================================
+# Sensitive values are loaded from environment variables.
+# See .env.example for required variables.
+# ============================================
+
+spring:
+  config:
+    import: classpath:menu-resource-permissions.yml
+  profiles:
+    active: oracle  # oracle 또는 mysql
+
+  # H2 Console (로그 조회용 - 기본 활성화)
+  h2:
+    console:
+      enabled: true
+      path: /h2-console
+      settings:
+        web-allow-others: false  # 보안: 로컬만 접근
+
+  # File Upload Configuration
+  servlet:
+    multipart:
+      enabled: true
+      max-file-size: 50MB
+      max-request-size: 150MB
+
+  # Thymeleaf Configuration
+  thymeleaf:
+    cache: false
+    prefix: classpath:/templates/
+    suffix: .html
+    encoding: UTF-8
+    mode: HTML
+
+# Server Configuration
+server:
+  port: 8080
+  servlet:
+    session:
+      timeout: 30m
+      persistent: false
+  error:
+    include-stacktrace: never
+    include-exception: false
+    include-message: never
+    include-binding-errors: never
+
+# File Upload Path Configuration
+# 환경에 따라 절대 경로 설정 가능 (예: /data/uploads, C:/uploads)
+# 설정하지 않으면 기본값 ${user.dir}/uploads 사용
+file:
+  upload-dir: ${user.dir}/uploads
+
+# XML Property Configuration
+xml-property:
+  directory: ${user.dir}/xml-properties
+
+# Security Configuration
+app:
+  title: ${APP_TITLE:Neo Spider Admin}
+  security:
+    remember-me-key: ${REMEMBER_ME_KEY:admin-demo-remember-me-key}
+    authority-source: ${AUTHORITY_SOURCE:user-menu}
+
+# Log Destination Toggles
+log:
+  dest:
+    console: ${LOG_DEST_CONSOLE:true}
+    h2: ${LOG_DEST_H2:false}
+    logstash: ${LOG_DEST_LOGSTASH:false}
+    rdb:
+      access: ${LOG_DEST_RDB_ACCESS:true}
+      error: ${LOG_DEST_RDB_ERROR:true}
+
+# Logging Configuration
+logging:
+  level:
+    root: INFO
+    com.example.admin_demo: INFO  # 상세 로그 필요 시 DEBUG
+    org.mybatis: INFO  # SQL 확인 필요 시 DEBUG
+
+# Scheduling Configuration (배치 이력 정리 스케줄러)
+scheduling:
+  batch-his-cleanup:
+    enabled: true
+    cron: "0 0 2 * * ?"     # 매일 새벽 2시 실행
+    retention-days: 90       # 보관 기간 (일)
+    strategy: DELETE         # DELETE 또는 DROP_PARTITION (파티셔닝 적용 시)

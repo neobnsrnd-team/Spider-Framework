@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<div th:fragment="search">
+    <div class="page-content">
+        <div class="card">
+            <div class="card-body">
+                <form id="searchForm">
+                    <div class="row mb-3 align-items-end">
+                        <!-- 왼쪽 열: 기관명, 거래명 -->
+                        <div class="col-md-6">
+                            <div class="row mb-2">
+                                <div class="col-md-3 text-start">
+                                    <label for="orgName" class="form-label mb-0">기관명</label>
+                                </div>
+                                <div class="col-md-6">
+                                    <input type="text" class="form-control" id="orgName" name="orgName" readonly>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-3 text-start">
+                                    <label for="trxName" class="form-label mb-0">거래명</label>
+                                </div>
+                                <div class="col-md-6">
+                                    <input type="text" class="form-control" id="trxName" name="trxName" readonly>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 오른쪽 열: 거래ID, 인스턴스ID -->
+                        <div class="col-md-6">
+                            <div class="row mb-2">
+                                <div class="col-md-3 text-start">
+                                    <label for="trxId" class="form-label mb-0">거래ID</label>
+                                </div>
+                                <div class="col-md-6">
+                                    <input type="text" class="form-control" id="trxId" name="trxId" readonly>
+                                </div>
+                                <div class="col-md-3">
+                                    <button type="button" class="btn btn-primary" id="btnTrxSearch">거래조회</button>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-3 text-start">
+                                    <label for="instanceId" class="form-label mb-0">인스턴스ID</label>
+                                </div>
+                                <div class="col-md-6">
+                                    <select class="form-select" id="instanceId" name="instanceId">
+                                        <option value="">선택하세요</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- 조회 버튼 (박스 밖) -->
+        <div class="text-center mt-3">
+            <button type="button" class="btn btn-primary px-4" id="btnSearch">조회</button>
+        </div>
+    </div>
+</div>
+</body>
+</html>

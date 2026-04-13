@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<!-- TrxStopHistory Page Scripts -->
+<th:block th:fragment="script">
+<script>
+    /**
+     * 일시 포맷 함수 (yyyyMMddHHmmss -> yyyy-MM-dd HH:mm:ss)
+     */
+    function formatDateTime(dtimeStr) {
+        if (!dtimeStr || dtimeStr.length < 14) return '';
+        return dtimeStr.substring(0, 4) + '-' +
+               dtimeStr.substring(4, 6) + '-' +
+               dtimeStr.substring(6, 8) + ' ' +
+               dtimeStr.substring(8, 10) + ':' +
+               dtimeStr.substring(10, 12) + ':' +
+               dtimeStr.substring(12, 14);
+    }
+
+    /**
+     * 구분유형 표시 함수
+     */
+    function formatGubunType(gubunType) {
+        switch(gubunType) {
+            case 'T': return '<span class="badge bg-primary">거래</span>';
+            case 'S': return '<span class="badge bg-info">서비스</span>';
+            default: return HtmlUtils.escape(gubunType);
+        }
+    }
+
+    /**
+     * 거래중지여부 표시 함수
+     */
+    function formatTrxStopYn(trxStopYn) {
+        switch(trxStopYn) {
+            case 'Y': return '<span class="badge bg-danger">중지</span>';
+            case 'N': return '<span class="badge bg-success">정상</span>';
+            default: return HtmlUtils.escape(trxStopYn);
+        }
+    }
+
+    // 거래중지일시 날짜 입력 최대 연도 제한 (변경 시 이 상수만 수정)
+    const TRX_STOP_DTIME_MAX_DATE = '2099-12-31';
+
+    // TrxStopHistory Management Namespace
+    window.TrxStopHistory = (function() {
+        let currentPage = 1;
+        let totalItems = 0;
+        let itemsPerPage = 10;
+        let currentData = [];
+        let appliedSearch = {}; // 조회 버튼 클릭 시 커밋된 검색조건
+        let sortBy = null;
+        let sortDirection = null;
+
+        // DOM에서 현재 검색 폼 값을 읽어 반환 (커밋하지 않음)
+        function _readSearchForm() {
+            const raw = (document.getElementById('searchTrxStopDtime').value || '').replace(/[^0-9]/g, '');
+            return {
+                gubunType: document.getElementById('searchGubunType').value,
+                trxId: document.getElementById('searchTrxId').value,
+                startDtime: raw ? raw + '000000' : '',
+                endDtime: raw ? raw + '235959' : ''
+            };
+        }
+
+        // Initialize
+        function init() {
+            // Initialize page size selector
+            const limitRows = document.getElementById('limitRows');
+            if (limitRows) {
+                limitRows.value = itemsPerPage;
+                limitRows.addEventListener('change', function() {
+                    itemsPerPage = parseInt(this.value);
+                    search();
+                });
+            }
+
+            // Initialize refresh button
+            const btnRefresh = document.getElementById('btnRefresh');
+            if (btnRefresh) {
+                btnRefresh.addEventListener('click', search);
+            }
+
+            // Initialize excel/print buttons
+            const btnExcel = document.getElementById('btnExcel');
+            if (btnExcel) {
+                btnExcel.addEventListener('click', exportExcel);
+            }
+
+            const btnPrint = document.getElementById('btnPrint');
+            if (btnPrint) {
+                btnPrint.addEventListener('click', printTable);
+            }
+
+            // 정렬 이벤트 핸들러 설정
+            const sortableHeaders = document.querySelectorAll('#historyTable thead th[data-sort]');
+            sortableHeaders.forEach(header => {
+                header.classList.add('sortable');
+                header.addEventListener('click', function() {
+                    const sortKey = this.getAttribute('data-sort');
+                    if (!sortKey) return;
+
+                    // 3단계 순환: ASC → DESC → DEFAULT
+                    if (sortBy === sortKey) {
+                        if (sortDirection === 'ASC') {
+                            sortDirection = 'DESC';
+                        } else if (sortDirection === 'DESC') {
+                            sortBy = null;
+                            sortDirection = null;
+                        }
+                    } else {
+                        sortBy = sortKey;
+                        sortDirection = 'ASC';
+                    }
+                    currentPage = 1;
+                    updateSortIndicators();
+                    search();
+                });
+            });
+
+            // 날짜 입력 연도 최대값 설정 (TRX_STOP_DTIME_MAX_DATE 상수로 일괄 관리)
+            const dateInput = document.getElementById('searchTrxStopDtime');
+            if (dateInput) {
+                dateInput.max = TRX_STOP_DTIME_MAX_DATE;
+            }
+
+            search();
+        }
+
+        // 조회 버튼/새로고침/정렬/페이지 사이즈 변경 시 호출
+        // DOM 현재값을 appliedSearch에 커밋하고 1페이지부터 재조회
+        function search() {
+            currentPage = 1;
+            appliedSearch = _readSearchForm();
+            load();
+        }
+
+        // 실제 API 호출 — appliedSearch 기준 (페이지 이동 시에도 검색 조건 유지)
+        function load() {
+            const params = new URLSearchParams({
+                page: currentPage - 1, // PageRequest는 0-based
+                size: itemsPerPage
+            });
+
+            if (sortBy) {
+                params.append('sortBy', sortBy);
+                params.append('sortDirection', sortDirection);
+            }
+
+            Object.entries(appliedSearch).forEach(([k, v]) => {
+                if (v) params.append(k, v);
+            });
+
+            fetch(`${API_BASE_URL}/trx-stop-histories?${params.toString()}`)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    if (data.success) {
+                        const pageData = data.data;
+                        const histories = pageData.content || [];
+                        totalItems = pageData.totalElements || 0;
+                        renderTable(histories);
+                        renderPagination();
+                    } else {
+                        Toast.error(data.message || '검색 실패');
+                        renderTable([]);
+                        totalItems = 0;
+                        renderPagination();
+                    }
+                })
+                .catch(error => {
+                    Toast.error('검색 중 오류가 발생했습니다: ' + error.message);
+                    renderTable([]);
+                    totalItems = 0;
+                    renderPagination();
+                });
+        }
+
+        // Render table
+        function renderTable(histories) {
+            currentData = histories || [];
+            const tbody = document.getElementById('historyTableBody');
+            if (!tbody) return;
+            tbody.innerHTML = '';
+
+            if (!histories || histories.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="6" class="text-center py-4 text-body-secondary">
+                            조회된 데이터가 없습니다.
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+
+            histories.forEach((history) => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td class="text-center">${formatGubunType(history.gubunType)}</td>
+                    <td>${HtmlUtils.escape(history.trxId)}</td>
+                    <td>${HtmlUtils.escape(history.trxName || '-')}</td>
+                    <td>${HtmlUtils.escape(history.trxStopReason || '-')}</td>
+                    <td class="text-center">${formatDateTime(history.trxStopUpdateDtime)}</td>
+                    <td class="text-center">${HtmlUtils.escape(history.lastUpdateUserId)}</td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
+        // Update sort indicators
+        function updateSortIndicators() {
+            const headers = document.querySelectorAll('#historyTable thead th.sortable');
+            headers.forEach(header => {
+                header.classList.remove('sort-asc', 'sort-desc');
+            });
+
+            if (!sortBy || !sortDirection) {
+                return;
+            }
+
+            const activeHeader = document.querySelector(`#historyTable thead th[data-sort="${sortBy}"]`);
+            if (activeHeader) {
+                activeHeader.classList.add(sortDirection === 'ASC' ? 'sort-asc' : 'sort-desc');
+            }
+        }
+
+        // Render pagination controls
+        function renderPagination() {
+            const totalPages = Math.ceil(totalItems / itemsPerPage);
+            const pagination = document.getElementById('pagination');
+            if (!pagination) return;
+
+            let paginationHtml = '';
+
+            // First page button
+            paginationHtml += `
+                <li class="page-item ${currentPage === 1 ? 'disabled' : ''}">
+                    <a class="page-link" href="#" onclick="window.TrxStopHistory.changePage(1); return false;">
+                        <i class="bi bi-chevron-double-left"></i>
+                    </a>
+                </li>
+            `;
+
+            // Previous page button
+            paginationHtml += `
+                <li class="page-item ${currentPage === 1 ? 'disabled' : ''}">
+                    <a class="page-link" href="#" onclick="window.TrxStopHistory.changePage(${currentPage - 1}); return false;">
+                        <i class="bi bi-chevron-left"></i>
+                    </a>
+                </li>
+            `;
+
+            // Page numbers
+            const maxButtons = 5;
+            let startPage = Math.max(1, currentPage - Math.floor(maxButtons / 2));
+            let endPage = Math.min(totalPages, startPage + maxButtons - 1);
+
+            if (endPage - startPage + 1 < maxButtons) {
+                startPage = Math.max(1, endPage - maxButtons + 1);
+            }
+
+            for (let i = startPage; i <= endPage; i++) {
+                paginationHtml += `
+                    <li class="page-item ${i === currentPage ? 'active' : ''}">
+                        <a class="page-link" href="#" onclick="window.TrxStopHistory.changePage(${i}); return false;">${i}</a>
+                    </li>
+                `;
+            }
+
+            // Next page button
+            paginationHtml += `
+                <li class="page-item ${currentPage === totalPages || totalPages === 0 ? 'disabled' : ''}">
+                    <a class="page-link" href="#" onclick="window.TrxStopHistory.changePage(${currentPage + 1}); return false;">
+                        <i class="bi bi-chevron-right"></i>
+                    </a>
+                </li>
+            `;
+
+            // Last page button
+            paginationHtml += `
+                <li class="page-item ${currentPage === totalPages || totalPages === 0 ? 'disabled' : ''}">
+                    <a class="page-link" href="#" onclick="window.TrxStopHistory.changePage(${totalPages}); return false;">
+                        <i class="bi bi-chevron-double-right"></i>
+                    </a>
+                </li>
+            `;
+
+            pagination.innerHTML = paginationHtml;
+
+            // Update page info
+            const start = totalItems === 0 ? 0 : (currentPage - 1) * itemsPerPage + 1;
+            const end = Math.min(currentPage * itemsPerPage, totalItems);
+            const pageInfo = document.getElementById('pageInfo');
+            if (pageInfo) {
+                pageInfo.textContent = `${start} - ${end} of ${totalItems} items`;
+            }
+        }
+
+        // 페이지 이동 — appliedSearch 유지 (조회 버튼 누른 시점의 검색 조건 적용)
+        function changePage(page) {
+            const totalPages = Math.ceil(totalItems / itemsPerPage);
+            if (page < 1 || page > totalPages) return;
+            currentPage = page;
+            load();
+        }
+
+        // 엑셀 내보내기 — appliedSearch 기준 (조회된 데이터와 동일한 조건)
+        function exportExcel() {
+            const params = new URLSearchParams();
+            Object.entries(appliedSearch).forEach(([k, v]) => {
+                if (v) params.append(k, v);
+            });
+            const qs = params.toString();
+            window.location.href = '/api/trx-stop-histories/export' + (qs ? '?' + qs : '');
+        }
+
+        // 인쇄 — 현재 페이지 데이터 출력
+        function printTable() {
+            const columns = [
+                { key: 'gubunType', label: '구분유형' },
+                { key: 'trxId', label: '거래ID' },
+                { key: 'trxName', label: '거래명' },
+                { key: 'trxStopUpdateDtime', label: '중지/재개일시' },
+                { key: 'trxStopReason', label: '중지사유' },
+                { key: 'lastUpdateUserId', label: '최종수정자' }
+            ];
+            PrintUtil.print({ title: '거래중지이력', columns: columns, data: currentData });
+        }
+
+        // Public API
+        return {
+            init: init,
+            search: search,
+            changePage: changePage,
+            updateSortIndicators: updateSortIndicators,
+            exportExcel: exportExcel,
+            printTable: printTable
+        };
+    })();
+
+    // ==================== Initialization ====================
+    // DOM 준비 완료 후 초기화
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', function() {
+            TrxStopHistory.init();
+        });
+    } else {
+        TrxStopHistory.init();
+    }
+</script>
+</th:block>
+</body>
+</html>

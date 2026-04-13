@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+
+<!-- AdminActionLog Detail Modal Fragment -->
+<div th:fragment="modal">
+    <div class="modal fade" id="adminActionLogDetailModal" tabindex="-1" aria-labelledby="adminActionLogDetailModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="adminActionLogDetailModalLabel">관리자 작업이력 상세</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="form-section">
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label">사용자 ID</label>
+                                <input type="text" class="form-control" id="detailUserId" readonly>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">접근 일시</label>
+                                <input type="text" class="form-control" id="detailAccessDtime" readonly>
+                            </div>
+                        </div>
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label">접근 IP</label>
+                                <input type="text" class="form-control" id="detailAccessIp" readonly>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">접근 URL</label>
+                                <input type="text" class="form-control" id="detailAccessUrl" readonly>
+                            </div>
+                        </div>
+                        <div class="row mb-3">
+                            <div class="col-12">
+                                <label class="form-label">결과 메세지</label>
+                                <input type="text" class="form-control" id="detailResultMessage" readonly>
+                            </div>
+                        </div>
+                        <div class="row mb-3">
+                            <div class="col-12">
+                                <label class="form-label">입력 데이터</label>
+                                <textarea class="form-control resize-none" id="detailInputData" rows="8" readonly></textarea>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"><i class="bi bi-x-lg"></i> 닫기</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+</body>
+</html>

@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<div th:fragment="modal">
+    <!-- Error Modal -->
+    <div class="modal fade" id="errorModal" tabindex="-1" aria-labelledby="errorModalLabel" aria-hidden="true"
+         data-bs-backdrop="static" data-bs-keyboard="false">
+        <div class="modal-dialog modal-dialog-centered modal-lg sp-modal-lg">
+            <div class="modal-content">
+                <!-- Modal Header -->
+                <div class="modal-header py-2">
+                    <h5 class="modal-title" id="errorModalLabel">오류코드 등록</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+
+                <!-- Modal Body -->
+                <div class="modal-body sp-scrollable">
+                    <!-- Form -->
+                    <form id="errorForm">
+                        <!-- Section: 오류 코드 정보 -->
+                        <div class="modal-section-title">
+                            <i class="bi bi-exclamation-circle-fill text-danger"></i>
+                            <span>오류 코드 정보</span>
+                        </div>
+
+                        <div class="mb-3">
+                            <!-- Row 1 -->
+                            <div class="row g-3 mb-2">
+                                <div class="col-md-6">
+                                    <label class="form-label small mb-1">오류코드<span class="text-danger">*</span></label>
+                                    <input type="text" class="form-control form-control-sm" id="errorCode" name="errorCode"
+                                           maxlength="40" required>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label small mb-1">오류레벨<span class="text-danger">*</span></label>
+                                    <select class="form-select form-select-sm" id="errorLevel" name="errorLevel" required>
+                                        <option value="">선택 안 함</option>
+                                        <option value="1">안전</option>
+                                        <option value="2">주의</option>
+                                        <option value="3">경계</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <!-- Row 2 -->
+                            <div class="row g-3 mb-2">
+                                <div class="col-md-6">
+                                    <label class="form-label small mb-1">오류제목<span class="text-danger">*</span></label>
+                                    <input type="text" class="form-control form-control-sm" id="errorTitle" name="errorTitle"
+                                           maxlength="200" required>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label small mb-1">기관명</label>
+                                    <select class="form-select form-select-sm" id="orgId" name="orgId">
+                                        <option value="">선택 안함</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <!-- Row 3 -->
+                            <div class="row g-3 mb-2">
+                                <div class="col-12">
+                                    <label class="form-label small mb-1">기관오류코드</label>
+                                    <input type="text" class="form-control form-control-sm" id="orgErrorCode" name="orgErrorCode"
+                                           maxlength="40">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Section: 언어별 오류 코드 -->
+                        <div class="modal-section-title mt-3">
+                            <i class="bi bi-exclamation-circle-fill text-danger"></i>
+                            <span>언어별 오류 코드</span>
+                        </div>
+
+                        <div class="mb-3 p-3">
+                            <div class="sp-lang-columns">
+                                <!-- 한국어(KO) Column -->
+                                <div class="sp-lang-col">
+                                    <h6 class="sp-lang-heading">한국어(KO)</h6>
+
+                                    <div class="sp-lang-field">
+                                        <label class="sp-lang-label">오류제목</label>
+                                        <input type="text" class="form-control form-control-sm fs-sm" id="koErrorTitle" name="koErrorTitle"
+                                               maxlength="200">
+                                    </div>
+
+                                    <div class="sp-lang-field">
+                                        <label class="sp-lang-label">오류조치방법</label>
+                                        <textarea class="form-control form-control-sm fs-sm resize-vertical" id="koErrorGuideDesc" name="koErrorGuideDesc"
+                                                  maxlength="1600" rows="3"></textarea>
+                                    </div>
+
+                                    <div class="sp-lang-field">
+                                        <label class="sp-lang-label">오류 발생원인</label>
+                                        <textarea class="form-control form-control-sm fs-sm resize-vertical" id="koErrorCauseDesc" name="koErrorCauseDesc"
+                                                  maxlength="1600" rows="3"></textarea>
+                                    </div>
+
+                                    <div class="sp-lang-field">
+                                        <label class="sp-lang-label">관련도움말 URL</label>
+                                        <input type="text" class="form-control form-control-sm fs-sm" id="koHelpPageUrl" name="koHelpPageUrl"
+                                               maxlength="200">
+                                    </div>
+
+                                    <div class="sp-lang-field">
+                                        <label class="sp-lang-label">관련 FAQ URL</label>
+                                        <input type="text" class="form-control form-control-sm fs-sm" id="koFaqPageUrl" name="koFaqPageUrl"
+                                               maxlength="200">
+                                    </div>
+                                </div>
+
+                                <!-- 영어(EN) Column -->
+                                <div class="sp-lang-col">
+                                    <h6 class="sp-lang-heading">영어(EN)</h6>
+
+                                    <div class="sp-lang-field">
+                                        <label class="sp-lang-label">오류제목</label>
+                                        <input type="text" class="form-control form-control-sm fs-sm" id="enErrorTitle" name="enErrorTitle"
+                                               maxlength="200">
+                                    </div>
+
+                                    <div class="sp-lang-field">
+                                        <label class="sp-lang-label">오류조치방법</label>
+                                        <textarea class="form-control form-control-sm fs-sm resize-vertical" id="enErrorGuideDesc" name="enErrorGuideDesc"
+                                                  maxlength="1600" rows="3"></textarea>
+                                    </div>
+
+                                    <div class="sp-lang-field">
+                                        <label class="sp-lang-label">오류 발생원인</label>
+                                        <textarea class="form-control form-control-sm fs-sm resize-vertical" id="enErrorCauseDesc" name="enErrorCauseDesc"
+                                                  maxlength="1600" rows="3"></textarea>
+                                    </div>
+
+                                    <div class="sp-lang-field">
+                                        <label class="sp-lang-label">관련도움말 URL</label>
+                                        <input type="text" class="form-control form-control-sm fs-sm" id="enHelpPageUrl" name="enHelpPageUrl"
+                                               maxlength="200">
+                                    </div>
+
+                                    <div class="sp-lang-field">
+                                        <label class="sp-lang-label">관련 FAQ URL</label>
+                                        <input type="text" class="form-control form-control-sm fs-sm" id="enFaqPageUrl" name="enFaqPageUrl"
+                                               maxlength="200">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Section: 폰뱅킹 오류메세지 -->
+                        <div class="modal-section-title mt-3">
+                            <i class="bi bi-exclamation-circle-fill text-danger"></i>
+                            <span>폰뱅킹 오류메세지</span>
+                        </div>
+
+                        <div class="mb-3">
+                            <div class="row g-3 mb-2">
+                                <div class="col-md-6">
+                                    <label class="form-label small mb-1">한국어(KO)</label>
+                                    <input type="text" class="form-control form-control-sm" id="koMessage" name="koMessage"
+                                           maxlength="400">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label small mb-1">영어(EN)</label>
+                                    <input type="text" class="form-control form-control-sm" id="enMessage" name="enMessage"
+                                           maxlength="400">
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- Modal Footer -->
+                <div class="modal-footer py-2">
+                    <button th:if="${userAuthorities != null and userAuthorities.contains('ERROR_CODE:W')}"
+                            type="button" class="btn btn-primary btn-sm" id="btnSave"
+                            onclick="ErrorModal.save(); return false;">
+                        <i class="bi bi-check-lg"></i> 저장
+                    </button>
+                    <button th:if="${userAuthorities != null and userAuthorities.contains('ERROR_CODE:W')}"
+                            type="button" class="btn btn-danger btn-sm d-hidden" id="btnDelete"
+                            onclick="ErrorModal.delete(); return false;">
+                        <i class="bi bi-trash"></i> 삭제
+                    </button>
+                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">
+                        <i class="bi bi-x-lg"></i> 닫기
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        (function () {
+            window.ErrorModal = {
+                mode: 'create',
+                currentErrorCode: null,
+
+                openForCreate: function () {
+                    this.mode = 'create';
+                    this.currentErrorCode = null;
+
+                    $('#errorForm')[0].reset();
+                    $('#errorModalLabel').text('오류코드 등록');
+                    $('#errorCode').prop('disabled', false);
+                    $('#btnDelete').addClass('d-hidden');
+                    $('#btnSave').show();
+
+                    this.loadOrgList();
+                    $('#errorModal').modal('show');
+                },
+
+                openForEdit: function (errorCode) {
+                    this.mode = 'edit';
+                    this.currentErrorCode = errorCode;
+
+                    $('#errorModalLabel').text('오류코드 수정');
+                    $('#errorCode').prop('disabled', true);
+                    $('#btnDelete').removeClass('d-hidden');
+                    $('#btnSave').show();
+
+                    this.loadOrgList();
+                    this.loadErrorData(errorCode);
+                    $('#errorModal').modal('show');
+                },
+
+                loadOrgList: function () {
+                    $.ajax({
+                        url: `${API_BASE_URL}/orgs/list`,
+                        method: 'GET',
+                        success: (response) => {
+                            if (response.success && response.data) {
+                                const $select = $('#orgId');
+                                $select.empty().append('<option value="">선택 안함</option>');
+                                response.data.forEach(org => {
+                                    $select.append(`<option value="${org.orgId}">${org.orgName}</option>`);
+                                });
+                            }
+                        },
+                        error: (xhr) => {
+                            console.error('Failed to load organization list:', xhr);
+                        }
+                    });
+                },
+
+                loadErrorData: function (errorCode) {
+                    $.ajax({
+                        url: `${API_BASE_URL}/errors/${errorCode}`,
+                        method: 'GET',
+                        success: (response) => {
+                            if (response.success && response.data) {
+                                const data = response.data;
+                                $('#errorCode').val(data.errorCode || '');
+                                $('#errorTitle').val(data.errorTitle || '');
+                                $('#errorLevel').val(data.errorLevel || '');
+                                $('#orgId').val(data.orgId || '');
+                                $('#orgErrorCode').val(data.orgErrorCode || '');
+                                $('#koErrorTitle').val(data.koErrorTitle || '');
+                                $('#enErrorTitle').val(data.enErrorTitle || '');
+                                $('#koErrorCauseDesc').val(data.koErrorCauseDesc || '');
+                                $('#enErrorCauseDesc').val(data.enErrorCauseDesc || '');
+                                $('#koErrorGuideDesc').val(data.koErrorGuideDesc || '');
+                                $('#enErrorGuideDesc').val(data.enErrorGuideDesc || '');
+                                $('#koHelpPageUrl').val(data.koHelpPageUrl || '');
+                                $('#enHelpPageUrl').val(data.enHelpPageUrl || '');
+                                $('#koFaqPageUrl').val(data.koFaqPageUrl || '');
+                                $('#enFaqPageUrl').val(data.enFaqPageUrl || '');
+                                $('#koMessage').val(data.koMessage || '');
+                                $('#enMessage').val(data.enMessage || '');
+                            }
+                        },
+                        error: (xhr) => {
+                            console.error('Failed to load error data:', xhr);
+                            Toast.error('오류코드 정보를 불러오는데 실패했습니다.');
+                            $('#errorModal').modal('hide');
+                        }
+                    });
+                },
+
+                save: function () {
+                    if (!this.validateForm()) {
+                        return;
+                    }
+
+                    const formData = {
+                        errorCode: $('#errorCode').val(),
+                        errorTitle: $('#errorTitle').val(),
+                        errorLevel: $('#errorLevel').val(),
+                        orgId: $('#orgId').val(),
+                        orgErrorCode: $('#orgErrorCode').val(),
+                        koErrorTitle: $('#koErrorTitle').val(),
+                        enErrorTitle: $('#enErrorTitle').val(),
+                        koErrorCauseDesc: $('#koErrorCauseDesc').val(),
+                        enErrorCauseDesc: $('#enErrorCauseDesc').val(),
+                        koErrorGuideDesc: $('#koErrorGuideDesc').val(),
+                        enErrorGuideDesc: $('#enErrorGuideDesc').val(),
+                        koHelpPageUrl: $('#koHelpPageUrl').val(),
+                        enHelpPageUrl: $('#enHelpPageUrl').val(),
+                        koFaqPageUrl: $('#koFaqPageUrl').val(),
+                        enFaqPageUrl: $('#enFaqPageUrl').val(),
+                        koMessage: $('#koMessage').val(),
+                        enMessage: $('#enMessage').val()
+                    };
+
+                    if (this.mode === 'create') {
+                        this.createError(formData);
+                    } else {
+                        this.updateError(formData);
+                    }
+                },
+
+                validateForm: function () {
+                    const errorCode = $('#errorCode').val().trim();
+                    const errorTitle = $('#errorTitle').val().trim();
+                    const errorLevel = $('#errorLevel').val();
+
+                    if (!errorCode) {
+                        Toast.warning('오류코드를 입력해주세요.');
+                        $('#errorCode').focus();
+                        return false;
+                    }
+
+                    if (!errorTitle) {
+                        Toast.warning('오류제목을 입력해주세요.');
+                        $('#errorTitle').focus();
+                        return false;
+                    }
+
+                    if (!errorLevel) {
+                        Toast.warning('오류레벨을 선택해주세요.');
+                        $('#errorLevel').focus();
+                        return false;
+                    }
+
+                    return true;
+                },
+
+                createError: function (formData) {
+                    $.ajax({
+                        url: `${API_BASE_URL}/errors`,
+                        method: 'POST',
+                        contentType: 'application/json',
+                        data: JSON.stringify(formData),
+                        success: (response) => {
+                            if (response.success) {
+                                Toast.success('오류코드가 등록되었습니다.');
+                                $('#errorModal').modal('hide');
+                                if (typeof Errors !== 'undefined' && Errors.load) {
+                                    Errors.load();
+                                }
+                            } else {
+                                Toast.error(response.message || '오류코드 등록에 실패했습니다.');
+                            }
+                        },
+                        error: (xhr) => {
+                            const errorMsg = xhr.responseJSON?.message || '오류코드 등록에 실패했습니다.';
+                            Toast.error(errorMsg);
+                        }
+                    });
+                },
+
+                updateError: function (formData) {
+                    $.ajax({
+                        url: `${API_BASE_URL}/errors/${this.currentErrorCode}`,
+                        method: 'PUT',
+                        contentType: 'application/json',
+                        data: JSON.stringify(formData),
+                        success: (response) => {
+                            if (response.success) {
+                                Toast.success('오류코드가 수정되었습니다.');
+                                $('#errorModal').modal('hide');
+                                if (typeof Errors !== 'undefined' && Errors.load) {
+                                    Errors.load();
+                                }
+                            } else {
+                                Toast.error(response.message || '오류코드 수정에 실패했습니다.');
+                            }
+                        },
+                        error: (xhr) => {
+                            const errorMsg = xhr.responseJSON?.message || '오류코드 수정에 실패했습니다.';
+                            Toast.error(errorMsg);
+                        }
+                    });
+                },
+
+                delete: function () {
+                    Toast.confirm('정말 삭제하시겠습니까?', () => {
+                        $.ajax({
+                            url: `${API_BASE_URL}/errors/${this.currentErrorCode}`,
+                            method: 'DELETE',
+                            success: (response) => {
+                                if (response.success) {
+                                    Toast.success('오류코드가 삭제되었습니다.');
+                                    $('#errorModal').modal('hide');
+                                    if (typeof Errors !== 'undefined' && Errors.load) {
+                                        Errors.load();
+                                    }
+                                } else {
+                                    Toast.error(response.message || '오류코드 삭제에 실패했습니다.');
+                                }
+                            },
+                            error: (xhr) => {
+                                const errorMsg = xhr.responseJSON?.message || '오류코드 삭제에 실패했습니다.';
+                                Toast.error(errorMsg);
+                            }
+                        });
+                    });
+                }
+            };
+        })();
+    </script>
+</div>
+</body>
+</html>

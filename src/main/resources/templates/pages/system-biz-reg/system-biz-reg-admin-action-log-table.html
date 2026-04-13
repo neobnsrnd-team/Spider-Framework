@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<!-- AdminActionLog Table Fragment -->
+<div th:fragment="table">
+    <div class="table-responsive">
+        <table class="table table-sm table-hover sp-data-grid" id="logTable">
+            <thead class="table-light">
+            <tr>
+                <th class="col-w-pct-5">일련번호</th>
+                <th class="col-w-pct-10">로그추적번호</th>
+                <th class="col-w-pct-6">채널ID</th>
+                <th class="col-w-pct-10">접속IP</th>
+                <th class="col-w-pct-17">접속URL</th>
+                <th class="col-w-pct-6">기동/수동</th>
+                <th class="col-w-pct-6">요청응답</th>
+                <th class="col-w-pct-6">처리결과</th>
+                <th class="col-w-pct-15">결과메시지</th>
+                <th class="col-w-pct-7">사용자ID</th>
+                <th class="col-w-pct-12">날짜</th>
+            </tr>
+            </thead>
+            <tbody id="logTableBody">
+            <!-- JavaScript로 동적 렌더링 -->
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- AdminActionLog Detail Modal Fragment -->
+<div th:fragment="modal">
+    <div class="modal fade" id="adminActionLogDetailModal" tabindex="-1" aria-labelledby="adminActionLogDetailModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="adminActionLogDetailModalLabel">관리자 작업이력 상세</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="form-section">
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label">일련번호</label>
+                                <input type="text" class="form-control" id="detailSeqNo" readonly>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">로그추적번호</label>
+                                <input type="text" class="form-control" id="detailLogTraceNo" readonly>
+                            </div>
+                        </div>
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label">채널ID</label>
+                                <input type="text" class="form-control" id="detailChannelId" readonly>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">사용자ID</label>
+                                <input type="text" class="form-control" id="detailUserId" readonly>
+                            </div>
+                        </div>
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label">접속IP</label>
+                                <input type="text" class="form-control" id="detailAccessIp" readonly>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">날짜</label>
+                                <input type="text" class="form-control" id="detailLogDate" readonly>
+                            </div>
+                        </div>
+                        <div class="row mb-3">
+                            <div class="col-12">
+                                <label class="form-label">접속URL</label>
+                                <input type="text" class="form-control" id="detailAccessUrl" readonly>
+                            </div>
+                        </div>
+                        <div class="row mb-3">
+                            <div class="col-md-4">
+                                <label class="form-label">기동/수동</label>
+                                <input type="text" class="form-control" id="detailAutoManual" readonly>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">요청/응답</label>
+                                <input type="text" class="form-control" id="detailReqRes" readonly>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">처리결과</label>
+                                <input type="text" class="form-control" id="detailResult" readonly>
+                            </div>
+                        </div>
+                        <div class="row mb-3">
+                            <div class="col-12">
+                                <label class="form-label">결과메시지</label>
+                                <textarea class="form-control resize-none" id="detailResultMessage" rows="5" readonly></textarea>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"><i class="bi bi-x-lg"></i> 닫기</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+</body>
+</html>

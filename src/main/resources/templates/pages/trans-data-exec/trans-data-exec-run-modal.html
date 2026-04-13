@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<div th:fragment="modal">
+    <!-- TransData Run Modal -->
+    <div class="modal fade" id="transDataRunModal" tabindex="-1" aria-labelledby="transDataRunModalLabel" aria-hidden="true"
+         data-bs-backdrop="static" data-bs-keyboard="false">
+        <div class="modal-dialog modal-dialog-centered sp-modal-xl">
+            <div class="modal-content">
+                <!-- Modal Header -->
+                <div class="modal-header py-2">
+                    <h5 class="modal-title" id="transDataRunModalLabel">이행 데이터 파일 목록</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+
+                <!-- Modal Body -->
+                <div class="modal-body sp-scrollable">
+                    <!-- Search Section -->
+                    <div class="card border p-2 mb-3">
+                        <div class="d-flex flex-wrap align-items-center gap-2 mb-1">
+                            <label class="form-label mb-0 small fw-medium fs-xs">파일 이름</label>
+                            <input type="text" id="runModalSearchFileName" class="form-control form-control-sm flex-fixed-150"
+                                   placeholder="파일명 입력"
+                                   onkeypress="if(event.key === 'Enter') TransData.runSearch()">
+
+                            <label class="form-label mb-0 small fw-medium ms-2 fs-xs">항목</label>
+                            <select id="runModalSearchFileType" class="form-select form-select-sm flex-fixed-120">
+                                <option value="">전체</option>
+                            </select>
+
+                            <div class="sp-datepicker-wrapper flex-fixed-100 ms-2">
+                                <input type="text" id="runModalSearchDateFrom" class="form-control form-control-sm pe-4" placeholder="yyyy/mm/dd" readonly>
+                                <i class="bi bi-calendar3 sp-datepicker-icon" id="runModalBtnDateFrom"></i>
+                            </div>
+                            <span class="mx-1 text-body-secondary">~</span>
+                            <div class="sp-datepicker-wrapper flex-fixed-100">
+                                <input type="text" id="runModalSearchDateTo" class="form-control form-control-sm pe-4" placeholder="yyyy/mm/dd" readonly>
+                                <i class="bi bi-calendar3 sp-datepicker-icon" id="runModalBtnDateTo"></i>
+                            </div>
+
+                            <div class="flex-grow-1"></div>
+
+                            <select id="runModalLimitRows" class="form-select form-select-sm sp-limit-select">
+                                <option value="10">10</option>
+                                <option value="20" selected>20</option>
+                                <option value="50">50</option>
+                                <option value="100">100</option>
+                                <option value="200">200</option>
+                                <option value="1000">1000</option>
+                            </select>
+                            <label class="form-label mb-0 small fw-medium ms-1 me-2 fs-xs">건씩</label>
+
+                            <button class="btn btn-primary btn-sm" onclick="TransData.runSearch()">
+                                <i class="bi bi-search"></i> 조회
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- 선택 파일 표시 + 데이터 이행 버튼 -->
+                    <div class="d-flex justify-content-end align-items-center gap-8px mt-2">
+                        <input type="text" id="runSelectedFileName" class="form-control form-control-sm mw-300 fs-sm sp-bg-readonly cursor-default" readonly
+                               placeholder="이행할 파일을 테이블에서 선택하세요">
+                        <button type="button" class="btn btn-success btn-sm" id="btnRunExec">
+                            <i class="bi bi-database"></i> 데이터 이행
+                        </button>
+                    </div>
+
+                    <!-- Table -->
+                    <div class="table-responsive mt-2">
+                        <table class="table table-sm table-hover sp-data-grid" id="transDataRunTable">
+                            <thead class="table-light">
+                            <tr>
+                                <th class="col-w-pct-15 cursor-pointer" data-run-sort="fileType">
+                                    이행대상 항목 <span class="sort-indicator" data-run-sort-indicator="fileType"></span>
+                                </th>
+                                <th class="col-w-pct-45 cursor-pointer" data-run-sort="fileName">
+                                    이행대상 파일명 <span class="sort-indicator" data-run-sort-indicator="fileName"></span>
+                                </th>
+                                <th class="col-w-pct-15 cursor-pointer" data-run-sort="fileSize">
+                                    파일 사이즈 <span class="sort-indicator" data-run-sort-indicator="fileSize"></span>
+                                </th>
+                                <th class="col-w-pct-25 cursor-pointer" data-run-sort="createDate">
+                                    이행파일 생성일 <span class="sort-indicator" data-run-sort-indicator="createDate"></span>
+                                </th>
+                            </tr>
+                            </thead>
+                            <tbody id="transDataRunTableBody">
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Pagination -->
+                    <div class="d-flex justify-content-between align-items-center mt-2">
+                        <span id="runModalPageInfo" class="page-info-text"></span>
+                        <nav>
+                            <ul class="pagination pagination-sm mb-0" id="runModalPagination"></ul>
+                        </nav>
+                    </div>
+                </div>
+
+                <!-- Modal Footer -->
+                <div class="modal-footer py-2">
+                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">
+                        <i class="bi bi-x-lg"></i> 닫기
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+</body>
+</html>

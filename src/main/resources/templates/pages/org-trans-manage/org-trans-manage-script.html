@@ -1,0 +1,584 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<th:block th:fragment="script">
+    <script>
+        (function() {
+            if (window.GatewayMappingList && typeof window.GatewayMappingList.load === 'function') {
+                window.GatewayMappingList.init();
+                return;
+            }
+
+            window.GatewayMappingList = {
+                currentPage: 1,
+                pageSize: 10,
+                totalElements: 0,
+                orgs: [],
+                trxTypes: [],
+                trxTypeMap: {
+                    '1': 'ONLINE',
+                    '2': 'BATCH',
+                    '3': 'ASYNC',
+                    '4': 'ASYNC 비온라인',
+                    '5': '전문변환',
+                    '6': 'POS',
+                    '7': 'FHM',
+                    '8': 'RETRY'
+                },
+                originalData: [],
+                modifiedData: [],
+                deletedKeys: [],
+                editingKey: null,
+                sortBy: null,
+                sortDirection: null,
+                currentRows: [],
+
+                init() {
+                    this.loadOrgs();
+                    this.loadTrxTypes();
+                    this.bindEvents();
+                    this.load(1);
+                },
+
+                bindEvents() {
+                    const headers = document.querySelectorAll('#gatewayMappingTable thead th[data-sort]');
+                    headers.forEach(header => {
+                        header.classList.add('sortable');
+                        if (header.dataset.sortBound === 'true') return;
+                        header.dataset.sortBound = 'true';
+                        header.addEventListener('click', () => {
+                            const sortKey = header.dataset.sort;
+                            if (!sortKey) return;
+                            if (this.sortBy === sortKey) {
+                                if (this.sortDirection === 'ASC') {
+                                    this.sortDirection = 'DESC';
+                                } else {
+                                    this.sortBy = null;
+                                    this.sortDirection = null;
+                                }
+                            } else {
+                                this.sortBy = sortKey;
+                                this.sortDirection = 'ASC';
+                            }
+                            this.updateSortIndicators();
+                            this.load(1); // 서버 사이드 정렬
+                        });
+                    });
+
+                    const pageSizeSelect = document.getElementById('mappingPageSize');
+                    if (pageSizeSelect) {
+                        pageSizeSelect.addEventListener('change', (e) => {
+                            this.pageSize = parseInt(e.target.value, 10) || 20;
+                            this.load(1);
+                        });
+                    }
+
+                    const selectAll = document.getElementById('mappingSelectAll');
+                    if (selectAll) {
+                        selectAll.addEventListener('change', (e) => {
+                            const checked = e.target.checked;
+                            document.querySelectorAll('#gatewayMappingTableBody input[type="checkbox"]')
+                                .forEach(cb => cb.checked = checked);
+                        });
+                    }
+
+                    const tbody = document.getElementById('gatewayMappingTableBody');
+                    if (tbody) {
+                        tbody.addEventListener('change', (e) => {
+                            const target = e.target;
+                            if (!target.classList.contains('editable-field')) return;
+                            const row = target.closest('tr');
+                            const key = row?.dataset?.key;
+                            if (!row || !key) return;
+                            const item = this.modifiedData.find(d => this.makeKey(d) === key);
+                            if (!item) return;
+                            const field = target.dataset.field;
+                            if (!field) return;
+                            item[field] = target.value;
+                            const newKey = this.makeKey(item);
+                            row.dataset.key = newKey;
+                            const cb = row.querySelector('input[type="checkbox"]');
+                            if (cb) cb.value = newKey;
+                            // CRUD 셀 업데이트
+                            const crudCell = row.querySelectorAll('td')[1];
+                            if (crudCell) crudCell.textContent = this.getRowCrud(item);
+                        });
+                    }
+
+                    const refreshBtn = document.getElementById('btnRefresh');
+                    if (refreshBtn) {
+                        refreshBtn.addEventListener('click', () => this.load(this.currentPage));
+                    }
+
+                },
+
+                loadOrgs() {
+                    fetch('/api/orgs', { credentials: 'same-origin' })
+                        .then(res => res.json())
+                        .then(res => {
+                            if (!res.success) throw new Error('기관 목록 로드 실패');
+                            const data = res.data || {};
+                            this.orgs = data.content || [];
+                            this.renderOrgSelect();
+                        })
+                        .catch(err => {
+                            console.error('[GatewayMappingList.loadOrgs]', err);
+                        });
+                },
+
+                loadTrxTypes() {
+                    if (typeof loadTrxTypeOptions === 'function') {
+                        loadTrxTypeOptions(() => {
+                            this.trxTypes = window.trxTypeOptionState?.options || [];
+                        });
+                    }
+                },
+
+                renderOrgSelect() {
+                    const select = document.getElementById('mappingOrgId');
+                    if (!select) return;
+                    const options = this.orgs.map(org =>
+                        `<option value="${HtmlUtils.escape(org.orgId)}">${HtmlUtils.escape(org.orgName || org.orgId)}</option>`
+                    ).join('');
+                    const firstOption = select.querySelector('option:first-child').outerHTML;
+                    select.innerHTML = firstOption + options;
+                },
+
+                load(page) {
+                    this.currentPage = page || 1;
+
+                    const orgId = document.getElementById('mappingOrgId')?.value || '';
+                    const ioType = document.getElementById('mappingIoType')?.value || '';
+                    const reqResType = document.getElementById('mappingReqResType')?.value || '';
+
+                    const params = new URLSearchParams({
+                        page: String(this.currentPage),
+                        size: String(this.pageSize)
+                    });
+                    if (ioType) params.set('ioType', ioType);
+                    if (reqResType) params.set('reqResType', reqResType);
+                    if (this.sortBy) params.set('sortBy', this.sortBy);
+                    if (this.sortDirection) params.set('sortDirection', this.sortDirection);
+
+                    const apiUrl = orgId
+                        ? `/api/transports?orgId=${encodeURIComponent(orgId)}&${params}`
+                        : `/api/transports?${params}`;
+
+                    fetch(apiUrl, {credentials: 'same-origin'})
+                        .then(res => res.json())
+                        .then(res => {
+                            if (!res.success) throw new Error(res.message || '조회 실패');
+                            const data = res.data || {};
+                            this.totalElements = data.totalElements || 0;
+                            const content = data.content || [];
+                            this.originalData = JSON.parse(JSON.stringify(content));
+                            this.modifiedData = JSON.parse(JSON.stringify(content));
+                            this.deletedKeys = [];
+                            this.currentRows = content;
+                            this.renderTable(this.currentRows);
+                            this.updateSortIndicators();
+                            this.renderPagination(data);
+                        })
+                        .catch(err => {
+                            console.error('[GatewayMappingList.load]', err);
+                            Toast.error('매핑 목록을 불러오는데 실패했습니다.');
+                        });
+                },
+
+                renderTable(rows) {
+                    const tbody = document.getElementById('gatewayMappingTableBody');
+                    if (!tbody) return;
+
+                    if (!rows.length) {
+                        tbody.innerHTML = '<tr><td colspan="7" class="text-center py-4 text-body-secondary">조회된 데이터가 없습니다.</td></tr>';
+                        return;
+                    }
+
+                    tbody.innerHTML = rows.map(row => {
+                        const key = this.makeKey(row);
+                        const crud = this.getRowCrud(row);
+                        const isDeleted = crud === '삭제';
+                        const rowClass = isDeleted ? 'cursor-pointer sp-row-deleted' : 'cursor-pointer';
+                        const disabledAttr = isDeleted ? 'disabled' : '';
+                        const ioTypeOptions = `
+                            <option value="O" ${row.ioType === 'O' ? 'selected' : ''}>어댑터(송신)</option>
+                            <option value="I" ${row.ioType === 'I' ? 'selected' : ''}>리스너(수신)</option>
+                        `;
+                        const reqResOptions = `
+                            <option value="Q" ${row.reqResType === 'Q' ? 'selected' : ''}>요청</option>
+                            <option value="S" ${row.reqResType === 'S' ? 'selected' : ''}>응답</option>
+                        `;
+                        const trxOptions = this.buildTrxTypeOptions(row.trxType);
+                        return `
+                            <tr data-key="${HtmlUtils.escape(key)}" class="${rowClass}">
+                                <td onclick="event.stopPropagation();"><input type="checkbox" value="${HtmlUtils.escape(key)}" ${disabledAttr}></td>
+                                <td class="text-center">${crud}</td>
+                                <td>${HtmlUtils.escape(row.orgId)}</td>
+                                <td>
+                                    <select class="form-select form-select-sm editable-field" data-field="ioType" ${disabledAttr}>
+                                        ${ioTypeOptions}
+                                    </select>
+                                </td>
+                                <td>
+                                    <select class="form-select form-select-sm editable-field" data-field="reqResType" ${disabledAttr}>
+                                        ${reqResOptions}
+                                    </select>
+                                </td>
+                                <td>
+                                    <select class="form-select form-select-sm editable-field" data-field="trxType" ${disabledAttr}>
+                                        ${trxOptions}
+                                    </select>
+                                </td>
+                                <td>
+                                    <input type="text" class="form-control form-control-sm editable-field" data-field="gwId"
+                                           value="${HtmlUtils.escape(row.gwId || '')}" maxlength="20" ${disabledAttr}>
+                                </td>
+                            </tr>
+                        `;
+                    }).join('');
+
+                    // 강제로 편집 가능 상태로 풀어줌 (이전 disabled 속성 제거)
+                    tbody.querySelectorAll('.editable-field').forEach(field => {
+                        field.removeAttribute('disabled');
+                        if (field.tagName === 'INPUT') {
+                            field.readOnly = false;
+                        }
+                    });
+                },
+
+                getSortedRows() {
+                    if (!this.sortBy || !this.sortDirection) {
+                        return this.currentRows || [];
+                    }
+                    const direction = this.sortDirection === 'DESC' ? -1 : 1;
+                    const rows = [...(this.currentRows || [])];
+                    return rows.sort((a, b) => {
+                        const aVal = a?.[this.sortBy] ?? '';
+                        const bVal = b?.[this.sortBy] ?? '';
+                        return this.compareValues(aVal, bVal) * direction;
+                    });
+                },
+
+                compareValues(aVal, bVal) {
+                    const aEmpty = aVal === null || aVal === undefined || aVal === '';
+                    const bEmpty = bVal === null || bVal === undefined || bVal === '';
+                    if (aEmpty && bEmpty) return 0;
+                    if (aEmpty) return 1;
+                    if (bEmpty) return -1;
+                    return String(aVal).localeCompare(String(bVal), 'ko', { numeric: true, sensitivity: 'base' });
+                },
+
+                updateSortIndicators() {
+                    const headers = document.querySelectorAll('#gatewayMappingTable thead th.sortable');
+                    headers.forEach(header => header.classList.remove('sort-asc', 'sort-desc'));
+                    if (!this.sortBy || !this.sortDirection) return;
+                    const active = document.querySelector(`#gatewayMappingTable thead th[data-sort="${this.sortBy}"]`);
+                    if (active) {
+                        active.classList.add(this.sortDirection === 'ASC' ? 'sort-asc' : 'sort-desc');
+                    }
+                },
+
+                makeKey(row) {
+                    return `${row.orgId}|${row.trxType}|${row.ioType}|${row.reqResType}`;
+                },
+
+                getTrxTypeLabel(code) {
+                    const found = this.trxTypes.find(t => t.trxType === code);
+                    if (found && found.trxTypeName) return found.trxTypeName;
+                    return this.trxTypeMap[code] || code || '-';
+                },
+
+                buildTrxTypeOptions(selected) {
+                    const options = (this.trxTypes.length ? this.trxTypes : Object.keys(this.trxTypeMap).map(code => ({
+                        trxType: code,
+                        trxTypeName: this.trxTypeMap[code]
+                    }))).map(t => {
+                        const selectedAttr = t.trxType === selected ? 'selected' : '';
+                        return `<option value="${HtmlUtils.escape(t.trxType)}" ${selectedAttr}>${HtmlUtils.escape(this.getTrxTypeLabel(t.trxType))}</option>`;
+                    }).join('');
+                    return options;
+                },
+
+                getRowCrud(row) {
+                    const key = this.makeKey(row);
+                    // 삭제 표시된 행
+                    if (this.deletedKeys.includes(key)) return '삭제';
+                    // 원본에 없으면 신규
+                    const original = this.originalData.find(d => this.makeKey(d) === key);
+                    if (!original) return '추가';
+                    // 원본과 다르면 수정
+                    if (original.gwId !== row.gwId || original.ioType !== row.ioType ||
+                        original.reqResType !== row.reqResType || original.trxType !== row.trxType) {
+                        return '수정';
+                    }
+                    return '';
+                },
+
+                renderPagination(pageData) {
+                    const container = document.getElementById('pagination');
+                    if (!container) return;
+
+                    const totalPages = pageData.totalPages || 0;
+                    const currentPage = pageData.currentPage || 1;
+                    const total = pageData.totalElements || 0;
+                    const size = pageData.size || this.pageSize;
+                    const start = total === 0 ? 0 : (currentPage - 1) * size + 1;
+                    const end = Math.min(currentPage * size, total);
+
+                    const pageInfo = document.getElementById('pageInfo');
+                    if (pageInfo) {
+                        pageInfo.textContent = `${start} - ${end} of ${total} items`;
+                    }
+
+                    const maxButtons = 5;
+                    let startPage = Math.max(1, currentPage - Math.floor(maxButtons / 2));
+                    let endPage = Math.min(totalPages, startPage + maxButtons - 1);
+
+                    if (endPage - startPage + 1 < maxButtons) {
+                        startPage = Math.max(1, endPage - maxButtons + 1);
+                    }
+
+                    let html = `
+                        <li class="page-item ${currentPage === 1 ? 'disabled' : ''}">
+                            <a class="page-link" href="#" onclick="GatewayMappingList.load(1); return false;">
+                                <i class="bi bi-chevron-double-left"></i>
+                            </a>
+                        </li>
+                        <li class="page-item ${currentPage === 1 ? 'disabled' : ''}">
+                            <a class="page-link" href="#" onclick="GatewayMappingList.load(${currentPage - 1}); return false;">
+                                <i class="bi bi-chevron-left"></i>
+                            </a>
+                        </li>
+                    `;
+
+                    for (let i = startPage; i <= endPage; i++) {
+                        html += `
+                            <li class="page-item ${i === currentPage ? 'active' : ''}">
+                                <a class="page-link" href="#" onclick="GatewayMappingList.load(${i}); return false;">${i}</a>
+                            </li>
+                        `;
+                    }
+
+                    html += `
+                        <li class="page-item ${currentPage === totalPages || totalPages === 0 ? 'disabled' : ''}">
+                            <a class="page-link" href="#" onclick="GatewayMappingList.load(${currentPage + 1}); return false;">
+                                <i class="bi bi-chevron-right"></i>
+                            </a>
+                        </li>
+                        <li class="page-item ${currentPage === totalPages || totalPages === 0 ? 'disabled' : ''}">
+                            <a class="page-link" href="#" onclick="GatewayMappingList.load(${totalPages}); return false;">
+                                <i class="bi bi-chevron-double-right"></i>
+                            </a>
+                        </li>
+                    `;
+
+                    container.innerHTML = html;
+                },
+
+                addRow() {
+                    const newItem = { orgId: '', trxType: '1', ioType: 'O', reqResType: 'Q', gwId: '' };
+                    this.modifiedData.unshift(newItem);
+                    this.renderTable(this.modifiedData);
+
+                    // 새 행의 orgId를 기관 select로 변경
+                    const tbody = document.getElementById('gatewayMappingTableBody');
+                    if (!tbody) return;
+                    const firstRow = tbody.querySelector('tr');
+                    if (!firstRow) return;
+
+                    // orgId 셀(세 번째 td — 체크박스, CRUD 다음)을 select로 교체
+                    const orgIdCell = firstRow.querySelectorAll('td')[2];
+                    if (orgIdCell) {
+                        const orgOptions = this.orgs.map(org =>
+                            `<option value="${HtmlUtils.escape(org.orgId)}">${HtmlUtils.escape(org.orgName || org.orgId)}</option>`
+                        ).join('');
+                        orgIdCell.innerHTML = `<select class="form-select form-select-sm editable-field" data-field="orgId">
+                            <option value="">선택하세요</option>${orgOptions}
+                        </select>`;
+
+                        const orgSelect = orgIdCell.querySelector('select');
+                        if (orgSelect) {
+                            orgSelect.addEventListener('change', () => {
+                                newItem.orgId = orgSelect.value;
+                                const key = this.makeKey(newItem);
+                                firstRow.dataset.key = key;
+                                const cb = firstRow.querySelector('input[type="checkbox"]');
+                                if (cb) cb.value = key;
+                            });
+                        }
+                    }
+                },
+
+                createMapping() {
+                    if (window.InterfaceMnt && InterfaceMnt.GatewayManage) {
+                        InterfaceMnt.GatewayManage.open(null, () => {
+                            this.load(1);
+                        });
+                    } else {
+                        Toast.error('Gateway 등록 모달을 불러오지 못했습니다.');
+                    }
+                },
+
+                deleteSelected() {
+                    const selected = Array.from(document.querySelectorAll('#gatewayMappingTableBody input[type="checkbox"]:checked'));
+                    if (selected.length === 0) {
+                        Toast.warning('삭제할 항목을 선택하세요.');
+                        return;
+                    }
+
+                    selected.forEach(cb => {
+                        const key = cb.value;
+                        const row = cb.closest('tr');
+                        const isNew = !this.originalData.find(d => this.makeKey(d) === key);
+
+                        if (isNew) {
+                            // 신규 행은 바로 제거
+                            this.modifiedData = this.modifiedData.filter(d => this.makeKey(d) !== key);
+                            if (row) row.remove();
+                        } else {
+                            // 기존 행은 삭제 표시
+                            if (!this.deletedKeys.includes(key)) {
+                                this.deletedKeys.push(key);
+                            }
+                            if (row) {
+                                row.classList.add('sp-row-deleted');
+                                row.querySelectorAll('input, select').forEach(el => el.disabled = true);
+                                const crudCell = row.querySelectorAll('td')[1];
+                                if (crudCell) crudCell.textContent = '삭제';
+                            }
+                        }
+                    });
+
+                    // 전체 선택 해제
+                    const selectAll = document.getElementById('mappingSelectAll');
+                    if (selectAll) selectAll.checked = false;
+                },
+
+                exportExcel() {
+                    const params = new URLSearchParams();
+                    const ioType = document.getElementById('mappingIoType')?.value || '';
+                    const reqResType = document.getElementById('mappingReqResType')?.value || '';
+                    if (ioType) params.set('ioType', ioType);
+                    if (reqResType) params.set('reqResType', reqResType);
+                    if (this.sortBy) {
+                        params.set('sortBy', this.sortBy);
+                        params.set('sortDirection', this.sortDirection || 'ASC');
+                    }
+                    const qs = params.toString();
+                    window.location.href = '/api/transports/export' + (qs ? '?' + qs : '');
+                },
+
+                printTable() {
+                    const columns = [
+                        { key: 'orgId', label: '기관 ID' },
+                        { key: 'ioType', label: '어댑터/리스너' },
+                        { key: 'reqResType', label: '요청/응답' },
+                        { key: 'trxType', label: '거래유형' },
+                        { key: 'gwId', label: 'GATEWAY ID' }
+                    ];
+                    PrintUtil.print({ title: '기관통신 Gateway맵핑 목록', columns: columns, data: this.modifiedData });
+                },
+
+                saveChanges() {
+                    // 중복 키 검사 (기관+거래유형+IO+요청/응답)
+                    const keys = this.modifiedData.map(item => this.makeKey(item));
+                    const uniqueKeys = new Set(keys);
+                    if (keys.length !== uniqueKeys.size) {
+                        Toast.info('중복된 키 조합(기관, 거래유형, 어댑터/리스너, 요청/응답)이 존재합니다. 수정 후 다시 저장해주세요.');
+                        return;
+                    }
+
+                    const upserts = [];
+                    const deletes = [];
+
+                    // 수정/생성된 항목 (삭제 대상 제외)
+                    this.modifiedData.forEach(item => {
+                        const key = this.makeKey(item);
+                        if (this.deletedKeys.includes(key)) return;
+                        const original = this.originalData.find(d => this.makeKey(d) === key);
+
+                        if (!original || JSON.stringify(original) !== JSON.stringify(item)) {
+                            upserts.push({
+                                orgId: item.orgId,
+                                ioType: item.ioType,
+                                reqResType: item.reqResType,
+                                trxType: item.trxType,
+                                gwId: item.gwId
+                            });
+                        }
+                    });
+
+                    // 삭제된 항목
+                    this.deletedKeys.forEach(key => {
+                        const parts = key.split('|');
+                        if (parts.length === 4) {
+                            deletes.push({
+                                orgId: parts[0],
+                                trxType: parts[1],
+                                ioType: parts[2],
+                                reqResType: parts[3]
+                            });
+                        }
+                    });
+
+                    if (upserts.length === 0 && deletes.length === 0) {
+                        Toast.warning('변경사항이 없습니다.');
+                        return;
+                    }
+
+                    // 기관별로 그룹화하여 batch 저장
+                    const orgGroups = {};
+
+                    upserts.forEach(item => {
+                        if (!orgGroups[item.orgId]) orgGroups[item.orgId] = { upserts: [], deletes: [] };
+                        orgGroups[item.orgId].upserts.push(item);
+                    });
+
+                    deletes.forEach(item => {
+                        if (!orgGroups[item.orgId]) orgGroups[item.orgId] = { upserts: [], deletes: [] };
+                        orgGroups[item.orgId].deletes.push(item);
+                    });
+
+                    const promises = Object.keys(orgGroups).map(orgId => {
+                        return fetch(`/api/transports/batch?orgId=${encodeURIComponent(orgId)}`, {
+                            method: 'POST',
+                            credentials: 'same-origin',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(orgGroups[orgId])
+                        });
+                    });
+
+                    Promise.all(promises)
+                        .then(responses => Promise.all(responses.map(r => r.json())))
+                        .then(results => {
+                            const allSuccess = results.every(r => r.success);
+                            if (allSuccess) {
+                                Toast.success('저장되었습니다.');
+                                this.load(this.currentPage);
+                            } else {
+                                throw new Error('일부 저장 실패');
+                            }
+                        })
+                        .catch(err => {
+                            console.error('[GatewayMappingList.saveChanges]', err);
+                            Toast.error('저장 중 오류가 발생했습니다.');
+                        });
+                }
+            };
+
+            // 엑셀/인쇄 버튼 바인딩
+            const btnExcel = document.getElementById('btnExcel');
+            if (btnExcel) {
+                btnExcel.addEventListener('click', () => window.GatewayMappingList.exportExcel());
+            }
+            const btnPrint = document.getElementById('btnPrint');
+            if (btnPrint) {
+                btnPrint.addEventListener('click', () => window.GatewayMappingList.printTable());
+            }
+
+            window.GatewayMappingList.init();
+        })();
+    </script>
+</th:block>
+</body>
+</html>

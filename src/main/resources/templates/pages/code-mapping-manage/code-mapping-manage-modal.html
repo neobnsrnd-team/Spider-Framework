@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<div th:fragment="modal">
+
+    <!-- 코드 맵핑 등록/수정 팝업 -->
+    <div class="modal fade" id="orgCodeRegisterModal" tabindex="-1" aria-hidden="true"
+         data-bs-backdrop="static" data-bs-keyboard="false">
+        <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content">
+            <div class="modal-header py-2">
+                <h5 class="modal-title" id="ocModalTitle">코드 맵핑 등록</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close" id="btnCloseOrgCodeModal"></button>
+            </div>
+            <div class="modal-body">
+
+                <!-- 등록 모드: 기관/코드그룹 드롭다운 -->
+                <div id="oc-modal-select-row" class="d-flex gap-3 mb-2">
+                    <div class="d-flex align-items-center gap-2">
+                        <label class="form-label mb-0 small fw-semibold text-nowrap">코드그룹 :</label>
+                        <select id="modalCodeGroupSelect" class="form-select form-select-sm" style="min-width:160px">
+                            <option value="">코드그룹 선택</option>
+                        </select>
+                    </div>
+                    <div class="d-flex align-items-center gap-2">
+                        <label class="form-label mb-0 small fw-semibold text-nowrap">기관 :</label>
+                        <select id="modalOrgSelect" class="form-select form-select-sm" style="min-width:160px">
+                            <option value="">기관 선택</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- 수정 모드: 기관/코드그룹 정보 표시 (읽기전용) -->
+                <div id="oc-modal-info-row" class="d-flex align-items-center gap-2 bg-light border rounded p-2 mb-2 d-hidden">
+                    <span class="fw-semibold">기관 :</span>
+                    <span id="oc-modal-org-label" class="me-3"></span>
+                    <span class="fw-semibold">코드그룹 :</span>
+                    <span id="oc-modal-cg-label"></span>
+                </div>
+
+                <!-- 안내 -->
+                <div class="small text-muted mb-1">
+                    <span class="text-danger fw-semibold">*</span> 붉은색 필드를 수정하세요
+                </div>
+
+                <!-- 팝업 그리드 -->
+                <div class="sp-scrollable-420">
+                    <table id="orgCodePopupTable" class="table table-sm table-hover sp-data-grid">
+                        <thead class="table-light">
+                        <tr>
+                            <th class="col-w-30"><input type="checkbox" id="popupCheckAll" title="전체선택"></th>
+                            <th class="sortable col-w-48" data-sort="crudType">CRUD</th>
+                            <th class="sortable col-w-100" data-sort="codeGroupId">코드그룹ID</th>
+                            <th class="sortable" data-sort="codeGroupName">코드그룹명</th>
+                            <th class="sortable col-w-100" data-sort="code">표준코드</th>
+                            <th class="sortable" data-sort="codeName">표준코드명</th>
+                            <th class="sortable col-w-100" data-sort="orgName">기관</th>
+                            <th class="sortable col-w-76" data-sort="priority">우선순위</th>
+                            <th class="sortable col-w-160" data-sort="orgCode">기관코드</th>
+                        </tr>
+                        </thead>
+                        <tbody id="orgCodePopupTbody">
+                        <tr><td colspan="9" class="sp-empty-state">기관과 코드그룹을 선택하세요</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+
+            </div>
+            <div class="modal-footer py-2 justify-content-between">
+                <button class="btn btn-sm btn-danger" id="btnDeleteSelected">
+                    선택행 삭제
+                </button>
+                <div class="d-flex gap-2">
+                    <button class="btn btn-sm btn-outline-secondary" id="btnCancelOrgCode"><i class="bi bi-x-lg"></i> 닫기</button>
+                    <button class="btn btn-sm btn-success" id="btnSaveOrgCode">변경사항 저장</button>
+                </div>
+            </div>
+        </div>
+        </div>
+    </div>
+
+</div>
+</body>
+</html>

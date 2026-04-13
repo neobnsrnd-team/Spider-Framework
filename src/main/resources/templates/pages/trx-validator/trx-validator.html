@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<div th:fragment="content">
+    <!-- Include Page Content Layout Styles -->
+
+    <!-- Search Section Header -->
+    <div class="page-header">
+        <h4 class="page-title">
+            <i class="bi bi-exclamation-circle-fill text-danger"></i>
+            검색조건
+        </h4>
+    </div>
+
+    <!-- Search Container (동적 생성) -->
+    <div id="searchContainer"></div>
+
+    <!-- List Section Header -->
+    <div class="page-header mt-3">
+        <h4 class="page-title">
+            <i class="bi bi-exclamation-circle-fill text-danger"></i>
+            리스트
+        </h4>
+
+        <!-- Toolbar -->
+        <th:block th:replace="~{fragments/page-content-layout :: toolbar}" />
+    </div>
+
+    <!-- Table Container (동적 생성) -->
+    <div id="tableContainer"></div>
+
+    <!-- Pagination -->
+    <th:block th:replace="~{fragments/page-content-layout :: pagination}" />
+
+    <!-- Bottom Action Buttons -->
+    <div class="bottom-actions" th:if="${userAuthorities != null and userAuthorities.contains('VALIDATOR:W')}">
+        <button class="btn btn-primary btn-sm" id="btnAdd">
+            + 등록
+        </button>
+    </div>
+
+    <!-- 권한 플래그 (모달에서 사용) -->
+    <script th:inline="javascript">
+        var validator_access = /*[[${userAuthorities != null and userAuthorities.contains('VALIDATOR:W')}]]*/ false;
+    </script>
+
+    <!-- Validator Modal -->
+    <div th:replace="~{pages/trx-validator/trx-validator-modal :: modal}"></div>
+
+    <!-- Page Script -->
+    <script th:inline="javascript">
+        // 거래 Validator 관리 페이지 설정
+        var PAGE_CONFIG = {
+            pageId: 'validators',
+            apiEndpoint: API_BASE_URL + '/validators/page',
+
+            // 검색 폼 설정
+            search: {
+                fields: [
+                    {
+                        type: 'text',
+                        id: 'validatorId',
+                        label: 'Validator ID',
+                        labelStyle: 'min-width: 85px;',
+                        placeholder: 'Validator ID',
+                        width: '150px'
+                    },
+                    {
+                        type: 'text',
+                        id: 'validatorName',
+                        label: 'Validator 명',
+                        labelStyle: 'min-width: 80px; margin-left: 10px;',
+                        placeholder: 'Validator 명',
+                        width: '150px'
+                    },
+                    {
+                        type: 'select',
+                        id: 'bizDomain',
+                        label: 'Site 구분',
+                        labelStyle: 'min-width: 60px; margin-left: 10px;',
+                        width: '130px',
+                        placeholder: '전체',
+                        options: []
+                    },
+                    {
+                        type: 'select',
+                        id: 'useYn',
+                        label: '사용여부',
+                        labelStyle: 'min-width: 55px; margin-left: 10px;',
+                        width: '100px',
+                        placeholder: '전체',
+                        options: ComboManager.simple.getList('USE_YN')
+                    }
+                ],
+                limit: { default: 10, showLarge: true }
+            },
+
+            // 테이블 설정
+            table: {
+                id: 'validatorTable',
+                columns: [
+                    { key: 'validatorId', label: 'Validator ID', width: '150px', sortable: true },
+                    { key: 'validatorName', label: 'Validator 명', width: '180px', sortable: true },
+                    { key: 'javaClassName', label: 'Validator Application 명', width: '200px', sortable: true },
+                    { key: 'bizDomainName', label: 'Site 구분', width: '120px', sortable: true },
+                    {
+                        key: 'useYn',
+                        label: '사용여부',
+                        width: '80px',
+                        sortable: true,
+                        render: (val) => val === 'Y' ? '사용' : '미사용'
+                    }
+                ],
+                emptyMessage: '조회 버튼을 클릭하여 데이터를 불러오세요.',
+                noDataMessage: '조회된 데이터가 없습니다.'
+            },
+
+            containers: {
+                search: '#searchContainer',
+                table: '#tableContainer',
+                pagination: '#pagination',
+                pageInfo: '#pageInfo'
+            },
+
+            autoLoad: true
+        };
+
+        // 페이지 상태 관리
+        window.ValidatorPage = {
+            currentPage: 1,
+            totalItems: 0,
+            itemsPerPage: 10,
+            sortBy: null,
+            sortDirection: null,
+
+            init: function() {
+                // 1. 검색 폼 렌더링
+                SearchForm.render('#searchContainer', PAGE_CONFIG.search, () => {
+                    this.currentPage = 1;
+                    this.load();
+                });
+
+                // 2. 테이블 렌더링
+                const tableConfig = {
+                    ...PAGE_CONFIG.table,
+                    onSort: (sortBy, sortDirection) => {
+                        this.sortBy = sortBy;
+                        this.sortDirection = sortDirection;
+                        this.currentPage = 1;
+                        this.load();
+                    }
+                };
+
+                DataTable.render('#tableContainer', tableConfig, (row) => {
+                    // 행 클릭 시 상세 모달 열기
+                    if (window.ValidatorModal) {
+                        window.ValidatorModal.openForDetail(row);
+                    }
+                });
+
+                // 3. 페이지네이션 초기화
+                Pagination.init('#pagination', '#pageInfo', (page) => {
+                    this.currentPage = page;
+                    this.load();
+                });
+
+                // 4. 버튼 이벤트 바인딩
+                $('#btnRefresh').off('click').on('click', () => {
+                    this.load();
+                });
+
+                $('#btnExcel').off('click').on('click', () => {
+                    this.exportExcel();
+                });
+
+                $('#btnPrint').off('click').on('click', () => {
+                    this.printTable();
+                });
+
+                $('#btnAdd').off('click').on('click', () => {
+                    if (window.ValidatorModal) {
+                        window.ValidatorModal.openForCreate();
+                    }
+                });
+
+                // 5. Site 구분 코드 동적 로드
+                this.loadBizDomainOptions();
+
+                // 6. 자동 로드
+                if (PAGE_CONFIG.autoLoad) {
+                    this.load();
+                }
+            },
+
+            loadBizDomainOptions: function() {
+                ComboManager.db.getList('/api/codes/by-group/FR20003').then(options => {
+                    SearchForm.setOptions('#searchContainer', 'bizDomain', options);
+                });
+            },
+
+            load: function() {
+                const params = SearchForm.getParams('#searchContainer');
+                params.page = this.currentPage;
+                params.size = params.size || this.itemsPerPage;
+
+                if (this.sortBy) {
+                    params.sortBy = this.sortBy;
+                    params.sortDirection = this.sortDirection || 'ASC';
+                }
+
+                $.ajax({
+                    url: PAGE_CONFIG.apiEndpoint,
+                    method: 'GET',
+                    data: params,
+                    success: (response) => {
+                        if (response.success && response.data) {
+                            const pageData = response.data;
+                            DataTable.setData('#tableContainer', pageData.content || []);
+
+                            this.totalItems = pageData.totalElements || 0;
+                            this.itemsPerPage = params.size;
+
+                            Pagination.update('#pagination', {
+                                currentPage: this.currentPage,
+                                totalItems: this.totalItems,
+                                itemsPerPage: this.itemsPerPage
+                            });
+                        } else {
+                            DataTable.setData('#tableContainer', []);
+                            Pagination.reset('#pagination');
+                        }
+                    },
+                    error: (xhr) => {
+                        console.error('Failed to load validators:', xhr);
+                        Toast.error('Validator 목록을 불러오는데 실패했습니다.');
+                        DataTable.setData('#tableContainer', []);
+                        Pagination.reset('#pagination');
+                    }
+                });
+            },
+
+            printTable: function() {
+                const printColumns = PAGE_CONFIG.table.columns
+                    .filter(col => !col.render)
+                    .map(col => ({ key: col.key, label: col.label }));
+                const data = DataTable.getData('#tableContainer');
+                PrintUtil.print({ title: 'Validator 목록', columns: printColumns, data: data });
+            },
+
+            exportExcel: function() {
+                const params = SearchForm.getParams('#searchContainer');
+                delete params.page;
+                delete params.size;
+                if (this.sortBy) {
+                    params.sortBy = this.sortBy;
+                    params.sortDirection = this.sortDirection || 'ASC';
+                }
+                const qs = $.param(params);
+                window.location.href = API_BASE_URL + '/validators/export' + (qs ? '?' + qs : '');
+            }
+        };
+
+        // 페이지 초기화
+        $(document).ready(function() {
+            ValidatorPage.init();
+        });
+    </script>
+</div>
+</body>
+</html>

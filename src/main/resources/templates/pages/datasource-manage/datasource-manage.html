@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<div th:fragment="content">
+
+    <!-- Search Section -->
+    <div class="page-header">
+        <h4 class="page-title">
+            <i class="bi bi-exclamation-circle-fill text-danger"></i>
+            검색조건
+        </h4>
+    </div>
+
+    <div id="searchContainer"></div>
+
+    <!-- List Section -->
+    <div class="page-header mt-3">
+        <h4 class="page-title">
+            <i class="bi bi-exclamation-circle-fill text-danger"></i>
+            리스트
+        </h4>
+        <th:block th:replace="~{fragments/page-content-layout :: toolbar}" />
+    </div>
+
+    <div id="tableContainer"></div>
+
+    <th:block th:replace="~{fragments/page-content-layout :: pagination}" />
+
+    <!-- Bottom Action Buttons -->
+    <div class="bottom-actions" th:if="${userAuthorities != null and userAuthorities.contains('DATASOURCE:W')}">
+        <button class="btn btn-primary btn-sm" id="btnAdd">+ 등록</button>
+    </div>
+
+    <!-- 권한 플래그 -->
+    <script th:inline="javascript">
+        var datasource_access = /*[[${userAuthorities != null and userAuthorities.contains('DATASOURCE:W')}]]*/ false;
+    </script>
+
+    <!-- DataSource Modal -->
+    <div th:replace="~{pages/datasource-manage/datasource-modal :: modal}"></div>
+
+    <!-- Page Script -->
+    <script th:inline="javascript">
+        var PAGE_CONFIG = {
+            pageId: 'datasources',
+            apiEndpoint: API_BASE_URL + '/datasources/page',
+
+            search: {
+                fields: [
+                    {
+                        type: 'select',
+                        id: 'searchField',
+                        label: '검색조건',
+                        labelStyle: 'min-width: 70px;',
+                        width: '120px',
+                        options: [
+                            { value: 'dbId',     label: 'DB ID' },
+                            { value: 'dbName',   label: 'DB 명' },
+                            { value: 'dbUserId', label: 'DB 사용자 ID' }
+                        ]
+                    },
+                    {
+                        type: 'text',
+                        id: 'searchValue',
+                        label: '검색어',
+                        labelStyle: 'min-width: 50px; margin-left: 10px;',
+                        placeholder: '검색어 입력',
+                        width: '180px'
+                    },
+                    {
+                        type: 'select',
+                        id: 'jndiYnFilter',
+                        label: 'JNDI',
+                        labelStyle: 'min-width: 40px; margin-left: 10px;',
+                        width: '100px',
+                        placeholder: '전체',
+                        options: [
+                            { value: 'Y', label: 'JNDI' },
+                            { value: 'N', label: '직접접속' }
+                        ]
+                    }
+                ],
+                limit: { default: 10, showLarge: true }
+            },
+
+            table: {
+                id: 'datasourceTable',
+                columns: [
+                    { key: 'dbId',         label: 'DB ID',         width: '150px', sortable: true },
+                    { key: 'dbName',       label: 'DB 명',          width: '180px', sortable: true },
+                    { key: 'dbUserId',     label: 'DB 사용자 ID',   width: '140px', sortable: true },
+                    { key: 'connectionUrl', label: '접속 URL',      width: '240px', sortable: false },
+                    {
+                        key: 'jndiYn', label: 'JNDI', width: '80px', sortable: true,
+                        render: (val) => val === 'Y' ? 'JNDI' : '직접접속'
+                    },
+                    { key: 'lastUpdateDtime', label: '최종수정일시', width: '140px', sortable: true }
+                ],
+                emptyMessage: '조회 버튼을 클릭하여 데이터를 불러오세요.',
+                noDataMessage: '조회된 데이터가 없습니다.'
+            },
+
+            containers: {
+                search: '#searchContainer',
+                table: '#tableContainer',
+                pagination: '#pagination',
+                pageInfo: '#pageInfo'
+            },
+
+            autoLoad: true
+        };
+
+        window.DataSourcePage = {
+            currentPage: 1,
+            totalItems: 0,
+            itemsPerPage: 10,
+            sortBy: null,
+            sortDirection: null,
+
+            init: function () {
+                SearchForm.render('#searchContainer', PAGE_CONFIG.search, () => {
+                    this.currentPage = 1;
+                    this.load();
+                });
+
+                const tableConfig = {
+                    ...PAGE_CONFIG.table,
+                    onSort: (sortBy, sortDirection) => {
+                        this.sortBy = sortBy;
+                        this.sortDirection = sortDirection;
+                        this.currentPage = 1;
+                        this.load();
+                    }
+                };
+
+                DataTable.render('#tableContainer', tableConfig, (row) => {
+                    if (window.DataSourceModal) {
+                        window.DataSourceModal.openForDetail(row);
+                    }
+                });
+
+                Pagination.init('#pagination', '#pageInfo', (page) => {
+                    this.currentPage = page;
+                    this.load();
+                });
+
+                $('#btnRefresh').off('click').on('click', () => this.load());
+                $('#btnExcel').off('click').on('click', () => this.exportExcel());
+                $('#btnPrint').off('click').on('click', () => this.printTable());
+                $('#btnAdd').off('click').on('click', () => {
+                    if (window.DataSourceModal) {
+                        window.DataSourceModal.openForCreate();
+                    }
+                });
+
+                if (PAGE_CONFIG.autoLoad) {
+                    this.load();
+                }
+            },
+
+            load: function () {
+                const params = SearchForm.getParams('#searchContainer');
+                params.page = this.currentPage;
+                params.size = params.size || this.itemsPerPage;
+
+                if (this.sortBy) {
+                    params.sortBy = this.sortBy;
+                    params.sortDirection = this.sortDirection || 'ASC';
+                }
+
+                $.ajax({
+                    url: PAGE_CONFIG.apiEndpoint,
+                    method: 'GET',
+                    data: params,
+                    success: (response) => {
+                        if (response.success && response.data) {
+                            const pageData = response.data;
+                            DataTable.setData('#tableContainer', pageData.content || []);
+                            this.totalItems = pageData.totalElements || 0;
+                            this.itemsPerPage = params.size;
+                            Pagination.update('#pagination', {
+                                currentPage: this.currentPage,
+                                totalItems: this.totalItems,
+                                itemsPerPage: this.itemsPerPage
+                            });
+                        } else {
+                            DataTable.setData('#tableContainer', []);
+                            Pagination.reset('#pagination');
+                        }
+                    },
+                    error: (xhr) => {
+                        console.error('Failed to load datasources:', xhr);
+                        Toast.error('데이터소스 목록을 불러오는데 실패했습니다.');
+                        DataTable.setData('#tableContainer', []);
+                        Pagination.reset('#pagination');
+                    }
+                });
+            },
+
+            printTable: function () {
+                const printColumns = PAGE_CONFIG.table.columns
+                    .filter(col => !col.render)
+                    .map(col => ({ key: col.key, label: col.label }));
+                const data = DataTable.getData('#tableContainer');
+                PrintUtil.print({ title: '데이터소스 목록', columns: printColumns, data: data });
+            },
+
+            exportExcel: function () {
+                const params = SearchForm.getParams('#searchContainer');
+                delete params.page;
+                delete params.size;
+                if (this.sortBy) {
+                    params.sortBy = this.sortBy;
+                    params.sortDirection = this.sortDirection || 'ASC';
+                }
+                const qs = $.param(params);
+                window.location.href = API_BASE_URL + '/datasources/export' + (qs ? '?' + qs : '');
+            }
+        };
+
+        $(document).ready(function () {
+            DataSourcePage.init();
+        });
+    </script>
+</div>
+</body>
+</html>

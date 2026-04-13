@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<div th:fragment="content">
+    <!-- Common Page Styles -->
+    <th:block th:replace="~{pages/connect-org-manage/connect-org-manage-modal :: styles}" />
+
+    <!-- Search Section Header -->
+    <div class="page-header">
+        <h4 class="page-title">
+            <i class="bi bi-exclamation-circle-fill text-danger"></i>
+            검색조건
+        </h4>
+    </div>
+
+    <!-- Search Box -->
+    <div th:replace="~{pages/org-trans-manage/org-trans-manage-search :: search}"></div>
+
+    <!-- List Section Header + Toolbar -->
+    <div class="page-header mt-3">
+        <h4 class="page-title">
+            <i class="bi bi-exclamation-circle-fill text-danger"></i>
+            리스트
+        </h4>
+        <div class="page-header-actions">
+            <button class="btn btn-outline-secondary btn-sm" id="btnExcel">
+                <i class="bi bi-file-earmark-excel"></i> 엑셀
+            </button>
+            <button class="btn btn-outline-secondary btn-sm" id="btnPrint">
+                <i class="bi bi-file-earmark-text"></i> 출력
+            </button>
+        </div>
+    </div>
+
+    <!-- Table -->
+    <div th:replace="~{pages/org-trans-manage/org-trans-manage-table :: table}"></div>
+
+    <!-- Pagination -->
+    <div th:replace="~{fragments/page-content-layout :: pagination}"></div>
+
+    <!-- Bottom Action Buttons -->
+    <div th:replace="~{pages/org-trans-manage/org-trans-manage-buttons :: buttons}"></div>
+
+    <!-- Gateway 등록 모달 -->
+    <div th:replace="~{pages/connect-org-manage/connect-org-manage-modal :: gatewayManageModal}"></div>
+
+    <!-- Scripts -->
+    <th:block th:replace="~{pages/org-trans-manage/org-trans-manage-script :: script}" />
+    <th:block th:replace="~{pages/connect-org-manage/connect-org-manage-script :: script}" />
+</div>
+</body>
+</html>

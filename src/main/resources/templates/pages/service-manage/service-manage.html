@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<div th:fragment="content">
+
+    <!-- Search Section Header -->
+    <div class="page-header">
+        <h4 class="page-title">
+            <i class="bi bi-exclamation-circle-fill text-danger"></i>
+            검색조건
+        </h4>
+    </div>
+
+    <!-- Search Container (동적 생성) -->
+    <div id="searchContainer"></div>
+
+    <!-- List Section Header -->
+    <div class="page-header mt-3">
+        <h4 class="page-title">
+            <i class="bi bi-exclamation-circle-fill text-danger"></i>
+            리스트
+        </h4>
+
+        <!-- Toolbar -->
+        <th:block th:replace="~{fragments/page-content-layout :: toolbar}" />
+    </div>
+
+    <!-- Table Container (동적 생성) -->
+    <div id="tableContainer"></div>
+
+    <!-- Pagination -->
+    <th:block th:replace="~{fragments/page-content-layout :: pagination}" />
+
+    <!-- Bottom Action Buttons -->
+    <div class="bottom-actions">
+        <div class="d-inline-flex gap-2">
+            <button class="btn btn-outline-secondary btn-sm" id="btnNamingRuleOpen">
+                <i class="bi bi-info-circle"></i> 서비스네이밍룰
+            </button>
+            <button class="btn btn-outline-secondary btn-sm" id="btnAccessUserListOpen">
+                <i class="bi bi-people"></i> 접근허용자리스트
+            </button>
+        </div>
+        <div th:if="${userAuthorities != null and userAuthorities.contains('FWK_SERVICE:W')}"
+             class="d-inline-flex gap-2">
+            <button class="btn btn-primary btn-sm" id="btnAdd">
+                + 등록
+            </button>
+        </div>
+    </div>
+
+    <!-- 권한 플래그 (모달에서 사용) -->
+    <script th:inline="javascript">
+        var fwk_service_access = /*[[${userAuthorities != null and userAuthorities.contains('FWK_SERVICE:W')}]]*/ false;
+        var component_access = /*[[${userAuthorities != null and userAuthorities.contains('COMPONENT:W')}]]*/ false;
+        var reload_access = /*[[${userAuthorities != null and userAuthorities.contains('RELOAD:W')}]]*/ false;
+        var access_user_write = /*[[${userAuthorities != null and userAuthorities.contains('ACCESS_USER:W')}]]*/ false;
+    </script>
+
+    <!-- Service Modal -->
+    <div th:replace="~{pages/service-manage/service-manage-modal :: modal}"></div>
+
+    <!-- Page Script -->
+    <script th:inline="javascript">
+        var PAGE_CONFIG = {
+            pageId: 'fwkServices',
+            apiEndpoint: API_BASE_URL + '/fwk-services/page',
+
+            search: {
+                rows: [
+                    [
+                        {
+                            type: 'text',
+                            id: 'serviceId',
+                            label: '서비스 ID',
+                            labelStyle: 'min-width: 70px;',
+                            placeholder: '서비스 ID',
+                            width: '150px'
+                        },
+                        {
+                            type: 'text',
+                            id: 'serviceName',
+                            label: '서비스명',
+                            labelStyle: 'min-width: 60px; margin-left: 10px;',
+                            placeholder: '서비스명',
+                            width: '150px'
+                        },
+                        {
+                            type: 'select',
+                            id: 'serviceType',
+                            label: '서비스 유형',
+                            labelStyle: 'min-width: 75px; margin-left: 10px;',
+                            width: '130px',
+                            placeholder: '전체',
+                            options: []
+                        },
+                        {
+                            type: 'select',
+                            id: 'useYn',
+                            label: '사용여부',
+                            labelStyle: 'min-width: 55px; margin-left: 10px;',
+                            width: '100px',
+                            placeholder: '전체',
+                            options: ComboManager.simple.getList('USE_YN')
+                        }
+                    ],
+                    [
+                        {
+                            type: 'select',
+                            id: 'bizGroupId',
+                            label: '업무분류',
+                            labelStyle: 'min-width: 70px;',
+                            width: '160px',
+                            placeholder: '전체',
+                            options: []
+                        },
+                        {
+                            type: 'select',
+                            id: 'reqChannelCode',
+                            label: '요청채널구분',
+                            labelStyle: 'min-width: 85px; margin-left: 10px;',
+                            width: '130px',
+                            placeholder: '전체',
+                            options: []
+                        },
+                        {
+                            type: 'text',
+                            id: 'componentId',
+                            label: '컴포넌트ID',
+                            labelStyle: 'min-width: 80px; margin-left: 10px;',
+                            placeholder: '컴포넌트ID',
+                            width: '150px'
+                        },
+                        {
+                            type: 'text',
+                            id: 'componentName',
+                            label: '컴포넌트명',
+                            labelStyle: 'min-width: 80px; margin-left: 10px;',
+                            placeholder: '컴포넌트명',
+                            width: '150px'
+                        }
+                    ]
+                ],
+                limit: { default: 10, showLarge: true }
+            },
+
+            table: {
+                id: 'fwkServiceTable',
+                columns: [
+                    { key: 'serviceId', label: '서비스 ID', width: '180px', sortable: true },
+                    { key: 'serviceName', label: '서비스명', width: '200px', sortable: true },
+                    { key: 'bizGroupId', label: '업무분류', width: '90px', sortable: false },
+                    {
+                        key: 'useYn',
+                        label: '사용여부',
+                        width: '70px',
+                        sortable: true,
+                        render: (val) => val === 'Y'
+                            ? '<span class="badge text-bg-success">Y</span>'
+                            : '<span class="badge text-bg-secondary">' + (val || 'N') + '</span>'
+                    },
+                    {
+                        key: 'componentCount',
+                        label: '컴포넌트',
+                        width: '75px',
+                        sortable: false,
+                        render: (val) => (val > 0)
+                            ? '<span class="badge text-bg-primary">' + val + '</span>'
+                            : '<span class="badge text-bg-light text-muted border">0</span>'
+                    },
+                    {
+                        key: '_reload',
+                        label: 'Reload',
+                        width: '65px',
+                        sortable: false,
+                        render: (val, row) =>
+                            '<button type="button" class="btn btn-outline-warning btn-sm py-0 px-1 btn-row-reload" ' +
+                            'data-service-id="' + (row.serviceId || '') + '">Reload</button>'
+                    },
+                    {
+                        key: '_similar',
+                        label: '유사서비스',
+                        width: '70px',
+                        sortable: false,
+                        render: (val, row) =>
+                            fwk_service_access
+                                ? '<button type="button" class="btn btn-outline-info btn-sm py-0 px-1 btn-row-similar" ' +
+                                  'data-service-id="' + (row.serviceId || '') + '">등록</button>'
+                                : ''
+                    },
+                    {
+                        key: 'accessUserCount',
+                        label: '허용자 추가',
+                        width: '75px',
+                        sortable: false,
+                        render: (val, row) =>
+                            '<button type="button" class="btn btn-link p-0 btn-row-access" ' +
+                            'data-service-id="' + (row.serviceId || '') + '">' +
+                            ((val > 0)
+                                ? '<span class="badge text-bg-info">' + val + '</span>'
+                                : '<span class="badge text-bg-light text-muted border">0</span>') +
+                            '</button>'
+                    }
+                ],
+                emptyMessage: '조회 버튼을 클릭하여 데이터를 불러오세요.',
+                noDataMessage: '조회된 데이터가 없습니다.'
+            },
+
+            containers: {
+                search: '#searchContainer',
+                table: '#tableContainer',
+                pagination: '#pagination',
+                pageInfo: '#pageInfo'
+            },
+
+            autoLoad: true
+        };
+
+        window.FwkServicePage = {
+            currentPage: 1,
+            totalItems: 0,
+            itemsPerPage: 10,
+            sortBy: null,
+            sortDirection: null,
+            lastData: [],
+
+            init: function() {
+                SearchForm.render('#searchContainer', PAGE_CONFIG.search, () => {
+                    this.currentPage = 1;
+                    this.load();
+                });
+
+                // 조회 버튼/limit을 카드 맨 마지막으로 이동하기 위해 현재 위치에서 detach
+                const $card = $('#searchContainer .card');
+                const $searchBtn = $card.find('button[id$="_searchBtn"]');
+                const $lastRow = $searchBtn.closest('div.d-flex');
+                const $spacer = $lastRow.children('.flex-grow-1');
+                const $limitSelect = $lastRow.children('select[id$="_limitRows"]');
+                const $limitLabel = $limitSelect.next('label');
+                $spacer.detach();
+                $limitSelect.detach();
+                $limitLabel.detach();
+                $searchBtn.detach();
+
+                // 옵션 체크박스 행 추가
+                $card.append(
+                    '<div class="d-flex align-items-center flex-wrap gap-3 mt-1">' +
+                        '<span class="form-label mb-0 small fw-medium">옵션</span>' +
+                        '<div class="form-check form-check-inline mb-0"><input class="form-check-input" type="checkbox" id="opt_loginOnlyYn" value="Y"><label class="form-check-label small" for="opt_loginOnlyYn">로그인체크</label></div>' +
+                        '<div class="form-check form-check-inline mb-0"><input class="form-check-input" type="checkbox" id="opt_secureSignYn" value="Y"><label class="form-check-label small" for="opt_secureSignYn">전자서명로그저장</label></div>' +
+                        '<div class="form-check form-check-inline mb-0"><input class="form-check-input" type="checkbox" id="opt_bankStatusCheckYn" value="Y"><label class="form-check-label small" for="opt_bankStatusCheckYn">타행상태체크여부</label></div>' +
+                        '<div class="form-check form-check-inline mb-0"><input class="form-check-input" type="checkbox" id="opt_bizdayServiceYn" value="Y"><label class="form-check-label small" for="opt_bizdayServiceYn">영업일서비스여부</label></div>' +
+                        '<div class="form-check form-check-inline mb-0"><input class="form-check-input" type="checkbox" id="opt_saturdayServiceYn" value="Y"><label class="form-check-label small" for="opt_saturdayServiceYn">토요일서비스여부</label></div>' +
+                        '<div class="form-check form-check-inline mb-0"><input class="form-check-input" type="checkbox" id="opt_holidayServiceYn" value="Y"><label class="form-check-label small" for="opt_holidayServiceYn">공휴일서비스여부</label></div>' +
+                    '</div>'
+                );
+
+                // 조회 버튼 행을 카드 맨 마지막(우측 정렬)에 추가
+                $card.append(
+                    $('<div class="d-flex align-items-center gap-2 mt-1"></div>')
+                        .append($spacer)
+                        .append($limitSelect)
+                        .append($limitLabel)
+                        .append($searchBtn)
+                );
+
+                // DB 콤보 로드 (placeholder가 이미 '전체'를 추가하므로 getList 사용)
+                ComboManager.db.getList('/api/codes/by-group/FR90002').then(options => {
+                    SearchForm.setOptions('#searchContainer', 'serviceType', options);
+                });
+                ComboManager.db.getList('/api/codes/by-group/FR90003').then(options => {
+                    SearchForm.setOptions('#searchContainer', 'reqChannelCode', options);
+                });
+                ComboManager.db.getList(API_BASE_URL + '/biz-groups', res => {
+                    if (!res.success || !res.data) return [];
+                    return res.data.map(b => ({ value: b.bizGroupId, label: b.bizGroupName }));
+                }).then(options => {
+                    SearchForm.setOptions('#searchContainer', 'bizGroupId', options);
+                });
+
+                const tableConfig = {
+                    ...PAGE_CONFIG.table,
+                    onSort: (sortBy, sortDirection) => {
+                        this.sortBy = sortBy;
+                        this.sortDirection = sortDirection;
+                        this.currentPage = 1;
+                        this.load();
+                    }
+                };
+
+                DataTable.render('#tableContainer', tableConfig, (row) => {
+                    if (window.FwkServiceModal) {
+                        window.FwkServiceModal.openForDetail(row.serviceId);
+                    }
+                });
+
+                Pagination.init('#pagination', '#pageInfo', (page) => {
+                    this.currentPage = page;
+                    this.load();
+                });
+
+                $('#btnRefresh').off('click').on('click', () => this.load());
+
+                $('#btnPrint').off('click').on('click', () => this.printTable());
+
+                $('#btnExcel').off('click').on('click', () => {
+                    const params = SearchForm.getParams('#searchContainer');
+                    const checkboxMap = {
+                        loginOnlyYn: '#opt_loginOnlyYn',
+                        secureSignYn: '#opt_secureSignYn',
+                        bankStatusCheckYn: '#opt_bankStatusCheckYn',
+                        bizdayServiceYn: '#opt_bizdayServiceYn',
+                        saturdayServiceYn: '#opt_saturdayServiceYn',
+                        holidayServiceYn: '#opt_holidayServiceYn'
+                    };
+                    Object.entries(checkboxMap).forEach(([key, sel]) => {
+                        if ($(sel).is(':checked')) params[key] = 'Y';
+                    });
+                    window.location = API_BASE_URL + '/fwk-services/export?' + $.param(params);
+                });
+
+                $('#btnAdd').off('click').on('click', () => {
+                    if (window.FwkServiceModal) window.FwkServiceModal.openForCreate();
+                });
+
+                // 서비스네이밍룰 버튼 → 네이밍룰 모달
+                $('#btnNamingRuleOpen').off('click').on('click', () => {
+                    bootstrap.Modal.getOrCreateInstance(document.getElementById('serviceNamingRuleModal')).show();
+                });
+
+                // 접근허용자리스트 버튼 → 전체 목록 (serviceId 미필터)
+                $('#btnAccessUserListOpen').off('click').on('click', () => {
+                    if (window.SvcAccessModal) SvcAccessModal.open(null);
+                });
+
+                if (PAGE_CONFIG.autoLoad) {
+                    this.load();
+                }
+            },
+
+            load: function() {
+                const params = SearchForm.getParams('#searchContainer');
+                params.page = this.currentPage;
+                params.size = params.size || this.itemsPerPage;
+
+                // 옵션 체크박스 수집
+                const checkboxMap = {
+                    loginOnlyYn: '#opt_loginOnlyYn',
+                    secureSignYn: '#opt_secureSignYn',
+                    bankStatusCheckYn: '#opt_bankStatusCheckYn',
+                    bizdayServiceYn: '#opt_bizdayServiceYn',
+                    saturdayServiceYn: '#opt_saturdayServiceYn',
+                    holidayServiceYn: '#opt_holidayServiceYn'
+                };
+                Object.entries(checkboxMap).forEach(([key, sel]) => {
+                    if ($(sel).is(':checked')) params[key] = 'Y';
+                });
+
+                if (this.sortBy) {
+                    params.sortBy = this.sortBy;
+                    params.sortDirection = this.sortDirection || 'ASC';
+                }
+
+                $.ajax({
+                    url: PAGE_CONFIG.apiEndpoint,
+                    method: 'GET',
+                    data: params,
+                    success: (response) => {
+                        if (response.success && response.data) {
+                            const pageData = response.data;
+                            this.lastData = pageData.content || [];
+                            DataTable.setData('#tableContainer', this.lastData);
+                            this._bindRowButtons();
+
+                            this.totalItems = pageData.totalElements || 0;
+                            this.itemsPerPage = params.size;
+
+                            Pagination.update('#pagination', {
+                                currentPage: this.currentPage,
+                                totalItems: this.totalItems,
+                                itemsPerPage: this.itemsPerPage
+                            });
+                        } else {
+                            DataTable.setData('#tableContainer', []);
+                            Pagination.reset('#pagination');
+                        }
+                    },
+                    error: (xhr) => {
+                        console.error('Failed to load fwk-services:', xhr);
+                        Toast.error('서비스 목록을 불러오는데 실패했습니다.');
+                        DataTable.setData('#tableContainer', []);
+                        Pagination.reset('#pagination');
+                    }
+                });
+            },
+
+            _bindRowButtons: function() {
+                $('#tableContainer').find('.btn-row-reload').off('click').on('click', function (e) {
+                    e.stopPropagation();
+                    if (window.SvcReloadModal) SvcReloadModal.open($(this).attr('data-service-id'));
+                });
+                $('#tableContainer').find('.btn-row-similar').off('click').on('click', function (e) {
+                    e.stopPropagation();
+                    if (window.FwkServiceModal) FwkServiceModal.openForSimilar($(this).attr('data-service-id'));
+                });
+                $('#tableContainer').find('.btn-row-access').off('click').on('click', function (e) {
+                    e.stopPropagation();
+                    if (window.SvcAccessModal) SvcAccessModal.open($(this).attr('data-service-id'));
+                });
+            },
+
+            printTable: function() {
+                const printColumns = PAGE_CONFIG.table.columns
+                    .filter(col => !col.key.startsWith('_'))
+                    .map(col => ({ key: col.key, label: col.label }));
+                PrintUtil.print({ title: '서비스 목록', columns: printColumns, data: this.lastData });
+            }
+        };
+
+        $(document).ready(function() {
+            FwkServicePage.init();
+        });
+    </script>
+</div>
+</body>
+</html>

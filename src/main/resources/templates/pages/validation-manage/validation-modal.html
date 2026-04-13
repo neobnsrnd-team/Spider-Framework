@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<div th:fragment="modal">
+    <!-- Validation Detail/Create Modal -->
+    <div class="modal fade" id="validationModal" tabindex="-1" aria-labelledby="validationModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="validationModalLabel">Validation 상세</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="validationForm">
+                        <div class="form-section">
+                            <!-- Row 1: 키워드(ID), 키워드 설명 -->
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                    <label class="form-label">키워드 <span class="text-danger">*</span></label>
+                                    <input type="text" class="form-control" id="vldModalValidationId" name="validationId"
+                                           maxlength="50" required>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">키워드 설명</label>
+                                    <input type="text" class="form-control" id="vldModalValidationDesc" name="validationDesc"
+                                           maxlength="500">
+                                </div>
+                            </div>
+
+                            <!-- Row 2: 키입력 이벤트 제어코드, 마스크업 스타일 -->
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                    <label class="form-label">키입력 이벤트 제어코드</label>
+                                    <input type="text" class="form-control" id="vldModalFieldEventText" name="fieldEventText"
+                                           maxlength="4000">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">마스크업 스타일</label>
+                                    <input type="text" class="form-control" id="vldModalMaskText" name="maskText"
+                                           maxlength="200">
+                                </div>
+                            </div>
+
+                            <!-- Row 3: 문자열 속성, Submit시 수행할 스크립트 -->
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                    <label class="form-label">문자열 속성</label>
+                                    <input type="text" class="form-control" id="vldModalCharTypeText" name="charTypeText"
+                                           maxlength="200">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Submit시 수행할 스크립트</label>
+                                    <input type="text" class="form-control" id="vldModalSubmitEventText" name="submitEventText"
+                                           maxlength="4000">
+                                </div>
+                            </div>
+
+                            <!-- Row 4: 최대값, 최소값 -->
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                    <label class="form-label">최대값</label>
+                                    <input type="text" class="form-control" id="vldModalMaxValueText" name="maxValueText"
+                                           maxlength="200">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">최소값</label>
+                                    <input type="text" class="form-control" id="vldModalMinValueText" name="minValueText"
+                                           maxlength="200">
+                                </div>
+                            </div>
+
+                            <!-- Row 5: Validation 클래스 (full width textarea) -->
+                            <div class="row mb-3">
+                                <div class="col-12">
+                                    <label class="form-label">Validation 클래스</label>
+                                    <textarea class="form-control resize-vertical" id="vldModalJavaClassName" name="javaClassName"
+                                              rows="2" maxlength="500"></textarea>
+                                </div>
+                            </div>
+
+                            <!-- Row 6: 최종수정자 ID, 최종수정일시 (상세 모드에서만 표시) -->
+                            <div class="row mb-3 d-hidden" id="vldSystemInfoRow">
+                                <div class="col-md-6">
+                                    <label class="form-label">최종수정자 ID</label>
+                                    <input type="text" class="form-control" id="vldModalLastUpdateUserId" readonly>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">최종수정일시</label>
+                                    <input type="text" class="form-control" id="vldModalLastUpdateDtime" readonly>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <!-- Modal Footer -->
+                <div class="modal-footer justify-content-end">
+                    <button th:if="${userAuthorities != null and userAuthorities.contains('VALIDATION:W')}"
+                            type="button" class="btn btn-primary btn-sm d-hidden" id="btnValidationSave">
+                        <i class="bi bi-floppy"></i> 저장
+                    </button>
+                    <button th:if="${userAuthorities != null and userAuthorities.contains('VALIDATION:W')}"
+                            type="button" class="btn btn-danger btn-sm d-hidden" id="btnValidationDelete">
+                        <i class="bi bi-trash"></i> 삭제
+                    </button>
+                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal"><i class="bi bi-x-lg"></i> 닫기</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        (function () {
+            window.ValidationModal = {
+                mode: 'detail',
+                currentValidationId: null,
+
+                _showModal: function () {
+                    const modal = bootstrap.Modal.getOrCreateInstance(document.getElementById('validationModal'));
+                    modal.show();
+                },
+
+                _hideModal: function () {
+                    const modalEl = document.getElementById('validationModal');
+                    const modal = bootstrap.Modal.getInstance(modalEl);
+                    if (modal) modal.hide();
+                },
+
+                openForDetail: function (rowData) {
+                    this.mode = 'detail';
+                    this.currentValidationId = rowData.validationId;
+
+                    var hasWrite = validation_access;
+
+                    $('#validationModalLabel').text('Validator 컴포넌트 상세');
+                    this._fillForm(rowData);
+                    this._setFieldsReadonly(!hasWrite);
+
+                    if (hasWrite) {
+                        $('#vldModalValidationId').prop('readonly', true);
+                        $('#vldModalValidationId').prop('disabled', true);
+                    }
+
+                    $('#vldSystemInfoRow').removeClass('d-hidden');
+                    $('#btnValidationSave').toggleClass('d-hidden', !hasWrite);
+                    $('#btnValidationDelete').toggleClass('d-hidden', !hasWrite);
+
+                    this._showModal();
+                },
+
+                openForCreate: function () {
+                    this.mode = 'create';
+                    this.currentValidationId = null;
+
+                    $('#validationModalLabel').text('Validator 컴포넌트 등록');
+                    $('#validationForm')[0].reset();
+                    this._setFieldsReadonly(false);
+                    $('#vldModalValidationId').prop('readonly', false);
+                    $('#vldModalValidationId').prop('disabled', false);
+
+                    $('#vldSystemInfoRow').addClass('d-hidden');
+                    $('#btnValidationSave').removeClass('d-hidden');
+                    $('#btnValidationDelete').addClass('d-hidden');
+
+                    this._showModal();
+                },
+
+                _fillForm: function (data) {
+                    $('#vldModalValidationId').val(data.validationId || '');
+                    $('#vldModalValidationDesc').val(data.validationDesc || '');
+                    $('#vldModalFieldEventText').val(data.fieldEventText || '');
+                    $('#vldModalMaskText').val(data.maskText || '');
+                    $('#vldModalCharTypeText').val(data.charTypeText || '');
+                    $('#vldModalSubmitEventText').val(data.submitEventText || '');
+                    $('#vldModalMaxValueText').val(data.maxValueText || '');
+                    $('#vldModalMinValueText').val(data.minValueText || '');
+                    $('#vldModalJavaClassName').val(data.javaClassName || '');
+                    $('#vldModalLastUpdateUserId').val(data.lastUpdateUserId || '');
+                    $('#vldModalLastUpdateDtime').val(this._formatDatetime(data.lastUpdateDtime));
+                },
+
+                _setFieldsReadonly: function (readonly) {
+                    $('#vldModalValidationId').prop('readonly', readonly).prop('disabled', readonly);
+                    $('#vldModalValidationDesc').prop('readonly', readonly);
+                    $('#vldModalFieldEventText').prop('readonly', readonly);
+                    $('#vldModalMaskText').prop('readonly', readonly);
+                    $('#vldModalCharTypeText').prop('readonly', readonly);
+                    $('#vldModalSubmitEventText').prop('readonly', readonly);
+                    $('#vldModalMaxValueText').prop('readonly', readonly);
+                    $('#vldModalMinValueText').prop('readonly', readonly);
+                    $('#vldModalJavaClassName').prop('readonly', readonly);
+                },
+
+                _formatDatetime: function (dateStr) {
+                    if (!dateStr || dateStr.length < 14) return dateStr || '';
+                    return dateStr.substring(0, 4) + '/' +
+                           dateStr.substring(4, 6) + '/' +
+                           dateStr.substring(6, 8) + ' ' +
+                           dateStr.substring(8, 10) + ':' +
+                           dateStr.substring(10, 12) + ':' +
+                           dateStr.substring(12, 14);
+                },
+
+                save: function () {
+                    if (!this._validateForm()) return;
+
+                    const formData = {
+                        validationDesc: $('#vldModalValidationDesc').val(),
+                        fieldEventText: $('#vldModalFieldEventText').val(),
+                        submitEventText: $('#vldModalSubmitEventText').val(),
+                        maskText: $('#vldModalMaskText').val(),
+                        charTypeText: $('#vldModalCharTypeText').val(),
+                        maxValueText: $('#vldModalMaxValueText').val(),
+                        minValueText: $('#vldModalMinValueText').val(),
+                        javaClassName: $('#vldModalJavaClassName').val()
+                    };
+
+                    if (this.mode === 'create') {
+                        formData.validationId = $('#vldModalValidationId').val();
+                        $.ajax({
+                            url: API_BASE_URL + '/validations',
+                            method: 'POST',
+                            contentType: 'application/json',
+                            data: JSON.stringify(formData),
+                            success: (response) => {
+                                if (response.success) {
+                                    Toast.success('Validation이 등록되었습니다.');
+                                    this._hideModal();
+                                    if (window.ValidationPage) ValidationPage.load();
+                                } else {
+                                    Toast.error(response.message || 'Validation 등록에 실패했습니다.');
+                                }
+                            },
+                            error: (xhr) => {
+                                Toast.error(xhr.responseJSON?.message || 'Validation 등록에 실패했습니다.');
+                            }
+                        });
+                    } else {
+                        $.ajax({
+                            url: API_BASE_URL + '/validations/' + encodeURIComponent(this.currentValidationId),
+                            method: 'PUT',
+                            contentType: 'application/json',
+                            data: JSON.stringify(formData),
+                            success: (response) => {
+                                if (response.success) {
+                                    Toast.success('Validation이 수정되었습니다.');
+                                    this._hideModal();
+                                    if (window.ValidationPage) ValidationPage.load();
+                                } else {
+                                    Toast.error(response.message || 'Validation 수정에 실패했습니다.');
+                                }
+                            },
+                            error: (xhr) => {
+                                Toast.error(xhr.responseJSON?.message || 'Validation 수정에 실패했습니다.');
+                            }
+                        });
+                    }
+                },
+
+                delete: function () {
+                    Toast.confirm('정말 삭제하시겠습니까?', () => {
+                        $.ajax({
+                            url: API_BASE_URL + '/validations/' + encodeURIComponent(this.currentValidationId),
+                            method: 'DELETE',
+                            success: (response) => {
+                                if (response.success) {
+                                    Toast.success('Validation이 삭제되었습니다.');
+                                    this._hideModal();
+                                    if (window.ValidationPage) ValidationPage.load();
+                                } else {
+                                    Toast.error(response.message || 'Validation 삭제에 실패했습니다.');
+                                }
+                            },
+                            error: (xhr) => {
+                                Toast.error(xhr.responseJSON?.message || 'Validation 삭제에 실패했습니다.');
+                            }
+                        });
+                    });
+                },
+
+                _validateForm: function () {
+                    if (this.mode === 'create') {
+                        const validationId = $('#vldModalValidationId').val().trim();
+                        if (!validationId) {
+                            Toast.warning('키워드를 입력해주세요.');
+                            $('#vldModalValidationId').focus();
+                            return false;
+                        }
+                    }
+                    return true;
+                }
+            };
+
+            $(document).off('click', '#btnValidationSave').on('click', '#btnValidationSave', function () {
+                ValidationModal.save();
+            });
+
+            $(document).off('click', '#btnValidationDelete').on('click', '#btnValidationDelete', function () {
+                ValidationModal.delete();
+            });
+        })();
+    </script>
+</div>
+</body>
+</html>

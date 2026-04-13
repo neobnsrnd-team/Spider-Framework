@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<!-- Monitor Bottom Actions Fragment -->
+<div th:fragment="buttons" class="bottom-actions"
+     th:if="${userAuthorities != null and userAuthorities.contains('MONITOR:W')}">
+    <button class="btn btn-primary btn-sm" id="btnAddMonitor">
+        <i class="bi bi-plus-lg"></i> 등록
+    </button>
+    <button class="btn btn-outline-danger btn-sm ms-2" id="btnDeleteSelected">
+        <i class="bi bi-trash"></i> 선택 삭제
+    </button>
+</div>
+</body>
+</html>

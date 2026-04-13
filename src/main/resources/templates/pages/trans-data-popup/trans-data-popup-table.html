@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<!-- TransDataGeneration Source Table Fragment -->
+<div th:fragment="table">
+    <div class="sp-popup-border-box">
+        <div id="genTrxOnlyWrap" class="d-none align-items-center gap-2 mb-1">
+            <input type="checkbox" id="genTrxOnly" class="form-check-input">
+            <label for="genTrxOnly" class="form-check-label fs-xs">거래 이행시 거래+전문이 아닌 거래만 이행</label>
+        </div>
+        <div style="overflow-x: auto;">
+            <table class="table table-sm table-hover sp-data-grid sp-compact-grid sp-draggable-grid" id="genSourceTable" style="min-width: 500px;">
+                <colgroup>
+                    <col class="col-w-pct-5">
+                    <col class="col-w-pct-25">
+                    <col class="col-w-pct-20">
+                    <col class="col-w-pct-15">
+                    <col class="col-w-pct-35">
+                </colgroup>
+                <thead class="table-light">
+                <tr>
+                    <th class="col-w-pct-5 text-center">
+                        <input type="checkbox" id="genSelectAll" onclick="TransDataGeneration.toggleSelectAll(this)">
+                    </th>
+                    <th id="genColHeader1" data-sort="col1" class="col-w-pct-25">ID</th>
+                    <th id="genColHeader2" data-sort="col2" class="col-w-pct-20">칼럼2</th>
+                    <th id="genColHeader3" data-sort="col3" class="col-w-pct-15">칼럼3</th>
+                    <th id="genColHeader4" data-sort="col4" class="col-w-pct-35">칼럼4</th>
+                </tr>
+                </thead>
+                <tbody id="genSourceTableBody">
+                <!-- JavaScript로 동적 렌더링 -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+    <!-- Pagination -->
+    <div class="pagination-container">
+        <nav>
+            <ul class="pagination pagination-sm" id="genPagination">
+            </ul>
+        </nav>
+        <div class="pagination-info">
+            <span id="genPageInfo">0 - 0 of 0 items</span>
+        </div>
+    </div>
+</div>
+</body>
+</html>

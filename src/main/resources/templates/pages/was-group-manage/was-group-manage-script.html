@@ -1,0 +1,910 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<th:block th:fragment="script">
+    <script>
+        (function() {
+            let currentPage = 1;
+            let totalItems = 0;
+            let itemsPerPage = 10;
+            let currentGroupId = null;
+            let assignedInstances = [];
+            let availableInstances = [];
+            let sortBy = null;
+            let sortDirection = null;
+            let allGroups = [];
+            let filteredGroups = [];
+            const groupCountCache = {};
+
+            $(document).ready(function() {
+                loadWasGroups();
+
+                $('#limitRows').change(function() {
+                    itemsPerPage = parseInt($(this).val()) || 20;
+                    currentPage = 1;
+                    loadWasGroups();
+                });
+
+                const refreshBtn = document.getElementById('btnRefresh');
+                if (refreshBtn) {
+                    refreshBtn.addEventListener('click', () => loadWasGroups());
+                }
+
+                $('#wasGroupTable thead th[data-sort]').each(function() {
+                    const $th = $(this);
+                    $th.addClass('sortable');
+                    $th.on('click', function() {
+                        const key = $th.data('sort');
+                        if (!key) return;
+                        if (sortBy === key) {
+                            if (sortDirection === 'ASC') {
+                                sortDirection = 'DESC';
+                            } else if (sortDirection === 'DESC') {
+                                sortBy = null;
+                                sortDirection = null;
+                            } else {
+                                sortDirection = 'ASC';
+                            }
+                        } else {
+                            sortBy = key;
+                            sortDirection = 'ASC';
+                        }
+                        updateSortIndicators();
+                        // 정렬 조건이 변경되었으므로 서버에서 다시 데이터 로드
+                        currentPage = 1;
+                        loadWasGroups();
+                    });
+                });
+            });
+
+            function loadWasGroups() {
+                // 검색 조건 수집
+                const groupName = $('#groupName').val() || '';
+                const groupId = $('#groupId').val() || '';
+                const groupDesc = $('#groupDesc').val() || '';
+
+                // 페이지네이션 파라미터 구성
+                const params = new URLSearchParams({
+                    page: String(currentPage),
+                    size: String(itemsPerPage)
+                });
+
+                if (groupName) params.set('wasGroupName', groupName);
+                if (groupId) params.set('wasGroupId', groupId);
+                if (groupDesc) params.set('wasGroupDesc', groupDesc);
+                if (sortBy) params.set('sortBy', sortBy);
+                if (sortDirection) params.set('sortDirection', sortDirection);
+
+                // 서버 사이드 페이지네이션 API 호출
+                $.ajax({
+                    url: `/api/was/group/page?${params.toString()}`,
+                    method: 'GET',
+                    success: function(response) {
+                        const pageData = response.data || response;
+                        allGroups = pageData.content || [];
+                        totalItems = pageData.totalElements || 0;
+                        filteredGroups = allGroups;
+
+                        // 개수 값은 표시를 위해 필요하므로 별도로 채운다
+                        ensureGroupCounts(filteredGroups).finally(renderPage);
+                    },
+                    error: function(xhr) {
+                        console.error('Failed to load WAS groups:', xhr);
+                        const tbody = $('#wasGroupTableBody');
+                        tbody.empty();
+                        tbody.append(`
+                            <tr>
+                                <td colspan="4" class="text-center py-4 text-body-secondary">
+                                    데이터를 불러오는데 실패했습니다.
+                                </td>
+                            </tr>
+                        `);
+                    }
+                });
+            }
+
+            function applyFiltersAndRender() {
+                // 검색 조건이 변경되었으므로 서버에서 다시 데이터 로드
+                currentPage = 1;
+                loadWasGroups();
+            }
+
+            function matchSearch(value, keyword, type) {
+                if (!keyword) return true;
+                const source = String(value || '').toLowerCase();
+                const term = String(keyword || '').toLowerCase();
+                switch (type) {
+                    case 'equal':
+                        return source === term;
+                    case 'start':
+                        return source.startsWith(term);
+                    case 'like':
+                    default:
+                        return source.includes(term);
+                }
+            }
+
+            function renderPage() {
+                // 서버 사이드 정렬 결과 그대로 사용
+                renderWasGroupTable(filteredGroups);
+                renderPagination();
+                updateSortIndicators();
+            }
+
+            function getSortValue(group, key) {
+                if (!group) return '';
+                if (key === 'instanceCount') {
+                    return groupCountCache[group.wasGroupId] ?? 0;
+                }
+                return group[key] ?? '';
+            }
+
+            function compareValues(aVal, bVal) {
+                const aEmpty = aVal === null || aVal === undefined || aVal === '';
+                const bEmpty = bVal === null || bVal === undefined || bVal === '';
+                if (aEmpty && bEmpty) return 0;
+                if (aEmpty) return 1;
+                if (bEmpty) return -1;
+                if (typeof aVal === 'number' && typeof bVal === 'number') {
+                    return aVal - bVal;
+                }
+                return String(aVal).localeCompare(String(bVal), 'ko', { numeric: true, sensitivity: 'base' });
+            }
+
+            function updateSortIndicators() {
+                const headers = $('#wasGroupTable thead th.sortable');
+                headers.removeClass('sort-asc sort-desc');
+                if (!sortBy || !sortDirection) return;
+                headers.filter(`[data-sort="${sortBy}"]`)
+                    .addClass(sortDirection === 'ASC' ? 'sort-asc' : 'sort-desc');
+            }
+
+            function ensureGroupCounts(groups) {
+                const pending = (groups || []).filter(group => group && group.wasGroupId && groupCountCache[group.wasGroupId] === undefined);
+                if (!pending.length) return Promise.resolve();
+                const requests = pending.map(group => {
+                    return $.ajax({
+                        url: `/api/was/group/${group.wasGroupId}/instances/count`,
+                        method: 'GET'
+                    }).then(response => {
+                        const count = response.data || 0;
+                        groupCountCache[group.wasGroupId] = count;
+                    }).catch(() => {
+                        groupCountCache[group.wasGroupId] = 0;
+                    });
+                });
+                return Promise.all(requests);
+            }
+
+            function renderWasGroupTable(groups) {
+                const tbody = $('#wasGroupTableBody');
+                tbody.empty();
+
+                if (!groups || groups.length === 0) {
+                    tbody.append(`
+                        <tr>
+                            <td colspan="4" class="text-center py-4 text-body-secondary">
+                                조회된 데이터가 없습니다.
+                            </td>
+                        </tr>
+                    `);
+                    return;
+                }
+
+                groups.forEach(group => {
+                    const row = $('<tr class="cursor-pointer"></tr>');
+                    row.click(function() {
+                        viewGroupDetail(group.wasGroupId);
+                    });
+                    // table-hover 클래스가 hover 스타일 처리
+                    
+                    row.append(`<td>${group.wasGroupId || ''}</td>`);
+                    row.append(`<td>${group.wasGroupName || ''}</td>`);
+                    row.append(`<td>${group.wasGroupDesc || ''}</td>`);
+                    
+                    // 인스턴스 개수 표시
+                    const cachedCount = groupCountCache[group.wasGroupId];
+                    const countTd = $('<td class="text-center">-</td>');
+                    if (cachedCount !== undefined) {
+                        countTd.text(cachedCount);
+                    }
+                    row.append(countTd);
+                    
+                    if (cachedCount === undefined) {
+                        $.ajax({
+                            url: `/api/was/group/${group.wasGroupId}/instances/count`,
+                            method: 'GET',
+                            success: function(response) {
+                                const count = response.data || 0;
+                                groupCountCache[group.wasGroupId] = count;
+                                countTd.text(count);
+                            },
+                            error: function() {
+                                groupCountCache[group.wasGroupId] = 0;
+                                countTd.text('0');
+                            }
+                        });
+                    }
+                    
+                    tbody.append(row);
+                });
+            }
+
+            function renderPagination() {
+                const totalPages = Math.ceil(totalItems / itemsPerPage);
+                const pagination = $('#pagination');
+                pagination.empty();
+                currentPage = totalPages === 0 ? 1 : Math.min(Math.max(currentPage, 1), totalPages);
+
+                const startItem = totalItems === 0 ? 0 : (currentPage - 1) * itemsPerPage + 1;
+                const endItem = totalItems === 0 ? 0 : Math.min(currentPage * itemsPerPage, totalItems);
+                const pageInfo = $('#pageInfo');
+                if (pageInfo.length) {
+                    pageInfo.text(`${startItem} - ${endItem} of ${totalItems} items`);
+                }
+
+                const maxButtons = 5;
+                let startPage = Math.max(1, currentPage - Math.floor(maxButtons / 2));
+                let endPage = Math.min(totalPages, startPage + maxButtons - 1);
+
+                if (endPage - startPage + 1 < maxButtons) {
+                    startPage = Math.max(1, endPage - maxButtons + 1);
+                }
+
+                let html = `
+                    <li class="page-item ${currentPage === 1 ? 'disabled' : ''}">
+                        <a class="page-link" href="#" onclick="FWKM0190.changePage(1); return false;">
+                            <i class="bi bi-chevron-double-left"></i>
+                        </a>
+                    </li>
+                    <li class="page-item ${currentPage === 1 ? 'disabled' : ''}">
+                        <a class="page-link" href="#" onclick="FWKM0190.changePage(${currentPage - 1}); return false;">
+                            <i class="bi bi-chevron-left"></i>
+                        </a>
+                    </li>
+                `;
+
+                for (let i = startPage; i <= endPage; i++) {
+                    html += `
+                        <li class="page-item ${i === currentPage ? 'active' : ''}">
+                            <a class="page-link" href="#" onclick="FWKM0190.changePage(${i}); return false;">${i}</a>
+                        </li>
+                    `;
+                }
+
+                html += `
+                    <li class="page-item ${currentPage === totalPages || totalPages === 0 ? 'disabled' : ''}">
+                        <a class="page-link" href="#" onclick="FWKM0190.changePage(${currentPage + 1}); return false;">
+                            <i class="bi bi-chevron-right"></i>
+                        </a>
+                    </li>
+                    <li class="page-item ${currentPage === totalPages || totalPages === 0 ? 'disabled' : ''}">
+                        <a class="page-link" href="#" onclick="FWKM0190.changePage(${totalPages}); return false;">
+                            <i class="bi bi-chevron-double-right"></i>
+                        </a>
+                    </li>
+                `;
+
+                pagination.html(html);
+            }
+
+            function changePage(page) {
+                const totalPages = Math.ceil(totalItems / itemsPerPage);
+                if (page < 1 || page > totalPages) return;
+                currentPage = page;
+                loadWasGroups();
+            }
+
+            function viewGroupDetail(groupId) {
+                console.log('View group detail:', groupId);
+                currentGroupId = groupId; // 수정 모드
+                
+                // Show modal
+                showGroupModal();
+                
+                // Load group data
+                $.ajax({
+                    url: `/api/was/group/${groupId}`,
+                    method: 'GET',
+                    success: function(response) {
+                        const group = response.data || response;
+                        const readOnly = !hasWasGroupWrite;
+                        $('#modalGroupId').val(group.wasGroupId || '').prop('readonly', true); // 수정은 ID readonly
+                        $('#modalGroupName').val(group.wasGroupName || '').prop('readonly', readOnly);
+                        $('#modalGroupDesc').val(group.wasGroupDesc || '').prop('readonly', readOnly);
+                    },
+                    error: function(xhr) {
+                        console.error('Failed to load group:', xhr);
+                        Toast.error('그룹 정보를 불러오는데 실패했습니다.');
+                    }
+                });
+                
+                // Load instances
+                loadGroupInstances(groupId);
+            }
+
+            function showGroupModal() {
+                if ($('#wasGroupModal').length === 0) {
+                    createModalHTML();
+                }
+                const modal = bootstrap.Modal.getOrCreateInstance($('#wasGroupModal')[0]);
+                modal.show();
+            }
+            
+            function showCreateGroupModal() {
+                console.log('Creating new WAS group');
+                
+                // Create modal if not exists
+                if ($('#wasGroupModal').length === 0) {
+                    createModalHTML();
+                }
+                
+                // Clear form
+                currentGroupId = null;
+                $('#modalGroupId').val('').prop('readonly', false); // 신규는 ID 입력 가능
+                $('#modalGroupName').val('');
+                $('#modalGroupDesc').val('');
+                
+                // Clear instances
+                assignedInstances = [];
+                availableInstances = [];
+                
+                const modal = bootstrap.Modal.getOrCreateInstance($('#wasGroupModal')[0]);
+                modal.show();
+
+                // Load all available instances
+                $.ajax({
+                    url: '/api/was/instance',
+                    method: 'GET',
+                    success: function(response) {
+                        availableInstances = response.data || response.content || response || [];
+                        renderAssignedInstances(); // Empty list
+                        renderAvailableInstances(); // All instances
+                    },
+                    error: function(xhr) {
+                        console.error('Failed to load instances:', xhr);
+                        renderAssignedInstances();
+                        renderAvailableInstances();
+                    }
+                });
+            }
+            
+            function createModalHTML() {
+                const modalHTML = `
+                    <div id="wasGroupModal" class="modal fade" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
+                        <div class="modal-dialog modal-dialog-centered modal-xl">
+                            <div class="modal-content">
+
+                        <!-- Header -->
+                        <div class="modal-header py-2">
+                            <span>WAS 그룹 관리</span>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+
+                        <!-- Content -->
+                        <div class="modal-body">
+
+                            <!-- WAS 그룹 상세 -->
+                            <div class="card border p-3 mb-3">
+                                <div class="d-flex align-items-center gap-2 text-danger mb-3">
+                                    <i class="bi bi-exclamation-circle-fill"></i>
+                                    <span class="fw-semibold">WAS 그룹 상세</span>
+                                </div>
+                                <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
+                                    <div class="col-auto flex-grow-1">
+                                        <label class="form-label mb-0 small fw-medium">WAS 그룹 ID</label>
+                                        <input type="text" id="modalGroupId" readonly class="form-control form-control-sm">
+                                    </div>
+                                    <div class="col-auto flex-grow-1">
+                                        <label class="form-label mb-0 small fw-medium">WAS 그룹명</label>
+                                        <input type="text" id="modalGroupName" class="form-control form-control-sm">
+                                    </div>
+                                </div>
+                                <div>
+                                    <label class="form-label mb-0 small fw-medium">WAS 그룹설명</label>
+                                    <textarea id="modalGroupDesc" rows="3" class="form-control form-control-sm"></textarea>
+                                </div>
+                            </div>
+
+                            <!-- WAS 인스턴스 정보 -->
+                            <div class="card border p-3">
+                                <div class="d-flex align-items-center gap-2 text-danger mb-3">
+                                    <i class="bi bi-exclamation-circle-fill"></i>
+                                    <span class="fw-semibold">WAS 인스턴스 정보</span>
+                                </div>
+
+                                <div class="bg-body-tertiary border rounded p-2 mb-3 fw-semibold text-primary small">
+                                    실행된 WAS INSTANCE 등록
+                                </div>
+
+                                <div class="sp-was-instance-grid">
+
+                                    <!-- Left: Assigned Instances -->
+                                    <div>
+                                        <div class="sp-was-instance-list">
+                                            <table class="table table-sm table-hover sp-data-grid mb-0">
+                                                <thead class="table-light">
+                                                    <tr>
+                                                        <th>WAS INSTANCE ID</th>
+                                                        <th>인스턴스 명</th>
+                                                        <th>IP</th>
+                                                        <th>종류</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody id="assignedInstancesBody" class="sp-clickable-rows">
+                                                    <tr>
+                                                        <td colspan="4" class="text-center py-4 text-body-secondary">인스턴스를 선택하세요</td>
+                                                    </tr>
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+
+                                    <!-- Center: Arrow Buttons -->
+                                    <div class="sp-was-arrow-column">
+                                        ${hasWasGroupWrite ? `
+                                        <button onclick="FWKM0190.removeInstances()" class="btn btn-outline-danger btn-sm px-3 py-2 fw-bold fs-5">→</button>
+                                        <button onclick="FWKM0190.addInstances()" class="btn btn-outline-primary btn-sm px-3 py-2 fw-bold fs-5">←</button>
+                                        ` : ''}
+                                    </div>
+
+                                    <!-- Right: Available Instances -->
+                                    <div>
+                                        <div class="sp-was-instance-list">
+                                            <table class="table table-sm table-hover sp-data-grid mb-0">
+                                                <thead class="table-light">
+                                                    <tr>
+                                                        <th>WAS INSTANCE ID</th>
+                                                        <th>IP</th>
+                                                        <th>종류</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody id="availableInstancesBody" class="sp-clickable-rows">
+                                                    <tr>
+                                                        <td colspan="3" class="text-center py-4 text-body-secondary">로딩 중...</td>
+                                                    </tr>
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Footer -->
+                        <div class="modal-footer py-2 modal-actions">
+                            <div class="modal-actions-left">
+                                ${hasWasGroupWrite ? `<button type="button" class="btn btn-danger btn-sm" onclick="FWKM0190.deleteGroup()">
+                                    <i class="bi bi-trash"></i> 삭제
+                                </button>` : ''}
+                            </div>
+                            <div class="modal-actions-right">
+                                <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">
+                                    <i class="bi bi-x-lg"></i> 닫기
+                                </button>
+                                ${hasWasGroupWrite ? `<button type="button" class="btn btn-primary btn-sm" onclick="FWKM0190.saveGroup()">
+                                    <i class="bi bi-floppy"></i> 저장
+                                </button>` : ''}
+                            </div>
+                        </div>
+
+                            </div>
+                        </div>
+                    </div>
+                `;
+                $('#wasGroupModalContainer').html(modalHTML);
+            }
+
+            function closeGroupModal() {
+                const modalEl = document.getElementById('wasGroupModal');
+                if (modalEl) {
+                    const modal = bootstrap.Modal.getInstance(modalEl);
+                    if (modal) modal.hide();
+                }
+                currentGroupId = null;
+                assignedInstances = [];
+                availableInstances = [];
+            }
+
+            function loadGroupInstances(groupId) {
+                console.log('Loading instances for group:', groupId);
+                
+                // Load assigned instances (left side) - 그룹에 속한 인스턴스 (전체 정보)
+                $.ajax({
+                    url: `/api/was/group/${groupId}/instances/details`,
+                    method: 'GET',
+                    success: function(response) {
+                        console.log('Assigned instances response:', response);
+                        assignedInstances = response.data || response || [];
+                        console.log('Assigned instances:', assignedInstances);
+                        renderAssignedInstances();
+                        
+                        // After loading assigned, load available
+                        loadAvailableInstances();
+                    },
+                    error: function(xhr) {
+                        console.error('Failed to load assigned instances:', xhr);
+                        // Even if error, try to load all instances
+                        assignedInstances = [];
+                        renderAssignedInstances();
+                        loadAvailableInstances();
+                    }
+                });
+            }
+            
+            function loadAvailableInstances() {
+                // Load all instances, then filter out assigned ones
+                $.ajax({
+                    url: '/api/was/instance',
+                    method: 'GET',
+                    success: function(response) {
+                        console.log('All instances response:', response);
+                        const allInstances = response.data || response.content || response || [];
+                        console.log('All instances:', allInstances);
+                        
+                        // Helper function
+                        function getValue(obj, ...keys) {
+                            for (let key of keys) {
+                                if (obj[key] !== undefined && obj[key] !== null) {
+                                    return obj[key];
+                                }
+                            }
+                            return null;
+                        }
+                        
+                        // 대문자/소문자 키 모두 지원해서 필터링
+                        const assignedIds = assignedInstances.map(i => 
+                            getValue(i, 'instanceId', 'INSTANCEID', 'instanceid', 'INSTANCE_ID')
+                        );
+                        console.log('Assigned IDs to filter:', assignedIds);
+                        
+                        // Filter: 우측에는 그룹에 속하지 않은 인스턴스만
+                        availableInstances = allInstances.filter(inst => {
+                            const instId = getValue(inst, 'instanceId', 'INSTANCEID', 'instanceid', 'INSTANCE_ID');
+                            return !assignedIds.includes(instId);
+                        });
+                        
+                        console.log('Available instances (filtered):', availableInstances);
+                        renderAvailableInstances();
+                    },
+                    error: function(xhr) {
+                        console.error('Failed to load available instances:', xhr);
+                        availableInstances = [];
+                        renderAvailableInstances();
+                    }
+                });
+            }
+
+            function renderAssignedInstances() {
+                console.log('==== renderAssignedInstances called ====');
+                console.log('Assigned instances count:', assignedInstances.length);
+                console.log('Assigned instances data:', assignedInstances);
+                
+                const tbody = $('#assignedInstancesBody');
+                tbody.empty();
+                
+                if (assignedInstances.length === 0) {
+                    tbody.append(`
+                        <tr>
+                            <td colspan="4" class="text-center py-4 text-body-secondary">
+                                등록된 인스턴스가 없습니다
+                            </td>
+                        </tr>
+                    `);
+                    return;
+                }
+                
+                assignedInstances.forEach(inst => {
+                    console.log('Rendering assigned instance:', inst);
+                    
+                    // Helper function for case-insensitive key access
+                    function getValue(obj, ...keys) {
+                        for (let key of keys) {
+                            if (obj[key] !== undefined && obj[key] !== null) {
+                                return obj[key];
+                            }
+                        }
+                        return null;
+                    }
+                    
+                    // 모든 가능한 키 형태 지원
+                    const instanceId = getValue(inst, 'instanceId', 'INSTANCEID', 'instanceid', 'INSTANCE_ID') || '-';
+                    const instanceName = getValue(inst, 'instanceName', 'INSTANCENAME', 'instancename', 'INSTANCE_NAME') || '-';
+                    const ip = getValue(inst, 'ip', 'IP') || '-';
+                    const instanceType = getValue(inst, 'instanceType', 'INSTANCETYPE', 'instancetype', 'INSTANCE_TYPE') || '';
+                    
+                    // instanceType 매핑
+                    let typeText = instanceType;
+                    if (typeText === '1') typeText = 'WEB';
+                    else if (typeText === '2') typeText = 'AP';
+                    else if (typeText === '3') typeText = '통합';
+                    else if (!typeText) typeText = '-';
+                    
+                    console.log('Extracted values:', {instanceId, instanceName, ip, typeText});
+                    
+                    const row = $(`
+                        <tr class="sp-was-inst-row" data-instance-id="${instanceId}">
+                            <td>${instanceId}</td>
+                            <td class="text-start">${instanceName}</td>
+                            <td>${ip}</td>
+                            <td>${typeText}</td>
+                        </tr>
+                    `);
+
+                    row.click(function() {
+                        $(this).toggleClass('selected');
+                    });
+
+                    tbody.append(row);
+                });
+
+                console.log('Assigned instances table rendered successfully');
+            }
+
+            function renderAvailableInstances() {
+                console.log('==== renderAvailableInstances called ====');
+                console.log('Available instances count:', availableInstances.length);
+                console.log('Available instances data:', availableInstances);
+                
+                const tbody = $('#availableInstancesBody');
+                tbody.empty();
+                
+                if (availableInstances.length === 0) {
+                    tbody.append(`
+                        <tr>
+                            <td colspan="3" class="text-center py-4 text-body-secondary">
+                                사용 가능한 인스턴스가 없습니다
+                            </td>
+                        </tr>
+                    `);
+                    return;
+                }
+                
+                availableInstances.forEach(inst => {
+                    console.log('Rendering available instance:', inst);
+                    
+                    // Helper function
+                    function getValue(obj, ...keys) {
+                        for (let key of keys) {
+                            if (obj[key] !== undefined && obj[key] !== null) {
+                                return obj[key];
+                            }
+                        }
+                        return null;
+                    }
+                    
+                    const instanceId = getValue(inst, 'instanceId', 'INSTANCEID', 'instanceid', 'INSTANCE_ID') || '-';
+                    const ip = getValue(inst, 'ip', 'IP') || '-';
+                    const instanceType = getValue(inst, 'instanceType', 'INSTANCETYPE', 'instancetype', 'INSTANCE_TYPE') || '';
+                    
+                    // instanceType 매핑
+                    let typeText = instanceType;
+                    if (typeText === '1') typeText = 'WEB';
+                    else if (typeText === '2') typeText = 'AP';
+                    else if (typeText === '3') typeText = '통합';
+                    else if (!typeText) typeText = '-';
+                    
+                    const row = $(`
+                        <tr class="sp-was-inst-row" data-instance-id="${instanceId}">
+                            <td>${instanceId}</td>
+                            <td>${ip}</td>
+                            <td>${typeText}</td>
+                        </tr>
+                    `);
+
+                    row.click(function() {
+                        $(this).toggleClass('selected');
+                    });
+                    
+                    tbody.append(row);
+                });
+                
+                console.log('Available instances table rendered successfully');
+            }
+
+            function addInstances() {
+                // 우측 → 좌측으로 이동 (그룹에 추가)
+                const selected = $('#availableInstancesBody tr.selected');
+                if (selected.length === 0) {
+                    Toast.warning('추가할 인스턴스를 선택해주세요.');
+                    return;
+                }
+                
+                console.log('Adding instances to group');
+                selected.each(function() {
+                    const instanceId = $(this).data('instance-id');
+                    console.log('Adding:', instanceId);
+                    
+                    // Helper function
+                    function getValue(obj, ...keys) {
+                        for (let key of keys) {
+                            if (obj[key] !== undefined && obj[key] !== null) {
+                                return obj[key];
+                            }
+                        }
+                        return null;
+                    }
+                    
+                    const instance = availableInstances.find(i => {
+                        const id = getValue(i, 'instanceId', 'INSTANCEID', 'instanceid', 'INSTANCE_ID');
+                        return id === instanceId;
+                    });
+                    
+                    if (instance) {
+                        assignedInstances.push(instance);
+                        availableInstances = availableInstances.filter(i => {
+                            const id = getValue(i, 'instanceId', 'INSTANCEID', 'instanceid', 'INSTANCE_ID');
+                            return id !== instanceId;
+                        });
+                    }
+                });
+                
+                console.log('After add - Assigned:', assignedInstances.length, 'Available:', availableInstances.length);
+                renderAssignedInstances();
+                renderAvailableInstances();
+            }
+
+            function removeInstances() {
+                // 좌측 → 우측으로 이동 (그룹에서 제거)
+                const selected = $('#assignedInstancesBody tr.selected');
+                if (selected.length === 0) {
+                    Toast.warning('제거할 인스턴스를 선택해주세요.');
+                    return;
+                }
+                
+                console.log('Removing instances from group');
+                selected.each(function() {
+                    const instanceId = $(this).data('instance-id');
+                    console.log('Removing:', instanceId);
+                    
+                    // Helper function
+                    function getValue(obj, ...keys) {
+                        for (let key of keys) {
+                            if (obj[key] !== undefined && obj[key] !== null) {
+                                return obj[key];
+                            }
+                        }
+                        return null;
+                    }
+                    
+                    const instance = assignedInstances.find(i => {
+                        const id = getValue(i, 'instanceId', 'INSTANCEID', 'instanceid', 'INSTANCE_ID');
+                        return id === instanceId;
+                    });
+                    
+                    if (instance) {
+                        availableInstances.push(instance);
+                        assignedInstances = assignedInstances.filter(i => {
+                            const id = getValue(i, 'instanceId', 'INSTANCEID', 'instanceid', 'INSTANCE_ID');
+                            return id !== instanceId;
+                        });
+                    }
+                });
+                
+                console.log('After remove - Assigned:', assignedInstances.length, 'Available:', availableInstances.length);
+                renderAssignedInstances();
+                renderAvailableInstances();
+            }
+
+            function saveGroup() {
+                const groupId = $('#modalGroupId').val();
+                const groupName = $('#modalGroupName').val();
+                const groupDesc = $('#modalGroupDesc').val();
+                
+                if (!groupId) {
+                    Toast.warning('WAS 그룹 ID를 입력해주세요.');
+                    return;
+                }
+                
+                if (!groupName) {
+                    Toast.warning('WAS 그룹명을 입력해주세요.');
+                    return;
+                }
+                
+                console.log('Saving group:', groupId);
+                console.log('Assigned instances:', assignedInstances);
+                
+                // Helper function
+                function getValue(obj, ...keys) {
+                    for (let key of keys) {
+                        if (obj[key] !== undefined && obj[key] !== null) {
+                            return obj[key];
+                        }
+                    }
+                    return null;
+                }
+                
+                const data = {
+                    wasGroupId: groupId,
+                    wasGroupName: groupName,
+                    wasGroupDesc: groupDesc,
+                    instanceIds: assignedInstances.map(i => 
+                        getValue(i, 'instanceId', 'INSTANCEID', 'instanceid', 'INSTANCE_ID')
+                    )
+                };
+                
+                console.log('Save data:', data);
+                
+                // 신규 생성인지 수정인지 판단
+                const isNew = currentGroupId === null;
+                const url = isNew ? '/api/was/group' : `/api/was/group/${groupId}`;
+                const method = isNew ? 'POST' : 'PUT';
+                
+                $.ajax({
+                    url: url,
+                    method: method,
+                    contentType: 'application/json',
+                    data: JSON.stringify(data),
+                    success: function(response) {
+                        console.log('Save success:', response);
+                        Toast.success(isNew ? '등록되었습니다.' : '저장되었습니다.');
+                        closeGroupModal();
+                        loadWasGroups();
+                    },
+                    error: function(xhr) {
+                        console.error('Failed to save group:', xhr);
+                        console.error('Response:', xhr.responseText);
+                        Toast.error('저장에 실패했습니다: ' + (xhr.responseJSON?.message || '알 수 없는 오류'));
+                    }
+                });
+            }
+
+            function deleteGroup() {
+                const groupId = $('#modalGroupId').val();
+
+                Toast.confirm('정말 삭제하시겠습니까?', function() {
+                    $.ajax({
+                        url: `/api/was/group/${groupId}`,
+                        method: 'DELETE',
+                        success: function() {
+                            Toast.success('삭제되었습니다.');
+                            closeGroupModal();
+                            loadWasGroups();
+                        },
+                        error: function(xhr) {
+                            console.error('Failed to delete group:', xhr);
+                            Toast.error('삭제에 실패했습니다.');
+                        }
+                    });
+                });
+            }
+
+            // Global namespace for this page
+            window.FWKM0190 = {
+                loadWasGroups: loadWasGroups,
+                changePage: changePage,
+                viewGroupDetail: viewGroupDetail,
+                showGroupModal: showGroupModal,
+                showCreateGroupModal: showCreateGroupModal,
+                closeGroupModal: closeGroupModal,
+                addInstances: addInstances,
+                removeInstances: removeInstances,
+                saveGroup: saveGroup,
+                deleteGroup: deleteGroup,
+                exportExcel: function() {
+                    const params = new URLSearchParams();
+                    const groupName = $('#groupName').val() || '';
+                    const groupId = $('#groupId').val() || '';
+                    const groupDesc = $('#groupDesc').val() || '';
+                    if (groupName) params.set('wasGroupName', groupName);
+                    if (groupId) params.set('wasGroupId', groupId);
+                    if (groupDesc) params.set('wasGroupDesc', groupDesc);
+                    if (sortBy) params.set('sortBy', sortBy);
+                    if (sortDirection) params.set('sortDirection', sortDirection);
+                    const qs = params.toString();
+                    window.location.href = '/api/was/group/export' + (qs ? '?' + qs : '');
+                },
+                printList: function() {
+                    const columns = [
+                        { key: 'wasGroupId', label: 'WAS그룹ID' },
+                        { key: 'wasGroupName', label: 'WAS그룹명' },
+                        { key: 'wasGroupDesc', label: '설명' }
+                    ];
+                    PrintUtil.print({ title: 'WAS 그룹 목록', columns: columns, data: filteredGroups });
+                }
+            };
+        })();
+    </script>
+</th:block>
+</body>
+</html>

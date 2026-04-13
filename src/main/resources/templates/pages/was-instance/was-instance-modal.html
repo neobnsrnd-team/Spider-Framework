@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<div th:fragment="modal">
+    <!-- Instance Create/Edit Modal -->
+    <div class="modal fade" id="instanceModal" tabindex="-1" role="dialog">
+        <div class="modal-dialog modal-lg" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="instanceModalTitle">WAS 인스턴스 등록</h5>
+                    <button type="button" class="close" data-dismiss="modal">
+                        <span>&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <form id="instanceForm">
+                        <input type="hidden" id="modalMode" value="create">
+                        <input type="hidden" id="originalInstanceId" value="">
+
+                        <div class="form-group row">
+                            <label class="col-sm-3 col-form-label required">인스턴스 ID</label>
+                            <div class="col-sm-9">
+                                <input type="text" class="form-control" id="instanceId" 
+                                       maxlength="4" required>
+                                <small class="form-text text-muted">최대 4자</small>
+                            </div>
+                        </div>
+
+                        <div class="form-group row">
+                            <label class="col-sm-3 col-form-label">인스턴스명</label>
+                            <div class="col-sm-9">
+                                <input type="text" class="form-control" id="instanceName" 
+                                       maxlength="50">
+                                <small class="form-text text-muted">최대 50자</small>
+                            </div>
+                        </div>
+
+                        <div class="form-group row">
+                            <label class="col-sm-3 col-form-label">인스턴스 설명</label>
+                            <div class="col-sm-9">
+                                <textarea class="form-control" id="instanceDesc" 
+                                          rows="3" maxlength="200"></textarea>
+                                <small class="form-text text-muted">최대 200자</small>
+                            </div>
+                        </div>
+
+                        <div class="form-group row">
+                            <label class="col-sm-3 col-form-label">WAS 설정 ID</label>
+                            <div class="col-sm-9">
+                                <input type="text" class="form-control" id="wasConfigId" 
+                                       maxlength="10">
+                                <small class="form-text text-muted">최대 10자</small>
+                            </div>
+                        </div>
+
+                        <div class="form-group row">
+                            <label class="col-sm-3 col-form-label">인스턴스 구분</label>
+                            <div class="col-sm-9">
+                                <input type="text" class="form-control" id="instanceType" 
+                                       maxlength="1">
+                                <small class="form-text text-muted">1자</small>
+                            </div>
+                        </div>
+
+                        <div class="form-group row">
+                            <label class="col-sm-3 col-form-label">IP 주소</label>
+                            <div class="col-sm-9">
+                                <input type="text" class="form-control" id="ip" 
+                                       maxlength="15" placeholder="예: 192.168.1.1">
+                                <small class="form-text text-muted">IPv4 형식 (최대 15자)</small>
+                            </div>
+                        </div>
+
+                        <div class="form-group row">
+                            <label class="col-sm-3 col-form-label">포트 번호</label>
+                            <div class="col-sm-9">
+                                <input type="text" class="form-control" id="port" 
+                                       maxlength="5" placeholder="예: 8080">
+                                <small class="form-text text-muted">숫자만 입력 (최대 5자)</small>
+                            </div>
+                        </div>
+
+                        <div class="form-group row">
+                            <label class="col-sm-3 col-form-label">운영 모드</label>
+                            <div class="col-sm-9">
+                                <select class="form-control" id="operModeType">
+                                    <option value="">선택</option>
+                                    <option value="T">테스트(T)</option>
+                                    <option value="R">운영(R)</option>
+                                    <option value="D">개발(D)</option>
+                                </select>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">
+                        <i class="bi bi-x-lg"></i> 취소
+                    </button>
+                    <button type="button" class="btn btn-primary" onclick="saveInstance()">
+                        <i class="bi bi-floppy"></i> 저장
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+</body>
+</html>

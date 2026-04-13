@@ -1,0 +1,98 @@
+<configuration>
+    <property name="LOG_PATTERN"
+              value="%d{yyyy-MM-dd HH:mm:ss.SSS} [%X{traceId:-SYSTEM}] [%thread] %-5level %logger{36} - %msg%n"/>
+
+    <springProperty name="LOG_DEST_CONSOLE" source="log.dest.console" defaultValue="true"/>
+    <springProperty name="LOG_DEST_H2" source="log.dest.h2" defaultValue="false"/>
+    <springProperty name="LOG_DEST_LOGSTASH" source="log.dest.logstash" defaultValue="false"/>
+
+    <!-- Console Appender: LOG_DEST_CONSOLE=false 시 DenyAllFilter로 비활성화 -->
+    <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+        <if condition='!"true".equals(property("LOG_DEST_CONSOLE"))'>
+            <then>
+                <filter class="ch.qos.logback.core.filter.DenyAllFilter"/>
+            </then>
+        </if>
+        <encoder>
+            <pattern>${LOG_PATTERN}</pattern>
+        </encoder>
+    </appender>
+
+    <!-- CI 환경: Console 로그만 사용 -->
+    <springProfile name="ci">
+        <root level="INFO">
+            <appender-ref ref="CONSOLE"/>
+        </root>
+    </springProfile>
+
+    <!-- 비-CI 환경 -->
+    <springProfile name="!ci">
+
+        <!-- H2 DBAppender: LOG_DEST_H2=true 일 때만 활성 -->
+        <if condition='property("LOG_DEST_H2").equals("true")'>
+            <then>
+                <appender name="DB" class="ch.qos.logback.classic.db.DBAppender">
+                    <connectionSource class="ch.qos.logback.core.db.DriverManagerConnectionSource">
+                        <driverClass>org.h2.Driver</driverClass>
+                        <url>jdbc:h2:file:./logs/h2/logdb;AUTO_SERVER=TRUE;INIT=RUNSCRIPT FROM 'classpath:db/h2/schema-log.sql'</url>
+                        <user>sa</user>
+                        <password></password>
+                    </connectionSource>
+                </appender>
+
+                <appender name="ASYNC_DB" class="ch.qos.logback.classic.AsyncAppender">
+                    <appender-ref ref="DB"/>
+                    <queueSize>512</queueSize>
+                    <discardingThreshold>0</discardingThreshold>
+                    <includeCallerData>true</includeCallerData>
+                </appender>
+            </then>
+        </if>
+
+        <!-- Logstash TCP Appender: LOG_DEST_LOGSTASH=true 일 때만 활성 -->
+        <if condition='property("LOG_DEST_LOGSTASH").equals("true")'>
+            <then>
+                <appender name="LOGSTASH" class="net.logstash.logback.appender.LogstashTcpSocketAppender">
+                    <destination>${LOGSTASH_HOST:-localhost}:${LOGSTASH_PORT:-5000}</destination>
+                    <encoder class="net.logstash.logback.encoder.LogstashEncoder">
+                        <includeMdcKeyName>traceId</includeMdcKeyName>
+                        <customFields>{"application":"spider-admin"}</customFields>
+                    </encoder>
+                    <reconnectionDelay>10 seconds</reconnectionDelay>
+                </appender>
+
+                <appender name="ASYNC_LOGSTASH" class="ch.qos.logback.classic.AsyncAppender">
+                    <appender-ref ref="LOGSTASH"/>
+                    <queueSize>512</queueSize>
+                    <discardingThreshold>0</discardingThreshold>
+                    <neverBlock>true</neverBlock>
+                </appender>
+            </then>
+        </if>
+
+        <!-- Root logger: CONSOLE 항상 ON, H2/Logstash 조건부 추가 -->
+        <root level="INFO">
+            <appender-ref ref="CONSOLE"/>
+        </root>
+
+        <if condition='property("LOG_DEST_H2").equals("true")'>
+            <then>
+                <root level="INFO">
+                    <appender-ref ref="CONSOLE"/>
+                    <appender-ref ref="ASYNC_DB"/>
+                </root>
+            </then>
+        </if>
+
+        <if condition='property("LOG_DEST_LOGSTASH").equals("true")'>
+            <then>
+                <root level="INFO">
+                    <appender-ref ref="CONSOLE"/>
+                    <appender-ref ref="ASYNC_LOGSTASH"/>
+                </root>
+            </then>
+        </if>
+
+    </springProfile>
+
+</configuration>

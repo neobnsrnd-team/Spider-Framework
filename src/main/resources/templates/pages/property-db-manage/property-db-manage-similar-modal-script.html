@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<th:block th:fragment="similarScript">
+<script>
+    window.SimilarPropertyModal = (function() {
+        var _similarData = [];     // 필터링된 데이터 (테이블 표시용)
+        var _allData = [];         // 원본 전체 데이터
+        var _modalInstance = null;
+        var _parentModalId = null;
+        var _onCopyCallback = null;
+
+        function open(parentModalId, onCopyCallback) {
+            _parentModalId = parentModalId;
+            _onCopyCallback = onCopyCallback;
+            _similarData = [];
+            _allData = [];
+
+            // 검색 필드 초기화
+            $('#similarSearchField').val('propertyId');
+            $('#similarSearchValue').val('');
+            $('#similarSelectAll').prop('checked', false);
+            $('#similarPropertyTableBody').html(
+                '<tr><td colspan="7" class="text-center text-muted py-3">데이터를 불러오는 중입니다...</td></tr>'
+            );
+
+            // 그룹 목록 + 전체 프로퍼티 동시 로드
+            var groupsLoaded = $.ajax({ url: API_BASE_URL + '/properties/groups', method: 'GET' });
+            var propsLoaded = $.ajax({ url: API_BASE_URL + '/properties/groups/_all/properties', method: 'GET' });
+
+            $.when(groupsLoaded, propsLoaded).done(function(groupsRes, propsRes) {
+                // 그룹 셀렉트 렌더링
+                var gResponse = groupsRes[0];
+                if (gResponse.success && gResponse.data) {
+                    var select = $('#similarGroupSelect');
+                    select.empty();
+                    select.append('<option value="">전체</option>');
+                    gResponse.data.forEach(function(group) {
+                        select.append('<option value="' + group.propertyGroupId + '">' +
+                            group.propertyGroupId + ' (' + (group.propertyGroupName || '') + ')</option>');
+                    });
+                }
+
+                // 전체 프로퍼티 렌더링
+                var pResponse = propsRes[0];
+                if (pResponse.success && pResponse.data && pResponse.data.length > 0) {
+                    _allData = pResponse.data;
+                    _similarData = pResponse.data;
+                    renderTable(_similarData);
+                } else {
+                    _allData = [];
+                    _similarData = [];
+                    $('#similarPropertyTableBody').html(
+                        '<tr><td colspan="7" class="text-center text-muted py-3">등록된 프로퍼티가 없습니다.</td></tr>'
+                    );
+                }
+            });
+
+            // 부모 모달 숨기고 → 완전히 닫힌 후 유사 모달 열기
+            var parentModalEl = document.getElementById(_parentModalId);
+            parentModalEl.addEventListener('hidden.bs.modal', function onHidden() {
+                parentModalEl.removeEventListener('hidden.bs.modal', onHidden);
+                _modalInstance = bootstrap.Modal.getOrCreateInstance(document.getElementById('similarPropertyModal'));
+                _modalInstance.show();
+            });
+            bootstrap.Modal.getOrCreateInstance(parentModalEl).hide();
+        }
+
+        function loadProperties() {
+            var groupId = $('#similarGroupSelect').val();
+
+            // 검색어 초기화
+            $('#similarSearchValue').val('');
+
+            // 그룹 선택 여부에 따라 URL 결정 (미선택 시 전체 조회)
+            var url;
+            if (groupId) {
+                url = API_BASE_URL + '/properties/groups/' + encodeURIComponent(groupId) + '/properties';
+            } else {
+                url = API_BASE_URL + '/properties/groups/_all/properties';
+            }
+
+            $.ajax({
+                url: url,
+                method: 'GET',
+                success: function(response) {
+                    if (response.success && response.data && response.data.length > 0) {
+                        _allData = response.data;
+                        _similarData = response.data;
+                        renderTable(_similarData);
+                    } else {
+                        _allData = [];
+                        _similarData = [];
+                        $('#similarPropertyTableBody').html(
+                            '<tr><td colspan="7" class="text-center text-muted py-3">등록된 프로퍼티가 없습니다.</td></tr>'
+                        );
+                    }
+                },
+                error: function(xhr) {
+                    console.error('유사 프로퍼티 조회 실패:', xhr);
+                    Toast.error('프로퍼티 목록을 불러오는데 실패했습니다.');
+                }
+            });
+        }
+
+        function renderTable(data) {
+            var tbody = $('#similarPropertyTableBody');
+            tbody.empty();
+            $('#similarSelectAll').prop('checked', false);
+
+            if (!data || data.length === 0) {
+                tbody.html('<tr><td colspan="7" class="text-center text-muted py-3">검색 결과가 없습니다.</td></tr>');
+                _similarData = [];
+                return;
+            }
+
+            _similarData = data;
+            data.forEach(function(prop, idx) {
+                tbody.append(
+                    '<tr>' +
+                    '<td class="text-center"><input type="checkbox" class="similar-prop-checkbox" data-idx="' + idx + '"></td>' +
+                    '<td>' + HtmlUtils.escape(prop.propertyId || '') + '</td>' +
+                    '<td>' + HtmlUtils.escape(prop.propertyName || '') + '</td>' +
+                    '<td>' + HtmlUtils.escape(prop.propertyDesc || '') + '</td>' +
+                    '<td>' + HtmlUtils.escape(prop.defaultValue || '') + '</td>' +
+                    '<td>' + HtmlUtils.escape(prop.validData || '') + '</td>' +
+                    '<td>' + HtmlUtils.escape(prop.dataTypeName || prop.dataType || '') + '</td>' +
+                    '</tr>'
+                );
+            });
+        }
+
+        function filterProperties() {
+            var searchField = $('#similarSearchField').val();
+            var keyword = ($('#similarSearchValue').val() || '').trim().toLowerCase();
+
+            if (!keyword) {
+                renderTable(_allData);
+                return;
+            }
+
+            var filtered = _allData.filter(function(prop) {
+                var value = (prop[searchField] || '').toLowerCase();
+                return value.indexOf(keyword) !== -1;
+            });
+            renderTable(filtered);
+        }
+
+        function toggleSelectAll(checkbox) {
+            $('.similar-prop-checkbox').prop('checked', checkbox.checked);
+        }
+
+        function copySelected() {
+            var checked = $('.similar-prop-checkbox:checked');
+            if (checked.length === 0) {
+                Toast.warning('복사할 항목을 선택해주세요.');
+                return;
+            }
+
+            var copiedProperties = [];
+            checked.each(function() {
+                var idx = parseInt($(this).data('idx'));
+                var prop = _similarData[idx];
+                if (prop) {
+                    copiedProperties.push({
+                        propertyId: prop.propertyId || '',
+                        propertyName: prop.propertyName || '',
+                        propertyDesc: prop.propertyDesc || '',
+                        dataType: prop.dataType || 'C',
+                        validData: prop.validData || '',
+                        defaultValue: prop.defaultValue || ''
+                    });
+                }
+            });
+
+            if (_onCopyCallback && copiedProperties.length > 0) {
+                _onCopyCallback(copiedProperties);
+            }
+
+            close();
+        }
+
+        function close() {
+            if (_modalInstance) {
+                var similarModalEl = document.getElementById('similarPropertyModal');
+                var parentId = _parentModalId;
+                similarModalEl.addEventListener('hidden.bs.modal', function onHidden() {
+                    similarModalEl.removeEventListener('hidden.bs.modal', onHidden);
+                    bootstrap.Modal.getOrCreateInstance(document.getElementById(parentId)).show();
+                });
+                _modalInstance.hide();
+                _modalInstance = null;
+            }
+        }
+
+        return {
+            open: open,
+            loadProperties: loadProperties,
+            filterProperties: filterProperties,
+            toggleSelectAll: toggleSelectAll,
+            copySelected: copySelected,
+            close: close
+        };
+    })();
+</script>
+</th:block>
+</body>
+</html>

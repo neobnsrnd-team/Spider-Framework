@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<!-- Trx Table Fragment -->
+<div th:fragment="table" class="table-responsive">
+    <table class="table table-sm table-hover sp-data-grid" id="trxTable">
+        <thead class="table-light">
+            <tr>
+                <th class="col-w-120" data-sort="trxId">거래ID</th>
+                <th class="col-w-150" data-sort="trxName">거래명</th>
+                <th class="col-w-100" data-sort="orgId">기관명</th>
+                <th class="col-w-70">기동/수동</th>
+                <th class="col-w-150">요청/응답 전문명</th>
+                <th class="col-w-150">기본값 설정전문</th>
+                <th class="col-w-70">현재 상태</th>
+                <th class="col-w-80">대응답 관리</th>
+                <th class="col-w-70">다수 응답</th>
+            </tr>
+        </thead>
+        <tbody id="trxTableBody">
+            <tr>
+                <td colspan="9" class="text-center py-4 text-body-secondary">
+                    조회 버튼을 클릭하여 데이터를 불러오세요.
+                </td>
+            </tr>
+        </tbody>
+    </table>
+</div>
+</body>
+</html>

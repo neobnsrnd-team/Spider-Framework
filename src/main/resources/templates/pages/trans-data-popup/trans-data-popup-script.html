@@ -1,0 +1,746 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<!-- TransDataGeneration Page Scripts -->
+<th:block th:fragment="script">
+<script>
+    window.TransDataGeneration = (function() {
+        // ==================== Tab Configuration ====================
+        const TAB_CONFIG = {
+            TRX: {
+                label: '거래',
+                columns: [
+                    { key: 'col1', label: '거래ID'   },
+                    { key: 'col2', label: '기관ID'   },
+                    { key: 'col3', label: '운영모드' },
+                    { key: 'col4', label: '거래명'   }
+                ],
+                searchFields: [
+                    { value: 'trxId', label: '거래ID' },
+                    { value: 'trxName', label: '거래명' }
+                ]
+            },
+            MESSAGE: {
+                label: '메세지',
+                columns: [
+                    { key: 'col1', label: '전문ID' },
+                    { key: 'col2', label: '기관ID' },
+                    { key: 'col3', label: '전문명' },
+                    { key: 'col4', label: ''       }
+                ],
+                searchFields: [
+                    { value: 'messageId', label: '전문ID' },
+                    { value: 'messageName', label: '전문명' }
+                ]
+            },
+            CODE: {
+                label: '코드그룹',
+                columns: [
+                    { key: 'col1', label: '코드그룹ID' },
+                    { key: 'col2', label: '코드그룹명' },
+                    { key: 'col3', label: ''           },
+                    { key: 'col4', label: ''           }
+                ],
+                searchFields: [
+                    { value: 'codeGroupId', label: '코드그룹ID' },
+                    { value: 'codeGroupName', label: '코드그룹명' }
+                ]
+            },
+            WEBAPP: {
+                label: 'WebApp',
+                columns: [
+                    { key: 'col1', label: '메뉴URL' },
+                    { key: 'col2', label: '메뉴명'  },
+                    { key: 'col3', label: ''          },
+                    { key: 'col4', label: ''          }
+                ],
+                searchFields: [
+                    { value: 'menuUrl',  label: '메뉴URL' },
+                    { value: 'menuName', label: '메뉴명'  }
+                ]
+            },
+            SERVICE: {
+                label: '서비스',
+                columns: [
+                    { key: 'col1', label: '서비스ID' },
+                    { key: 'col2', label: '서비스명' },
+                    { key: 'col3', label: ''         },
+                    { key: 'col4', label: ''         }
+                ],
+                searchFields: [
+                    { value: 'serviceId', label: '서비스ID' },
+                    { value: 'serviceName', label: '서비스명' }
+                ]
+            },
+            ERROR: {
+                label: '오류코드',
+                columns: [
+                    { key: 'col1', label: '오류코드' },
+                    { key: 'col2', label: '오류제목' },
+                    { key: 'col3', label: ''         },
+                    { key: 'col4', label: ''         }
+                ],
+                searchFields: [
+                    { value: 'errorCode', label: '오류코드' },
+                    { value: 'errorTitle', label: '오류제목' }
+                ]
+            },
+            COMPONENT: {
+                label: 'Component',
+                columns: [
+                    { key: 'col1', label: '컴포넌트 ID' },
+                    { key: 'col2', label: '컴포넌트 명' },
+                    { key: 'col3', label: '클래스 명'   },
+                    { key: 'col4', label: ''             }
+                ],
+                searchFields: [
+                    { value: 'componentId',        label: '컴포넌트 ID' },
+                    { value: 'componentName',      label: '컴포넌트 명' },
+                    { value: 'componentClassName', label: '클래스 명'   }
+                ]
+            },
+            PROPERTY: {
+                label: 'Property',
+                columns: [
+                    { key: 'col1', label: '프로퍼티ID' },
+                    { key: 'col2', label: '그룹ID'     },
+                    { key: 'col3', label: '기본값'     },
+                    { key: 'col4', label: '프로퍼티명' }
+                ],
+                searchFields: [
+                    { value: 'propertyId', label: '프로퍼티ID' },
+                    { value: 'propertyName', label: '프로퍼티명' }
+                ]
+            }
+        };
+
+        // ==================== State ====================
+        let currentTab = 'TRX';
+        let sourceData = [];
+        let targetItems = [];  // { id, name, type, typeLabel }
+        let currentPage = 1;
+        let itemsPerPage = 10;
+        let currentVisibleCols = [true, true, true, true];
+        let sortBy  = null;   // 'col1' | 'col2' | 'col3' | 'col4'
+        let sortDir = null;   // 'asc' | 'desc'
+        let targetSortBy  = null;   // 'id' | 'name' | 'typeLabel'
+        let targetSortDir = null;   // 'asc' | 'desc'
+
+        // ==================== Init ====================
+        function init() {
+            const perPageSel = document.getElementById('genItemsPerPage');
+            if (perPageSel) itemsPerPage = parseInt(perPageSel.value) || 10;
+            switchTab('TRX');
+            initDragDrop();
+            initSortHeaders();
+            initTargetSortHeaders();
+            loadOrgList();
+        }
+
+        // ==================== Org List ====================
+        function loadOrgList() {
+            fetch('/api/orgs/list')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        const select = document.getElementById('genOrgFilter');
+                        // Keep "전체" option
+                        (data.data || []).forEach(org => {
+                            const opt = document.createElement('option');
+                            opt.value = org.orgId;
+                            opt.textContent = org.orgName;
+                            select.appendChild(opt);
+                        });
+                    }
+                })
+                .catch(error => console.error('Error loading org list:', error));
+        }
+
+        // ==================== Tab ====================
+        function switchTab(tabType) {
+            currentTab = tabType;
+            currentPage = 1;
+            sortBy  = null;
+            sortDir = null;
+            updateSortIndicators();
+
+            // Update tab button styles
+            document.querySelectorAll('#genTabButtons .btn').forEach(btn => {
+                const isActive = btn.getAttribute('data-tab') === tabType;
+                btn.classList.toggle('btn-primary', isActive);
+                btn.classList.toggle('btn-outline-secondary', !isActive);
+            });
+
+            // Update search fields
+            const config = TAB_CONFIG[tabType];
+            const searchFieldSelect = document.getElementById('genSearchField');
+            searchFieldSelect.innerHTML = '';
+            config.searchFields.forEach(f => {
+                const opt = document.createElement('option');
+                opt.value = f.value;
+                opt.textContent = f.label;
+                searchFieldSelect.appendChild(opt);
+            });
+
+            // 헤더 텍스트만 업데이트 (항상 4컬럼 표시)
+            config.columns.forEach((col, i) => {
+                const header = document.getElementById('genColHeader' + (i + 1));
+                if (header) header.textContent = col.label || '';
+            });
+            currentVisibleCols = [true, true, true, true];
+
+            // Show/hide org filter (visible for TRX and MESSAGE tabs only)
+            const orgLabel = document.getElementById('genOrgLabel');
+            const orgFilter = document.getElementById('genOrgFilter');
+            const trxOnlyWrap = document.getElementById('genTrxOnlyWrap');
+
+            if (tabType === 'TRX' || tabType === 'MESSAGE') {
+                if (orgLabel) orgLabel.style.display = '';
+                if (orgFilter) orgFilter.style.display = '';
+            } else {
+                if (orgLabel) orgLabel.style.display = 'none';
+                if (orgFilter) orgFilter.style.display = 'none';
+            }
+
+            // Show trxOnly checkbox only for TRX tab
+            if (trxOnlyWrap) {
+                if (tabType === 'TRX') {
+                    trxOnlyWrap.classList.remove('d-none');
+                    trxOnlyWrap.classList.add('d-flex');
+                } else {
+                    trxOnlyWrap.classList.add('d-none');
+                    trxOnlyWrap.classList.remove('d-flex');
+                }
+            }
+
+            // Reset org filter on tab switch
+            if (orgFilter) orgFilter.value = '';
+
+            // Clear search value
+            document.getElementById('genSearchValue').value = '';
+
+            // Load data
+            search();
+        }
+
+        // ==================== Search ====================
+        function search() {
+            const searchField = document.getElementById('genSearchField').value;
+            const searchValue = document.getElementById('genSearchValue').value;
+
+            const params = new URLSearchParams({ tab: currentTab });
+            if (searchField) params.append('searchField', searchField);
+            if (searchValue) params.append('searchValue', searchValue);
+            const orgId = document.getElementById('genOrgFilter')?.value || '';
+            if (orgId) params.append('orgId', orgId);
+
+            fetch(`/api/trans/generation/source?${params.toString()}`)
+                .then(response => {
+                    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                    return response.json();
+                })
+                .then(data => {
+                    if (data.success) {
+                        sourceData = data.data || [];
+                        currentPage = 1;
+                        renderSourceTable();
+                        renderPagination();
+                    } else {
+                        Toast.error(data.message || '조회 실패');
+                        sourceData = [];
+                        renderSourceTable();
+                        renderPagination();
+                    }
+                })
+                .catch(error => {
+                    console.error('Error searching source data:', error);
+                    Toast.error('조회 중 오류가 발생했습니다: ' + error.message);
+                    sourceData = [];
+                    renderSourceTable();
+                    renderPagination();
+                });
+        }
+
+        // ==================== Sort ====================
+        function initSortHeaders() {
+            document.querySelectorAll('#genSourceTable thead th[data-sort]').forEach(th => {
+                th.classList.add('sortable');
+                th.addEventListener('click', function() {
+                    const key = this.getAttribute('data-sort');
+                    if (sortBy === key) {
+                        sortDir = sortDir === 'asc' ? 'desc' : 'asc';
+                    } else {
+                        sortBy  = key;
+                        sortDir = 'asc';
+                    }
+                    updateSortIndicators();
+                    currentPage = 1;
+                    renderSourceTable();
+                    renderPagination();
+                });
+            });
+        }
+
+        function updateSortIndicators() {
+            document.querySelectorAll('#genSourceTable thead th[data-sort]').forEach(th => {
+                th.classList.remove('sort-asc', 'sort-desc');
+                if (sortBy && th.getAttribute('data-sort') === sortBy) {
+                    th.classList.add(sortDir === 'asc' ? 'sort-asc' : 'sort-desc');
+                }
+            });
+        }
+
+        function getSortedData() {
+            if (!sortBy || !sortDir) return sourceData;
+            return [...sourceData].sort((a, b) => {
+                const valA = (a[sortBy] || '').toString().toLowerCase();
+                const valB = (b[sortBy] || '').toString().toLowerCase();
+                if (valA < valB) return sortDir === 'asc' ? -1 : 1;
+                if (valA > valB) return sortDir === 'asc' ?  1 : -1;
+                return 0;
+            });
+        }
+
+        // ==================== Source Table Rendering ====================
+        function renderSourceTable() {
+            const tbody = document.getElementById('genSourceTableBody');
+            if (!tbody) return;
+            tbody.innerHTML = '';
+
+            const selectAll = document.getElementById('genSelectAll');
+            if (selectAll) selectAll.checked = false;
+
+            // 정렬 후 클라이언트 페이지네이션
+            const sorted = getSortedData();
+            const start = (currentPage - 1) * itemsPerPage;
+            const end = Math.min(start + itemsPerPage, sorted.length);
+            const pageItems = sorted.slice(start, end);
+
+            const visibleCount = 5; // checkbox + 4 data cols
+            if (pageItems.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="${visibleCount}" class="text-center py-4 text-body-secondary">
+                            조회된 데이터가 없습니다.
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+
+            const config = TAB_CONFIG[currentTab];
+            pageItems.forEach(item => {
+                const row = document.createElement('tr');
+                row.draggable = true;
+                row.setAttribute('data-id', item.id || '');
+                row.setAttribute('data-name', item.name || '');
+
+                // Check if already in target
+                const alreadyAdded = targetItems.some(t => t.id === item.id && t.type === currentTab);
+
+                const cols = ['col1','col2','col3','col4'];
+                let cellsHtml = `<td class="text-center">
+                        <input type="checkbox" class="gen-source-check" value="${HtmlUtils.escape(item.id)}"
+                               ${alreadyAdded ? 'disabled checked' : ''}>
+                    </td>`;
+                cols.forEach((col) => {
+                    cellsHtml += `<td>${HtmlUtils.escape(item[col] || '')}</td>`;
+                });
+                row.innerHTML = cellsHtml;
+
+                if (alreadyAdded) {
+                    row.classList.add('opacity-50');
+                }
+
+                // Drag events
+                row.addEventListener('dragstart', function(e) {
+                    if (alreadyAdded) { e.preventDefault(); return; }
+                    row.classList.add('dragging');
+                    e.dataTransfer.setData('text/plain', JSON.stringify({
+                        id: item.id,
+                        name: item.name,
+                        type: currentTab,
+                        typeLabel: config.label
+                    }));
+                    e.dataTransfer.effectAllowed = 'copy';
+                });
+                row.addEventListener('dragend', function() {
+                    row.classList.remove('dragging');
+                });
+
+                tbody.appendChild(row);
+            });
+        }
+
+        // ==================== Pagination ====================
+        function renderPagination() {
+            const totalPages = Math.ceil(getSortedData().length / itemsPerPage);
+            const pagination = document.getElementById('genPagination');
+            if (!pagination) return;
+
+            let html = '';
+            const isFirst = currentPage === 1;
+            const isLast  = currentPage === totalPages || totalPages === 0;
+
+            // First
+            html += `<li class="page-item ${isFirst ? 'disabled' : ''}">
+                <a class="page-link" href="#" onclick="TransDataGeneration.changePage(1); return false;">
+                    <i class="bi bi-chevron-double-left"></i>
+                </a>
+            </li>`;
+
+            // Previous
+            html += `<li class="page-item ${isFirst ? 'disabled' : ''}">
+                <a class="page-link" href="#" onclick="TransDataGeneration.changePage(${currentPage - 1}); return false;">
+                    <i class="bi bi-chevron-left"></i>
+                </a>
+            </li>`;
+
+            // Page numbers
+            const maxButtons = 5;
+            let startPage = Math.max(1, currentPage - Math.floor(maxButtons / 2));
+            let endPage = Math.min(totalPages, startPage + maxButtons - 1);
+            if (endPage - startPage + 1 < maxButtons) {
+                startPage = Math.max(1, endPage - maxButtons + 1);
+            }
+
+            for (let i = startPage; i <= endPage; i++) {
+                html += `<li class="page-item ${i === currentPage ? 'active' : ''}">
+                    <a class="page-link" href="#" onclick="TransDataGeneration.changePage(${i}); return false;">${i}</a>
+                </li>`;
+            }
+
+            // Next
+            html += `<li class="page-item ${isLast ? 'disabled' : ''}">
+                <a class="page-link" href="#" onclick="TransDataGeneration.changePage(${currentPage + 1}); return false;">
+                    <i class="bi bi-chevron-right"></i>
+                </a>
+            </li>`;
+
+            // Last
+            html += `<li class="page-item ${isLast ? 'disabled' : ''}">
+                <a class="page-link" href="#" onclick="TransDataGeneration.changePage(${totalPages}); return false;">
+                    <i class="bi bi-chevron-double-right"></i>
+                </a>
+            </li>`;
+
+            pagination.innerHTML = html;
+
+            // Page info
+            const total = getSortedData().length;
+            const s = total === 0 ? 0 : (currentPage - 1) * itemsPerPage + 1;
+            const e = Math.min(currentPage * itemsPerPage, total);
+            const pageInfo = document.getElementById('genPageInfo');
+            if (pageInfo) pageInfo.textContent = `${s} - ${e} of ${total} items`;
+        }
+
+        function changePage(page) {
+            const totalPages = Math.ceil(sourceData.length / itemsPerPage);
+            if (page < 1 || page > totalPages) return;
+            currentPage = page;
+            renderSourceTable();
+            renderPagination();
+        }
+
+        function changeItemsPerPage(value) {
+            itemsPerPage = parseInt(value);
+            currentPage = 1;
+            renderSourceTable();
+            renderPagination();
+        }
+
+        // ==================== Select All ====================
+        function toggleSelectAll(checkbox) {
+            document.querySelectorAll('.gen-source-check:not(:disabled)').forEach(cb => {
+                cb.checked = checkbox.checked;
+            });
+        }
+
+        function toggleTargetSelectAll(checkbox) {
+            document.querySelectorAll('.gen-target-check').forEach(cb => {
+                cb.checked = checkbox.checked;
+            });
+        }
+
+        // ==================== Add to Target ====================
+        function addToTarget() {
+            const checked = document.querySelectorAll('.gen-source-check:checked:not(:disabled)');
+            if (checked.length === 0) {
+                Toast.warning('이행 대상을 선택해 주세요.');
+                return;
+            }
+
+            const config = TAB_CONFIG[currentTab];
+            let addedCount = 0;
+
+            checked.forEach(cb => {
+                const id = cb.value;
+                const row = cb.closest('tr');
+                const name = row.getAttribute('data-name') || '';
+
+                if (!targetItems.some(t => t.id === id && t.type === currentTab)) {
+                    targetItems.push({
+                        id: id,
+                        name: name,
+                        type: currentTab,
+                        typeLabel: config.label
+                    });
+                    addedCount++;
+                }
+            });
+
+            if (addedCount > 0) {
+                renderTargetTable();
+                renderSourceTable(); // Refresh to update disabled state
+            }
+        }
+
+        function addItemToTarget(item) {
+            if (!targetItems.some(t => t.id === item.id && t.type === item.type)) {
+                targetItems.push(item);
+                renderTargetTable();
+                renderSourceTable();
+            }
+        }
+
+        // ==================== Remove from Target ====================
+        function removeFromTarget() {
+            const checked = document.querySelectorAll('.gen-target-check:checked');
+            if (checked.length === 0) {
+                Toast.warning('삭제할 항목을 선택해 주세요.');
+                return;
+            }
+
+            const removeKeys = new Set();
+            checked.forEach(cb => {
+                removeKeys.add(cb.value);
+            });
+
+            targetItems = targetItems.filter(item => !removeKeys.has(item.type + '|' + item.id));
+            renderTargetTable();
+            renderSourceTable(); // Refresh disabled state
+        }
+
+        // ==================== Target Sort ====================
+        function initTargetSortHeaders() {
+            document.querySelectorAll('#genTargetTable thead th[data-sort]').forEach(th => {
+                th.classList.add('sortable');
+                th.addEventListener('click', function() {
+                    const key = this.getAttribute('data-sort');
+                    if (targetSortBy === key) {
+                        targetSortDir = targetSortDir === 'asc' ? 'desc' : 'asc';
+                    } else {
+                        targetSortBy  = key;
+                        targetSortDir = 'asc';
+                    }
+                    updateTargetSortIndicators();
+                    renderTargetTable();
+                });
+            });
+        }
+
+        function updateTargetSortIndicators() {
+            document.querySelectorAll('#genTargetTable thead th[data-sort]').forEach(th => {
+                th.classList.remove('sort-asc', 'sort-desc');
+                if (targetSortBy && th.getAttribute('data-sort') === targetSortBy) {
+                    th.classList.add(targetSortDir === 'asc' ? 'sort-asc' : 'sort-desc');
+                }
+            });
+        }
+
+        function getTargetSortedData() {
+            if (!targetSortBy || !targetSortDir) return targetItems;
+            return [...targetItems].sort((a, b) => {
+                const valA = (a[targetSortBy] || '').toString().toLowerCase();
+                const valB = (b[targetSortBy] || '').toString().toLowerCase();
+                if (valA < valB) return targetSortDir === 'asc' ? -1 : 1;
+                if (valA > valB) return targetSortDir === 'asc' ?  1 : -1;
+                return 0;
+            });
+        }
+
+        // ==================== Target Table Rendering ====================
+        function renderTargetTable() {
+            const tbody = document.getElementById('genTargetTableBody');
+            const dropZone = document.getElementById('genDropZone');
+            const targetSelectAll = document.getElementById('genTargetSelectAll');
+            if (!tbody) return;
+
+            tbody.innerHTML = '';
+            if (targetSelectAll) targetSelectAll.checked = false;
+
+            if (targetItems.length === 0) {
+                if (dropZone) dropZone.classList.remove('d-hidden');
+                return;
+            }
+
+            if (dropZone) dropZone.classList.add('d-hidden');
+
+            getTargetSortedData().forEach(item => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td class="text-center">
+                        <input type="checkbox" class="gen-target-check" value="${HtmlUtils.escape(item.type + '|' + item.id)}">
+                    </td>
+                    <td>${HtmlUtils.escape(item.id)}</td>
+                    <td>${HtmlUtils.escape(item.name)}</td>
+                    <td><span class="badge bg-info fs-2xs">${HtmlUtils.escape(item.typeLabel)}</span></td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
+        // ==================== Drag & Drop ====================
+        function initDragDrop() {
+            const targetArea = document.getElementById('genTargetArea');
+            if (!targetArea) return;
+
+            targetArea.addEventListener('dragover', function(e) {
+                e.preventDefault();
+                e.dataTransfer.dropEffect = 'copy';
+                targetArea.classList.add('drag-over');
+            });
+
+            targetArea.addEventListener('dragleave', function(e) {
+                if (!targetArea.contains(e.relatedTarget)) {
+                    targetArea.classList.remove('drag-over');
+                }
+            });
+
+            targetArea.addEventListener('drop', function(e) {
+                e.preventDefault();
+                targetArea.classList.remove('drag-over');
+
+                try {
+                    const data = JSON.parse(e.dataTransfer.getData('text/plain'));
+                    addItemToTarget(data);
+                } catch (err) {
+                    console.error('Drop error:', err);
+                }
+            });
+        }
+
+        // ==================== Execute ====================
+        function openExecuteModal() {
+            if (targetItems.length === 0) {
+                Toast.info('이행 대상 데이터를 추가해 주세요.');
+                return;
+            }
+
+            // Summary
+            const typeCounts = {};
+            targetItems.forEach(item => {
+                typeCounts[item.typeLabel] = (typeCounts[item.typeLabel] || 0) + 1;
+            });
+            const summaryText = Object.entries(typeCounts)
+                .map(([type, count]) => `${type}: ${count}건`)
+                .join(', ');
+            document.getElementById('genExecuteSummary').textContent = `총 ${targetItems.length}건 (${summaryText})`;
+
+            const reasonEl = document.getElementById('genTranReason');
+            reasonEl.value = '';
+            document.getElementById('genTranReasonCount').textContent = '0';
+            reasonEl.oninput = function() {
+                document.getElementById('genTranReasonCount').textContent = this.value.length;
+            };
+
+            $('#genExecuteModal').modal('show');
+        }
+
+        function executeTransfer() {
+            const tranReason = document.getElementById('genTranReason').value.trim();
+
+            if (!tranReason) {
+                Toast.warning('필수 입력사항 입니다.');
+                document.getElementById('genTranReason').focus();
+                return;
+            }
+
+            const trxOnly = document.getElementById('genTrxOnly')?.checked || false;
+
+            const requestBody = {
+                tranReason: tranReason,
+                trxOnly: trxOnly,
+                items: targetItems.map(item => ({
+                    tranId: item.id,
+                    tranName: item.name,
+                    tranType: item.type
+                }))
+            };
+
+            // Disable button
+            const btn = document.querySelector('#genExecuteModal .btn-primary');
+            if (btn) { btn.disabled = true; btn.innerHTML = '<i class="bi bi-arrow-repeat sp-spin"></i> 생성 중...'; }
+
+            fetch('/api/trans/generation/download', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(requestBody)
+            })
+            .then(response => {
+                if (!response.ok) {
+                    return response.json().then(data => {
+                        throw new Error(data.message || 'SQL 파일 생성 실패');
+                    });
+                }
+                // Content-Disposition 헤더에서 파일명 추출
+                const disposition = response.headers.get('Content-Disposition');
+                let filename = 'download.zip';
+                if (disposition) {
+                    const match = disposition.match(/filename="?([^";\n]+)"?/);
+                    if (match) filename = match[1];
+                }
+                return response.blob().then(blob => ({ blob, filename }));
+            })
+            .then(({ blob, filename }) => {
+                // 브라우저 다운로드 트리거
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = filename;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+
+                Toast.success('SQL 파일이 생성되었습니다.\n파일명: ' + filename);
+                $('#genExecuteModal').modal('hide');
+            })
+            .catch(error => {
+                console.error('Error generating SQL zip:', error);
+                Toast.error('SQL 파일 생성 중 오류가 발생했습니다: ' + error.message);
+            })
+            .finally(() => {
+                if (btn) { btn.disabled = false; btn.innerHTML = '<i class="bi bi-play-fill"></i> 이행 실행'; }
+            });
+        }
+
+        // ==================== Public API ====================
+        return {
+            init: init,
+            switchTab: switchTab,
+            search: search,
+            changePage: changePage,
+            changeItemsPerPage: changeItemsPerPage,
+            toggleSelectAll: toggleSelectAll,
+            toggleTargetSelectAll: toggleTargetSelectAll,
+            addToTarget: addToTarget,
+            removeFromTarget: removeFromTarget,
+            openExecuteModal: openExecuteModal,
+            executeTransfer: executeTransfer,
+            loadOrgList: loadOrgList
+        };
+    })();
+
+    // ==================== Initialization ====================
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', function() {
+            TransDataGeneration.init();
+        });
+    } else {
+        TransDataGeneration.init();
+    }
+</script>
+</th:block>
+</body>
+</html>

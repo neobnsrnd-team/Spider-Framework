@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin System</title>
+
+    <!-- 1. Bootstrap 5.3.3 -->
+    <link th:href="@{/webjars/bootstrap/5.3.3/css/bootstrap.min.css}" rel="stylesheet">
+    <!-- 2. Bootstrap Icons 1.11.3 -->
+    <link th:href="@{/webjars/bootstrap-icons/1.11.3/font/bootstrap-icons.min.css}" rel="stylesheet">
+    <!-- Design Tokens -->
+    <link rel="stylesheet" th:href="@{/css/design-tokens.css}">
+    <!-- Application CSS (통합 스타일시트) -->
+    <link rel="stylesheet" th:href="@{/css/app.css}">
+
+    <!-- Page Specific CSS는 JavaScript로 동적 로드됩니다 -->
+    <th:block th:replace="${cssFragment} ?: ~{}"></th:block>
+
+    <!-- Theme Manager (FOUC 방지 — head에서 즉시 실행) -->
+    <script th:src="@{/js/utils/theme-manager.js}"></script>
+
+    <!-- 공통 HTML 이스케이프 유틸리티 (XSS 방지) — AJAX 로드 페이지 스크립트보다 먼저 로드 -->
+    <script th:src="@{/js/utils/html-utils.js}"></script>
+</head>
+<body>
+<div class="admin-container">
+    <!-- Sidebar hover trigger (collapsed 시 마우스 진입 영역) -->
+    <div class="sidebar-hover-trigger" id="sidebarHoverTrigger"></div>
+
+    <!-- Left Sidebar -->
+    <div th:replace="~{fragments/sidebar :: sidebar}"></div>
+
+    <!-- Main Area -->
+    <div class="main-area">
+        <!-- Top Bar -->
+        <div th:replace="~{fragments/topbar :: topbar}"></div>
+
+        <!-- Tab Bar -->
+        <div class="tab-bar-wrapper">
+            <div class="tab-bar" id="tabBar">
+                <!-- 메뉴 클릭 시 동적으로 생성됨 -->
+            </div>
+            <div class="tab-menu-wrapper sp-dropdown" id="tabMenuWrapper" style="display:none;">
+                <button class="tab-menu-btn" data-bs-toggle="dropdown" aria-expanded="false" title="탭 메뉴">
+                    <i class="bi bi-three-dots-vertical"></i>
+                </button>
+                <ul class="dropdown-menu dropdown-menu-end">
+                    <li><button class="dropdown-item" id="tabCloseAll" type="button">
+                        <i class="bi bi-x-lg"></i> 모든 탭 닫기
+                    </button></li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- Content Area -->
+        <div class="content-area">
+            <div id="dynamic-content">
+                <div id="welcome-screen" class="text-center py-5">
+                    <i class="bi bi-house-door d-block mb-2 text-body-secondary welcome-icon"></i>
+                    <h4>환영합니다!</h4>
+                    <p class="text-body-secondary">좌측 메뉴에서 항목을 선택하세요.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- jQuery -->
+<script th:src="@{/webjars/jquery/3.7.1/jquery.min.js}"></script>
+
+<!-- Bootstrap JS -->
+<script th:src="@{/webjars/bootstrap/5.3.3/js/bootstrap.bundle.min.js}"></script>
+
+<!-- 전역 AJAX 세션/권한 핸들러 (jQuery 직후, 다른 컴포넌트보다 먼저 로드) -->
+<script th:src="@{/js/components/SessionHandler.js}"></script>
+
+<!-- SortableJS -->
+<script th:src="@{/webjars/sortablejs/1.15.6/Sortable.min.js}"></script>
+
+<!-- Common Components JS -->
+<script th:src="@{/js/components/Toast.js}"></script>
+<script th:src="@{/js/components/SearchForm.js}"></script>
+<script th:src="@{/js/components/DataTable.js}"></script>
+<script th:src="@{/js/components/Pagination.js}"></script>
+<script th:src="@{/js/components/Modal.js}"></script>
+<script th:src="@{/js/components/PageManager.js}"></script>
+<script th:src="@{/js/components/ComboManager.js}"></script>
+<script th:src="@{/js/components/PrintUtil.js}"></script>
+
+<script>
+    const API_BASE_URL = '/api';
+
+    // Tab Management (전역으로 노출)
+    window.TabManager = {
+        tabs: [],
+        activeTab: null,
+        contentCache: {},
+        _suppressHistory: false,
+        MAX_CACHED_TABS: 10,
+        _cacheOrder: [], // LRU 순서 (인덱스 0이 가장 오래됨)
+
+        addTab: function (page, title, readOnly) {
+            const existing = this.tabs.find(t => t.page === page);
+            if (existing) {
+                if (this.activeTab !== page) {
+                    this.activateTab(page);
+                }
+                return;
+            }
+
+            this.tabs.push({page, title, readOnly: readOnly || false});
+            this.renderTabs();
+            this.activateTab(page);
+        },
+
+        removeTab: function (page) {
+            const index = this.tabs.findIndex(t => t.page === page);
+            if (index === -1) return;
+
+            this.tabs.splice(index, 1);
+            $('link[data-page-css]').filter(function() { return this.getAttribute('data-page-css') === page; }).remove();
+
+            if (this.activeTab === page) {
+                // 활성 탭은 DOM에 있으므로 제거
+                $('#dynamic-content').children('[data-tab-page]').remove();
+                if (this.tabs.length > 0) {
+                    const newActive = this.tabs[this.tabs.length - 1];
+                    this.activateTab(newActive.page);
+                } else {
+                    this.showWelcome();
+                }
+            } else {
+                // 비활성 탭은 캐시에서 삭제
+                delete this.contentCache[page];
+                this._cacheOrder = this._cacheOrder.filter(p => p !== page);
+            }
+
+            this.renderTabs();
+        },
+
+        activateTab: function (page) {
+            if (this.activeTab === page) return;
+            const prevPage = this.activeTab;
+            this.activeTab = page;
+            if (typeof window.syncSidebarActiveMenu === 'function') {
+                window.syncSidebarActiveMenu(page);
+            }
+            this.renderTabs();
+            this.loadContent(page, prevPage);
+            if (!this._suppressHistory) {
+                history.pushState({ page: page }, '', page);
+            }
+        },
+
+        renderTabs: function () {
+            const tabBar = $('#tabBar');
+            tabBar.empty();
+
+            sessionStorage.setItem('tabManagerState', JSON.stringify({
+                tabs: this.tabs,
+                activeTab: this.activeTab
+            }));
+
+            this.tabs.forEach(tab => {
+                const isActive = tab.page === this.activeTab;
+                const readOnlyBadge = tab.readOnly ? '<span class="fs-2xs text-warning ms-1">[읽기전용]</span>' : '';
+
+                const tabEl = $(`
+                        <div class="tab-item ${isActive ? 'active' : ''}" data-page="${tab.page}">
+                            <i class="bi bi-circle-fill tab-dot"></i>
+                            <span>${tab.title}${readOnlyBadge}</span>
+                            <span class="tab-close">×</span>
+                        </div>
+                    `);
+
+                tabEl.find('.tab-close').click((e) => {
+                    e.stopPropagation();
+                    this.removeTab(tab.page);
+                });
+
+                tabEl.click(() => {
+                    this.activateTab(tab.page);
+                });
+
+                tabBar.append(tabEl);
+            });
+
+            // 탭 메뉴 버튼 표시/숨김
+            $('#tabMenuWrapper').toggle(this.tabs.length > 0);
+        },
+
+        closeAllTabs: function () {
+            this.tabs = [];
+            this.activeTab = null;
+            this.contentCache = {};
+            this._cacheOrder = [];
+            $('link[data-page-css]').remove();
+            $('#dynamic-content').children('[data-tab-page]').remove();
+            this.renderTabs();
+            this.showWelcome();
+        },
+
+        loadContent: function (page, prevPage) {
+            const contentArea = $('#dynamic-content');
+
+            // 환영 화면 숨기기
+            $('#welcome-screen').hide();
+
+            // 이전 탭 콘텐츠를 DOM에서 분리해 캐시에 보관 (ID 충돌 방지)
+            if (prevPage && prevPage !== page) {
+                const prevContent = contentArea.children('[data-tab-page]');
+                if (prevContent.length) {
+                    this.contentCache[prevPage] = prevContent.detach();
+                    // LRU 순서 갱신
+                    this._cacheOrder = this._cacheOrder.filter(p => p !== prevPage);
+                    this._cacheOrder.push(prevPage);
+                    // 상한선 초과 시 가장 오래된 캐시 제거
+                    while (this._cacheOrder.length > this.MAX_CACHED_TABS) {
+                        const evict = this._cacheOrder.shift();
+                        delete this.contentCache[evict];
+                        $('link[data-page-css]').filter(function () {
+                            return this.getAttribute('data-page-css') === evict;
+                        }).remove();
+                    }
+                }
+            }
+
+            // 캐시된 콘텐츠가 있으면 DOM에 복원 (스크립트·이벤트·상태 보존)
+            if (this.contentCache[page]) {
+                var cached = this.contentCache[page];
+                contentArea.append(cached);
+                delete this.contentCache[page];
+                this._cacheOrder = this._cacheOrder.filter(p => p !== page);
+                // 캐시 복원 후 페이지에 탭 활성화 알림 (SPA 글로벌 상태 복원용)
+                cached.trigger('tab:activated');
+                return;
+            }
+
+            // 새 탭 콘텐츠 div 생성
+            const tabContent = $('<div>').attr('data-tab-page', page);
+            tabContent.html(`
+                <div class="loading-spinner show">
+                    <i class="bi bi-arrow-repeat sp-spin loading-spinner-icon"></i>
+                    <p class="mt-3">로딩 중...</p>
+                </div>
+            `);
+            contentArea.append(tabContent);
+
+            // 페이지별 CSS 동적 로드 (미로드 시에만)
+            if (!$('link[data-page-css]').filter(function() { return this.getAttribute('data-page-css') === page; }).length) {
+                const lastSegment = page.split('/').filter(Boolean).pop() || '';
+                const cssPath = `/css/${lastSegment}-content.css`;
+                $('<link>')
+                    .attr('rel', 'stylesheet')
+                    .attr('href', cssPath)
+                    .attr('data-page-css', page)
+                    .on('error', function () {
+                        console.log(`CSS file not found: ${cssPath}`);
+                    })
+                    .appendTo('head');
+            }
+
+            // 페이지 콘텐츠 AJAX 로드
+            // jQuery의 .html()은 내부적으로 DOMEval을 사용하여 script를 자동 실행한다.
+            // 아래 eval 루프를 추가하면 script가 두 번 실행되어 서로 다른 scope의
+            // 페이지 객체 인스턴스가 생성되고, 이벤트 핸들러가 중복 등록되는 버그가 발생한다.
+            $.ajax({
+                url: page,
+                method: 'GET',
+                headers: { 'X-Tab-Request': 'true' },
+                success: function (html) {
+                    tabContent.html(html);
+                },
+                error: function (xhr) {
+                    tabContent.html(`                                                                                                                                             
+                          <div class="alert alert-danger">  
+                              <h5><i class="bi bi-exclamation-triangle"></i> 오류</h5>
+                              <p>페이지를 로드하는데 실패했습니다.</p>
+                          </div>
+                      `);
+                }
+            });
+        },
+
+        showWelcome: function () {
+            const contentArea = $('#dynamic-content');
+            // 현재 활성 탭 콘텐츠를 캐시에 보관 (탭 목록은 유지)
+            if (this.activeTab) {
+                const activeContent = contentArea.children('[data-tab-page]');
+                if (activeContent.length) {
+                    this.contentCache[this.activeTab] = activeContent.detach();
+                }
+            }
+            $('#welcome-screen').show();
+            this.activeTab = null;
+            if (typeof window.syncSidebarActiveMenu === 'function') {
+                window.syncSidebarActiveMenu(null);
+            }
+            sessionStorage.removeItem('tabManagerState');
+            if (!this._suppressHistory) {
+                history.pushState({}, '', '/home');
+            }
+        }
+    };
+
+    // F5 새로고침 시 복원할 탭 상태 읽기
+    (function () {
+        const saved = sessionStorage.getItem('tabManagerState');
+        if (saved) {
+            try { window._savedTabState = JSON.parse(saved); }
+            catch (e) { sessionStorage.removeItem('tabManagerState'); }
+        }
+    })();
+
+    // Tab menu: 모든 탭 닫기
+    $('#tabCloseAll').on('click', function() {
+        window.TabManager.closeAllTabs();
+    });
+
+    $(window).on('popstate', function(e) {
+        const state = e.originalEvent.state;
+        window.TabManager._suppressHistory = true;
+        if (state && state.page) {
+            const tab = window.TabManager.tabs.find(function(t) { return t.page === state.page; });
+            if (tab) {
+                window.TabManager.activateTab(state.page);
+            } else {
+                window.TabManager.showWelcome();
+            }
+        } else {
+            window.TabManager.showWelcome();
+        }
+        window.TabManager._suppressHistory = false;
+    });
+</script>
+
+<script th:inline="javascript">
+    /*[# th:if="${initialPage != null}"]*/
+    window.pendingInitialPage = /*[[${initialPage}]]*/ null;
+    /*[/]*/
+</script>
+<script>
+    // pendingInitialPage가 없으면 새 로그인 세션 → 이전 탭 상태 초기화
+    if (!window.pendingInitialPage) {
+        sessionStorage.removeItem('tabManagerState');
+        window._savedTabState = null;
+    }
+</script>
+</body>
+</html>

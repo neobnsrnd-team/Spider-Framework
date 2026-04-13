@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<!-- TrxStop Table Fragment -->
+<div th:fragment="table" class="table-responsive">
+    <table class="table table-sm table-hover sp-data-grid" id="trxStopTable">
+        <thead class="table-light">
+            <tr>
+                <th class="col-w-40"><input type="checkbox" id="selectAll"></th>
+                <th class="col-w-130" data-sort="trxId">거래ID</th>
+                <th class="col-w-160" data-sort="trxName">거래명</th>
+                <th class="col-w-100" data-sort="operModeType">운영모드</th>
+                <th class="col-w-80" data-sort="trxType">거래구분</th>
+                <th class="col-w-60">재처리</th>
+                <th class="col-w-60">상태</th>
+                <th class="col-w-80">상태 변경</th>
+                <th class="col-w-90">허용자추가</th>
+            </tr>
+        </thead>
+        <tbody id="trxStopTableBody">
+            <tr>
+                <td colspan="9" class="text-center py-4 text-body-secondary">
+                    조회 버튼을 클릭하여 데이터를 불러오세요.
+                </td>
+            </tr>
+        </tbody>
+    </table>
+</div>
+</body>
+</html>

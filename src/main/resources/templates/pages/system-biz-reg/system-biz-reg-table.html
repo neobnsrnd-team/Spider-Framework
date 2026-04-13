@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<!-- Monitor Table Fragment -->
+<div th:fragment="table" class="table-responsive">
+    <table class="table table-sm table-hover sp-data-grid" id="monitorTable">
+        <thead class="table-light">
+            <tr>
+                <th class="col-w-150" data-sort="monitorId">모니터ID</th>
+                <th class="col-w-200" data-sort="monitorName">모니터명</th>
+                <th data-sort="monitorQuery">모니터쿼리</th>
+                <th class="col-w-120" data-sort="refreshTerm">새로고침주기</th>
+            </tr>
+        </thead>
+        <tbody id="monitorTableBody">
+            <tr>
+                <td colspan="4" class="text-center py-4 text-body-secondary">
+                    조회 버튼을 클릭하여 데이터를 불러오세요.
+                </td>
+            </tr>
+        </tbody>
+    </table>
+</div>
+</body>
+</html>

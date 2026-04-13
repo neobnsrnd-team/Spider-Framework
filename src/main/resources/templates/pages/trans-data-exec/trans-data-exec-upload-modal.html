@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<div th:fragment="modal">
+    <!-- TransData Upload Modal -->
+    <div class="modal fade" id="transDataUploadModal" tabindex="-1" aria-labelledby="transDataUploadModalLabel" aria-hidden="true"
+         data-bs-backdrop="static" data-bs-keyboard="false">
+        <div class="modal-dialog modal-dialog-centered sp-modal-md">
+            <div class="modal-content">
+                <!-- Modal Header -->
+                <div class="modal-header py-2 justify-content-center position-relative">
+                    <h5 class="modal-title" id="transDataUploadModalLabel">데이터 이행 스크립트 파일 업로드</h5>
+                    <button type="button" class="btn-close sp-modal-close-abs" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+
+                <!-- Modal Body -->
+                <div class="modal-body p-3">
+                    <!-- Section Title -->
+                    <div class="sp-upload-section-title">
+                        <span class="sp-upload-section-icon">&#9658;</span>
+                        <span class="sp-upload-section-label">데이터 이행 파일 업로드</span>
+                    </div>
+
+                    <!-- 진행단계 -->
+                    <div class="fs-sm fw-semibold mb-2">진행단계</div>
+
+                    <!-- 파일 선택 버튼 영역 -->
+                    <div class="d-flex align-items-center gap-6px mb-3">
+                        <input type="file" id="uploadFileInput" multiple accept=".sql" class="d-hidden">
+                        <button type="button" class="btn btn-sm btn-outline-secondary fs-sm" id="btnBrowseFile">찾아보기</button>
+                        <button type="button" class="btn btn-sm btn-outline-secondary fs-sm" id="btnUploadFile">Upload</button>
+                    </div>
+
+                    <!-- 파일 목록 테이블 -->
+                    <div class="sp-upload-container">
+                        <!-- Table Header -->
+                        <table class="sp-upload-header-table">
+                            <colgroup>
+                                <col>
+                                <col class="col-w-90">
+                                <col class="col-w-80">
+                                <col class="col-w-90">
+                            </colgroup>
+                            <thead>
+                                <tr class="sp-upload-header-row">
+                                    <th class="sp-upload-header-cell">파일 이름</th>
+                                    <th class="sp-upload-header-cell">Type</th>
+                                    <th class="sp-upload-header-cell">Size</th>
+                                    <th class="sp-upload-header-cell">Status</th>
+                                </tr>
+                            </thead>
+                        </table>
+
+                        <!-- Scrollable Table Body + Scroll Buttons -->
+                        <div class="sp-upload-body-wrapper">
+                            <div id="uploadFileListWrapper" class="sp-upload-scroll-area">
+                                <table id="uploadFileTable" class="sp-upload-body-table">
+                                    <colgroup>
+                                        <col>
+                                        <col class="col-w-90">
+                                        <col class="col-w-80">
+                                        <col class="col-w-90">
+                                    </colgroup>
+                                    <tbody id="uploadFileTableBody">
+                                        <tr>
+                                            <td colspan="4" class="sp-upload-empty-cell"></td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                            <!-- Custom Scroll Buttons -->
+                            <div class="sp-upload-scroll-buttons">
+                                <button type="button" id="btnScrollUp" class="sp-upload-scroll-btn">&#9650;</button>
+                                <button type="button" id="btnScrollDown" class="sp-upload-scroll-btn">&#9660;</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Modal Footer -->
+                <div class="modal-footer py-2 justify-content-end">
+                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">
+                        <i class="bi bi-grid me-1"></i> 닫기
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+</body>
+</html>

@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<!-- Message Instance (거래추적로그) Search Fragment -->
+<div th:fragment="search" class="card border p-2 mb-3" id="searchBox">
+    <!-- Row 1: 사용자ID, 거래추적번호, 글로벌ID -->
+    <div class="d-flex flex-wrap align-items-center gap-2 mb-1">
+        <label class="form-label mb-0 small fw-medium">사용자ID</label>
+        <input type="text" id="searchUserId" class="form-control form-control-sm flex-fixed-120" placeholder="">
+
+        <label class="form-label mb-0 small fw-medium ms-2">거래추적번호</label>
+        <input type="text" id="searchTrxTrackingNo" class="form-control form-control-sm flex-fixed-200" placeholder="">
+
+        <label class="form-label mb-0 small fw-medium ms-2">글로벌ID</label>
+        <input type="text" id="searchGlobalId" class="form-control form-control-sm flex-fixed-120" placeholder="">
+
+        <div class="flex-grow-1"></div>
+
+        <select id="limitRows" class="form-select form-select-sm sp-limit-select">
+            <option value="10" selected>10</option>
+            <option value="20">20</option>
+            <option value="50">50</option>
+            <option value="100">100</option>
+        </select>
+
+        <label class="form-label mb-0 small fw-medium">건씩</label>
+
+        <button class="btn btn-primary btn-sm" onclick="MessageInstance.load()">
+            <i class="bi bi-search"></i> 조회
+        </button>
+    </div>
+
+    <!-- Row 2: 기관ID, 기관전문ID -->
+    <div class="d-flex flex-wrap align-items-center gap-2 mb-1 mt-1">
+        <label class="form-label mb-0 small fw-medium">기관ID</label>
+        <input type="text" id="searchOrgId" class="form-control form-control-sm flex-fixed-120" placeholder="">
+
+        <label class="form-label mb-0 small fw-medium ms-2">기관전문ID</label>
+        <input type="text" id="searchOrgMessageId" class="form-control form-control-sm flex-fixed-200" placeholder="">
+    </div>
+
+    <!-- Row 3: 거래일시 (날짜 범위 + 시간대) -->
+    <div class="d-flex flex-wrap align-items-center gap-2 mb-1 mt-1">
+        <label class="form-label mb-0 small fw-medium">거래일시</label>
+        <input type="date" id="searchTrxDateFrom" class="form-control form-control-sm flex-fixed-140">
+        <span class="mx-1">~</span>
+        <input type="date" id="searchTrxDateTo" class="form-control form-control-sm flex-fixed-140">
+
+        <label class="form-label mb-0 small fw-medium ms-2">거래된 시간대</label>
+        <input type="text" id="searchTrxTimeFrom" class="form-control form-control-sm flex-fixed-60 text-center" placeholder="0000" maxlength="4">
+        <span class="mx-1">~</span>
+        <input type="text" id="searchTrxTimeTo" class="form-control form-control-sm flex-fixed-60 text-center" placeholder="2359" maxlength="4">
+        <span class="text-body-secondary fs-2xs ms-2">ex) 1134 ~ 1341</span>
+    </div>
+</div>
+
+</body>
+</html>
