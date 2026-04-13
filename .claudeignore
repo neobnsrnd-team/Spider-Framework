@@ -1,0 +1,6 @@
+### Claude Ignore File ###
+
+### reactive-springware/ ###
+reactive-springware/docs/
+reactive-springware/node_modules/
+
