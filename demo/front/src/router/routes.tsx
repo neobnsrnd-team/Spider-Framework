@@ -1,54 +1,12 @@
 /**
  * @file routes.tsx
- * @description 앱 전체 라우트 정의.
+ * @description 하위 호환성 유지용 re-export.
  *
- * 페이지 추가 시 반드시 이 파일에 route를 등록한다.
- * - path는 kebab-case 사용 (예: /transfer-success)
- * - 동적 세그먼트는 콜론 prefix 사용 (예: :id)
+ * 라우트 설정은 아래 구조로 분리되었다:
+ *   src/constants/paths.ts        — 경로 상수
+ *   src/mocks/cardMocks.tsx       — Mock 데이터
+ *   src/routes/RouteWrappers.tsx  — Route Wrapper 컴포넌트
+ *   src/routes/index.tsx          — pageRoutes / modalRoutes 설정
  */
-
-import { HomeDashboardPage } from '@/features/homeDashboard/page';
-import { AccountListPage } from '@/features/accountList/page';
-import { AccountDetailPage } from '@/features/accountDetail/page';
-import { TransferPage } from '@/features/transfer/page';
-import { TransferSuccessPage } from '@/features/transferSuccess/page';
-import { KbHomePage } from '@/features/kbHome/page';
-import { KbTransactionHistoryListPage } from '@/features/kbTransactionHistory/page';
-import { HanaTransactionHistoryListPage } from '@/features/hanaTransactionHistory/page';
-
-const routes = [
-  {
-    path: '/home',
-    element: <HomeDashboardPage />,
-  },
-  {
-    path: '/accounts',
-    element: <AccountListPage />,
-  },
-  {
-    path: '/accounts/:id',
-    element: <AccountDetailPage />,
-  },
-  {
-    path: '/transfer',
-    element: <TransferPage />,
-  },
-  {
-    path: '/transfer/success',
-    element: <TransferSuccessPage />,
-  },
-  {
-    path: '/kb-home',
-    element: <KbHomePage />,
-  },
-  {
-    path: '/kb-transactions',
-    element: <KbTransactionHistoryListPage />,
-  },
-  {
-    path: '/hana-transactions',
-    element: <HanaTransactionHistoryListPage />,
-  },
-];
-
-export default routes;
+export { pageRoutes, modalRoutes } from '@/routes';
+export type { RouteConfig }        from '@/routes';
