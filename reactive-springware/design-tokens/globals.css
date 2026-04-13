@@ -43,7 +43,7 @@
 /* Tailwind v4: 자동 스캔 범위 밖에 있는 컴포넌트 디렉토리를 명시적으로 추가.
    packages/component-library 는 각 앱의 Vite 루트 밖에 위치하므로
    @source 없이는 Tailwind가 해당 파일의 클래스명을 수집하지 못한다. */
-@source "../packages/component-library/**/*.{ts,tsx}";
+@source "../component-library/**/*.{ts,tsx}";
 
 /* ================================================================
    BREAKPOINT REFERENCE VARIABLES (JS 참조용)
