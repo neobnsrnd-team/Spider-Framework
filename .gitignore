@@ -1,6 +1,6 @@
 HELP.md
 target/
-.mvn/wrapper/maven-wrapper.jar
+admin/.mvn/wrapper/maven-wrapper.jar
 !**/src/main/**/target/
 !**/src/test/**/target/
 docs/dev
@@ -16,7 +16,7 @@ docs/TOBE
 .sts4-cache
 
 ### IntelliJ IDEA ###
-.idea
+.idea/*
 *.iws
 *.iml
 *.ipr
@@ -32,10 +32,10 @@ build/
 !**/src/test/**/build/
 
 ### VS Code ###
-.vscode/
+.vscode/*
 
 ### Environment Configuration ###
-.env
+admin/.env
 src/main/resources/application-local.yaml
 
 ### Claude temp files ###
