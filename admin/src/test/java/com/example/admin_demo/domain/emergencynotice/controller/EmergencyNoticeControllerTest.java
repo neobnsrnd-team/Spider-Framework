@@ -180,6 +180,24 @@ class EmergencyNoticeControllerTest {
         }
 
         @Test
+        @WithMockUser(authorities = {"EMERGENCY_NOTICE:R", "EMERGENCY_NOTICE:W"})
+        @DisplayName("[유효성] 제목이 공백이면 400을 반환해야 한다")
+        void saveAll_blankTitle_returns400() throws Exception {
+            Map<String, Object> invalidRequest = Map.of(
+                    "notices", List.of(Map.of(
+                            "propertyId", "EMERGENCY_KO",
+                            "title", "",
+                            "content", "내용")),
+                    "displayType", "N");
+
+            mockMvc.perform(put(BASE_URL)
+                            .with(csrf())
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(invalidRequest)))
+                    .andExpect(status().isBadRequest());
+        }
+
+        @Test
         @DisplayName("[인증] 비인증 요청 시 401을 반환해야 한다")
         void saveAll_unauthenticated_returns401() throws Exception {
             mockMvc.perform(put(BASE_URL)

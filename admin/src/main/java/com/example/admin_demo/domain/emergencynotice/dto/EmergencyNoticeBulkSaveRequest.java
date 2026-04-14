@@ -1,9 +1,8 @@
 package com.example.admin_demo.domain.emergencynotice.dto;
 
+import com.example.admin_demo.domain.emergencynotice.DisplayType;
 import jakarta.validation.Valid;
-import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.Pattern;
 import java.util.List;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -37,8 +36,8 @@ public class EmergencyNoticeBulkSaveRequest {
     /**
      * 긴급공지 노출 타입 (A: 전체 / B: 기업 / C: 개인 / N: 사용안함)
      * FWK_PROPERTY 'notice'.USE_YN 행의 DEFAULT_VALUE에 저장된다.
+     * 유효하지 않은 값은 Jackson 역직렬화 단계에서 400으로 거부된다.
      */
-    @NotBlank(message = "노출 타입은 필수입니다")
-    @Pattern(regexp = "^[ABCN]$", message = "노출 타입은 A, B, C, N 중 하나여야 합니다")
-    private String displayType;
+    @NotNull(message = "노출 타입은 필수입니다")
+    private DisplayType displayType;
 }

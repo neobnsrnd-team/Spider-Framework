@@ -73,8 +73,8 @@
             var readonlyAttr = HAS_WRITE ? '' : 'readonly';
             var rows = this.data.map(function (row) {
                 var label = LANG_LABEL[row.propertyId] || row.propertyId;
-                var title = HtmlUtils ? HtmlUtils.escape(row.title || '') : (row.title || '');
-                var content = HtmlUtils ? HtmlUtils.escape(row.content || '') : (row.content || '');
+                var title = HtmlUtils.escape(row.title || '');
+                var content = HtmlUtils.escape(row.content || '');
                 content = content.replace(/_\$BR/g, '\n'); // _$BR → 줄바꿈 변환 (ASIS 호환)
                 var dtime = formatDtime(row.lastUpdateDtime || '');
                 var userId = row.lastUpdateUserId || '';
@@ -164,8 +164,8 @@
             var content = tr.querySelector('.notice-content').value;
 
             // XSS 방지 후 \n → <br> 변환하여 HTML 렌더링
-            var titleEscaped   = HtmlUtils ? HtmlUtils.escape(title)   : title;
-            var contentEscaped = HtmlUtils ? HtmlUtils.escape(content) : content;
+            var titleEscaped   = HtmlUtils.escape(title);
+            var contentEscaped = HtmlUtils.escape(content);
             var contentHtml    = contentEscaped.replace(/\n/g, '<br>');
 
             document.getElementById('previewModalLang').textContent    = lang;

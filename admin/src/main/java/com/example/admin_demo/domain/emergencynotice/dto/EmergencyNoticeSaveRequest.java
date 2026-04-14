@@ -35,12 +35,14 @@ public class EmergencyNoticeSaveRequest {
     /**
      * 긴급공지 제목 (→ PROPERTY_DESC)
      */
+    @NotBlank(message = "제목은 필수입니다")
     @Size(max = 300, message = "제목은 300자 이내여야 합니다")
     private String title;
 
     /**
      * 긴급공지 내용 (→ DEFAULT_VALUE)
      */
+    @NotBlank(message = "내용은 필수입니다")
     @Size(max = 1000, message = "내용은 1000자 이내여야 합니다")
     private String content;
 }

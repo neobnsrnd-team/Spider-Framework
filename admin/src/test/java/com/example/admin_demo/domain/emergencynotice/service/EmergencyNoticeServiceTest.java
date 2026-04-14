@@ -8,11 +8,13 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
 
+import com.example.admin_demo.domain.emergencynotice.DisplayType;
 import com.example.admin_demo.domain.emergencynotice.dto.EmergencyNoticeBulkSaveRequest;
 import com.example.admin_demo.domain.emergencynotice.dto.EmergencyNoticeResponse;
 import com.example.admin_demo.domain.emergencynotice.dto.EmergencyNoticeSaveRequest;
 import com.example.admin_demo.domain.emergencynotice.mapper.EmergencyNoticeMapper;
 import com.example.admin_demo.global.exception.NotFoundException;
+import org.mockito.ArgumentCaptor;
 import java.util.List;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -98,7 +100,7 @@ class EmergencyNoticeServiceTest {
                 .notices(List.of(
                         buildSaveRequest("EMERGENCY_KO"),
                         buildSaveRequest("EMERGENCY_EN")))
-                .displayType("A")
+                .displayType(DisplayType.A)
                 .build();
         given(emergencyNoticeMapper.countByPropertyId(anyString())).willReturn(1);
 
@@ -117,6 +119,28 @@ class EmergencyNoticeServiceTest {
 
         assertThatThrownBy(() -> emergencyNoticeService.saveAll(request))
                 .isInstanceOf(NotFoundException.class);
+    }
+
+    @Test
+    @DisplayName("[저장] _$BR 마커는 백엔드에서 변환 없이 그대로 저장된다 (변환은 프론트엔드 담당)")
+    void saveAll_lineBreakMarkerPassthrough() {
+        EmergencyNoticeBulkSaveRequest request = EmergencyNoticeBulkSaveRequest.builder()
+                .notices(List.of(EmergencyNoticeSaveRequest.builder()
+                        .propertyId("EMERGENCY_KO")
+                        .title("제목")
+                        .content("첫 줄_$BR둘째 줄") // 프론트에서 \n → _$BR 변환 후 전달한 값
+                        .build()))
+                .displayType(DisplayType.N)
+                .build();
+        given(emergencyNoticeMapper.countByPropertyId(anyString())).willReturn(1);
+
+        emergencyNoticeService.saveAll(request);
+
+        // 서비스가 _$BR 을 별도 변환 없이 mapper 에 그대로 넘기는지 검증
+        ArgumentCaptor<EmergencyNoticeSaveRequest> captor =
+                ArgumentCaptor.forClass(EmergencyNoticeSaveRequest.class);
+        then(emergencyNoticeMapper).should().updateNotice(captor.capture(), anyString(), anyString());
+        assertThat(captor.getValue().getContent()).isEqualTo("첫 줄_$BR둘째 줄");
     }
 
     // ─── 헬퍼 ─────────────────────────────────────────────────────────
@@ -142,7 +166,7 @@ class EmergencyNoticeServiceTest {
     private EmergencyNoticeBulkSaveRequest buildBulkSaveRequest() {
         return EmergencyNoticeBulkSaveRequest.builder()
                 .notices(List.of(buildSaveRequest("EMERGENCY_KO")))
-                .displayType("N")
+                .displayType(DisplayType.N)
                 .build();
     }
 }

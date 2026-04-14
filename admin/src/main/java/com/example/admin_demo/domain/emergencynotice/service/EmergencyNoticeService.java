@@ -4,7 +4,6 @@ import com.example.admin_demo.domain.emergencynotice.dto.EmergencyNoticeBulkSave
 import com.example.admin_demo.domain.emergencynotice.dto.EmergencyNoticeResponse;
 import com.example.admin_demo.domain.emergencynotice.dto.EmergencyNoticeSaveRequest;
 import com.example.admin_demo.domain.emergencynotice.mapper.EmergencyNoticeMapper;
-import com.example.admin_demo.global.exception.InvalidInputException;
 import com.example.admin_demo.global.exception.NotFoundException;
 import com.example.admin_demo.global.util.AuditUtil;
 import java.util.List;
@@ -36,7 +35,7 @@ public class EmergencyNoticeService {
      */
     public List<EmergencyNoticeResponse> getAll() {
         List<EmergencyNoticeResponse> notices = emergencyNoticeMapper.selectAll();
-        if (notices.isEmpty()) {
+        if (notices == null || notices.isEmpty()) {
             throw new NotFoundException("긴급공지 데이터가 존재하지 않습니다. 초기 데이터를 확인해주세요.");
         }
         return notices;
@@ -58,6 +57,9 @@ public class EmergencyNoticeService {
     /**
      * 언어별 긴급공지와 노출 타입을 일괄 저장한다.
      *
+     * <p>줄바꿈 마커({@code _$BR}) 변환은 프론트엔드에서 담당한다.
+     * 백엔드는 전달받은 값을 변환 없이 그대로 저장·조회한다.
+     *
      * @param request 언어별 공지 목록 + 노출 타입
      */
     @Transactional
@@ -67,15 +69,14 @@ public class EmergencyNoticeService {
         String now = AuditUtil.now();
         String userId = AuditUtil.currentUserId();
 
-        // 언어별 긴급공지 저장
+        // 언어별 긴급공지 저장 (propertyId 유효성은 DTO @Pattern에서 검증)
         for (EmergencyNoticeSaveRequest notice : request.getNotices()) {
-            validatePropertyId(notice.getPropertyId());
             emergencyNoticeMapper.updateNotice(notice, now, userId);
             log.info("긴급공지 저장 완료: propertyId={}", notice.getPropertyId());
         }
 
-        // 노출 타입 저장
-        emergencyNoticeMapper.updateDisplayType(request.getDisplayType(), now, userId);
+        // 노출 타입 저장 (Enum → DB 저장용 문자열 변환)
+        emergencyNoticeMapper.updateDisplayType(request.getDisplayType().name(), now, userId);
         log.info("긴급공지 노출 타입 저장 완료: displayType={}", request.getDisplayType());
     }
 
@@ -93,12 +94,4 @@ public class EmergencyNoticeService {
         }
     }
 
-    /**
-     * propertyId가 EMERGENCY_KO 또는 EMERGENCY_EN인지 검증한다.
-     */
-    private void validatePropertyId(String propertyId) {
-        if (!"EMERGENCY_KO".equals(propertyId) && !"EMERGENCY_EN".equals(propertyId)) {
-            throw new InvalidInputException("유효하지 않은 propertyId: " + propertyId);
-        }
-    }
 }
