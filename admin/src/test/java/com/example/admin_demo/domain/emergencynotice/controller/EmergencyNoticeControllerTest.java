@@ -54,9 +54,8 @@ class EmergencyNoticeControllerTest {
         @WithMockUser(authorities = "EMERGENCY_NOTICE:R")
         @DisplayName("[조회] R 권한으로 조회하면 200과 notices+displayType을 반환해야 한다")
         void getAll_withReadAuth_returns200() throws Exception {
-            List<EmergencyNoticeResponse> notices = List.of(
-                    buildResponse("EMERGENCY_KO"),
-                    buildResponse("EMERGENCY_EN"));
+            List<EmergencyNoticeResponse> notices =
+                    List.of(buildResponse("EMERGENCY_KO"), buildResponse("EMERGENCY_EN"));
             given(emergencyNoticeService.getAll()).willReturn(notices);
             given(emergencyNoticeService.getDisplayType()).willReturn("N");
 
@@ -72,8 +71,7 @@ class EmergencyNoticeControllerTest {
         @WithMockUser(authorities = "EMERGENCY_NOTICE:R")
         @DisplayName("[조회] 초기 데이터 없을 시 404를 반환해야 한다")
         void getAll_notFound_returns404() throws Exception {
-            given(emergencyNoticeService.getAll())
-                    .willThrow(new NotFoundException("긴급공지 초기 데이터 없음"));
+            given(emergencyNoticeService.getAll()).willThrow(new NotFoundException("긴급공지 초기 데이터 없음"));
 
             mockMvc.perform(get(BASE_URL)).andExpect(status().isNotFound());
         }
@@ -137,11 +135,13 @@ class EmergencyNoticeControllerTest {
         @DisplayName("[유효성] 유효하지 않은 displayType 입력 시 400을 반환해야 한다")
         void saveAll_invalidDisplayType_returns400() throws Exception {
             Map<String, Object> invalidRequest = Map.of(
-                    "notices", List.of(Map.of(
+                    "notices",
+                    List.of(Map.of(
                             "propertyId", "EMERGENCY_KO",
                             "title", "제목",
                             "content", "내용")),
-                    "displayType", "X"); // valid: A/B/C/N only
+                    "displayType",
+                    "X"); // valid: A/B/C/N only
 
             mockMvc.perform(put(BASE_URL)
                             .with(csrf())
@@ -166,11 +166,13 @@ class EmergencyNoticeControllerTest {
         @DisplayName("[유효성] 유효하지 않은 propertyId 입력 시 400을 반환해야 한다")
         void saveAll_invalidPropertyId_returns400() throws Exception {
             Map<String, Object> invalidRequest = Map.of(
-                    "notices", List.of(Map.of(
+                    "notices",
+                    List.of(Map.of(
                             "propertyId", "INVALID_ID",
                             "title", "제목",
                             "content", "내용")),
-                    "displayType", "N");
+                    "displayType",
+                    "N");
 
             mockMvc.perform(put(BASE_URL)
                             .with(csrf())
@@ -184,11 +186,13 @@ class EmergencyNoticeControllerTest {
         @DisplayName("[유효성] 제목이 공백이면 400을 반환해야 한다")
         void saveAll_blankTitle_returns400() throws Exception {
             Map<String, Object> invalidRequest = Map.of(
-                    "notices", List.of(Map.of(
+                    "notices",
+                    List.of(Map.of(
                             "propertyId", "EMERGENCY_KO",
                             "title", "",
                             "content", "내용")),
-                    "displayType", "N");
+                    "displayType",
+                    "N");
 
             mockMvc.perform(put(BASE_URL)
                             .with(csrf())
@@ -222,10 +226,12 @@ class EmergencyNoticeControllerTest {
 
     private Map<String, Object> buildBulkSaveRequest() {
         return Map.of(
-                "notices", List.of(Map.of(
+                "notices",
+                List.of(Map.of(
                         "propertyId", "EMERGENCY_KO",
                         "title", "긴급공지 제목",
                         "content", "긴급공지 내용")),
-                "displayType", "N");
+                "displayType",
+                "N");
     }
 }

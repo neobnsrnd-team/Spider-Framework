@@ -23,8 +23,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional(readOnly = true)
 public class EmergencyNoticeService {
 
-    private static final List<String> NOTICE_PROPERTY_IDS =
-            List.of("EMERGENCY_KO", "EMERGENCY_EN", "USE_YN");
+    private static final List<String> NOTICE_PROPERTY_IDS = List.of("EMERGENCY_KO", "EMERGENCY_EN", "USE_YN");
 
     private final EmergencyNoticeMapper emergencyNoticeMapper;
 
@@ -87,11 +86,9 @@ public class EmergencyNoticeService {
     private void validateExistence() {
         for (String propertyId : NOTICE_PROPERTY_IDS) {
             if (emergencyNoticeMapper.countByPropertyId(propertyId) == 0) {
-                throw new NotFoundException(
-                        "FWK_PROPERTY 'notice." + propertyId + "' 데이터가 존재하지 않습니다."
+                throw new NotFoundException("FWK_PROPERTY 'notice." + propertyId + "' 데이터가 존재하지 않습니다."
                         + " docs/sql/oracle/03_insert_initial_data.sql의 초기 데이터를 먼저 실행해주세요.");
             }
         }
     }
-
 }
