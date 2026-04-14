@@ -29,6 +29,10 @@ import type { LoginPageProps } from "./types";
 export type { LoginPageProps } from "./types";
 
 export function LoginPage({
+  userId = '',
+  password = '',
+  onUserIdChange,
+  onPasswordChange,
   hasError = false,
   showPassword = false,
   onTogglePassword,
@@ -79,14 +83,16 @@ export function LoginPage({
             label="아이디"
             type="text"
             placeholder="아이디를 입력하세요"
-            defaultValue="hanabank_user"
+            value={userId}
+            onChange={(e) => onUserIdChange?.(e.target.value)}
             fullWidth
           />
           <Input
             label="비밀번호"
             type={showPassword ? "text" : "password"}
             placeholder="비밀번호를 입력하세요"
-            defaultValue="password123"
+            value={password}
+            onChange={(e) => onPasswordChange?.(e.target.value)}
             fullWidth
             validationState={hasError ? "error" : "default"}
             helperText={

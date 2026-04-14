@@ -6,6 +6,9 @@
 export interface CardDashboardPageProps {
   /** 뒤로가기 없음 — 홈 루트 화면이므로 onBack 불필요 */
 
+  /** 로그인 사용자명 — StatementHeroCard 위 인사말에 표시 */
+  userName?: string;
+
   /** 알림 아이콘 클릭 */
   onNotification?: () => void;
   /** 메뉴 아이콘 클릭 */

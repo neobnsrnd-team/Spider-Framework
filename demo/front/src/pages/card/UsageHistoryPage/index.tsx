@@ -142,7 +142,7 @@ export function UsageHistoryPage({
           <div className="flex flex-col gap-md bg-surface rounded-2xl shadow-card px-md py-lg">
             <div className="flex flex-col gap-xs">
               <Typography variant="caption" color="muted">
-                {paymentSummary.date} 출금예정
+                {paymentSummary.date ? `${paymentSummary.date} 출금예정` : '출금예정일 정보 없음'}
               </Typography>
               <Typography variant="subheading" weight="bold" color="heading" numeric>
                 {formatAmount(paymentSummary.totalAmount)}
