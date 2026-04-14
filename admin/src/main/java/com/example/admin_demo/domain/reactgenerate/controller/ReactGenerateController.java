@@ -26,7 +26,8 @@ public class ReactGenerateController {
     @PreAuthorize("hasAuthority('REACT_GENERATE:W')")
     public ResponseEntity<ApiResponse<ReactGenerateResponse>> generate(
             @Valid @RequestBody ReactGenerateRequest request) {
-        return ResponseEntity.ok(ApiResponse.success(reactGenerateService.generate(request)));
+        String currentUserId = SecurityUtil.getCurrentUserId();
+        return ResponseEntity.ok(ApiResponse.success(reactGenerateService.generate(request, currentUserId)));
     }
 
     @PostMapping("/{id}/request-approval")

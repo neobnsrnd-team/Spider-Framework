@@ -10,13 +10,13 @@ import com.example.admin_demo.domain.menu.mapper.UserMenuMapper;
 import com.example.admin_demo.domain.role.dto.RoleMenuResponse;
 import com.example.admin_demo.domain.role.mapper.RoleMenuMapper;
 import com.example.admin_demo.domain.user.mapper.UserMapper;
+import com.example.admin_demo.global.config.MenuProperties;
 import com.example.admin_demo.global.dto.PageRequest;
 import com.example.admin_demo.global.dto.PageResponse;
 import com.example.admin_demo.global.exception.DuplicateException;
 import com.example.admin_demo.global.exception.InternalException;
 import com.example.admin_demo.global.exception.InvalidInputException;
 import com.example.admin_demo.global.exception.NotFoundException;
-import com.example.admin_demo.global.config.MenuProperties;
 import com.example.admin_demo.global.util.AuditUtil;
 import com.example.admin_demo.global.util.ExcelColumnDefinition;
 import com.example.admin_demo.global.util.ExcelExportUtil;
@@ -341,9 +341,7 @@ public class MenuService {
             }
         }
 
-        return menus.stream()
-                .filter(m -> !toHide.contains(m.getMenuId()))
-                .collect(Collectors.toList());
+        return menus.stream().filter(m -> !toHide.contains(m.getMenuId())).collect(Collectors.toList());
     }
 
     private List<MenuHierarchyResponse> buildMenuHierarchy(

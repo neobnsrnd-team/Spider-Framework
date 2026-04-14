@@ -1,3 +1,5 @@
+<!-- 이 파일은 scripts/extract-component-map.ts로 자동 생성됩니다. 직접 수정하지 마세요. -->
+<!-- 원본: docs/component-map.md -->
 # Component Map — Figma → React 매핑 전략
 
 > **대상 Figma 파일**: Hana Bank App (`eRnV2DPVtHbGn5HSISS65O`)

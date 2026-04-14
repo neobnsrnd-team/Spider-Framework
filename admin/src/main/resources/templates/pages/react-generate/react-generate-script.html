@@ -43,11 +43,13 @@
         $('#generatingIndicator').removeClass('d-none');
         $('#btnGenerate').prop('disabled', true);
 
+        const requirements = $('#requirementsInput').val().trim() || null;
+
         $.ajax({
             url: API_BASE_URL + '/react-generate/generate',
             method: 'POST',
             contentType: 'application/json',
-            data: JSON.stringify({ figmaUrl: figmaUrl }),
+            data: JSON.stringify({ figmaUrl: figmaUrl, requirements: requirements }),
             success: function (res) {
                 if (res.success && res.data) {
                     renderResult(res.data);

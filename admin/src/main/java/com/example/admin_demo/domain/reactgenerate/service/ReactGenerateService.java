@@ -1,15 +1,16 @@
 package com.example.admin_demo.domain.reactgenerate.service;
 
+import com.example.admin_demo.domain.reactgenerate.ai.ClaudeApiClient;
+import com.example.admin_demo.domain.reactgenerate.ai.prompt.PromptBuilder;
 import com.example.admin_demo.domain.reactgenerate.dto.ReactGenerateApprovalResponse;
 import com.example.admin_demo.domain.reactgenerate.dto.ReactGenerateRequest;
 import com.example.admin_demo.domain.reactgenerate.dto.ReactGenerateResponse;
 import com.example.admin_demo.domain.reactgenerate.enums.ReactGenerateStatus;
+import com.example.admin_demo.domain.reactgenerate.mapper.ReactGenerateMapper;
 import com.example.admin_demo.global.exception.NotFoundException;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.Map;
 import java.util.UUID;
-import java.util.concurrent.ConcurrentHashMap;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -19,22 +20,50 @@ import org.springframework.stereotype.Service;
 @RequiredArgsConstructor
 public class ReactGenerateService {
 
-    // TODO: DB 테이블 생성 후 Mapper로 교체
-    private final Map<String, ReactGenerateResponse> store = new ConcurrentHashMap<>();
+    private final ReactGenerateMapper reactGenerateMapper;
+    private final PromptBuilder promptBuilder;
+    private final ClaudeApiClient claudeApiClient;
 
-    private static final DateTimeFormatter FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+    private static final DateTimeFormatter FORMATTER = DateTimeFormatter.ofPattern("yyyyMMddHHmmss");
 
-    public ReactGenerateResponse generate(ReactGenerateRequest request) {
-        log.info("React 코드 생성 요청 - figmaUrl: {}", request.getFigmaUrl());
+    /**
+     * Figma URL과 요구사항을 받아 Claude API로 React 코드를 생성하고 DB에 저장한다.
+     *
+     * @param request figmaUrl, requirements
+     * @param createdBy 생성 요청자 ID (로그인 사용자)
+     * @return 생성된 코드와 메타 정보
+     */
+    public ReactGenerateResponse generate(ReactGenerateRequest request, String createdBy) {
+        log.info("React 코드 생성 요청 — figmaUrl: {}, userId: {}", request.getFigmaUrl(), createdBy);
 
+        // 1. system / user prompt 조립
+        String systemPrompt = promptBuilder.buildSystemPrompt();
+        String userPrompt = promptBuilder.buildUserPrompt(request.getFigmaUrl(), request.getRequirements());
+
+        // 2. Claude API 호출하여 React 코드 생성
+        String reactCode = claudeApiClient.generate(systemPrompt, userPrompt);
+
+        // 3. 코드 기반 preview HTML 생성
+        String previewHtml = buildPreviewHtml(reactCode, request.getFigmaUrl());
+
+        // 4. DB 저장 (초기 상태: GENERATED)
         String id = UUID.randomUUID().toString();
         String now = LocalDateTime.now().format(FORMATTER);
 
-        // TODO: Figma API 연동 및 Claude API를 통한 실제 코드 생성 구현
-        String reactCode = buildPlaceholderCode(request.getFigmaUrl());
-        String previewHtml = buildPreviewHtml(request.getFigmaUrl());
+        reactGenerateMapper.insert(
+                id,
+                request.getFigmaUrl(),
+                request.getRequirements(),
+                systemPrompt,
+                userPrompt,
+                reactCode,
+                previewHtml,
+                createdBy,
+                now);
 
-        ReactGenerateResponse response = ReactGenerateResponse.builder()
+        log.info("React 코드 생성 완료 — id: {}", id);
+
+        return ReactGenerateResponse.builder()
                 .id(id)
                 .figmaUrl(request.getFigmaUrl())
                 .reactCode(reactCode)
@@ -42,30 +71,32 @@ public class ReactGenerateService {
                 .status(ReactGenerateStatus.GENERATED.name())
                 .createdAt(now)
                 .build();
-
-        store.put(id, response);
-        return response;
     }
 
+    /**
+     * 생성된 코드를 관리자 승인 요청 상태로 변경한다.
+     */
     public ReactGenerateApprovalResponse requestApproval(String id) {
-        ReactGenerateResponse item = findById(id);
-        item.setStatus(ReactGenerateStatus.PENDING_APPROVAL.name());
-        store.put(id, item);
+        requireExists(id);
 
-        log.info("승인 요청 - id: {}", id);
+        reactGenerateMapper.updateStatus(id, ReactGenerateStatus.PENDING_APPROVAL.name(), null, null);
+        log.info("승인 요청 — id: {}", id);
+
         return ReactGenerateApprovalResponse.builder()
                 .id(id)
                 .status(ReactGenerateStatus.PENDING_APPROVAL.name())
                 .build();
     }
 
+    /**
+     * 관리자가 생성 코드를 승인한다.
+     */
     public ReactGenerateApprovalResponse approve(String id, String approvedBy) {
-        ReactGenerateResponse item = findById(id);
-        item.setStatus(ReactGenerateStatus.APPROVED.name());
-        store.put(id, item);
+        requireExists(id);
 
         String now = LocalDateTime.now().format(FORMATTER);
-        log.info("승인 완료 - id: {}, approvedBy: {}", id, approvedBy);
+        reactGenerateMapper.updateStatus(id, ReactGenerateStatus.APPROVED.name(), approvedBy, now);
+        log.info("승인 완료 — id: {}, approvedBy: {}", id, approvedBy);
 
         return ReactGenerateApprovalResponse.builder()
                 .id(id)
@@ -75,54 +106,35 @@ public class ReactGenerateService {
                 .build();
     }
 
-    private ReactGenerateResponse findById(String id) {
-        ReactGenerateResponse item = store.get(id);
-        if (item == null) {
+    /** ID로 이력을 조회하고, 없으면 NotFoundException을 던진다. */
+    private void requireExists(String id) {
+        if (reactGenerateMapper.selectById(id) == null) {
             throw new NotFoundException("생성 결과를 찾을 수 없습니다. id=" + id);
         }
-        return item;
     }
 
-    private String buildPlaceholderCode(String figmaUrl) {
-        return """
-                import React from 'react';
-
-                // TODO: Figma URL에서 생성된 컴포넌트
-                // Source: %s
-                const GeneratedComponent = () => {
-                  return (
-                    <div className="generated-component">
-                      <h2>Generated Component</h2>
-                      <p>Figma 디자인 기반으로 생성된 컴포넌트입니다.</p>
-                    </div>
-                  );
-                };
-
-                export default GeneratedComponent;
-                """
-                .formatted(figmaUrl);
-    }
-
-    private String buildPreviewHtml(String figmaUrl) {
+    /**
+     * 생성된 React 코드를 iframe에서 미리볼 수 있는 HTML을 생성한다.
+     * React 코드는 직접 실행이 불가하므로 코드를 code 태그로 감싸 표시한다.
+     */
+    private String buildPreviewHtml(String reactCode, String figmaUrl) {
         return """
                 <!DOCTYPE html>
                 <html>
                 <head>
                   <meta charset="UTF-8">
                   <style>
-                    body { font-family: sans-serif; padding: 20px; }
-                    .generated-component { border: 1px dashed #ccc; padding: 20px; border-radius: 8px; }
+                    body { font-family: monospace; padding: 16px; background: #1e1e1e; color: #d4d4d4; }
+                    pre { white-space: pre-wrap; word-break: break-all; font-size: 13px; }
+                    .source { font-size: 11px; color: #666; margin-bottom: 8px; }
                   </style>
                 </head>
                 <body>
-                  <div class="generated-component">
-                    <h2>Generated Component</h2>
-                    <p>Figma 디자인 기반으로 생성된 컴포넌트입니다.</p>
-                    <small style="color:#999">Source: %s</small>
-                  </div>
+                  <div class="source">Source: %s</div>
+                  <pre>%s</pre>
                 </body>
                 </html>
                 """
-                .formatted(figmaUrl);
+                .formatted(figmaUrl, reactCode.replace("<", "&lt;").replace(">", "&gt;"));
     }
 }

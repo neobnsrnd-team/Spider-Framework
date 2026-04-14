@@ -11,23 +11,30 @@
         </h4>
     </div>
 
-    <!-- Figma URL Input Card -->
+    <!-- Input Card -->
     <div class="card mb-3">
         <div class="card-body">
-            <div class="row g-2 align-items-end">
-                <div class="col">
-                    <label for="figmaUrlInput" class="form-label fw-semibold">Figma URL</label>
-                    <input type="url"
-                           id="figmaUrlInput"
-                           class="form-control"
-                           placeholder="https://www.figma.com/design/..."
-                           autocomplete="off">
-                </div>
-                <div class="col-auto">
-                    <button type="button" class="btn btn-primary" id="btnGenerate">
-                        <i class="bi bi-lightning-charge-fill me-1"></i>생성
-                    </button>
-                </div>
+            <div class="mb-2">
+                <label for="figmaUrlInput" class="form-label fw-semibold">Figma URL</label>
+                <input type="url"
+                       id="figmaUrlInput"
+                       class="form-control"
+                       placeholder="https://www.figma.com/design/..."
+                       autocomplete="off">
+            </div>
+            <div class="mb-3">
+                <label for="requirementsInput" class="form-label fw-semibold">
+                    요구사항 <span class="text-muted fw-normal small">(선택)</span>
+                </label>
+                <textarea id="requirementsInput"
+                          class="form-control"
+                          rows="3"
+                          placeholder="예: 이체 화면의 계좌 선택 카드를 생성해줘. primary 버튼만 사용할 것."></textarea>
+            </div>
+            <div class="d-flex justify-content-end">
+                <button type="button" class="btn btn-primary" id="btnGenerate">
+                    <i class="bi bi-lightning-charge-fill me-1"></i>생성
+                </button>
             </div>
         </div>
     </div>

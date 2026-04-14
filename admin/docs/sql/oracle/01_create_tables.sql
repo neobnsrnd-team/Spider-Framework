@@ -1172,3 +1172,25 @@ CREATE TABLE FWK_LOG (
     LOG_DATA                   CLOB,
     CONSTRAINT PK_FWK_LOG PRIMARY KEY (LOG_SNO)
 );
+
+
+-- =============================================================
+-- 15. React Generate (1 table)
+-- =============================================================
+
+CREATE TABLE REACT_GENERATE_HIS (
+    ID                         VARCHAR2(36)   NOT NULL,
+    FIGMA_URL                  VARCHAR2(1000) NOT NULL,
+    REQUIREMENTS               CLOB,
+    SYSTEM_PROMPT              CLOB,                         -- 디버깅 및 감사용 저장
+    USER_PROMPT                CLOB,
+    REACT_CODE                 CLOB,
+    PREVIEW_HTML               CLOB,
+    STATUS                     VARCHAR2(20)   DEFAULT 'GENERATED' NOT NULL,  -- GENERATED / PENDING_APPROVAL / APPROVED / REJECTED
+    APPROVED_BY                VARCHAR2(100),
+    APPROVED_AT                VARCHAR2(14),
+    CREATED_BY                 VARCHAR2(100)  NOT NULL,
+    CREATED_AT                 VARCHAR2(14)   NOT NULL,
+    CONSTRAINT PK_REACT_GENERATE_HIS PRIMARY KEY (ID),
+    CONSTRAINT CHK_REACT_GEN_STATUS CHECK (STATUS IN ('GENERATED', 'PENDING_APPROVAL', 'APPROVED', 'REJECTED'))
+);
