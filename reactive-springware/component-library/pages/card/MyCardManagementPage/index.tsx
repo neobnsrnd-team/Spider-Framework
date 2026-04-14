@@ -37,10 +37,16 @@ export function MyCardManagementPage({
   cards,
   initialCardId,
   managementRows,
+  onCardSelect,
   onBack,
   onClose,
 }: MyCardManagementPageProps) {
   const [selectedCardId, setSelectedCardId] = useState(initialCardId ?? cards[0]?.id);
+
+  const handleCardSelect = (id: string) => {
+    setSelectedCardId(id);
+    onCardSelect?.(id);
+  };
   const [balanceHidden, setBalanceHidden] = useState(false);
   const [isCompact, setIsCompact] = useState(false);
 
@@ -96,7 +102,7 @@ export function MyCardManagementPage({
                   key={card.id}
                   label={card.name}
                   isSelected={isSelected}
-                  onClick={() => setSelectedCardId(card.id)}
+                  onClick={() => handleCardSelect(card.id)}
                 />
               );
             })}

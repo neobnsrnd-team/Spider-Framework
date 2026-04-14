@@ -4,6 +4,14 @@
  */
 
 export interface LoginPageProps {
+  /** 아이디 입력값 */
+  userId?: string;
+  /** 비밀번호 입력값 */
+  password?: string;
+  /** 아이디 변경 핸들러 */
+  onUserIdChange?: (value: string) => void;
+  /** 비밀번호 변경 핸들러 */
+  onPasswordChange?: (value: string) => void;
   /** true 시 비밀번호 에러 상태(빨간 테두리 + 안내 문구) 표시 */
   hasError?: boolean;
   /** true 시 비밀번호 평문 표시 */
