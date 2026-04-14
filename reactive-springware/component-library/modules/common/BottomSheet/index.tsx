@@ -141,7 +141,7 @@ export function BottomSheet({
          *   - 헤더 없음: 드래그 핸들 pb-1(4px) + 본문 pt-md(12px) = 16px 간격
          */}
         <div
-          className="flex-1 min-h-0 overflow-y-auto [&::-webkit-scrollbar]:hidden pt-md pb-md"
+          className="flex-1 min-h-0 overflow-y-auto [&::-webkit-scrollbar]:hidden p-md"
           style={{ scrollbarWidth: 'none' }}
         >
           {children}

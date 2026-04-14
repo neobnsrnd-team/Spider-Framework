@@ -37,6 +37,7 @@ export function MyCardManagementPage({
   cards,
   initialCardId,
   managementRows,
+  onCardSelect,
   onBack,
   onClose,
 }: MyCardManagementPageProps) {
@@ -100,7 +101,7 @@ export function MyCardManagementPage({
                   key={card.id}
                   label={card.name}
                   isSelected={isSelected}
-                  onClick={() => setSelectedCardId(card.id)}
+                  onClick={() => { setSelectedCardId(card.id); onCardSelect?.(card.id); }}
                 />
               );
             })}

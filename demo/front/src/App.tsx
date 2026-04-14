@@ -1,6 +1,8 @@
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { pageRoutes, modalRoutes } from '@/routes'
+import { AuthProvider, useAuth } from '@/contexts/AuthContext'
+import { PATHS } from '@/constants/paths'
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -22,12 +24,17 @@ const queryClient = new QueryClient({
  * 새 모달이 필요하면 routes.tsx 의 modalRoutes 에만 추가하면 된다.
  */
 function AppRoutes() {
-  const location = useLocation()
+  const location   = useLocation()
   const background = (location.state as { background?: Location })?.background
+  const { isLoggedIn } = useAuth()
+
+  // 로그인 안 된 상태에서 로그인 페이지 외 접근 시 리다이렉트
+  if (!isLoggedIn && location.pathname !== PATHS.LOGIN) {
+    return <Navigate to={PATHS.LOGIN} replace />
+  }
 
   return (
     <>
-      {/* 일반 페이지 라우트 — 모달 열린 동안에는 background 위치로 고정 */}
       <Routes location={background ?? location}>
         <Route path="/" element={<Navigate to="/login" replace />} />
         {pageRoutes.map(({ path, element }) => (
@@ -35,7 +42,6 @@ function AppRoutes() {
         ))}
       </Routes>
 
-      {/* 모달 라우트 — background 가 있을 때만 렌더링 */}
       {background && (
         <Routes>
           {modalRoutes.map(({ path, element }) => (
@@ -50,9 +56,11 @@ function AppRoutes() {
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <BrowserRouter>
-        <AppRoutes />
-      </BrowserRouter>
+      <AuthProvider>
+        <BrowserRouter>
+          <AppRoutes />
+        </BrowserRouter>
+      </AuthProvider>
     </QueryClientProvider>
   )
 }
