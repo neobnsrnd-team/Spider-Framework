@@ -87,6 +87,14 @@ menu:
   hidden-menu-ids:
     - acl_manage  # Framework 관리메뉴 (asis 메뉴)
 
+# Figma API Configuration (React Generate 메뉴 — 디자인 노드 조회)
+figma:
+  api:
+    url: https://api.figma.com
+    token: ${FIGMA_ACCESS_TOKEN}
+    connect-timeout-seconds: 10
+    read-timeout-seconds: 30
+
 # Claude API Configuration (React Generate 메뉴)
 claude:
   api:
