@@ -46,8 +46,7 @@ public class EmergencyNoticeController {
      */
     @PutMapping
     @PreAuthorize("hasAuthority('EMERGENCY_NOTICE:W')")
-    public ResponseEntity<ApiResponse<Void>> saveAll(
-            @Valid @RequestBody EmergencyNoticeBulkSaveRequest request) {
+    public ResponseEntity<ApiResponse<Void>> saveAll(@Valid @RequestBody EmergencyNoticeBulkSaveRequest request) {
         emergencyNoticeService.saveAll(request);
         return ResponseEntity.ok(ApiResponse.success(null));
     }

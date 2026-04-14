@@ -14,11 +14,11 @@ import com.example.admin_demo.domain.emergencynotice.dto.EmergencyNoticeResponse
 import com.example.admin_demo.domain.emergencynotice.dto.EmergencyNoticeSaveRequest;
 import com.example.admin_demo.domain.emergencynotice.mapper.EmergencyNoticeMapper;
 import com.example.admin_demo.global.exception.NotFoundException;
-import org.mockito.ArgumentCaptor;
 import java.util.List;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -38,8 +38,7 @@ class EmergencyNoticeServiceTest {
     @Test
     @DisplayName("[조회] 긴급공지 목록이 존재하면 List를 반환해야 한다")
     void getAll_exists_returnsList() {
-        List<EmergencyNoticeResponse> data =
-                List.of(buildResponse("EMERGENCY_KO"), buildResponse("EMERGENCY_EN"));
+        List<EmergencyNoticeResponse> data = List.of(buildResponse("EMERGENCY_KO"), buildResponse("EMERGENCY_EN"));
         given(emergencyNoticeMapper.selectAll()).willReturn(data);
 
         List<EmergencyNoticeResponse> result = emergencyNoticeService.getAll();
@@ -54,8 +53,7 @@ class EmergencyNoticeServiceTest {
     void getAll_empty_throwsNotFoundException() {
         given(emergencyNoticeMapper.selectAll()).willReturn(List.of());
 
-        assertThatThrownBy(() -> emergencyNoticeService.getAll())
-                .isInstanceOf(NotFoundException.class);
+        assertThatThrownBy(() -> emergencyNoticeService.getAll()).isInstanceOf(NotFoundException.class);
     }
 
     // ─── getDisplayType ───────────────────────────────────────────────
@@ -75,8 +73,7 @@ class EmergencyNoticeServiceTest {
     void getDisplayType_null_throwsNotFoundException() {
         given(emergencyNoticeMapper.selectDisplayType()).willReturn(null);
 
-        assertThatThrownBy(() -> emergencyNoticeService.getDisplayType())
-                .isInstanceOf(NotFoundException.class);
+        assertThatThrownBy(() -> emergencyNoticeService.getDisplayType()).isInstanceOf(NotFoundException.class);
     }
 
     // ─── saveAll ──────────────────────────────────────────────────────
@@ -97,17 +94,14 @@ class EmergencyNoticeServiceTest {
     @DisplayName("[저장] 복수 공지 저장 시 언어 수만큼 updateNotice가 호출되어야 한다")
     void saveAll_multipleNotices_callsUpdateNoticeForEach() {
         EmergencyNoticeBulkSaveRequest request = EmergencyNoticeBulkSaveRequest.builder()
-                .notices(List.of(
-                        buildSaveRequest("EMERGENCY_KO"),
-                        buildSaveRequest("EMERGENCY_EN")))
+                .notices(List.of(buildSaveRequest("EMERGENCY_KO"), buildSaveRequest("EMERGENCY_EN")))
                 .displayType(DisplayType.A)
                 .build();
         given(emergencyNoticeMapper.countByPropertyId(anyString())).willReturn(1);
 
         emergencyNoticeService.saveAll(request);
 
-        then(emergencyNoticeMapper).should(org.mockito.Mockito.times(2))
-                .updateNotice(any(), anyString(), anyString());
+        then(emergencyNoticeMapper).should(org.mockito.Mockito.times(2)).updateNotice(any(), anyString(), anyString());
         then(emergencyNoticeMapper).should().updateDisplayType(eq("A"), anyString(), anyString());
     }
 
@@ -117,8 +111,7 @@ class EmergencyNoticeServiceTest {
         EmergencyNoticeBulkSaveRequest request = buildBulkSaveRequest();
         given(emergencyNoticeMapper.countByPropertyId(anyString())).willReturn(0);
 
-        assertThatThrownBy(() -> emergencyNoticeService.saveAll(request))
-                .isInstanceOf(NotFoundException.class);
+        assertThatThrownBy(() -> emergencyNoticeService.saveAll(request)).isInstanceOf(NotFoundException.class);
     }
 
     @Test
@@ -137,8 +130,7 @@ class EmergencyNoticeServiceTest {
         emergencyNoticeService.saveAll(request);
 
         // 서비스가 _$BR 을 별도 변환 없이 mapper 에 그대로 넘기는지 검증
-        ArgumentCaptor<EmergencyNoticeSaveRequest> captor =
-                ArgumentCaptor.forClass(EmergencyNoticeSaveRequest.class);
+        ArgumentCaptor<EmergencyNoticeSaveRequest> captor = ArgumentCaptor.forClass(EmergencyNoticeSaveRequest.class);
         then(emergencyNoticeMapper).should().updateNotice(captor.capture(), anyString(), anyString());
         assertThat(captor.getValue().getContent()).isEqualTo("첫 줄_$BR둘째 줄");
     }
