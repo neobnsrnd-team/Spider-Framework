@@ -1185,7 +1185,6 @@ CREATE TABLE REACT_GENERATE_HIS (
     SYSTEM_PROMPT              CLOB,                         -- 디버깅 및 감사용 저장
     USER_PROMPT                CLOB,
     REACT_CODE                 CLOB,
-    PREVIEW_HTML               CLOB,
     STATUS                     VARCHAR2(20)   DEFAULT 'GENERATED' NOT NULL,  -- GENERATED / PENDING_APPROVAL / APPROVED / REJECTED
     APPROVED_BY                VARCHAR2(100),
     APPROVED_AT                VARCHAR2(14),

@@ -1040,7 +1040,6 @@ CREATE TABLE REACT_GENERATE_HIS (
     SYSTEM_PROMPT              LONGTEXT,
     USER_PROMPT                LONGTEXT,
     REACT_CODE                 LONGTEXT,
-    PREVIEW_HTML               LONGTEXT,
     STATUS                     VARCHAR(20)    NOT NULL DEFAULT 'GENERATED',
     APPROVED_BY                VARCHAR(100),
     APPROVED_AT                VARCHAR(14),

@@ -20,7 +20,6 @@ public interface ReactGenerateMapper {
             @Param("systemPrompt") String systemPrompt,
             @Param("userPrompt") String userPrompt,
             @Param("reactCode") String reactCode,
-            @Param("previewHtml") String previewHtml,
             @Param("createdBy") String createdBy,
             @Param("createdAt") String createdAt);
 

@@ -13,11 +13,15 @@ import com.example.admin_demo.domain.reactgenerate.figma.FigmaNodeResponse;
 import com.example.admin_demo.domain.reactgenerate.figma.FigmaUrlParser;
 import com.example.admin_demo.domain.reactgenerate.mapper.ReactGenerateMapper;
 import com.example.admin_demo.global.exception.NotFoundException;
+import com.example.admin_demo.global.log.event.ErrorLogEvent;
+import com.example.admin_demo.global.util.TraceIdUtil;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.boot.logging.LogLevel;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 
 @Slf4j
@@ -30,6 +34,7 @@ public class ReactGenerateService {
     private final ClaudeApiClient claudeApiClient;
     private final FigmaApiClient figmaApiClient;
     private final FigmaDesignExtractor figmaDesignExtractor;
+    private final ApplicationEventPublisher eventPublisher;
 
     private static final DateTimeFormatter FORMATTER = DateTimeFormatter.ofPattern("yyyyMMddHHmmss");
 
@@ -66,11 +71,10 @@ public class ReactGenerateService {
 
         // 5. Claude API 호출하여 React 코드 생성
         // TODO : 현재 Claude API 는 코드만 구현한 상태 (Claude API 확정 후, 위의 주석 제거 후 테스트 필요)
-//        String reactCode = claudeApiClient.generate(systemPrompt, userPrompt);
-        String reactCode = """
-                import React from "react";
+        //        String reactCode = claudeApiClient.generate(systemPrompt, userPrompt);
+        String reactCode =
+                """
                 import { Eye, EyeOff, KeyRound, Fingerprint, QrCode } from "lucide-react";
-                
                 import { BlankPageLayout } from "@cl/layout/BlankPageLayout";
                 import { AppBrandHeader } from "@cl/layout/AppBrandHeader";
                 import { Stack } from "@cl/layout/Stack";
@@ -80,11 +84,15 @@ public class ReactGenerateService {
                 import { Button } from "@cl/core/Button";
                 import { DividerWithLabel } from "@cl/modules/common/DividerWithLabel";
                 import { QuickMenuGrid } from "@cl/biz/common/QuickMenuGrid";
-                import type { LoginPageProps } from "./types";
-                
-                export type { LoginPageProps } from "./types";
-                
-                export function LoginPage({
+
+                interface LoginPageProps {
+                  hasError?: boolean;
+                  showPassword?: boolean;
+                  onTogglePassword?: () => void;
+                  onLogin?: () => void;
+                }
+
+                export default function LoginPage({
                   hasError = false,
                   showPassword = false,
                   onTogglePassword,
@@ -110,11 +118,11 @@ public class ReactGenerateService {
                       onClick: () => {},
                     },
                   ];
-                
+
                   return (
                     <BlankPageLayout>
                       <AppBrandHeader brandInitial="H" brandName="하나카드" />
-                
+
                       <Stack gap="md" className="px-standard pt-xl pb-md">
                         <Stack gap="xs" className="pb-md">
                           <Typography
@@ -129,7 +137,7 @@ public class ReactGenerateService {
                             하나카드에 오신 것을 환영합니다
                           </Typography>
                         </Stack>
-                
+
                         <Stack gap="lg">
                           <Input
                             label="아이디"
@@ -160,7 +168,7 @@ public class ReactGenerateService {
                             }
                           />
                         </Stack>
-                
+
                         <Inline justify="center" gap="sm" className="py-sm">
                           <Button variant="ghost" size="sm" onClick={() => {}}>
                             아이디 찾기
@@ -180,14 +188,14 @@ public class ReactGenerateService {
                             회원가입
                           </Button>
                         </Inline>
-                
+
                         <div className="pt-md">
                           <Button variant="primary" size="lg" fullWidth onClick={onLogin}>
                             로그인
                           </Button>
                         </div>
                       </Stack>
-                
+
                       <Stack gap="xl" className="px-standard pb-2xl">
                         <DividerWithLabel label="다른 로그인 방식" />
                         <QuickMenuGrid cols={3} items={ALT_LOGIN_ITEMS} />
@@ -197,24 +205,20 @@ public class ReactGenerateService {
                 }
                 """;
 
-                // 6. 코드 기반 preview HTML 생성
-        String previewHtml = buildPreviewHtml(reactCode, request.getFigmaUrl());
-
-        // 7. DB 저장 (초기 상태: GENERATED)
+        // 6. DB 저장 (초기 상태: GENERATED)
         String id = UUID.randomUUID().toString();
         String now = LocalDateTime.now().format(FORMATTER);
 
         // TODO : 현재 DB 설계 확정 전이므로, 수정 필요
-//        reactGenerateMapper.insert(
-//                id,
-//                request.getFigmaUrl(),
-//                request.getRequirements(),
-//                systemPrompt,
-//                userPrompt,
-//                reactCode,
-//                previewHtml,
-//                createdBy,
-//                now);
+        //        reactGenerateMapper.insert(
+        //                id,
+        //                request.getFigmaUrl(),
+        //                request.getRequirements(),
+        //                systemPrompt,
+        //                userPrompt,
+        //                reactCode,
+        //                createdBy,
+        //                now);
 
         log.info("React 코드 생성 완료 — id: {}", id);
 
@@ -222,7 +226,6 @@ public class ReactGenerateService {
                 .id(id)
                 .figmaUrl(request.getFigmaUrl())
                 .reactCode(reactCode)
-                .previewHtml(previewHtml)
                 .status(ReactGenerateStatus.GENERATED.name())
                 .createdAt(now)
                 .build();
@@ -261,35 +264,35 @@ public class ReactGenerateService {
                 .build();
     }
 
+    /**
+     * Preview App에서 발생한 렌더링 오류를 ErrorLogEvent로 발행한다.
+     *
+     * <p>브라우저 side에서 catch된 오류는 서버까지 전달되지 않으므로,
+     * 클라이언트가 명시적으로 이 메서드를 호출해 FWK_ERROR_HIS에 기록한다.
+     *
+     * @param errorMessage 브라우저에서 전달한 오류 메시지
+     * @param userId       요청자 ID
+     * @param requestUri   요청 URI
+     */
+    public void logRenderError(String errorMessage, String userId, String requestUri) {
+        String now = LocalDateTime.now().format(FORMATTER);
+        eventPublisher.publishEvent(new ErrorLogEvent(
+                TraceIdUtil.get(),
+                "RENDER_ERROR",
+                errorMessage,
+                null, // 클라이언트 오류이므로 서버 스택 트레이스 없음
+                userId,
+                requestUri,
+                "POST",
+                null,
+                now,
+                LogLevel.WARN)); // 렌더링 실패는 서버 장애가 아니므로 WARN
+    }
+
     /** ID로 이력을 조회하고, 없으면 NotFoundException을 던진다. */
     private void requireExists(String id) {
         if (reactGenerateMapper.selectById(id) == null) {
             throw new NotFoundException("생성 결과를 찾을 수 없습니다. id=" + id);
         }
-    }
-
-    /**
-     * 생성된 React 코드를 iframe에서 미리볼 수 있는 HTML을 생성한다.
-     * React 코드는 직접 실행이 불가하므로 코드를 code 태그로 감싸 표시한다.
-     */
-    private String buildPreviewHtml(String reactCode, String figmaUrl) {
-        return """
-                <!DOCTYPE html>
-                <html>
-                <head>
-                  <meta charset="UTF-8">
-                  <style>
-                    body { font-family: monospace; padding: 16px; background: #1e1e1e; color: #d4d4d4; }
-                    pre { white-space: pre-wrap; word-break: break-all; font-size: 13px; }
-                    .source { font-size: 11px; color: #666; margin-bottom: 8px; }
-                  </style>
-                </head>
-                <body>
-                  <div class="source">Source: %s</div>
-                  <pre>%s</pre>
-                </body>
-                </html>
-                """
-                .formatted(figmaUrl, reactCode.replace("<", "&lt;").replace(">", "&gt;"));
     }
 }

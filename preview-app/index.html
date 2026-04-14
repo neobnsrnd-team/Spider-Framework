@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Preview</title>
+    <!--
+      @babel/standalone (~8 MB): 브라우저에서 TSX를 런타임 트랜스파일하기 위해 CDN으로 로드.
+      npm 번들에 포함하면 최종 번들이 8 MB 이상 커지므로 CDN을 권장한다.
+      <script type="module"> 보다 먼저 로드되므로 React 앱 실행 시점엔 window.Babel이 보장된다.
+    -->
+    <script src="https://cdn.jsdelivr.net/npm/@babel/standalone/babel.min.js"></script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

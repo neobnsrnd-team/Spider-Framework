@@ -74,9 +74,20 @@
         // 메타 정보
         $('#resultMeta').text('생성일시: ' + (data.createdAt || ''));
 
-        // 화면 미리보기 (iframe srcdoc)
+        // 화면 미리보기: postMessage로 Preview App에 생성 코드 전달
+        // iframe이 이미 로드되어 있으면 즉시 전달, 아직 로딩 중이면 onload 후 전달
         const frame = document.getElementById('previewFrame');
-        frame.srcdoc = data.previewHtml || '';
+        const sendCode = () => {
+            frame.contentWindow.postMessage(
+                { type: 'UPDATE_CODE', code: data.reactCode || '' },
+                '*'
+            );
+        };
+        if (frame.contentDocument?.readyState === 'complete') {
+            sendCode();
+        } else {
+            frame.onload = sendCode;
+        }
 
         // 코드 미리보기 (escape XSS)
         const escaped = (data.reactCode || '').replace(/&/g, '&amp;')
@@ -104,6 +115,8 @@
 
     // ─── 승인 요청 ───────────────────────────────────────────
     $('#btnRequestApproval').on('click', function () {
+        if(alert('구현 예정입니다.')) return;
+
         if (!currentId) return;
         if (!confirm('승인을 요청하시겠습니까?')) return;
 
@@ -126,6 +139,8 @@
 
     // ─── 승인 ────────────────────────────────────────────────
     $('#btnApprove').on('click', function () {
+        if(alert('구현 예정입니다.')) return;
+
         if (!currentId) return;
         if (!confirm('해당 코드를 승인하시겠습니까?')) return;
 
