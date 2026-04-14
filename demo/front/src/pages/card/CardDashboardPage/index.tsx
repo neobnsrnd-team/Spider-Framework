@@ -32,7 +32,7 @@
  * @param activeBottomTab  - 하단 탭바 활성 ID (기본: 'my')
  * @param onBottomNavChange - 하단 탭바 탭 변경 핸들러
  */
-import React, { useState } from 'react';
+import React, { useState } from "react";
 import {
   Bell,
   Menu,
@@ -53,59 +53,60 @@ import {
   ShoppingBag,
   PieChart,
   Building2,
-} from 'lucide-react';
+} from "lucide-react";
 
-import { HomePageLayout } from '@cl/layout/HomePageLayout';
-import { BottomNav } from '@cl/layout/BottomNav';
-import { Button } from '@cl/core/Button';
-import { SectionHeader } from '@cl/modules/common/SectionHeader';
-import { StatementHeroCard } from '@cl/biz/card/StatementHeroCard';
-import { LoanMenuBar } from '@cl/biz/card/LoanMenuBar';
-import { SummaryCard } from '@cl/biz/card/SummaryCard';
-import { QuickMenuGrid } from '@cl/biz/common/QuickMenuGrid';
-import { QuickShortcutCard } from '@cl/biz/card/QuickShortcutCard';
-import { BannerCarousel } from '@cl/biz/common/BannerCarousel';
-import { BalanceToggle } from '@cl/modules/common/BalanceToggle';
+import { HomePageLayout } from "@cl/layout/HomePageLayout";
+import { BottomNav } from "@cl/layout/BottomNav";
+import { Button } from "@cl/core/Button";
+import { SectionHeader } from "@cl/modules/common/SectionHeader";
+import { StatementHeroCard } from "@cl/biz/card/StatementHeroCard";
+import { LoanMenuBar } from "@cl/biz/card/LoanMenuBar";
+import { SummaryCard } from "@cl/biz/card/SummaryCard";
+import { QuickMenuGrid } from "@cl/biz/common/QuickMenuGrid";
+import { QuickShortcutCard } from "@cl/biz/card/QuickShortcutCard";
+import { BannerCarousel } from "@cl/biz/common/BannerCarousel";
+import { BalanceToggle } from "@cl/modules/common/BalanceToggle";
 
-import type { CardDashboardPageProps } from './types';
-import { cn } from '@lib/cn';
-import { Typography } from '@cl/core/Typography';
+import type { CardDashboardPageProps } from "./types";
+import { cn } from "@lib/cn";
+import { Typography } from "@cl/core/Typography";
 
 /** 하단 탭바 항목 정의 */
 const BOTTOM_NAV_ITEMS = (onBottomNavChange: (id: string) => void) => [
   {
-    id: 'my',
+    id: "my",
     icon: <User className="size-5" />,
-    label: '마이',
-    onClick: () => onBottomNavChange('my'),
+    label: "마이",
+    onClick: () => onBottomNavChange("my"),
   },
   {
-    id: 'benefit',
+    id: "benefit",
     icon: <Gift className="size-5" />,
-    label: '혜택/실적',
-    onClick: () => onBottomNavChange('benefit'),
+    label: "혜택/실적",
+    onClick: () => onBottomNavChange("benefit"),
   },
   {
-    id: 'payment',
+    id: "payment",
     icon: <Wallet className="size-5" />,
-    label: '결제',
-    onClick: () => onBottomNavChange('payment'),
+    label: "결제",
+    onClick: () => onBottomNavChange("payment"),
   },
   {
-    id: 'shopping',
+    id: "shopping",
     icon: <ShoppingBag className="size-5" />,
-    label: '쇼핑/여행',
-    onClick: () => onBottomNavChange('shopping'),
+    label: "쇼핑/여행",
+    onClick: () => onBottomNavChange("shopping"),
   },
   {
-    id: 'asset',
+    id: "asset",
     icon: <PieChart className="size-5" />,
-    label: '자산',
-    onClick: () => onBottomNavChange('asset'),
+    label: "자산",
+    onClick: () => onBottomNavChange("asset"),
   },
 ];
 
 export function CardDashboardPage({
+  userName,
   onNotification,
   onMenu,
   onStatementDetail,
@@ -132,7 +133,9 @@ export function CardDashboardPage({
   onBottomNavChange,
 }: CardDashboardPageProps) {
   /** Storybook 확인용 내부 상태 — 실제 앱에서는 Hook에서 관리 */
-  const [activeBottomTab, setActiveBottomTab] = useState(activeBottomTabProp ?? 'my');
+  const [activeBottomTab, setActiveBottomTab] = useState(
+    activeBottomTabProp ?? "my",
+  );
   /** 금액 숨김 여부 — 토글 버튼으로 대시보드 전체 금액을 일괄 마스킹 */
   const [amountHidden, setAmountHidden] = useState(false);
 
@@ -144,61 +147,61 @@ export function CardDashboardPage({
   /** QuickMenuGrid 항목 — iconShape="rounded"로 사각형 아이콘 */
   const quickMenuItems = [
     {
-      id: 'performance',
+      id: "performance",
       icon: <BarChart2 className="size-5" />,
-      label: '카드별 실적',
+      label: "카드별 실적",
       onClick: onCardPerformance,
-      iconShape: 'rounded' as const,
+      iconShape: "rounded" as const,
     },
     {
-      id: 'history',
+      id: "history",
       icon: <List className="size-5" />,
-      label: '이용내역',
+      label: "이용내역",
       onClick: onUsageHistory,
-      iconShape: 'rounded' as const,
+      iconShape: "rounded" as const,
     },
     {
-      id: 'my-cards',
+      id: "my-cards",
       icon: <CreditCard className="size-5" />,
-      label: '보유카드',
+      label: "보유카드",
       onClick: onMyCards,
-      iconShape: 'rounded' as const,
+      iconShape: "rounded" as const,
     },
     {
-      id: 'coupons',
+      id: "coupons",
       icon: <Ticket className="size-5" />,
-      label: '쿠폰함',
+      label: "쿠폰함",
       onClick: onCoupons,
-      iconShape: 'rounded' as const,
+      iconShape: "rounded" as const,
     },
     {
-      id: 'limit',
+      id: "limit",
       icon: <Gauge className="size-5" />,
-      label: '한도조회',
+      label: "한도조회",
       onClick: onLimitCheck,
-      iconShape: 'rounded' as const,
+      iconShape: "rounded" as const,
     },
     {
-      id: 'installment',
+      id: "installment",
       icon: <Percent className="size-5" />,
-      label: '무이자할부',
+      label: "무이자할부",
       onClick: onInstallment,
-      iconShape: 'rounded' as const,
+      iconShape: "rounded" as const,
     },
     {
-      id: 'apply',
+      id: "apply",
       icon: <Plus className="size-5" />,
-      label: '카드신청',
+      label: "카드신청",
       onClick: onCardApply,
-      iconShape: 'rounded' as const,
+      iconShape: "rounded" as const,
     },
   ];
 
   /** 헤더 아이콘 버튼 공통 스타일 */
   const iconBtnCls = cn(
-    'flex items-center justify-center size-9 rounded-full',
-    'text-text-muted hover:bg-surface-raised hover:text-text-heading',
-    'transition-colors duration-150',
+    "flex items-center justify-center size-9 rounded-full",
+    "text-text-muted hover:bg-surface-raised hover:text-text-heading",
+    "transition-colors duration-150",
   );
 
   return (
@@ -230,6 +233,15 @@ export function CardDashboardPage({
         }
         withBottomNav
       >
+        {/* ── 인사말 ────────────────────────────────────── */}
+        {userName && (
+          <div className="px-standard pt-standard">
+            <Typography variant="heading" color="heading">
+              안녕하세요, {userName} 님!
+            </Typography>
+          </div>
+        )}
+
         {/* ── 이번 달 명세서 히어로 카드 ────────────────── */}
         <div className="px-standard pt-standard">
           <StatementHeroCard
@@ -245,21 +257,21 @@ export function CardDashboardPage({
           <LoanMenuBar
             items={[
               {
-                id: 'short-loan',
+                id: "short-loan",
                 icon: <CreditCard size={14} />,
-                label: '단기카드대출(현금서비스)',
+                label: "단기카드대출(현금서비스)",
                 onClick: onShortLoan,
               },
               {
-                id: 'long-loan',
+                id: "long-loan",
                 icon: <Banknote size={14} />,
-                label: '장기카드대출(카드론)',
+                label: "장기카드대출(카드론)",
                 onClick: onLongLoan,
               },
               {
-                id: 'revolving',
+                id: "revolving",
                 icon: <RefreshCw size={14} />,
-                label: '일부결제금액이월약정(리볼빙)',
+                label: "일부결제금액이월약정(리볼빙)",
                 onClick: onRevolving,
               },
             ]}
@@ -275,9 +287,9 @@ export function CardDashboardPage({
             hidden={amountHidden}
             icon={<Building2 size={36} />}
             actions={[
-              { label: '내 계좌', onClick: onMyAccount ?? (() => {}) },
-              { label: '금융진단', onClick: onDiagnosis ?? (() => {}) },
-              { label: '보험진단', onClick: onInsuranceDiag ?? (() => {}) },
+              { label: "내 계좌", onClick: onMyAccount ?? (() => {}) },
+              { label: "금융진단", onClick: onDiagnosis ?? (() => {}) },
+              { label: "보험진단", onClick: onInsuranceDiag ?? (() => {}) },
             ]}
           />
         </div>
@@ -291,9 +303,13 @@ export function CardDashboardPage({
             hidden={amountHidden}
             icon={<Wallet size={32} />}
             actions={[
-              { label: '가계부', onClick: onHouseholdBook ?? (() => {}) },
-              { label: '소비브리핑', onClick: onSpendingBriefing ?? (() => {}), active: true },
-              { label: '고정지출', onClick: onFixedExpenses ?? (() => {}) },
+              { label: "가계부", onClick: onHouseholdBook ?? (() => {}) },
+              {
+                label: "소비브리핑",
+                onClick: onSpendingBriefing ?? (() => {}),
+                active: true,
+              },
+              { label: "고정지출", onClick: onFixedExpenses ?? (() => {}) },
             ]}
           />
         </div>
@@ -332,22 +348,22 @@ export function CardDashboardPage({
           <BannerCarousel
             items={[
               {
-                id: 'event-1',
-                variant: 'promo',
-                title: '카드 신규 발급 이벤트',
-                description: '첫 달 연회비 면제 + 캐시백 최대 3만원',
+                id: "event-1",
+                variant: "promo",
+                title: "카드 신규 발급 이벤트",
+                description: "첫 달 연회비 면제 + 캐시백 최대 3만원",
               },
               {
-                id: 'event-2',
-                variant: 'promo',
-                title: '무이자 할부 혜택',
-                description: '5만원 이상 결제 시 2~3개월 무이자',
+                id: "event-2",
+                variant: "promo",
+                title: "무이자 할부 혜택",
+                description: "5만원 이상 결제 시 2~3개월 무이자",
               },
               {
-                id: 'event-3',
-                variant: 'promo',
-                title: '카드 이용 실적 안내',
-                description: '이번 달 실적을 확인하고 혜택을 챙겨보세요',
+                id: "event-3",
+                variant: "promo",
+                title: "카드 이용 실적 안내",
+                description: "이번 달 실적을 확인하고 혜택을 챙겨보세요",
               },
             ]}
           />
@@ -355,12 +371,18 @@ export function CardDashboardPage({
 
         {/* ── 금액 보기/숨기기 — 스크롤 콘텐츠 맨 아래 ── */}
         <div className="flex justify-center py-sm">
-          <BalanceToggle hidden={amountHidden} onToggle={() => setAmountHidden((prev) => !prev)} />
+          <BalanceToggle
+            hidden={amountHidden}
+            onToggle={() => setAmountHidden((prev) => !prev)}
+          />
         </div>
       </HomePageLayout>
 
       {/* ── 하단 고정 탭바 ──────────────────────────────── */}
-      <BottomNav items={BOTTOM_NAV_ITEMS(handleBottomNavChange)} activeId={activeBottomTab} />
+      <BottomNav
+        items={BOTTOM_NAV_ITEMS(handleBottomNavChange)}
+        activeId={activeBottomTab}
+      />
     </div>
   );
 }

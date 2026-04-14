@@ -377,4 +377,31 @@ INSERT INTO FWK_ROLE_MENU (ROLE_ID, MENU_ID, AUTH_CODE) VALUES ('ADMIN', 'v3_biz
 INSERT INTO FWK_ROLE_MENU (ROLE_ID, MENU_ID, AUTH_CODE) VALUES ('ADMIN', 'v3_sql_query_manage', 'W');
 INSERT INTO FWK_ROLE_MENU (ROLE_ID, MENU_ID, AUTH_CODE) VALUES ('ADMIN', 'v3_sql_dataSource_manage', 'W');
 
+-- ============================================================
+-- 긴급공지 관리 (emergency-notice-manage)
+-- ============================================================
+
+-- 1depth: 긴급공지 (v3_acl_manage 하위, MENU_URL=NULL → 클릭 시 2depth 토글 펼침)
+INSERT INTO FWK_MENU (MENU_ID, PRIOR_MENU_ID, SORT_ORDER, MENU_NAME, MENU_URL, DISPLAY_YN, USE_YN, LAST_UPDATE_DTIME, LAST_UPDATE_USER_ID)
+VALUES ('v3_emergency_notice', 'v3_acl_manage', 12, '긴급공지', NULL, 'Y', 'Y', TO_CHAR(SYSDATE, 'YYYYMMDDHH24MISS'), 'system');
+
+-- 2depth: 긴급공지 생성 (v3_emergency_notice 하위)
+INSERT INTO FWK_MENU (MENU_ID, PRIOR_MENU_ID, SORT_ORDER, MENU_NAME, MENU_URL, DISPLAY_YN, USE_YN, LAST_UPDATE_DTIME, LAST_UPDATE_USER_ID)
+VALUES ('v3_emergency_notice_manage', 'v3_emergency_notice', 1, '긴급공지 생성', '/emergency-notices', 'Y', 'Y', TO_CHAR(SYSDATE, 'YYYYMMDDHH24MISS'), 'system');
+
+-- ADMIN 역할 권한 등록
+INSERT INTO FWK_ROLE_MENU (ROLE_ID, MENU_ID, AUTH_CODE) VALUES ('ADMIN', 'v3_emergency_notice_manage', 'W');
+
+-- FWK_PROPERTY 긴급공지 초기 데이터 (notice 그룹)
+-- ASIS 구조: PROPERTY_DESC = 제목, DEFAULT_VALUE = 내용
+INSERT INTO FWK_PROPERTY (PROPERTY_GROUP_ID, PROPERTY_ID, PROPERTY_NAME, PROPERTY_DESC, DATA_TYPE, VALID_DATA, DEFAULT_VALUE, LAST_UPDATE_USER_ID, LAST_UPDATE_DTIME)
+VALUES ('notice', 'EMERGENCY_KO', 'EMERGENCY_KO', '', 'C', NULL, '', 'system', TO_CHAR(SYSDATE, 'YYYYMMDDHH24MISS'));
+
+INSERT INTO FWK_PROPERTY (PROPERTY_GROUP_ID, PROPERTY_ID, PROPERTY_NAME, PROPERTY_DESC, DATA_TYPE, VALID_DATA, DEFAULT_VALUE, LAST_UPDATE_USER_ID, LAST_UPDATE_DTIME)
+VALUES ('notice', 'EMERGENCY_EN', 'EMERGENCY_EN', '', 'C', NULL, '', 'system', TO_CHAR(SYSDATE, 'YYYYMMDDHH24MISS'));
+
+-- USE_YN: 노출 타입 (A: 전체 / B: 기업 / C: 개인 / N: 사용안함), 초기값 N(사용안함)
+INSERT INTO FWK_PROPERTY (PROPERTY_GROUP_ID, PROPERTY_ID, PROPERTY_NAME, PROPERTY_DESC, DATA_TYPE, VALID_DATA, DEFAULT_VALUE, LAST_UPDATE_USER_ID, LAST_UPDATE_DTIME)
+VALUES ('notice', 'USE_YN', 'USE_YN', '긴급공지사용여부', 'C', 'A,B,C,N', 'N', 'system', TO_CHAR(SYSDATE, 'YYYYMMDDHH24MISS'));
+
 COMMIT;

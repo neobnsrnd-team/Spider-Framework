@@ -35,6 +35,9 @@ menu-resource:
     v3_was_instance:
       R: WAS_INSTANCE:R, WAS_GROUP:R
       W: WAS_INSTANCE:W, WAS_GROUP:R
+    v3_emergency_notice_manage:
+      R: EMERGENCY_NOTICE:R
+      W: EMERGENCY_NOTICE:W
     v3_was_status:
       R: WAS_GATEWAY_STATUS:R
       W: WAS_GATEWAY_STATUS:W

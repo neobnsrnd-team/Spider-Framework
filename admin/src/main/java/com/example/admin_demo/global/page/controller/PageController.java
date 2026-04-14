@@ -109,7 +109,13 @@ public class PageController {
         return resolveView(request, "pages/code-manage/code-manage :: content", model);
     }
 
-    // ── 인프라 관리 ── system_oper_manage, property_db_manage, xml_property_manage, was_group_manage, was_instance
+    // ── 인프라 관리 ── system_oper_manage, property_db_manage, xml_property_manage, was_group_manage, was_instance,
+    // emergency_notice_manage
+
+    @GetMapping("/emergency-notices")
+    public String emergencyNotices(HttpServletRequest request, Model model) {
+        return resolveView(request, "pages/emergency-notice-manage/emergency-notice-manage :: content", model);
+    }
 
     @GetMapping("/reload")
     public String reload(HttpServletRequest request, Model model) {

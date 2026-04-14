@@ -21,10 +21,10 @@
 import React, { useState } from 'react';
 import { cn } from '@lib/cn';
 
-import { Typography }         from '../../../core/Typography';
-import { BottomSheet }        from '../../../modules/common/BottomSheet';
+import { Typography } from '../../../core/Typography';
+import { BottomSheet } from '../../../modules/common/BottomSheet';
 import { CollapsibleSection } from '../../../modules/common/CollapsibleSection';
-import { Divider }            from '../../../modules/common/Divider';
+import { Divider } from '../../../modules/common/Divider';
 
 import type { Transaction, UsageTransactionItemProps } from './types';
 
@@ -48,7 +48,7 @@ function DetailSheet({
   const isRefund = tx.amount < 0;
 
   const rows = [
-    { label: '거래일',   value: tx.date },
+    { label: '거래일시', value: tx.date },
     { label: '거래구분', value: tx.type },
     { label: '승인번호', value: tx.approvalNumber },
     { label: '거래상태', value: tx.status },
@@ -58,24 +58,31 @@ function DetailSheet({
   return (
     <BottomSheet open={open} onClose={onClose} title="이용내역 상세" snap="auto">
       <div className="flex flex-col items-center gap-xs pb-lg">
-        <Typography variant="body" color="muted">{tx.merchant}</Typography>
+        <Typography variant="body" color="muted">
+          {tx.merchant}
+        </Typography>
         <Typography
           variant="heading"
           weight="bold"
           numeric
           className={isRefund ? 'text-brand' : 'text-text-heading'}
         >
-          {isRefund ? '-' : ''}{formatAmount(tx.amount)}
+          {isRefund ? '-' : ''}
+          {formatAmount(tx.amount)}
         </Typography>
       </div>
 
       <Divider />
 
-      <div className="flex flex-col gap-sm p-lg">
+      <div className="flex flex-col gap-sm pt-lg">
         {rows.map(({ label, value }) => (
           <div key={label} className="flex justify-between items-center">
-            <Typography variant="body-sm" color="muted">{label}</Typography>
-            <Typography variant="body-sm" color="heading">{value}</Typography>
+            <Typography variant="body-sm" color="muted">
+              {label}
+            </Typography>
+            <Typography variant="body-sm" color="heading">
+              {value}
+            </Typography>
           </div>
         ))}
       </div>
@@ -90,20 +97,32 @@ function DetailSheet({
           <div className="flex flex-col gap-sm">
             {tx.merchantInfo.address && (
               <div className="flex justify-between gap-md">
-                <Typography variant="caption" color="muted" className="shrink-0">주소</Typography>
-                <Typography variant="caption" color="heading" className="text-right">{tx.merchantInfo.address}</Typography>
+                <Typography variant="caption" color="muted" className="shrink-0">
+                  주소
+                </Typography>
+                <Typography variant="caption" color="heading" className="text-right">
+                  {tx.merchantInfo.address}
+                </Typography>
               </div>
             )}
             {tx.merchantInfo.phone && (
               <div className="flex justify-between">
-                <Typography variant="caption" color="muted">전화번호</Typography>
-                <Typography variant="caption" color="heading">{tx.merchantInfo.phone}</Typography>
+                <Typography variant="caption" color="muted">
+                  전화번호
+                </Typography>
+                <Typography variant="caption" color="heading">
+                  {tx.merchantInfo.phone}
+                </Typography>
               </div>
             )}
             {tx.merchantInfo.businessType && (
               <div className="flex justify-between">
-                <Typography variant="caption" color="muted">업종</Typography>
-                <Typography variant="caption" color="heading">{tx.merchantInfo.businessType}</Typography>
+                <Typography variant="caption" color="muted">
+                  업종
+                </Typography>
+                <Typography variant="caption" color="heading">
+                  {tx.merchantInfo.businessType}
+                </Typography>
               </div>
             )}
           </div>
@@ -117,7 +136,7 @@ function DetailSheet({
 
 export function UsageTransactionItem({ tx, onClick }: UsageTransactionItemProps) {
   const [open, setOpen] = useState(false);
-  const isRefund    = tx.amount < 0;
+  const isRefund = tx.amount < 0;
   const isClickable = !!onClick;
 
   const rowContent = (
@@ -135,7 +154,8 @@ export function UsageTransactionItem({ tx, onClick }: UsageTransactionItemProps)
         weight="bold"
         className={cn('shrink-0', isRefund ? 'text-brand' : 'text-text-heading')}
       >
-        {isRefund ? '-' : ''}{formatAmount(tx.amount)}
+        {isRefund ? '-' : ''}
+        {formatAmount(tx.amount)}
       </Typography>
     </>
   );
@@ -150,7 +170,10 @@ export function UsageTransactionItem({ tx, onClick }: UsageTransactionItemProps)
       {isClickable ? (
         <button
           type="button"
-          onClick={() => { setOpen(true); onClick(); }}
+          onClick={() => {
+            setOpen(true);
+            onClick();
+          }}
           className={rowCls}
         >
           {rowContent}
@@ -160,9 +183,7 @@ export function UsageTransactionItem({ tx, onClick }: UsageTransactionItemProps)
       )}
 
       {/* onClick이 있을 때만 상세 BottomSheet 렌더링 */}
-      {isClickable && (
-        <DetailSheet tx={tx} open={open} onClose={() => setOpen(false)} />
-      )}
+      {isClickable && <DetailSheet tx={tx} open={open} onClose={() => setOpen(false)} />}
     </>
   );
 }

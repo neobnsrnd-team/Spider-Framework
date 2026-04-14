@@ -36,7 +36,7 @@ export function CardLinkedBalance({
 }: CardLinkedBalanceProps) {
   return (
     <div className={cn('flex flex-col gap-xs', className)}>
-      <span className="text-xs sm:text-sm text-text-muted">연결계좌 잔액</span>
+      <span className="text-xs sm:text-sm text-text-muted">사용가능 한도 금액</span>
 
       {/* 금액 + 보기/숨기기 배지 버튼 */}
       <div className="flex items-center gap-xs">
