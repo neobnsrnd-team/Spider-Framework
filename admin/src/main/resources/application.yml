@@ -85,7 +85,12 @@ logging:
 # 사이드바에서 숨길 메뉴 ID 목록 (DB 미변경, 이 프로젝트에서만 적용)
 menu:
   hidden-menu-ids:
-    - acl_manage  # Framework 관리메뉴 (asis 메뉴)
+    #- acl_manage  # Framework 관리메뉴 (asis 메뉴  TODO 임시노출해제)
+    - test         # test 메뉴
+    - testtest     # test 메뉴
+    - TTT2         # test 메뉴
+    - test1        # test 메뉴
+    - 테스트메뉴     # test 메뉴
 
 # Scheduling Configuration (배치 이력 정리 스케줄러)
 scheduling:
