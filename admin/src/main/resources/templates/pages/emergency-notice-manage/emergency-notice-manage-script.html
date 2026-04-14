@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<th:block th:fragment="script">
+<script th:inline="javascript">
+    /*<![CDATA[*/
+    // 쓰기 권한 여부 (Thymeleaf → JS)
+    var HAS_WRITE = /*[[${userAuthorities != null && userAuthorities.contains('EMERGENCY_NOTICE:W')}]]*/ false;
+
+    // 언어 레이블 매핑
+    var LANG_LABEL = {
+        'EMERGENCY_KO': '한국어 (KO)',
+        'EMERGENCY_EN': 'English (EN)'
+    };
+
+    /**
+     * DB에서 조회한 최종수정일시(yyyyMMddHHmmss 14자리)를 'yyyy-MM-dd HH:mm:ss' 형식으로 변환한다.
+     * @param {string} raw - DB 원본값 (예: '20260414153045')
+     * @returns {string} 포맷팅된 문자열, 형식이 맞지 않으면 원본 그대로 반환
+     */
+    function formatDtime(raw) {
+        if (!raw || raw.length !== 14) return raw;
+        return raw.substring(0, 4) + '-' + raw.substring(4, 6) + '-' + raw.substring(6, 8)
+            + ' ' + raw.substring(8, 10) + ':' + raw.substring(10, 12) + ':' + raw.substring(12, 14);
+    }
+
+    window.EmergencyNoticePage = {
+        data: [],        // 서버에서 받은 공지 목록 원본
+        displayType: 'N', // 서버에서 받은 노출 타입
+
+        init: function () {
+            this.load();
+            if (HAS_WRITE) {
+                var self = this;
+                document.getElementById('btnSave')
+                        .addEventListener('click', function () { self.save(); });
+            }
+        },
+
+        // 긴급공지 목록 + 노출 타입 조회
+        load: function () {
+            var self = this;
+            $.ajax({
+                url: API_BASE_URL + '/emergency-notices',
+                method: 'GET',
+                success: function (res) {
+                    if (res.success && res.data) {
+                        self.data = res.data.notices || [];
+                        self.displayType = res.data.displayType || 'N';
+                        self.render();
+                    } else {
+                        Toast.error('긴급공지 데이터를 불러오지 못했습니다.');
+                    }
+                },
+                error: function (xhr) {
+                    var msg = (xhr.responseJSON && xhr.responseJSON.message)
+                            ? xhr.responseJSON.message
+                            : '긴급공지 데이터를 불러오는 중 오류가 발생했습니다.';
+                    Toast.error(msg);
+                }
+            });
+        },
+
+        // 테이블 + 노출 타입 렌더링
+        render: function () {
+            // 노출 타입 드롭다운 설정
+            var displayTypeEl = document.getElementById('displayType');
+            if (displayTypeEl) {
+                displayTypeEl.value = this.displayType;
+            }
+
+            // 테이블 렌더링
+            var readonlyAttr = HAS_WRITE ? '' : 'readonly';
+            var rows = this.data.map(function (row) {
+                var label = LANG_LABEL[row.propertyId] || row.propertyId;
+                var title = HtmlUtils ? HtmlUtils.escape(row.title || '') : (row.title || '');
+                var content = HtmlUtils ? HtmlUtils.escape(row.content || '') : (row.content || '');
+                content = content.replace(/_\$BR/g, '\n'); // _$BR → 줄바꿈 변환 (ASIS 호환)
+                var dtime = formatDtime(row.lastUpdateDtime || '');
+                var userId = row.lastUpdateUserId || '';
+
+                return '<tr data-property-id="' + row.propertyId + '">'
+                    + '<td class="text-center fw-semibold small">' + label + '</td>'
+                    + '<td>'
+                    +   '<input type="text" class="form-control form-control-sm notice-title"'
+                    +   ' value="' + title + '" ' + readonlyAttr
+                    +   ' maxlength="300" placeholder="제목 입력">'
+                    + '</td>'
+                    + '<td>'
+                    +   '<textarea class="form-control form-control-sm notice-content" rows="3"'
+                    +   ' ' + readonlyAttr + ' maxlength="1000" placeholder="내용 입력 (줄바꿈 지원)">'
+                    + content + '</textarea>'
+                    + '</td>'
+                    + '<td class="text-center text-body-secondary small">' + dtime + '</td>'
+                    + '<td class="text-center text-body-secondary small">' + userId + '</td>'
+                    + '<td class="text-center">'
+                    +   '<button type="button" class="btn btn-outline-secondary btn-sm"'
+                    +   ' onclick="EmergencyNoticePage.preview(\'' + row.propertyId + '\')">'
+                    +   '<i class="bi bi-eye"></i>'
+                    +   '</button>'
+                    + '</td>'
+                    + '</tr>';
+            });
+
+            var tbody = document.getElementById('noticeTableBody');
+            tbody.innerHTML = rows.length > 0
+                ? rows.join('')
+                : '<tr><td colspan="6" class="text-center text-body-secondary py-4">조회된 긴급공지가 없습니다.</td></tr>';
+        },
+
+        // 일괄 저장
+        save: function () {
+            var displayType = document.getElementById('displayType').value;
+            if (!displayType) {
+                Toast.warning('노출 타입을 선택해주세요.');
+                return;
+            }
+
+            var notices = [];
+            var rows = document.querySelectorAll('#noticeTableBody tr[data-property-id]');
+            rows.forEach(function (tr) {
+                notices.push({
+                    propertyId: tr.dataset.propertyId,
+                    title:      tr.querySelector('.notice-title').value,
+                    content:    tr.querySelector('.notice-content').value.replace(/\n/g, '_$BR') // 줄바꿈 → _$BR 역변환 (ASIS 호환)
+                });
+            });
+
+            if (notices.length === 0) {
+                Toast.warning('저장할 공지 데이터가 없습니다.');
+                return;
+            }
+
+            var self = this;
+            $.ajax({
+                url: API_BASE_URL + '/emergency-notices',
+                method: 'PUT',
+                contentType: 'application/json',
+                data: JSON.stringify({ notices: notices, displayType: displayType }),
+                success: function (res) {
+                    if (res.success) {
+                        Toast.success('긴급공지가 저장되었습니다.');
+                        self.load(); // 저장 후 최신 데이터 다시 조회
+                    } else {
+                        Toast.error(res.message || '저장에 실패했습니다.');
+                    }
+                },
+                error: function (xhr) {
+                    var msg = (xhr.responseJSON && xhr.responseJSON.message)
+                            ? xhr.responseJSON.message
+                            : '저장 중 오류가 발생했습니다.';
+                    Toast.error(msg);
+                }
+            });
+        },
+
+        // 미리보기: 현재 입력 중인 제목/내용을 모달로 표시
+        preview: function (propertyId) {
+            var tr = document.querySelector('#noticeTableBody tr[data-property-id="' + propertyId + '"]');
+            if (!tr) return;
+
+            var lang    = LANG_LABEL[propertyId] || propertyId;
+            var title   = tr.querySelector('.notice-title').value;
+            var content = tr.querySelector('.notice-content').value;
+
+            // XSS 방지 후 \n → <br> 변환하여 HTML 렌더링
+            var titleEscaped   = HtmlUtils ? HtmlUtils.escape(title)   : title;
+            var contentEscaped = HtmlUtils ? HtmlUtils.escape(content) : content;
+            var contentHtml    = contentEscaped.replace(/\n/g, '<br>');
+
+            document.getElementById('previewModalLang').textContent    = lang;
+            document.getElementById('previewModalTitle').textContent   = titleEscaped;
+            document.getElementById('previewModalContent').innerHTML   = contentHtml;
+
+            new bootstrap.Modal(document.getElementById('noticePreviewModal')).show();
+        }
+    };
+
+    $(document).ready(function () {
+        EmergencyNoticePage.init();
+    });
+    /*]]>*/
+</script>
+</th:block>
+</body>
+</html>

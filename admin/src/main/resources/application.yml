@@ -86,6 +86,11 @@ logging:
 menu:
   hidden-menu-ids:
     - acl_manage  # Framework 관리메뉴 (asis 메뉴)
+    - testzxczxc
+    - testtest
+    - 테스트2
+    - test1
+    - 테스트메뉴
 
 # Scheduling Configuration (배치 이력 정리 스케줄러)
 scheduling:
