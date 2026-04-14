@@ -92,6 +92,25 @@ menu:
     - test1        # test 메뉴
     - 테스트메뉴     # test 메뉴
 
+# Figma API Configuration (React Generate 메뉴 — 디자인 노드 조회)
+figma:
+  api:
+    url: https://api.figma.com
+    token: ${FIGMA_ACCESS_TOKEN}
+    connect-timeout-seconds: 10
+    read-timeout-seconds: 30
+
+# Claude API Configuration (React Generate 메뉴)
+claude:
+  api:
+    url: https://api.anthropic.com/v1/messages
+    key: ${CLAUDE_API_KEY}
+    model: claude-sonnet-4-6      # 코드 생성 품질과 비용 균형 고려
+    max-tokens: 8192
+    # Claude 응답은 수십 초 소요될 수 있으므로 기본 RestTemplate 타임아웃과 별도 설정
+    connect-timeout-seconds: 10
+    read-timeout-seconds: 120
+
 # Scheduling Configuration (배치 이력 정리 스케줄러)
 scheduling:
   batch-his-cleanup:

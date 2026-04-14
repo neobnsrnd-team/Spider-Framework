@@ -1027,3 +1027,25 @@ CREATE TABLE FWK_TRANS_DATA_HIS (
     TRAN_TIME                  VARCHAR(14)    NOT NULL,
     PRIMARY KEY (TRAN_SEQ, TRAN_ID, TRAN_TYPE)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+
+-- =============================================================
+-- 15. React Generate (1 table)
+-- =============================================================
+
+CREATE TABLE REACT_GENERATE_HIS (
+    ID                         VARCHAR(36)    NOT NULL,
+    FIGMA_URL                  VARCHAR(1000)  NOT NULL,
+    REQUIREMENTS               LONGTEXT,
+    SYSTEM_PROMPT              LONGTEXT,
+    USER_PROMPT                LONGTEXT,
+    REACT_CODE                 LONGTEXT,
+    PREVIEW_HTML               LONGTEXT,
+    STATUS                     VARCHAR(20)    NOT NULL DEFAULT 'GENERATED',
+    APPROVED_BY                VARCHAR(100),
+    APPROVED_AT                VARCHAR(14),
+    CREATED_BY                 VARCHAR(100)   NOT NULL,
+    CREATED_AT                 VARCHAR(14)    NOT NULL,
+    PRIMARY KEY (ID),
+    CONSTRAINT CHK_REACT_GEN_STATUS CHECK (STATUS IN ('GENERATED', 'PENDING_APPROVAL', 'APPROVED', 'REJECTED'))
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

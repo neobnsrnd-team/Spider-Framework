@@ -147,3 +147,6 @@ menu-resource:
     v3_sql_dataSource_manage:
       R: DATASOURCE:R
       W: DATASOURCE:W
+    v3_react_generate:
+      R: REACT_GENERATE:R
+      W: REACT_GENERATE:W
