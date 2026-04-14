@@ -42,6 +42,8 @@
         $('#resultSection').addClass('d-none');
         $('#generatingIndicator').removeClass('d-none');
         $('#btnGenerate').prop('disabled', true);
+        // 생성 중에는 초기화 버튼도 비활성화하여 요청 중간에 폼이 바뀌는 것을 방지
+        $('#btnReset').prop('disabled', true);
 
         const requirements = $('#requirementsInput').val().trim() || null;
 
@@ -64,6 +66,7 @@
             complete: function () {
                 $('#generatingIndicator').addClass('d-none');
                 $('#btnGenerate').prop('disabled', false);
+                $('#btnReset').prop('disabled', false);
             }
         });
     });
@@ -161,6 +164,28 @@
                 Toast.error(xhr.responseJSON?.message || '승인 처리 중 오류가 발생했습니다.');
             }
         });
+    });
+
+    // ─── 초기화 ─────────────────────────────────────────────
+    $('#btnReset').on('click', function () {
+        // 입력 폼 초기화
+        $('#figmaUrlInput').val('');
+        $('#requirementsInput').val('');
+
+        // 결과 영역 숨김 및 내부 상태 초기화
+        $('#resultSection').addClass('d-none');
+        $('#resultMeta').text('');
+        document.getElementById('codeDisplay').innerHTML = '';
+        currentId = null;
+        currentStatus = null;
+
+        // Preview App에 빈 코드를 전달하여 미리보기 화면 초기화
+        const frame = document.getElementById('previewFrame');
+        if (frame.contentDocument?.readyState === 'complete') {
+            frame.contentWindow.postMessage({ type: 'UPDATE_CODE', code: '' }, '*');
+        }
+
+        $('#figmaUrlInput').focus();
     });
 
     // ─── Enter 키 지원 ──────────────────────────────────────
