@@ -18,7 +18,6 @@
             SYSTEM_PROMPT,
             USER_PROMPT,
             REACT_CODE,
-            PREVIEW_HTML,
             STATUS,
             CREATED_BY,
             CREATED_AT
@@ -29,7 +28,6 @@
             #{systemPrompt,jdbcType=CLOB},
             #{userPrompt,jdbcType=CLOB},
             #{reactCode,jdbcType=CLOB},
-            #{previewHtml,jdbcType=CLOB},
             'GENERATED',
             #{createdBy,jdbcType=VARCHAR},
             #{createdAt,jdbcType=VARCHAR}
@@ -42,7 +40,6 @@
         ID          AS id,
         FIGMA_URL   AS figmaUrl,
         REACT_CODE  AS reactCode,
-        PREVIEW_HTML AS previewHtml,
         STATUS      AS status,
         CREATED_AT  AS createdAt
     </sql>

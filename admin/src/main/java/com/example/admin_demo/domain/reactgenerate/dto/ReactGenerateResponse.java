@@ -14,7 +14,6 @@ public class ReactGenerateResponse {
     private String id;
     private String figmaUrl;
     private String reactCode;
-    private String previewHtml;
     private String status;
     private String createdAt;
 }

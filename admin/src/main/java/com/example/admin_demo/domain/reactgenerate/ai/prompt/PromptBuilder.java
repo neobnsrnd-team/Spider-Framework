@@ -103,6 +103,7 @@ public class PromptBuilder {
         sb.append("- 디자인 토큰(CSS 변수)을 활용하고 색상·크기 하드코딩 금지\n");
         sb.append("- TypeScript로 작성하고 props interface를 포함할 것\n");
         sb.append("- 접근성(aria 속성)을 고려할 것\n");
+        sb.append("- 반드시 `export default function ComponentName()` 형식으로 컴포넌트를 내보낼 것\n");
         sb.append("- 응답은 ```tsx ... ``` 코드 블록 하나로만 작성할 것\n");
 
         return sb.toString();
