@@ -1,4 +1,4 @@
-package com.example.admin_demo.domain.reactgenerate.figma;
+package com.example.admin_demo.domain.reactgenerate.figma.client;
 
 import org.springframework.boot.context.properties.ConfigurationProperties;
 

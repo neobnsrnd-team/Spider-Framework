@@ -1,16 +1,16 @@
 package com.example.admin_demo.domain.reactgenerate.service;
 
-import com.example.admin_demo.domain.reactgenerate.ai.ClaudeApiClient;
+import com.example.admin_demo.domain.reactgenerate.ai.client.ClaudeApiClient;
 import com.example.admin_demo.domain.reactgenerate.ai.prompt.PromptBuilder;
 import com.example.admin_demo.domain.reactgenerate.dto.ReactGenerateApprovalResponse;
 import com.example.admin_demo.domain.reactgenerate.dto.ReactGenerateRequest;
 import com.example.admin_demo.domain.reactgenerate.dto.ReactGenerateResponse;
 import com.example.admin_demo.domain.reactgenerate.enums.ReactGenerateStatus;
-import com.example.admin_demo.domain.reactgenerate.figma.FigmaApiClient;
 import com.example.admin_demo.domain.reactgenerate.figma.FigmaDesignContext;
 import com.example.admin_demo.domain.reactgenerate.figma.FigmaDesignExtractor;
-import com.example.admin_demo.domain.reactgenerate.figma.FigmaNodeResponse;
 import com.example.admin_demo.domain.reactgenerate.figma.FigmaUrlParser;
+import com.example.admin_demo.domain.reactgenerate.figma.client.FigmaApiClient;
+import com.example.admin_demo.domain.reactgenerate.figma.client.FigmaNodeResponse;
 import com.example.admin_demo.domain.reactgenerate.mapper.ReactGenerateMapper;
 import com.example.admin_demo.domain.reactgenerate.validator.CodeValidationResult;
 import com.example.admin_demo.domain.reactgenerate.validator.CodeValidator;
@@ -106,7 +106,7 @@ public class ReactGenerateService {
                   onTogglePassword?: () => void;
                   onLogin?: () => void;
                 }
-                
+
                 export default function LoginPage({
                   hasError = false,
                   showPassword = false,
