@@ -24,4 +24,15 @@ export default defineConfig({
       '@lib': resolve(__dirname, '../../reactive-springware/lib'),
     },
   },
+  server: {
+    proxy: {
+      /* /api/notices/* 요청을 Demo Backend로 프록시
+         SSE(EventSource)는 브라우저가 GET 요청을 직접 보내므로
+         CORS 없이 프록시를 통해 연결한다. */
+      '/api/notices': {
+        target:      'http://localhost:3001',
+        changeOrigin: true,
+      },
+    },
+  },
 })
