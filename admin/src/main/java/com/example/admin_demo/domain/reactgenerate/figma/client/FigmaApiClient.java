@@ -82,8 +82,9 @@ public class FigmaApiClient {
         } catch (HttpClientErrorException e) {
             int status = e.getStatusCode().value();
             if (status == 401 || status == 403) {
-                log.error("Figma API 인증 실패 — status: {}", status);
-                throw new InternalException("Figma API 인증에 실패했습니다. FIGMA_ACCESS_TOKEN을 확인하세요.");
+                // 에러 메시지에 환경변수명 등 내부 설정 정보를 노출하지 않는다
+                log.error("Figma API 인증 실패 — status: {}. FIGMA_ACCESS_TOKEN 설정을 확인하세요.", status);
+                throw new InternalException("Figma API 인증에 실패했습니다. 토큰 설정을 확인하세요.");
             }
             if (status == 404) {
                 log.warn("Figma 파일·노드 없음 — fileKey: {}, nodeId: {}", fileKey, nodeId);

@@ -6,9 +6,8 @@ import lombok.Setter;
 /**
  * React 코드 생성 이력 목록 검색 조건 DTO.
  *
- * <p>날짜 범위는 yyyyMMdd 형식으로 입력받으며, MyBatis XML에서
- * {@code fromDate || '000000'}, {@code toDate || '235959'} 로 확장되어
- * DB 저장 형식(yyyyMMddHHmmss)과 비교된다.
+ * <p>날짜 범위는 yyyyMMdd 형식으로 입력받으며, {@link #getFromDtime()}/{@link #getToDtime()}을 통해
+ * DB 저장 형식(yyyyMMddHHmmss)으로 변환되어 MyBatis XML에서 사용된다.
  */
 @Getter
 @Setter
@@ -25,6 +24,26 @@ public class ReactGenerateSearchRequest {
 
     /** 검색 종료일 (yyyyMMdd). null이면 제한 없음. */
     private String toDate;
+
+    /**
+     * DB 비교용 시작 일시를 반환한다 (yyyyMMddHHmmss).
+     * fromDate가 null이면 null을 반환하여 XML 조건에서 제외된다.
+     *
+     * @return yyyyMMdd000000 형식, fromDate가 null이면 null
+     */
+    public String getFromDtime() {
+        return fromDate != null && !fromDate.isBlank() ? fromDate + "000000" : null;
+    }
+
+    /**
+     * DB 비교용 종료 일시를 반환한다 (yyyyMMddHHmmss).
+     * toDate가 null이면 null을 반환하여 XML 조건에서 제외된다.
+     *
+     * @return yyyyMMdd235959 형식, toDate가 null이면 null
+     */
+    public String getToDtime() {
+        return toDate != null && !toDate.isBlank() ? toDate + "235959" : null;
+    }
 
     /** 현재 페이지 번호 (1-based). */
     private int page = 1;

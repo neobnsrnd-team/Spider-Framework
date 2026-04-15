@@ -385,8 +385,6 @@ public class ReactGenerateService {
      * @return list(목록), totalCount(전체 건수), page, size
      */
     public Map<String, Object> getHistory(ReactGenerateSearchRequest req) {
-        // LIKE 검색 시 SQL 와일드카드(%, _)를 이스케이프하여 의도치 않은 전체 매칭을 방지
-        req.setCreateUserId(escapeLike(req.getCreateUserId()));
         List<ReactGenerateHistoryResponse> list = reactGenerateMapper.selectList(req);
         int totalCount = reactGenerateMapper.selectCount(req);
         return Map.of("list", list, "totalCount", totalCount, "page", req.getPage(), "size", req.getSize());
@@ -459,15 +457,6 @@ public class ReactGenerateService {
             log.warn("날짜 형식 변환 실패 — dtime: {}", dtime);
             return dtime;
         }
-    }
-
-    /**
-     * LIKE 검색 시 SQL 와일드카드 문자(%, _)를 이스케이프한다.
-     * Oracle ESCAPE '\' 절과 함께 사용되며, null이면 그대로 반환한다.
-     */
-    private String escapeLike(String value) {
-        if (value == null) return null;
-        return value.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_");
     }
 
     /** 영문 상태 코드를 한글 레이블로 변환한다. */
