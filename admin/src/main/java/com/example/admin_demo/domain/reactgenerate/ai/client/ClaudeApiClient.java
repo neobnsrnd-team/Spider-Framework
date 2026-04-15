@@ -106,7 +106,14 @@ public class ClaudeApiClient {
         }
         try {
             List<Map<String, Object>> content = (List<Map<String, Object>>) body.get("content");
+            // content 리스트가 null이거나 비어있으면 응답 구조 이상으로 판단
+            if (content == null || content.isEmpty()) {
+                log.error("Claude API 응답 content가 비어있습니다: {}", body);
+                throw new InternalException("Claude API 응답을 파싱할 수 없습니다.");
+            }
             return (String) content.get(0).get("text");
+        } catch (InternalException e) {
+            throw e;
         } catch (Exception e) {
             log.error("Claude API 응답 파싱 실패: {}", body);
             throw new InternalException("Claude API 응답을 파싱할 수 없습니다.");

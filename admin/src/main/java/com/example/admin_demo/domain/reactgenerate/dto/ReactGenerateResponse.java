@@ -17,7 +17,10 @@ public class ReactGenerateResponse {
     private String reactCode;
     private String failReason;
     private String status;
+    private String createUserId;
     private String createDtime;
+    private String approvalUserId;
+    private String approvalDtime;
 
     /** WARN 레벨 보안 패턴 탐지 목록 — 코드는 통과하되 프론트엔드에 경고로 표시 */
     private List<String> validationWarnings;
