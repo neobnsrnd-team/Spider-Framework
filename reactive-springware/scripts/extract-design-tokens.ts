@@ -135,7 +135,8 @@ function main() {
       }
 
       // [data-brand='X'][data-domain='Y'] { — 복합 선택자는 단순 brand보다 먼저 검사
-      const bdMatch = trimmed.match(/^\[data-brand='(\w+)'\]\[data-domain='(\w+)'\]\s*\{/);
+      // 작은따옴표·큰따옴표 모두 허용 (CSS 작성 스타일에 따라 혼용될 수 있음)
+      const bdMatch = trimmed.match(/^\[data-brand=['"](\w+)['"]\]\[data-domain=['"](\w+)['"]\]\s*\{/);
       if (bdMatch) {
         blockKind = 'brand-domain';
         blockBrand = bdMatch[1];
@@ -146,7 +147,8 @@ function main() {
         continue;
       }
 
-      const bMatch = trimmed.match(/^\[data-brand='(\w+)'\]\s*\{/);
+      // 작은따옴표·큰따옴표 모두 허용
+      const bMatch = trimmed.match(/^\[data-brand=['"](\w+)['"]\]\s*\{/);
       if (bMatch) {
         blockKind = 'brand';
         blockBrand = bMatch[1];
@@ -155,7 +157,8 @@ function main() {
         continue;
       }
 
-      const dMatch = trimmed.match(/^\[data-domain='(\w+)'\]\s*\{/);
+      // 작은따옴표·큰따옴표 모두 허용
+      const dMatch = trimmed.match(/^\[data-domain=['"](\w+)['"]\]\s*\{/);
       if (dMatch) {
         blockKind = 'domain';
         blockDomain = dMatch[1];

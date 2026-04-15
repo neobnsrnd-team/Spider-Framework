@@ -27,8 +27,11 @@ public enum CodeValidationRule {
     SESSION_STORAGE(Pattern.compile("\\bsessionStorage\\b"), Severity.ERROR, "sessionStorage 직접 접근 금지: 민감 정보 노출 위험"),
 
     FETCH_EXTERNAL(
-            // 허용 도메인(api.figma.com, api.anthropic.com) 외 외부 도메인으로의 fetch 탐지
-            Pattern.compile("fetch\\s*\\(\\s*['\"]https?://(?!api\\.figma\\.com|api\\.anthropic\\.com)"),
+            // 허용 도메인(api.figma.com, api.anthropic.com) 외 외부 도메인으로의 fetch 탐지.
+            // 1) 인용부호: 작은따옴표·큰따옴표·백틱(템플릿 리터럴) 모두 지원
+            // 2) 도메인 섀도잉 방지: 허용 도메인 뒤에 반드시 경로 구분자(/:'"` 또는 공백)가 와야 통과.
+            //    예) https://api.figma.com.attacker.com → '.' 뒤에 attacker가 오므로 탐지됨
+            Pattern.compile("fetch\\s*\\(\\s*['\"`]https?://(?!(api\\.figma\\.com|api\\.anthropic\\.com)[:/'\"`\\s])"),
             Severity.ERROR,
             "알 수 없는 외부 도메인으로의 fetch 금지"),
 
