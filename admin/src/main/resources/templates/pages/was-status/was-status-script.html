@@ -550,6 +550,11 @@
         } else {
             window.WasGatewayStatus.init();
         }
+
+        // 캐시에서 복원 시(tab:activated) WAS별 Gateway 정보 최신화
+        $('[data-tab-page]').on('tab:activated', function () {
+            window.WasGatewayStatus.load(window.WasGatewayStatus.currentPage);
+        });
     })();
 </script>
 </th:block>

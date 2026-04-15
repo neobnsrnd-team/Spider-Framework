@@ -585,6 +585,11 @@
     // 화면 진입 시 자동 조회
     Roles.load();
 
+    // 캐시에서 복원 시(tab:activated) 권한 목록 최신화
+    $('[data-tab-page]').on('tab:activated', function () {
+        Roles.load();
+    });
+
     // Toolbar buttons
     $(document).ready(function() {
         $('#btnExcel').off('click').on('click', function() {
