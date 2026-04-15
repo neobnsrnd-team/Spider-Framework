@@ -12,6 +12,9 @@ import lombok.NoArgsConstructor;
 @Builder
 public class RenderErrorRequest {
 
+    /** 렌더링에 실패한 코드의 CODE_ID — FWK_RPS_CODE_HIS 레코드 특정에 사용 */
+    private String codeId;
+
     /** 브라우저에서 catch한 오류 메시지 (String(e)) */
     private String errorMessage;
 }

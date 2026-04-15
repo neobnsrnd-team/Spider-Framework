@@ -18,6 +18,7 @@
             SYSTEM_PROMPT,
             USER_PROMPT,
             REACT_CODE,
+            FAIL_REASON,
             STATUS,
             CREATE_USER_ID,
             CREATE_DTIME
@@ -28,7 +29,8 @@
             #{systemPrompt,jdbcType=CLOB},
             #{userPrompt,jdbcType=CLOB},
             #{reactCode,jdbcType=CLOB},
-            'GENERATED',
+            #{failReason,jdbcType=CLOB},
+            #{status,jdbcType=VARCHAR},
             #{createUserId,jdbcType=VARCHAR},
             #{createDtime,jdbcType=VARCHAR}
         )
@@ -40,6 +42,7 @@
         CODE_ID        AS codeId,
         FIGMA_URL      AS figmaUrl,
         REACT_CODE     AS reactCode,
+        FAIL_REASON    AS failReason,
         STATUS         AS status,
         CREATE_DTIME   AS createDtime
     </sql>
@@ -59,6 +62,14 @@
             STATUS           = #{status,jdbcType=VARCHAR},
             APPROVAL_USER_ID = #{approvalUserId,jdbcType=VARCHAR},
             APPROVAL_DTIME   = #{approvalDtime,jdbcType=VARCHAR}
+        WHERE CODE_ID = #{codeId,jdbcType=VARCHAR}
+    </update>
+
+    <update id="updateToFailed">
+        UPDATE FWK_RPS_CODE_HIS
+        SET
+            STATUS      = 'FAILED',
+            FAIL_REASON = #{failReason,jdbcType=CLOB}
         WHERE CODE_ID = #{codeId,jdbcType=VARCHAR}
     </update>
 

@@ -20,6 +20,8 @@ public interface ReactGenerateMapper {
             @Param("systemPrompt") String systemPrompt,
             @Param("userPrompt") String userPrompt,
             @Param("reactCode") String reactCode,
+            @Param("failReason") String failReason,
+            @Param("status") String status,
             @Param("createUserId") String createUserId,
             @Param("createDtime") String createDtime);
 
@@ -32,4 +34,7 @@ public interface ReactGenerateMapper {
             @Param("status") String status,
             @Param("approvalUserId") String approvalUserId,
             @Param("approvalDtime") String approvalDtime);
+
+    /** 렌더링 실패 또는 코드 생성 실패 시 STATUS를 FAILED로, FAIL_REASON을 기록한다. */
+    void updateToFailed(@Param("codeId") String codeId, @Param("failReason") String failReason);
 }

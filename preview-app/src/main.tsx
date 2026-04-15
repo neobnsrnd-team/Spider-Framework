@@ -17,12 +17,15 @@ import Renderer from './Renderer'
 
 function App() {
   const [code, setCode] = useState<string | null>(null)
+  // 렌더링 오류 보고 시 FWK_RPS_CODE_HIS 레코드 특정에 사용
+  const [codeId, setCodeId] = useState<string | null>(null)
 
-  // 부모 페이지로부터 UPDATE_CODE 메시지 수신 → 코드 상태 갱신
+  // 부모 페이지로부터 UPDATE_CODE 메시지 수신 → 코드·codeId 상태 갱신
   useEffect(() => {
-    const handler = (event: MessageEvent<{ type: string; code: string }>) => {
+    const handler = (event: MessageEvent<{ type: string; code: string; codeId?: string }>) => {
       if (event.data?.type === 'UPDATE_CODE') {
         setCode(event.data.code)
+        setCodeId(event.data.codeId ?? null)
       }
     }
     window.addEventListener('message', handler)
@@ -48,7 +51,7 @@ function App() {
     )
   }
 
-  return <Renderer code={code} />
+  return <Renderer code={code} codeId={codeId} />
 }
 
 ReactDOM.createRoot(document.getElementById('root')!).render(

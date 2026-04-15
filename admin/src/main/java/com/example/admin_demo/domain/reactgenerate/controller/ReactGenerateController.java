@@ -55,7 +55,10 @@ public class ReactGenerateController {
     public ResponseEntity<Void> logRenderError(
             @RequestBody RenderErrorRequest request, HttpServletRequest httpRequest) {
         reactGenerateService.logRenderError(
-                request.getErrorMessage(), SecurityUtil.getCurrentUserIdOrAnonymous(), httpRequest.getRequestURI());
+                request.getCodeId(),
+                request.getErrorMessage(),
+                SecurityUtil.getCurrentUserIdOrAnonymous(),
+                httpRequest.getRequestURI());
         return ResponseEntity.ok().build();
     }
 }

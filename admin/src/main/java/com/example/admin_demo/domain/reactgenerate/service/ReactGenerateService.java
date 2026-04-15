@@ -16,6 +16,7 @@ import com.example.admin_demo.domain.reactgenerate.validator.CodeValidationResul
 import com.example.admin_demo.domain.reactgenerate.validator.CodeValidator;
 import com.example.admin_demo.global.exception.InvalidInputException;
 import com.example.admin_demo.global.exception.NotFoundException;
+import com.example.admin_demo.global.exception.base.BaseException;
 import com.example.admin_demo.global.log.event.ErrorLogEvent;
 import com.example.admin_demo.global.util.TraceIdUtil;
 import java.time.LocalDateTime;
@@ -52,32 +53,42 @@ public class ReactGenerateService {
     public ReactGenerateResponse generate(ReactGenerateRequest request, String createdBy) {
         log.info("React 코드 생성 요청 — figmaUrl: {}, userId: {}", request.getFigmaUrl(), createdBy);
 
-        // 1. Figma URL에서 fileKey, nodeId 파싱
-        FigmaUrlParser.ParsedFigmaUrl parsed = FigmaUrlParser.parse(request.getFigmaUrl());
-        log.info("Figma URL 파싱 완료 — fileKey: {}, nodeId: {}", parsed.getFileKey(), parsed.getNodeId());
+        // 실패 이력 저장에 필요하므로 try 바깥에서 미리 생성
+        String id = UUID.randomUUID().toString();
+        String now = LocalDateTime.now().format(FORMATTER);
 
-        // 2. Figma API 호출로 디자인 노드 데이터 수신
-        FigmaNodeResponse figmaNodeResponse = figmaApiClient.getNode(parsed.getFileKey(), parsed.getNodeId());
+        // 어느 단계에서 실패해도 그 시점까지 수집된 값을 실패 이력에 기록하기 위해 바깥에 선언
+        String systemPrompt = null;
+        String userPrompt = null;
+        String reactCode = null;
 
-        // 3. 원시 Figma 응답에서 Claude 프롬프트용 디자인 컨텍스트 추출
-        FigmaDesignContext designContext =
-                figmaDesignExtractor.extract(figmaNodeResponse, parsed.getNodeId(), request.getFigmaUrl());
-        log.info(
-                "Figma 디자인 추출 완료 — component: {} ({}), size: {}×{}",
-                designContext.getComponentName(),
-                designContext.getComponentType(),
-                designContext.getWidth(),
-                designContext.getHeight());
+        try {
+            // 1. Figma URL에서 fileKey, nodeId 파싱
+            FigmaUrlParser.ParsedFigmaUrl parsed = FigmaUrlParser.parse(request.getFigmaUrl());
+            log.info("Figma URL 파싱 완료 — fileKey: {}, nodeId: {}", parsed.getFileKey(), parsed.getNodeId());
 
-        // 4. system / user prompt 조립 (Figma 디자인 컨텍스트 포함)
-        String systemPrompt = promptBuilder.buildSystemPrompt();
-        String userPrompt = promptBuilder.buildUserPrompt(designContext, request.getRequirements());
+            // 2. Figma API 호출로 디자인 노드 데이터 수신
+            FigmaNodeResponse figmaNodeResponse = figmaApiClient.getNode(parsed.getFileKey(), parsed.getNodeId());
 
-        // 5. Claude API 호출하여 React 코드 생성
-        // TODO : 현재 Claude API 는 코드만 구현한 상태 (Claude API 확정 후, 위의 주석 제거 후 테스트 필요)
-        //        String reactCode = claudeApiClient.generate(systemPrompt, userPrompt);
-        String reactCode =
-                """
+            // 3. 원시 Figma 응답에서 Claude 프롬프트용 디자인 컨텍스트 추출
+            FigmaDesignContext designContext =
+                    figmaDesignExtractor.extract(figmaNodeResponse, parsed.getNodeId(), request.getFigmaUrl());
+            log.info(
+                    "Figma 디자인 추출 완료 — component: {} ({}), size: {}×{}",
+                    designContext.getComponentName(),
+                    designContext.getComponentType(),
+                    designContext.getWidth(),
+                    designContext.getHeight());
+
+            // 4. system / user prompt 조립 (Figma 디자인 컨텍스트 포함)
+            systemPrompt = promptBuilder.buildSystemPrompt();
+            userPrompt = promptBuilder.buildUserPrompt(designContext, request.getRequirements());
+
+            // 5. Claude API 호출하여 React 코드 생성
+            // TODO : 현재 Claude API 는 코드만 구현한 상태 (Claude API 확정 후, 위의 주석 제거 후 테스트 필요)
+            //        reactCode = claudeApiClient.generate(systemPrompt, userPrompt);
+            reactCode =
+                    """
                 import { Eye, EyeOff, KeyRound, Fingerprint, QrCode } from "lucide-react";
                 import { BlankPageLayout } from "@cl/layout/BlankPageLayout";
                 import { AppBrandHeader } from "@cl/layout/AppBrandHeader";
@@ -95,7 +106,7 @@ public class ReactGenerateService {
                   onTogglePassword?: () => void;
                   onLogin?: () => void;
                 }
-
+                
                 export default function LoginPage({
                   hasError = false,
                   showPassword = false,
@@ -209,42 +220,66 @@ public class ReactGenerateService {
                 }
                 """;
 
-        // 6. 보안 패턴 검증 (Java 정규표현식 기반, Node.js/ESLint 불필요)
-        CodeValidationResult validation = codeValidator.validate(reactCode);
-        if (!validation.isPassed()) {
-            // ERROR 위반 발견 → 생성 실패로 처리 (Feature 2 구현 시 catch 블록에서 실패 이력 저장 예정)
-            log.warn("React 코드 보안 검증 실패 — errors: {}", String.join(" | ", validation.getErrors()));
-            throw new InvalidInputException("보안 검증 실패: " + String.join(", ", validation.getErrors()));
+            // 6. 보안 패턴 검증 (Java 정규표현식 기반, Node.js/ESLint 불필요)
+            CodeValidationResult validation = codeValidator.validate(reactCode);
+            if (!validation.isPassed()) {
+                // ERROR 위반 → catch 블록에서 실패 이력 저장 후 예외 재전파
+                log.warn("React 코드 보안 검증 실패 — errors: {}", String.join(" | ", validation.getErrors()));
+                throw new InvalidInputException("보안 검증 실패: " + String.join(", ", validation.getErrors()));
+            }
+            if (!validation.getWarnings().isEmpty()) {
+                log.warn("React 코드 보안 경고 — warnings: {}", String.join(" | ", validation.getWarnings()));
+            }
+
+            // 7. DB 저장 (초기 상태: GENERATED)
+            reactGenerateMapper.insert(
+                    id,
+                    request.getFigmaUrl(),
+                    request.getRequirements(),
+                    systemPrompt,
+                    userPrompt,
+                    reactCode,
+                    null, // failReason: 성공이므로 null
+                    ReactGenerateStatus.GENERATED.name(),
+                    createdBy,
+                    now);
+
+            log.info("React 코드 생성 완료 — codeId: {}", id);
+
+            return ReactGenerateResponse.builder()
+                    .codeId(id)
+                    .figmaUrl(request.getFigmaUrl())
+                    .reactCode(reactCode)
+                    .status(ReactGenerateStatus.GENERATED.name())
+                    .createDtime(now)
+                    // WARN 경고가 없으면 null을 반환해 프론트엔드에서 불필요한 렌더링 방지
+                    .validationWarnings(validation.getWarnings().isEmpty() ? null : validation.getWarnings())
+                    .build();
+
+        } catch (Exception e) {
+            // 생성 파이프라인 어느 단계에서든 실패 시 이력 저장 후 예외 재전파
+            // null 필드는 해당 단계에 도달하기 전에 실패했음을 의미
+
+            // BaseException은 getMessage()가 ErrorType 고정 문구를 반환하므로
+            // detailMessage(실제 상세 오류)가 있으면 우선 사용한다
+            String failReason = (e instanceof BaseException be && be.getDetailMessage() != null)
+                    ? be.getDetailMessage()
+                    : e.getMessage();
+
+            log.error("React 코드 생성 실패 — codeId: {}, error: {}", id, failReason);
+            reactGenerateMapper.insert(
+                    id,
+                    request.getFigmaUrl(),
+                    request.getRequirements(),
+                    systemPrompt,
+                    userPrompt,
+                    reactCode,
+                    failReason,
+                    ReactGenerateStatus.FAILED.name(),
+                    createdBy,
+                    now);
+            throw e; // 원래 예외를 그대로 재전파 → GlobalExceptionHandler에서 처리
         }
-        if (!validation.getWarnings().isEmpty()) {
-            log.warn("React 코드 보안 경고 — warnings: {}", String.join(" | ", validation.getWarnings()));
-        }
-
-        // 7. DB 저장 (초기 상태: GENERATED)
-        String id = UUID.randomUUID().toString();
-        String now = LocalDateTime.now().format(FORMATTER);
-
-        reactGenerateMapper.insert(
-                id,
-                request.getFigmaUrl(),
-                request.getRequirements(),
-                systemPrompt,
-                userPrompt,
-                reactCode,
-                createdBy,
-                now);
-
-        log.info("React 코드 생성 완료 — codeId: {}", id);
-
-        return ReactGenerateResponse.builder()
-                .codeId(id)
-                .figmaUrl(request.getFigmaUrl())
-                .reactCode(reactCode)
-                .status(ReactGenerateStatus.GENERATED.name())
-                .createDtime(now)
-                // WARN 경고가 없으면 null 대신 빈 리스트를 반환해 프론트엔드 null 체크 불필요
-                .validationWarnings(validation.getWarnings().isEmpty() ? null : validation.getWarnings())
-                .build();
     }
 
     /**
@@ -281,17 +316,25 @@ public class ReactGenerateService {
     }
 
     /**
-     * Preview App에서 발생한 렌더링 오류를 ErrorLogEvent로 발행한다.
+     * Preview App에서 발생한 렌더링 오류를 기록한다.
      *
      * <p>브라우저 side에서 catch된 오류는 서버까지 전달되지 않으므로,
-     * 클라이언트가 명시적으로 이 메서드를 호출해 FWK_ERROR_HIS에 기록한다.
+     * 클라이언트가 명시적으로 이 메서드를 호출해야 한다.
      *
+     * <ul>
+     *   <li>FWK_ERROR_HIS: ErrorLogEvent 발행으로 시스템 공통 오류 이력 저장</li>
+     *   <li>FWK_RPS_CODE_HIS: codeId가 있으면 해당 코드 레코드를 FAILED 처리</li>
+     * </ul>
+     *
+     * @param codeId       렌더링 실패한 코드의 CODE_ID (없으면 null)
      * @param errorMessage 브라우저에서 전달한 오류 메시지
      * @param userId       요청자 ID
      * @param requestUri   요청 URI
      */
-    public void logRenderError(String errorMessage, String userId, String requestUri) {
+    public void logRenderError(String codeId, String errorMessage, String userId, String requestUri) {
         String now = LocalDateTime.now().format(FORMATTER);
+
+        // FWK_ERROR_HIS: 시스템 공통 오류 이력 (기존 유지)
         eventPublisher.publishEvent(new ErrorLogEvent(
                 TraceIdUtil.get(),
                 "RENDER_ERROR",
@@ -303,6 +346,12 @@ public class ReactGenerateService {
                 null,
                 now,
                 LogLevel.WARN)); // 렌더링 실패는 서버 장애가 아니므로 WARN
+
+        // FWK_RPS_CODE_HIS: 해당 코드 레코드를 FAILED로 업데이트
+        if (codeId != null && !codeId.isBlank()) {
+            log.warn("렌더링 오류로 코드 실패 처리 — codeId: {}, error: {}", codeId, errorMessage);
+            reactGenerateMapper.updateToFailed(codeId, errorMessage);
+        }
     }
 
     /** CODE_ID로 이력을 조회하고, 없으면 NotFoundException을 던진다. */
