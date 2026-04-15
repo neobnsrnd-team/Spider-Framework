@@ -889,6 +889,42 @@ app.get("/api/cards/:cardId/transactions", verifyToken, async (req, res) => {
   }
 });
 
+/**
+ * GET /api/cards/:cardId/payable-amount
+ * 즉시결제 가능금액 조회.
+ *
+ * POC_카드사용내역에서 로그인 사용자의 해당 카드번호 건 중
+ * 누적결제금액 < 이용금액 인 레코드의 미결제 잔액(이용금액 - 누적결제금액) 합산을 반환한다.
+ *
+ * Response 200: { payableAmount: number }
+ */
+app.get("/api/cards/:cardId/payable-amount", verifyToken, async (req, res) => {
+  try {
+    const userId = req.user.userId;
+    const { cardId } = req.params;
+
+    const result = await withConnection((conn) =>
+      conn.execute(
+        `SELECT NVL(SUM("이용금액" - "누적결제금액"), 0) AS PAYABLE_AMOUNT
+           FROM D_SPIDERLINK.POC_카드사용내역
+          WHERE "이용자"   = :userId
+            AND "카드번호" = :cardId
+            AND "누적결제금액" < "이용금액"
+            AND "결제상태코드" <> '9'`,
+            /* 결제상태코드 9(취소건)는 즉시결제 대상에서 제외.
+             * 0:미결제, 1:완납, 2:부분결제, 9:취소 */
+        { userId, cardId },
+      ),
+    );
+
+    const payableAmount = Number(result.rows?.[0]?.PAYABLE_AMOUNT ?? 0);
+    res.json({ payableAmount });
+  } catch (err) {
+    console.error("[GET /api/cards/:cardId/payable-amount]", err);
+    res.status(500).json({ error: "DB 조회 중 오류가 발생했습니다." });
+  }
+});
+
 // ════════════════════════════════════════════════════════════════════════════
 // 서버 기동 — DB 풀이 준비된 후에만 listen
 // ════════════════════════════════════════════════════════════════════════════

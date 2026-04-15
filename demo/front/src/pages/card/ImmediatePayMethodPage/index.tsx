@@ -16,27 +16,27 @@
  * @param onBack            - 뒤로가기
  * @param onClose           - 닫기(X)
  */
-import React, { useState } from 'react';
-import { X } from 'lucide-react';
+import React, { useState } from "react";
+import { X } from "lucide-react";
 
-import { PageLayout } from '@cl/layout/PageLayout';
-import { Button } from '@cl/core/Button';
-import { Typography } from '@cl/core/Typography';
-import { LabelValueRow } from '@cl/modules/common/LabelValueRow';
-import { Divider }       from '@cl/modules/common/Divider';
-import { StepIndicator } from '@cl/modules/common/StepIndicator';
-import { TabNav }        from '@cl/modules/common/TabNav';
-import { AccountSelectCard } from '@cl/biz/card/AccountSelectCard';
+import { PageLayout } from "@cl/layout/PageLayout";
+import { Button } from "@cl/core/Button";
+import { Typography } from "@cl/core/Typography";
+import { LabelValueRow } from "@cl/modules/common/LabelValueRow";
+import { Divider } from "@cl/modules/common/Divider";
+import { StepIndicator } from "@cl/modules/common/StepIndicator";
+import { TabNav } from "@cl/modules/common/TabNav";
+import { AccountSelectCard } from "@cl/biz/card/AccountSelectCard";
 
-import type { ImmediatePayMethodPageProps, PaymentType } from './types';
+import type { ImmediatePayMethodPageProps, PaymentType } from "./types";
 
 const PAYMENT_TYPE_TABS = [
-  { id: 'total',    label: '총 이용금액 결제' },
-  { id: 'per-item', label: '이용건별 결제'    },
+  { id: "total", label: "총 이용금액 결제" },
+  { id: "per-item", label: "이용건별 결제" },
 ] as const;
 
 export function ImmediatePayMethodPage({
-  initialPaymentType = 'total',
+  initialPaymentType = "total",
   summaryItems,
   accounts,
   initialAccountId,
@@ -44,15 +44,23 @@ export function ImmediatePayMethodPage({
   onBack,
   onClose,
 }: ImmediatePayMethodPageProps) {
-  const [paymentType, setPaymentType] = useState<PaymentType>(initialPaymentType);
-  const [selectedId, setSelectedId] = useState(initialAccountId ?? accounts[0]?.id ?? '');
+  const [paymentType, setPaymentType] =
+    useState<PaymentType>(initialPaymentType);
+  const [selectedId, setSelectedId] = useState(
+    initialAccountId ?? accounts[0]?.id ?? "",
+  );
 
   return (
     <PageLayout
       title="즉시결제"
       onBack={onBack}
       bottomBar={
-        <Button variant="primary" size="lg" fullWidth onClick={() => onApply?.(selectedId)}>
+        <Button
+          variant="primary"
+          size="lg"
+          fullWidth
+          onClick={() => onApply?.(selectedId)}
+        >
           신청
         </Button>
       }
@@ -68,15 +76,6 @@ export function ImmediatePayMethodPage({
       }
     >
       <div className="flex flex-col gap-lg px-standard pt-md pb-xl">
-        {/* ── 결제 유형 선택 버튼 그룹 ────────────────────────────── */}
-        <TabNav
-          items={PAYMENT_TYPE_TABS}
-          activeId={paymentType}
-          onTabChange={(id) => setPaymentType(id as PaymentType)}
-          variant="pill"
-          fullWidth
-        />
-
         {/* ── STEP 3 레이블 ─────────────────────────────────────── */}
         <div className="flex flex-col gap-xs">
           <Typography variant="caption" color="brand">
@@ -96,7 +95,11 @@ export function ImmediatePayMethodPage({
           </Typography>
           <div className="flex flex-col gap-xs">
             {summaryItems.map((item) => (
-              <LabelValueRow key={item.label} label={item.label} value={item.value} />
+              <LabelValueRow
+                key={item.label}
+                label={item.label}
+                value={item.value}
+              />
             ))}
           </div>
         </div>

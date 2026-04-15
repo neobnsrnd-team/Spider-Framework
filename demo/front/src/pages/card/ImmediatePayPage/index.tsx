@@ -4,8 +4,8 @@
  *
  * 화면 구성:
  *   - 상단바: 뒤로가기 / '즉시결제' 타이틀 / 닫기(X) 버튼
- *   - 결제 유형 선택 버튼 그룹: 총 이용금액 결제 | 이용건별 결제
  *   - STEP 1 레이블 + 안내 문구
+ *   - 결제 유형 선택 버튼 그룹: 총 이용금액 결제 | 이용건별 결제
  *   - 청구단위 카드 Select
  *   - 청구단위 보유카드 아코디언 (카드명 + 마스킹된 카드번호)
  *
@@ -18,40 +18,41 @@
  * @param onClose             - 닫기(X) 핸들러
  * @param onNext              - 다음 버튼 클릭 핸들러
  */
-import React, { useState } from 'react';
-import { X } from 'lucide-react';
+import React, { useState } from "react";
+import { X } from "lucide-react";
 
-import { PageLayout } from '@cl/layout/PageLayout';
-import { Button } from '@cl/core/Button';
-import { Typography } from '@cl/core/Typography';
-import { Select } from '@cl/core/Select';
-import { TabNav } from '@cl/modules/common/TabNav';
-import { CollapsibleSection } from '@cl/modules/common/CollapsibleSection';
-import { StepIndicator } from '@cl/modules/common/StepIndicator';
-import { CardChipItem } from '@cl/biz/card/CardChipItem';
+import { PageLayout } from "@cl/layout/PageLayout";
+import { Button } from "@cl/core/Button";
+import { Typography } from "@cl/core/Typography";
+import { Select } from "@cl/core/Select";
+import { TabNav } from "@cl/modules/common/TabNav";
+import { CollapsibleSection } from "@cl/modules/common/CollapsibleSection";
+import { StepIndicator } from "@cl/modules/common/StepIndicator";
+import { CardChipItem } from "@cl/biz/card/CardChipItem";
 
-import type { ImmediatePayPageProps, PaymentType } from './types';
+import type { ImmediatePayPageProps, PaymentType } from "./types";
 
 /** 결제 유형 탭 항목 */
 const PAYMENT_TYPE_TABS = [
-  { id: 'total', label: '총 이용금액 결제' },
-  { id: 'per-item', label: '이용건별 결제' },
+  { id: "total", label: "총 이용금액 결제" },
+  { id: "per-item", label: "이용건별 결제" },
 ] as const;
 
 export function ImmediatePayPage({
   cards,
   initialCardId,
-  initialPaymentType = 'total',
+  initialPaymentType = "total",
   onPaymentTypeChange,
   onCardChange,
   onBack,
   onClose,
   onNext,
 }: ImmediatePayPageProps) {
-  const [paymentType, setPaymentType] = useState<PaymentType>(initialPaymentType);
+  const [paymentType, setPaymentType] =
+    useState<PaymentType>(initialPaymentType);
   const [selectedCardId, setSelectedCardId] = useState(
     /* 초기값 미전달 시 첫 번째 카드로 fallback */
-    initialCardId ?? cards[0]?.id ?? '',
+    initialCardId ?? cards[0]?.id ?? "",
   );
 
   /** Select 옵션: 카드명 + 마스킹번호를 label로 조합 */
@@ -61,6 +62,13 @@ export function ImmediatePayPage({
   }));
 
   function handlePaymentTypeChange(id: string) {
+    // 이용건별 결제는 현재 미지원 — 탭 전환을 막고 안내 메시지를 표시한다.
+    if (id === "per-item") {
+      alert(
+        "이용건별 결제는 현재 사용할 수 없습니다.\n추후 업데이트를 통해 제공될 예정입니다.",
+      );
+      return;
+    }
     const type = id as PaymentType;
     setPaymentType(type);
     onPaymentTypeChange?.(type);
@@ -76,7 +84,7 @@ export function ImmediatePayPage({
       title="즉시결제"
       onBack={onBack}
       bottomBar={
-        <Button variant="primary" size="lg" fullWidth onClick={onNext}>
+        <Button variant="primary" size="lg" fullWidth onClick={() => onNext?.(selectedCardId)}>
           다음
         </Button>
       }
@@ -92,17 +100,6 @@ export function ImmediatePayPage({
       }
     >
       <div className="flex flex-col gap-lg px-standard pt-md pb-xl">
-        {/* ── 결제 유형 선택 버튼 그룹 ──────────────────────────────
-         * pill 탭으로 '총 이용금액 결제' / '이용건별 결제' 선택.
-         * 선택된 탭이 강조(active) 된다. */}
-        <TabNav
-          items={PAYMENT_TYPE_TABS}
-          activeId={paymentType}
-          onTabChange={handlePaymentTypeChange}
-          variant="pill"
-          fullWidth
-        />
-
         {/* ── STEP 1 + 안내 문구 ────────────────────────────────── */}
         <div className="flex flex-col gap-xs">
           <Typography variant="caption" color="brand">
@@ -114,6 +111,17 @@ export function ImmediatePayPage({
             선택해 주세요.
           </Typography>
         </div>
+
+        {/* ── 결제 유형 선택 버튼 그룹 ──────────────────────────────
+         * pill 탭으로 '총 이용금액 결제' / '이용건별 결제' 선택.
+         * 선택된 탭이 강조(active) 된다. */}
+        <TabNav
+          items={PAYMENT_TYPE_TABS}
+          activeId={paymentType}
+          onTabChange={handlePaymentTypeChange}
+          variant="pill"
+          fullWidth
+        />
 
         {/* ── 청구단위 카드 Select ───────────────────────────────── */}
         <div className="flex flex-col gap-xs">
@@ -144,7 +152,11 @@ export function ImmediatePayPage({
           {cards
             .filter((c) => c.id === selectedCardId)
             .map((card) => (
-              <CardChipItem key={card.id} name={card.name} maskedNumber={card.maskedNumber} />
+              <CardChipItem
+                key={card.id}
+                name={card.name}
+                maskedNumber={card.maskedNumber}
+              />
             ))}
         </CollapsibleSection>
       </div>

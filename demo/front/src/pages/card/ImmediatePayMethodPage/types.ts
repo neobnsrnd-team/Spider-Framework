@@ -2,6 +2,7 @@
  * @file types.ts
  * @description ImmediatePayMethodPage (STEP 3 — 결제방식 선택) 타입 정의.
  */
+import type { ReactNode } from 'react';
 
 /** 결제 유형 */
 export type PaymentType = 'total' | 'per-item';
@@ -10,8 +11,8 @@ export type PaymentType = 'total' | 'per-item';
 export interface SummaryItem {
   /** 항목 레이블. 예: '청구단위' */
   label: string;
-  /** 항목 값. 예: '하나 머니 체크카드' */
-  value: string;
+  /** 항목 값. 문자열 또는 줄바꿈 등 커스텀 레이아웃을 위한 ReactNode */
+  value: ReactNode;
 }
 
 /** 출금계좌 단일 항목 */

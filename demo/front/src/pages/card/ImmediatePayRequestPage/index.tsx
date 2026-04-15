@@ -19,34 +19,34 @@
  * @param onBack         - 뒤로가기
  * @param onClose        - 닫기(X)
  */
-import React, { useState } from 'react';
-import { X, CreditCard } from 'lucide-react';
+import React, { useState } from "react";
+import { X, CreditCard } from "lucide-react";
 
-import { PageLayout } from '@cl/layout/PageLayout';
-import { Button } from '@cl/core/Button';
-import { Input } from '@cl/core/Input';
-import { Typography } from '@cl/core/Typography';
-import { CollapsibleSection } from '@cl/modules/common/CollapsibleSection';
-import { Divider } from '@cl/modules/common/Divider';
-import { StepIndicator } from '@cl/modules/common/StepIndicator';
-import { TabNav } from '@cl/modules/common/TabNav';
-import { LabelValueRow } from '@cl/modules/common/LabelValueRow';
+import { PageLayout } from "@cl/layout/PageLayout";
+import { Button } from "@cl/core/Button";
+import { Input } from "@cl/core/Input";
+import { Typography } from "@cl/core/Typography";
+import { CollapsibleSection } from "@cl/modules/common/CollapsibleSection";
+import { Divider } from "@cl/modules/common/Divider";
+import { StepIndicator } from "@cl/modules/common/StepIndicator";
+import { TabNav } from "@cl/modules/common/TabNav";
+import { LabelValueRow } from "@cl/modules/common/LabelValueRow";
 
-import type { ImmediatePayRequestPageProps, PaymentType } from './types';
+import type { ImmediatePayRequestPageProps, PaymentType } from "./types";
 
 /** 결제 유형 탭 항목 */
 const PAYMENT_TYPE_TABS = [
-  { id: 'total', label: '총 이용금액 결제' },
-  { id: 'per-item', label: '이용건별 결제' },
+  { id: "total", label: "총 이용금액 결제" },
+  { id: "per-item", label: "이용건별 결제" },
 ] as const;
 
 /** 금액 포맷 (정수 → "1,234,567원") */
 function formatAmount(n: number) {
-  return `${n.toLocaleString('ko-KR')}원`;
+  return `${n.toLocaleString("ko-KR")}원`;
 }
 
 export function ImmediatePayRequestPage({
-  initialPaymentType = 'total',
+  initialPaymentType = "total",
   card,
   payableAmount,
   paymentBreakdown = [],
@@ -57,23 +57,60 @@ export function ImmediatePayRequestPage({
   onBack,
   onClose,
 }: ImmediatePayRequestPageProps) {
-  const [paymentType, setPaymentType] = useState<PaymentType>(initialPaymentType);
+  const [paymentType, setPaymentType] =
+    useState<PaymentType>(initialPaymentType);
   /* 결제할 금액 — 숫자 문자열로 관리, 콤마 없이 저장 */
-  const [payAmount, setPayAmount] = useState('');
+  const [payAmount, setPayAmount] = useState("");
+  /* 금액 입력 에러 메시지. 빈 문자열이면 에러 없음 */
+  const [amountError, setAmountError] = useState("");
 
   function handleAmountChange(e: React.ChangeEvent<HTMLInputElement>) {
     /* 숫자만 허용 */
-    const digits = e.target.value.replace(/\D/g, '');
+    const digits = e.target.value.replace(/\D/g, "");
     setPayAmount(digits);
+
+    /* [검증 3] 최대금액 초과 여부를 입력 즉시 검사 */
+    if (digits && Number(digits) > payableAmount) {
+      setAmountError(`결제가능금액(${formatAmount(payableAmount)})을 초과할 수 없습니다.`);
+    } else {
+      setAmountError("");
+    }
   }
 
   function handleFullAmount() {
     setPayAmount(String(payableAmount));
+    setAmountError("");
+  }
+
+  function handleAmountBlur() {
+    /* 포커스 아웃 시 결제가능금액 초과면 결제가능금액으로 자동 보정 */
+    if (payAmount && Number(payAmount) > payableAmount) {
+      setPayAmount(String(payableAmount));
+      setAmountError("");
+    }
   }
 
   function handleNext() {
+    const amount = Number(payAmount);
+
+    /* [검증 1] 금액 미입력 */
+    if (!payAmount) {
+      setAmountError("결제할 금액을 입력해 주세요.");
+      return;
+    }
+    /* [검증 2] 최소금액 (0원 이하) */
+    if (amount <= 0) {
+      setAmountError("1원 이상 입력해 주세요.");
+      return;
+    }
+    /* [검증 3] 최대금액 초과 — 입력 중 이미 표시되나 제출 시도 시에도 차단 */
+    if (amount > payableAmount) {
+      setAmountError(`결제가능금액(${formatAmount(payableAmount)})을 초과할 수 없습니다.`);
+      return;
+    }
+
     /* 이용구분은 일시불 고정 — 현재 화면에서 다른 구분 선택 불가 */
-    onNext?.('lump', Number(payAmount) || payableAmount);
+    onNext?.("lump", amount);
   }
 
   return (
@@ -97,15 +134,6 @@ export function ImmediatePayRequestPage({
       }
     >
       <div className="flex flex-col gap-lg px-standard pt-md pb-xl">
-        {/* ── 결제 유형 선택 버튼 그룹 ────────────────────────────── */}
-        <TabNav
-          items={PAYMENT_TYPE_TABS}
-          activeId={paymentType}
-          onTabChange={(id) => setPaymentType(id as PaymentType)}
-          variant="pill"
-          fullWidth
-        />
-
         {/* ── STEP 2 레이블 ─────────────────────────────────────── */}
         <div className="flex flex-col gap-xs">
           <Typography variant="caption" color="brand">
@@ -166,63 +194,64 @@ export function ImmediatePayRequestPage({
               label="일시불"
               className="text-sm font-bold"
               value={
-                <Typography variant="body-sm" weight="bold" color="brand">{formatAmount(payableAmount)}</Typography>
+                <Typography variant="body-sm" weight="bold" color="brand">
+                  {formatAmount(payableAmount)}
+                </Typography>
               }
             />
           </div>
         </div>
 
-        {/* ── 결제가능금액 ───────────────────────────────────────── */}
-        <div className="flex flex-col gap-xs">
-          <Typography variant="body-sm" weight="bold" color="heading">
-            결제가능금액
-          </Typography>
-          {/* 대형 금액 표시 */}
-          <Typography variant="heading" weight="bold" color="heading" numeric>
-            {formatAmount(payableAmount)}
-          </Typography>
-        </div>
-
         {/* ── 결제할 금액 입력 ────────────────────────────────────── */}
-        <div className="flex flex-col gap-xs">
+        <div className="flex flex-col gap-sm">
           <Typography variant="body-sm" weight="bold" color="heading">
             결제할 금액 입력
           </Typography>
           <Input
-            value={payAmount ? Number(payAmount).toLocaleString('ko-KR') : ''}
+            value={payAmount ? Number(payAmount).toLocaleString("ko-KR") : ""}
             onChange={handleAmountChange}
             placeholder={`총 ${formatAmount(payableAmount)}`}
             inputMode="numeric"
             fullWidth
+            /* 에러 발생 시 빨간 테두리 + 에러 문구, 정상 시 안내 문구 표시 */
+            onBlur={handleAmountBlur}
+            validationState={amountError ? "error" : "default"}
+            helperText={amountError || amountHelperText}
             rightElement={
               <Button variant="outline" size="sm" onClick={handleFullAmount}>
                 전액
               </Button>
             }
           />
-          {amountHelperText && (
-            <Typography variant="caption" color="muted">
-              {amountHelperText}
-            </Typography>
-          )}
         </div>
 
         <Divider />
 
         {/* ── 꼭! 알아두세요 아코디언 ──────────────────────────── */}
         <div className="flex flex-col gap-xs">
-          <Typography variant="body-sm" weight="bold" color="heading" className="mb-xs">
+          <Typography
+            variant="body-sm"
+            weight="bold"
+            color="heading"
+            className="mb-xs"
+          >
             꼭! 알아두세요
           </Typography>
           {cautions.map(({ title, content }) => (
             <CollapsibleSection
               key={title}
-              header={<Typography variant="body-sm" weight="medium" color="heading">{title}</Typography>}
+              header={
+                <Typography variant="body-sm" weight="medium" color="heading">
+                  {title}
+                </Typography>
+              }
               defaultExpanded={false}
               headerAlign="left"
               className="px-0! py-1!"
             >
-              <Typography variant="caption" color="secondary">{content}</Typography>
+              <Typography variant="caption" color="secondary">
+                {content}
+              </Typography>
             </CollapsibleSection>
           ))}
         </div>
