@@ -891,34 +891,46 @@ app.get("/api/cards/:cardId/transactions", verifyToken, async (req, res) => {
 
 /**
  * GET /api/cards/:cardId/payable-amount
- * 즉시결제 가능금액 조회.
+ * 즉시결제 가능금액 및 한도금액 조회.
  *
- * POC_카드사용내역에서 로그인 사용자의 해당 카드번호 건 중
- * 누적결제금액 < 이용금액 인 레코드의 미결제 잔액(이용금액 - 누적결제금액) 합산을 반환한다.
+ * - payableAmount : POC_카드사용내역에서 누적결제금액 < 이용금액(취소 제외) 건의 미결제 잔액 합산
+ * - creditLimit   : POC_카드리스트의 한도금액 (결제 후 이용가능한도 계산에 사용)
  *
- * Response 200: { payableAmount: number }
+ * Response 200: { payableAmount: number, creditLimit: number }
  */
 app.get("/api/cards/:cardId/payable-amount", verifyToken, async (req, res) => {
   try {
     const userId = req.user.userId;
     const { cardId } = req.params;
 
-    const result = await withConnection((conn) =>
-      conn.execute(
-        `SELECT NVL(SUM("이용금액" - "누적결제금액"), 0) AS PAYABLE_AMOUNT
-           FROM D_SPIDERLINK.POC_카드사용내역
-          WHERE "이용자"   = :userId
-            AND "카드번호" = :cardId
-            AND "누적결제금액" < "이용금액"
-            AND "결제상태코드" <> '9'`,
-            /* 결제상태코드 9(취소건)는 즉시결제 대상에서 제외.
-             * 0:미결제, 1:완납, 2:부분결제, 9:취소 */
-        { userId, cardId },
-      ),
+    const [usageResult, cardResult] = await withConnection((conn) =>
+      Promise.all([
+        /* 미결제 잔액 합산 */
+        conn.execute(
+          `SELECT NVL(SUM("이용금액" - "누적결제금액"), 0) AS PAYABLE_AMOUNT
+             FROM D_SPIDERLINK.POC_카드사용내역
+            WHERE "이용자"       = :userId
+              AND "카드번호"     = :cardId
+              AND "누적결제금액" < "이용금액"
+              AND "결제상태코드" <> '9'`,
+              /* 결제상태코드 9(취소건)는 즉시결제 대상에서 제외.
+               * 0:미결제, 1:완납, 2:부분결제, 9:취소 */
+          { userId, cardId },
+        ),
+        /* 카드 한도금액 조회 */
+        conn.execute(
+          `SELECT NVL("한도금액", 0) AS CREDIT_LIMIT
+             FROM D_SPIDERLINK.POC_카드리스트
+            WHERE "사용자아이디" = :userId
+              AND "카드번호"     = :cardId`,
+          { userId, cardId },
+        ),
+      ]),
     );
 
-    const payableAmount = Number(result.rows?.[0]?.PAYABLE_AMOUNT ?? 0);
-    res.json({ payableAmount });
+    const payableAmount = Number(usageResult.rows?.[0]?.PAYABLE_AMOUNT ?? 0);
+    const creditLimit   = Number(cardResult.rows?.[0]?.CREDIT_LIMIT   ?? 0);
+    res.json({ payableAmount, creditLimit });
   } catch (err) {
     console.error("[GET /api/cards/:cardId/payable-amount]", err);
     res.status(500).json({ error: "DB 조회 중 오류가 발생했습니다." });

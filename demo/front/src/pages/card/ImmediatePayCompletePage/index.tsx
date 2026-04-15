@@ -30,8 +30,10 @@ function formatAmount(n: number) {
 
 export function ImmediatePayCompletePage({
   cardName,
+  cardNumber,
   amount,
   account,
+  availableLimit,
   completedAt,
   onConfirm,
 }: ImmediatePayCompletePageProps) {
@@ -65,10 +67,12 @@ export function ImmediatePayCompletePage({
             결제 정보
           </Typography>
           <div className="flex flex-col gap-xs">
-            <LabelValueRow label="카드명" value={cardName} />
-            <LabelValueRow label="결제금액" value={formatAmount(amount)} />
-            <LabelValueRow label="출금계좌" value={account} />
-            <LabelValueRow label="처리일시" value={completedAt} />
+            <LabelValueRow label="카드명"           value={cardName} />
+            <LabelValueRow label="카드번호"          value={cardNumber} />
+            <LabelValueRow label="결제금액"          value={formatAmount(amount)} />
+            <LabelValueRow label="출금계좌"          value={account} />
+            <LabelValueRow label="이용가능한도"      value={formatAmount(availableLimit)} />
+            <LabelValueRow label="처리일시"          value={completedAt} />
           </div>
         </div>
       </div>

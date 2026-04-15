@@ -37,6 +37,7 @@ import { ImmediatePayPage } from "@/pages/card/ImmediatePayPage";
 import type { CardInfo } from "@/pages/card/ImmediatePayPage/types";
 import { ImmediatePayRequestPage } from "@/pages/card/ImmediatePayRequestPage";
 import { ImmediatePayMethodPage } from "@/pages/card/ImmediatePayMethodPage";
+import { ImmediatePayConfirmSheet } from "@/pages/card/ImmediatePayMethodPage/ImmediatePayConfirmSheet";
 import { ImmediatePayCompletePage } from "@/pages/card/ImmediatePayCompletePage";
 import { MyCardManagementPage } from "@/pages/card/MyCardManagementPage";
 import { UserManagementPage } from "@/pages/card/UserManagementPage";
@@ -62,7 +63,6 @@ import {
   MOCK_MANAGEMENT_ROWS,
   MOCK_CAUTIONS,
 } from "@/mocks/cardMocks";
-import { Typography } from "@cl/core/Typography";
 
 /* ------------------------------------------------------------------ */
 /* 공통 / 인증                                                           */
@@ -700,8 +700,20 @@ export function ImmediatePayRequestRoute() {
   useEffect(() => {
     if (!card.id) return;
     axiosInstance
-      .get<{ payableAmount: number }>(`/cards/${card.id}/payable-amount`)
-      .then((r) => setPayableAmount(r.data.payableAmount))
+      .get<{ payableAmount: number; creditLimit: number }>(
+        `/cards/${card.id}/payable-amount`,
+      )
+      .then((r) => {
+        setPayableAmount(r.data.payableAmount);
+        // STEP 3 확인 시트에서 결제 후 이용가능한도 계산에 필요한 값을 세션에 저장한다.
+        sessionStorage.setItem(
+          "immediatePayAmountInfo",
+          JSON.stringify({
+            payableAmount: r.data.payableAmount,
+            creditLimit: r.data.creditLimit,
+          }),
+        );
+      })
       .catch((err) =>
         console.error("[ImmediatePayRequestRoute] 결제가능금액 조회 실패", err),
       );
@@ -757,23 +769,44 @@ export function ImmediatePayRequestRoute() {
   );
 }
 
-/** STEP 3 — 출금계좌 선택, 신청 클릭 시 PIN 입력 시트 열기 → 완료 시 STEP 4 로 이동 */
+/** STEP 3 — 출금계좌 선택, 신청 클릭 시 확인 시트 → PIN 입력 시트 → 완료 시 STEP 4 로 이동 */
 export function ImmediatePayMethodRoute() {
   const navigate = useNavigate();
+  const [confirmOpen, setConfirmOpen] = useState(false);
   const [pinOpen, setPinOpen] = useState(false);
+  // 신청 클릭 시 선택된 계좌를 확인 시트에 전달하기 위해 저장한다.
+  const [selectedAccount, setSelectedAccount] = useState({
+    bankName: "",
+    maskedAccount: "",
+  });
 
-  // STEP 1·2에서 세션에 저장된 카드 정보와 결제 요청 데이터를 읽는다.
+  // STEP 1·2에서 세션에 저장된 카드 정보·결제 요청 데이터·금액 정보를 읽는다.
   const storedCard = sessionStorage.getItem("immediatePaySelectedCard");
   const storedRequest = sessionStorage.getItem("immediatePayRequestData");
+  const storedAmountInfo = sessionStorage.getItem("immediatePayAmountInfo");
   const card: CardInfo = storedCard
     ? (JSON.parse(storedCard) as CardInfo)
     : { id: "", name: "", maskedNumber: "" };
   const { usageType, payAmount } = storedRequest
     ? (JSON.parse(storedRequest) as { usageType: string; payAmount: number })
     : { usageType: "lump", payAmount: 0 };
+  const { payableAmount: totalPayable, creditLimit } = storedAmountInfo
+    ? (JSON.parse(storedAmountInfo) as {
+        payableAmount: number;
+        creditLimit: number;
+      })
+    : { payableAmount: 0, creditLimit: 0 };
 
   // 이용구분 코드 → 표시 문자열
   const usageTypeLabel = usageType === "lump" ? "일시불" : "금액별";
+
+  // 결제 후 이용가능한도 = 한도금액 - (미결제금액 - 결제금액)
+  const availableLimit = creditLimit - (totalPayable - payAmount);
+
+  const ACCOUNTS = [
+    { id: "acc-1", bankName: "하나은행", maskedAccount: "123-456789-01***" },
+    { id: "acc-2", bankName: "국민은행", maskedAccount: "987-654321-99***" },
+  ];
 
   return (
     <>
@@ -795,22 +828,37 @@ export function ImmediatePayMethodRoute() {
             value: `${payAmount.toLocaleString("ko-KR")}원`,
           },
         ]}
-        accounts={[
-          {
-            id: "acc-1",
-            bankName: "하나은행",
-            maskedAccount: "123-456789-01***",
-          },
-          {
-            id: "acc-2",
-            bankName: "국민은행",
-            maskedAccount: "987-654321-99***",
-          },
-        ]}
+        accounts={ACCOUNTS}
         initialAccountId="acc-1"
-        onApply={() => setPinOpen(true)}
+        onApply={(accountId) => {
+          // 선택된 계좌를 state와 세션에 저장 후 확인 시트를 표시한다.
+          // 세션 저장: STEP 4 완료 화면에서 출금계좌를 표시하는 데 사용된다.
+          const found = ACCOUNTS.find((a) => a.id === accountId);
+          if (found) {
+            setSelectedAccount(found);
+            sessionStorage.setItem(
+              "immediatePaySelectedAccount",
+              JSON.stringify(found),
+            );
+          }
+          setConfirmOpen(true);
+        }}
         onBack={() => navigate(-1)}
         onClose={() => navigate(PATHS.CARD.DASHBOARD, { replace: true })}
+      />
+      {/* 즉시결제 확인 시트 — PIN 입력 전 최종 결제 내용 확인 */}
+      <ImmediatePayConfirmSheet
+        open={confirmOpen}
+        payAmount={payAmount}
+        cardName={card.name}
+        cardNumber={card.maskedNumber}
+        account={`${selectedAccount.bankName} ${selectedAccount.maskedAccount}`.trim()}
+        availableLimit={availableLimit}
+        onClose={() => setConfirmOpen(false)}
+        onConfirm={() => {
+          setConfirmOpen(false);
+          setPinOpen(true);
+        }}
       />
       <PinConfirmSheet
         open={pinOpen}
@@ -826,12 +874,54 @@ export function ImmediatePayMethodRoute() {
 /** STEP 4 — 완료 화면, 확인 클릭 시 대시보드로 이동 */
 export function ImmediatePayCompleteRoute() {
   const navigate = useNavigate();
+
+  // 이전 단계에서 세션에 저장된 카드·결제·계좌·금액 정보를 읽는다.
+  const storedCard = sessionStorage.getItem("immediatePaySelectedCard");
+  const storedRequest = sessionStorage.getItem("immediatePayRequestData");
+  const storedAccount = sessionStorage.getItem("immediatePaySelectedAccount");
+  const storedAmountInfo = sessionStorage.getItem("immediatePayAmountInfo");
+
+  const card = storedCard
+    ? (JSON.parse(storedCard) as { name: string; maskedNumber: string })
+    : { name: "", maskedNumber: "" };
+  const request = storedRequest
+    ? (JSON.parse(storedRequest) as { payAmount: number })
+    : { payAmount: 0 };
+  const account = storedAccount
+    ? (JSON.parse(storedAccount) as { bankName: string; maskedAccount: string })
+    : { bankName: "", maskedAccount: "" };
+  const amountInfo = storedAmountInfo
+    ? (JSON.parse(storedAmountInfo) as {
+        payableAmount: number;
+        creditLimit: number;
+      })
+    : { payableAmount: 0, creditLimit: 0 };
+
+  // 결제 후 이용가능한도 = 한도금액 - (미결제금액 - 결제금액)
+  const availableLimit =
+    amountInfo.creditLimit - (amountInfo.payableAmount - request.payAmount);
+
+  // 처리일시는 이 화면이 렌더링되는 시점(PIN 인증 완료 직후)으로 기록한다.
+  const completedAt = new Date()
+    .toLocaleString("ko-KR", {
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: false,
+    })
+    .replace(/\. /g, ".")
+    .replace(",", "");
+
   return (
     <ImmediatePayCompletePage
-      cardName="하나 머니 체크카드"
-      amount={1234567}
-      account="하나은행 123-456789-01***"
-      completedAt="2026.04.09 14:32"
+      cardName={card.name}
+      cardNumber={card.maskedNumber}
+      amount={request.payAmount}
+      account={`${account.bankName} ${account.maskedAccount}`.trim()}
+      availableLimit={availableLimit}
+      completedAt={completedAt}
       onConfirm={() => navigate(PATHS.CARD.DASHBOARD, { replace: true })}
     />
   );
