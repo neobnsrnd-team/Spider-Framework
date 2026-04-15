@@ -1033,18 +1033,19 @@ CREATE TABLE FWK_TRANS_DATA_HIS (
 -- 15. React Generate (1 table)
 -- =============================================================
 
-CREATE TABLE REACT_GENERATE_HIS (
-    ID                         VARCHAR(36)    NOT NULL,
+CREATE TABLE FWK_RPS_CODE_HIS (
+    CODE_ID                    VARCHAR(36)    NOT NULL,
     FIGMA_URL                  VARCHAR(1000)  NOT NULL,
     REQUIREMENTS               LONGTEXT,
     SYSTEM_PROMPT              LONGTEXT,
     USER_PROMPT                LONGTEXT,
     REACT_CODE                 LONGTEXT,
+    FAIL_REASON                LONGTEXT,
     STATUS                     VARCHAR(20)    NOT NULL DEFAULT 'GENERATED',
-    APPROVED_BY                VARCHAR(100),
-    APPROVED_AT                VARCHAR(14),
-    CREATED_BY                 VARCHAR(100)   NOT NULL,
-    CREATED_AT                 VARCHAR(14)    NOT NULL,
-    PRIMARY KEY (ID),
-    CONSTRAINT CHK_REACT_GEN_STATUS CHECK (STATUS IN ('GENERATED', 'PENDING_APPROVAL', 'APPROVED', 'REJECTED'))
+    CREATE_DTIME                 VARCHAR(14)    NOT NULL,
+    CREATE_USER_ID                 VARCHAR(20)   NOT NULL,
+    APPROVAL_DTIME                VARCHAR(14),
+    APPROVAL_USER_ID                VARCHAR(20),
+    PRIMARY KEY (CODE_ID),
+    CONSTRAINT CHK_REACT_GEN_STATUS CHECK (STATUS IN ('GENERATED', 'FAILED', 'PENDING_APPROVAL', 'APPROVED', 'REJECTED'))
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

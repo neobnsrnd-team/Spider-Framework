@@ -3,7 +3,7 @@
         "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 
 <!--
-    ReactGenerate Mapper (REACT_GENERATE_HIS)
+    ReactGenerate Mapper (FWK_RPS_CODE_HIS)
     - React 코드 생성 이력 INSERT / SELECT / UPDATE
 -->
 <mapper namespace="com.example.admin_demo.domain.reactgenerate.mapper.ReactGenerateMapper">
@@ -11,55 +11,55 @@
     <!-- ==================== INSERT ==================== -->
 
     <insert id="insert">
-        INSERT INTO REACT_GENERATE_HIS (
-            ID,
+        INSERT INTO FWK_RPS_CODE_HIS (
+            CODE_ID,
             FIGMA_URL,
             REQUIREMENTS,
             SYSTEM_PROMPT,
             USER_PROMPT,
             REACT_CODE,
             STATUS,
-            CREATED_BY,
-            CREATED_AT
+            CREATE_USER_ID,
+            CREATE_DTIME
         ) VALUES (
-            #{id,jdbcType=VARCHAR},
+            #{codeId,jdbcType=VARCHAR},
             #{figmaUrl,jdbcType=VARCHAR},
             #{requirements,jdbcType=CLOB},
             #{systemPrompt,jdbcType=CLOB},
             #{userPrompt,jdbcType=CLOB},
             #{reactCode,jdbcType=CLOB},
             'GENERATED',
-            #{createdBy,jdbcType=VARCHAR},
-            #{createdAt,jdbcType=VARCHAR}
+            #{createUserId,jdbcType=VARCHAR},
+            #{createDtime,jdbcType=VARCHAR}
         )
     </insert>
 
     <!-- ==================== SELECT ==================== -->
 
     <sql id="selectColumns">
-        ID          AS id,
-        FIGMA_URL   AS figmaUrl,
-        REACT_CODE  AS reactCode,
-        STATUS      AS status,
-        CREATED_AT  AS createdAt
+        CODE_ID        AS codeId,
+        FIGMA_URL      AS figmaUrl,
+        REACT_CODE     AS reactCode,
+        STATUS         AS status,
+        CREATE_DTIME   AS createDtime
     </sql>
 
     <select id="selectById" resultType="com.example.admin_demo.domain.reactgenerate.dto.ReactGenerateResponse">
         SELECT
             <include refid="selectColumns"/>
-        FROM REACT_GENERATE_HIS
-        WHERE ID = #{id,jdbcType=VARCHAR}
+        FROM FWK_RPS_CODE_HIS
+        WHERE CODE_ID = #{codeId,jdbcType=VARCHAR}
     </select>
 
     <!-- ==================== UPDATE ==================== -->
 
     <update id="updateStatus">
-        UPDATE REACT_GENERATE_HIS
+        UPDATE FWK_RPS_CODE_HIS
         SET
-            STATUS      = #{status,jdbcType=VARCHAR},
-            APPROVED_BY = #{approvedBy,jdbcType=VARCHAR},
-            APPROVED_AT = #{approvedAt,jdbcType=VARCHAR}
-        WHERE ID = #{id,jdbcType=VARCHAR}
+            STATUS           = #{status,jdbcType=VARCHAR},
+            APPROVAL_USER_ID = #{approvalUserId,jdbcType=VARCHAR},
+            APPROVAL_DTIME   = #{approvalDtime,jdbcType=VARCHAR}
+        WHERE CODE_ID = #{codeId,jdbcType=VARCHAR}
     </update>
 
 </mapper>

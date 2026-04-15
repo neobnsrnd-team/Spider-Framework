@@ -12,6 +12,9 @@ import com.example.admin_demo.domain.reactgenerate.figma.FigmaDesignExtractor;
 import com.example.admin_demo.domain.reactgenerate.figma.FigmaNodeResponse;
 import com.example.admin_demo.domain.reactgenerate.figma.FigmaUrlParser;
 import com.example.admin_demo.domain.reactgenerate.mapper.ReactGenerateMapper;
+import com.example.admin_demo.domain.reactgenerate.validator.CodeValidationResult;
+import com.example.admin_demo.domain.reactgenerate.validator.CodeValidator;
+import com.example.admin_demo.global.exception.InvalidInputException;
 import com.example.admin_demo.global.exception.NotFoundException;
 import com.example.admin_demo.global.log.event.ErrorLogEvent;
 import com.example.admin_demo.global.util.TraceIdUtil;
@@ -34,6 +37,7 @@ public class ReactGenerateService {
     private final ClaudeApiClient claudeApiClient;
     private final FigmaApiClient figmaApiClient;
     private final FigmaDesignExtractor figmaDesignExtractor;
+    private final CodeValidator codeValidator;
     private final ApplicationEventPublisher eventPublisher;
 
     private static final DateTimeFormatter FORMATTER = DateTimeFormatter.ofPattern("yyyyMMddHHmmss");
@@ -205,29 +209,41 @@ public class ReactGenerateService {
                 }
                 """;
 
-        // 6. DB 저장 (초기 상태: GENERATED)
+        // 6. 보안 패턴 검증 (Java 정규표현식 기반, Node.js/ESLint 불필요)
+        CodeValidationResult validation = codeValidator.validate(reactCode);
+        if (!validation.isPassed()) {
+            // ERROR 위반 발견 → 생성 실패로 처리 (Feature 2 구현 시 catch 블록에서 실패 이력 저장 예정)
+            log.warn("React 코드 보안 검증 실패 — errors: {}", String.join(" | ", validation.getErrors()));
+            throw new InvalidInputException("보안 검증 실패: " + String.join(", ", validation.getErrors()));
+        }
+        if (!validation.getWarnings().isEmpty()) {
+            log.warn("React 코드 보안 경고 — warnings: {}", String.join(" | ", validation.getWarnings()));
+        }
+
+        // 7. DB 저장 (초기 상태: GENERATED)
         String id = UUID.randomUUID().toString();
         String now = LocalDateTime.now().format(FORMATTER);
 
-        // TODO : 현재 DB 설계 확정 전이므로, 수정 필요
-        //        reactGenerateMapper.insert(
-        //                id,
-        //                request.getFigmaUrl(),
-        //                request.getRequirements(),
-        //                systemPrompt,
-        //                userPrompt,
-        //                reactCode,
-        //                createdBy,
-        //                now);
+        reactGenerateMapper.insert(
+                id,
+                request.getFigmaUrl(),
+                request.getRequirements(),
+                systemPrompt,
+                userPrompt,
+                reactCode,
+                createdBy,
+                now);
 
-        log.info("React 코드 생성 완료 — id: {}", id);
+        log.info("React 코드 생성 완료 — codeId: {}", id);
 
         return ReactGenerateResponse.builder()
-                .id(id)
+                .codeId(id)
                 .figmaUrl(request.getFigmaUrl())
                 .reactCode(reactCode)
                 .status(ReactGenerateStatus.GENERATED.name())
-                .createdAt(now)
+                .createDtime(now)
+                // WARN 경고가 없으면 null 대신 빈 리스트를 반환해 프론트엔드 null 체크 불필요
+                .validationWarnings(validation.getWarnings().isEmpty() ? null : validation.getWarnings())
                 .build();
     }
 
@@ -238,10 +254,10 @@ public class ReactGenerateService {
         requireExists(id);
 
         reactGenerateMapper.updateStatus(id, ReactGenerateStatus.PENDING_APPROVAL.name(), null, null);
-        log.info("승인 요청 — id: {}", id);
+        log.info("승인 요청 — codeId: {}", id);
 
         return ReactGenerateApprovalResponse.builder()
-                .id(id)
+                .codeId(id)
                 .status(ReactGenerateStatus.PENDING_APPROVAL.name())
                 .build();
     }
@@ -254,13 +270,13 @@ public class ReactGenerateService {
 
         String now = LocalDateTime.now().format(FORMATTER);
         reactGenerateMapper.updateStatus(id, ReactGenerateStatus.APPROVED.name(), approvedBy, now);
-        log.info("승인 완료 — id: {}, approvedBy: {}", id, approvedBy);
+        log.info("승인 완료 — codeId: {}, approvalUserId: {}", id, approvedBy);
 
         return ReactGenerateApprovalResponse.builder()
-                .id(id)
+                .codeId(id)
                 .status(ReactGenerateStatus.APPROVED.name())
-                .approvedBy(approvedBy)
-                .approvedAt(now)
+                .approvalUserId(approvedBy)
+                .approvalDtime(now)
                 .build();
     }
 
@@ -289,10 +305,10 @@ public class ReactGenerateService {
                 LogLevel.WARN)); // 렌더링 실패는 서버 장애가 아니므로 WARN
     }
 
-    /** ID로 이력을 조회하고, 없으면 NotFoundException을 던진다. */
+    /** CODE_ID로 이력을 조회하고, 없으면 NotFoundException을 던진다. */
     private void requireExists(String id) {
         if (reactGenerateMapper.selectById(id) == null) {
-            throw new NotFoundException("생성 결과를 찾을 수 없습니다. id=" + id);
+            throw new NotFoundException("생성 결과를 찾을 수 없습니다. codeId=" + id);
         }
     }
 }

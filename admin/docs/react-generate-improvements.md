@@ -149,87 +149,106 @@ private String failReason;  // 실패 시 오류 원인 메시지
 
 ---
 
-## Feature 3 — 코드 품질 검증 (ESLint 보안 룰셋)
+## Feature 3 — 코드 품질 검증 (Java 정규표현식 패턴 탐지)
 
-**영향 범위:** 신규 `CodeValidator` 서비스, Service, Controller, 서버 환경
+**영향 범위:** 신규 `CodeValidator` 서비스, Service, DTO
 
-**아키텍처:** Java `ProcessBuilder`로 Node.js ESLint 프로세스를 실행하는 방식
+**아키텍처:** Node.js/ESLint 없이 Java 정규표현식으로 보안 위협 패턴을 직접 탐지.
+배포 환경에 Node.js 설치 불필요, 외부 의존성 없음.
 
-### Step 1 — 서버 환경 준비
+> AST 분석이 아니므로 주석 내 패턴도 탐지될 수 있다. 오탐률보다 미탐률을 낮추는 방향으로 운용한다.
 
-```bash
-# 프로젝트 루트 기준, 빌드 환경에 1회 설치
-npm install --prefix admin/scripts \
-  eslint \
-  eslint-plugin-security \
-  eslint-plugin-no-unsanitized
-```
+### Step 1 — `CodeValidationRule` 정의
 
-### Step 2 — ESLint 설정 파일 생성 (`admin/scripts/.eslintrc-security.json`)
+탐지 대상 패턴과 심각도를 한 곳에서 관리한다.
 
-```json
-{
-  "env": { "browser": true, "es2021": true },
-  "plugins": ["security", "no-unsanitized"],
-  "rules": {
-    "no-eval": "error",
-    "security/detect-eval-with-expression": "error",
-    "security/detect-non-literal-regexp": "warn",
-    "no-unsanitized/method": "error",
-    "no-unsanitized/property": "error"
-  }
+```java
+// domain/reactgenerate/validator/CodeValidationRule.java
+public enum CodeValidationRule {
+
+    EVAL_USAGE(
+        Pattern.compile("\\beval\\s*\\("),
+        Severity.ERROR,
+        "eval() 사용 금지: 임의 코드 실행 위험"
+    ),
+    LOCAL_STORAGE(
+        Pattern.compile("\\blocalStorage\\b"),
+        Severity.ERROR,
+        "localStorage 직접 접근 금지: 민감 정보 노출 위험"
+    ),
+    SESSION_STORAGE(
+        Pattern.compile("\\bsessionStorage\\b"),
+        Severity.ERROR,
+        "sessionStorage 직접 접근 금지: 민감 정보 노출 위험"
+    ),
+    FETCH_EXTERNAL(
+        // https://로 시작하는 fetch 중 허용된 도메인(api.figma.com, api.anthropic.com) 외
+        Pattern.compile("fetch\\s*\\(\\s*['\"]https?://(?!api\\.figma\\.com|api\\.anthropic\\.com)"),
+        Severity.ERROR,
+        "알 수 없는 외부 도메인으로의 fetch 금지"
+    ),
+    INNER_HTML(
+        Pattern.compile("\\.innerHTML\\s*="),
+        Severity.WARN,
+        "innerHTML 직접 할당: XSS 위험 — dangerouslySetInnerHTML 또는 textContent 사용 권장"
+    ),
+    DOCUMENT_WRITE(
+        Pattern.compile("\\bdocument\\.write\\s*\\("),
+        Severity.WARN,
+        "document.write() 사용 지양"
+    );
+
+    public enum Severity { ERROR, WARN }
+
+    final Pattern pattern;
+    final Severity severity;
+    final String message;
 }
 ```
 
-탐지 대상 패턴:
-- `eval(...)` 사용
-- 불명확한 도메인으로의 `fetch` (추후 커스텀 룰 추가 고려)
-- `localStorage` 직접 접근 (`security/detect-non-literal-fs-filename` 응용)
-
-### Step 3 — `CodeValidator` 서비스 생성
+### Step 2 — `CodeValidator` 서비스 생성
 
 ```
 src/main/java/com/example/admin_demo/domain/reactgenerate/validator/CodeValidator.java
+src/main/java/com/example/admin_demo/domain/reactgenerate/validator/CodeValidationRule.java
 src/main/java/com/example/admin_demo/domain/reactgenerate/validator/CodeValidationResult.java
 ```
 
 `CodeValidator` 동작 흐름:
-1. 생성된 코드를 임시 파일(`Files.createTempFile`)에 저장
-2. `ProcessBuilder`로 ESLint 실행 (`--format json` 옵션으로 결과 파싱 용이하게)
-3. exit code 0이면 통과, 1이면 위반 목록 JSON 파싱
-4. 임시 파일 정리 (finally 블록)
-5. `CodeValidationResult` 반환 (passed, violations 목록)
+1. 전체 룰을 순회하며 `Pattern.matcher(code).find()` 로 패턴 탐지
+2. ERROR 룰 위반이 1개라도 있으면 `passed = false`
+3. `CodeValidationResult` 반환
 
 `CodeValidationResult` 구조:
 ```java
 boolean passed;
-List<String> errors;    // error 레벨 → 코드 반려
-List<String> warnings;  // warn 레벨 → 통과하되 응답에 포함
+List<String> errors;    // ERROR 레벨 위반 → 코드 반려
+List<String> warnings;  // WARN 레벨 위반 → 통과하되 응답에 포함
 ```
 
-### Step 4 — Service에 검증 단계 추가
+### Step 3 — Service에 검증 단계 추가
 
 `generate()` 내 Claude API 호출 직후:
 
 ```java
 String reactCode = claudeApiClient.generate(...);
 
-// ESLint 보안 검증
+// 정규표현식 보안 패턴 검증
 CodeValidationResult validation = codeValidator.validate(reactCode);
-if (!validation.getErrors().isEmpty()) {
-    // error 레벨 위반 → 실패 이력 저장 후 예외 throw
+if (!validation.isPassed()) {
+    // ERROR 위반 → 실패 이력 저장 후 예외 throw (Feature 2의 catch 블록에서 처리)
     throw new InvalidInputException(
         ErrorType.INVALID_INPUT,
         "보안 검증 실패: " + String.join(", ", validation.getErrors())
     );
 }
-// warning은 통과하되 response에 포함
+// WARN은 통과하되 response에 포함
 ```
 
-### Step 5 — `ReactGenerateResponse` DTO 수정
+### Step 4 — `ReactGenerateResponse` DTO 수정
 
 ```java
-private List<String> validationWarnings;  // ESLint warn 레벨 목록
+private List<String> validationWarnings;  // WARN 레벨 패턴 탐지 목록
 ```
 
 ---
