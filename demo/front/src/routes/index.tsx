@@ -23,6 +23,7 @@ import {
   MyCardManagementRoute,
   UserManagementRoute,
   HanaCardMenuModal,
+  NoticePreviewRoute,
 } from "./RouteWrappers";
 
 export interface RouteConfig {
@@ -31,7 +32,8 @@ export interface RouteConfig {
 }
 
 export const pageRoutes: RouteConfig[] = [
-  { path: PATHS.LOGIN, element: <LoginRoute /> },
+  { path: PATHS.LOGIN,                element: <LoginRoute /> },
+  { path: PATHS.PREVIEW.NOTICE,       element: <NoticePreviewRoute /> },
   { path: PATHS.CARD.DASHBOARD, element: <CardDashboardRoute /> },
   { path: PATHS.CARD.USAGE_HISTORY, element: <UsageHistoryRoute /> },
   { path: PATHS.CARD.PAYMENT_STATEMENT, element: <PaymentStatementRoute /> },

@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<div th:fragment="content">
+
+    <!-- Page Header -->
+    <div class="page-header">
+        <h4 class="page-title">
+            <i class="bi bi-broadcast text-danger"></i>
+            긴급공지 배포 관리
+        </h4>
+    </div>
+
+    <!-- 현재 배포 상태 카드 -->
+    <div class="card mb-3">
+        <div class="card-header small fw-semibold">현재 배포 상태</div>
+        <div class="card-body">
+            <div class="d-flex align-items-center gap-4 flex-wrap">
+                <div>
+                    <span class="text-body-secondary small">배포 상태</span><br>
+                    <span id="deployStatusBadge" class="badge fs-6 mt-1">-</span>
+                </div>
+                <div>
+                    <span class="text-body-secondary small">배포 시작</span><br>
+                    <span id="startDtime" class="fw-semibold">-</span>
+                </div>
+                <div>
+                    <span class="text-body-secondary small">배포 종료</span><br>
+                    <span id="endDtime" class="fw-semibold">-</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 공지 노출 설정 카드 (쓰기 권한자만 표시) -->
+    <div th:if="${userAuthorities != null and userAuthorities.contains('EMERGENCY_NOTICE:W')}"
+         class="card mb-3">
+        <div class="card-header small fw-semibold">공지 노출 설정</div>
+        <div class="card-body">
+            <div class="d-flex flex-column gap-3">
+                <!-- 닫기 버튼 토글 -->
+                <div class="d-flex align-items-center justify-content-between">
+                    <div>
+                        <div class="fw-semibold small">닫기 버튼 표시</div>
+                        <div class="text-body-secondary" style="font-size:0.78rem;">
+                            OFF 설정 시 사용자가 공지를 닫을 수 없어 화면 접근이 차단됩니다 (critical 장애 시 사용)
+                        </div>
+                    </div>
+                    <div class="form-check form-switch mb-0 ms-3">
+                        <input class="form-check-input" type="checkbox" role="switch"
+                               id="switchCloseableYn" style="width:2.5em; height:1.3em;">
+                    </div>
+                </div>
+                <!-- 오늘 하루 보지 않기 토글 -->
+                <div class="d-flex align-items-center justify-content-between">
+                    <div>
+                        <div class="fw-semibold small">오늘 하루 보지 않기</div>
+                        <div class="text-body-secondary" style="font-size:0.78rem;">
+                            OFF 설정 시 매 방문마다 공지가 표시됩니다
+                        </div>
+                    </div>
+                    <div class="form-check form-switch mb-0 ms-3">
+                        <input class="form-check-input" type="checkbox" role="switch"
+                               id="switchHideTodayYn" style="width:2.5em; height:1.3em;">
+                    </div>
+                </div>
+            </div>
+            <div class="d-flex align-items-center justify-content-between mt-3">
+                <span id="settingsSyncNote" class="text-body-secondary" style="font-size:0.78rem; display:none;">
+                    <i class="bi bi-info-circle me-1"></i>배포 중에는 저장 즉시 Demo 앱에 반영됩니다.
+                </span>
+                <button class="btn btn-secondary btn-sm ms-auto" id="btnSaveSettings">
+                    <i class="bi bi-floppy me-1"></i>설정 저장
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 배포 액션 버튼 (쓰기 권한자만 표시) -->
+    <div th:if="${userAuthorities != null and userAuthorities.contains('EMERGENCY_NOTICE:W')}"
+         class="d-flex gap-2 mb-4">
+        <button class="btn btn-primary btn-sm" id="btnDeploy">
+            <i class="bi bi-broadcast me-1"></i>배포
+        </button>
+        <button class="btn btn-outline-danger btn-sm" id="btnEndDeploy">
+            <i class="bi bi-stop-circle me-1"></i>배포 종료
+        </button>
+    </div>
+
+    <!-- 배포 이력 테이블 -->
+    <div class="page-header mt-2">
+        <h4 class="page-title">
+            <i class="bi bi-clock-history text-secondary"></i>
+            배포 이력
+        </h4>
+    </div>
+
+    <!-- 구분 필터 -->
+    <div class="d-flex align-items-center gap-2 mb-2">
+        <select id="filterReason" class="form-select form-select-sm" style="width: auto; min-width: 130px;">
+            <option value="">전체 구분</option>
+            <option value="배포">배포</option>
+            <option value="배포 종료">배포 종료</option>
+            <option value="내용 수정">내용 수정</option>
+            <option value="설정 변경">설정 변경</option>
+        </select>
+        <button id="btnResetFilter" class="btn btn-outline-secondary btn-sm">
+            <i class="bi bi-x-circle me-1"></i>초기화
+        </button>
+        <span id="historyTotalCount" class="text-body-secondary small ms-auto"></span>
+    </div>
+
+    <div class="table-responsive">
+        <table class="sp-data-grid w-100">
+            <thead>
+                <tr>
+                    <th style="width: 80px;  text-align: center;">버전</th>
+                    <th style="width: 120px; text-align: center;">구분</th>
+                    <th style="width: 160px; text-align: center;">변경일시</th>
+                    <th style="width: 100px; text-align: center;">변경자</th>
+                    <th style="text-align: left; padding-left: 12px;">변경 상세</th>
+                </tr>
+            </thead>
+            <tbody id="historyTableBody">
+                <tr>
+                    <td colspan="5" class="text-center text-body-secondary py-4">
+                        데이터를 불러오는 중입니다...
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <!-- 페이징 -->
+    <div id="historyPagination" class="mt-2 d-flex justify-content-center"></div>
+
+    <!-- Page Script -->
+    <th:block th:replace="~{pages/emergency-notice-deploy-manage/emergency-notice-deploy-manage-script :: script}" />
+</div>
+</body>
+</html>

@@ -50,12 +50,14 @@ export function Modal({
   size = 'md',
   disableBackdropClose = false,
   titleAlign = 'left',
+  /* closeable=false: X 버튼 숨김 + ESC 비활성화 (critical 공지 강제 노출 시 사용) */
+  closeable = true,
   className,
 }: ModalProps) {
-  /* ESC 키로 닫기 */
+  /* ESC 키로 닫기 — closeable=false이면 비활성화 */
   const handleKeyDown = useCallback(
-    (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); },
-    [onClose],
+    (e: KeyboardEvent) => { if (e.key === 'Escape' && closeable) onClose(); },
+    [onClose, closeable],
   );
 
   useEffect(() => {
@@ -97,58 +99,69 @@ export function Modal({
         )}
       >
 
-        {/* 헤더 (고정) — titleAlign 에 따라 레이아웃 분기 */}
-        {titleAlign === 'center' ? (
-          /*
-           * center 모드: 타이틀 중앙 정렬, X 버튼 절대 우측 배치.
-           * BottomSheet 헤더와 동일한 패턴 (경고·안내 모달에서 사용).
-           */
-          <div className="relative flex shrink-0 items-center justify-center px-xl pt-md pb-md">
-            {title && (
-              <h2 id="modal-title" className="text-base font-bold text-text-heading text-center">
-                {title}
-              </h2>
-            )}
-            <button
-              type="button"
-              onClick={onClose}
-              aria-label="모달 닫기"
-              className={cn(
-                'absolute right-xl flex items-center justify-center size-8 rounded-lg',
-                'text-text-muted hover:bg-surface-raised hover:text-text-heading',
-                'transition-colors duration-150',
+        {/*
+         * 헤더 (고정) — titleAlign 에 따라 레이아웃 분기.
+         * title도 없고 closeable=false이면 헤더 전체 생략 (공간 낭비 방지).
+         */}
+        {(title != null || closeable) && (
+          titleAlign === 'center' ? (
+            /*
+             * center 모드: 타이틀 중앙 정렬, X 버튼 절대 우측 배치.
+             * BottomSheet 헤더와 동일한 패턴 (경고·안내 모달에서 사용).
+             */
+            <div className="relative flex shrink-0 items-center justify-center px-xl pt-md pb-md">
+              {title && (
+                <h2 id="modal-title" className="text-base font-bold text-text-heading text-center">
+                  {title}
+                </h2>
               )}
-            >
-              <X className="size-4" aria-hidden="true" />
-            </button>
-          </div>
-        ) : (
-          /*
-           * left 모드(기본): 타이틀 좌측, X 버튼 우측 (justify-between).
-           * 일반 확인·선택 모달에서 사용.
-           */
-          <div className="flex shrink-0 items-center justify-between px-xl pt-md pb-md">
-            {title ? (
-              <h2 id="modal-title" className="text-base font-bold text-text-heading">
-                {title}
-              </h2>
-            ) : (
-              /* 닫기 버튼을 오른쪽으로 밀기 위한 spacer */
-              <span aria-hidden="true" />
-            )}
-            <button
-              type="button"
-              onClick={onClose}
-              aria-label="모달 닫기"
-              className={cn(
-                'ml-auto flex items-center justify-center size-8 rounded-lg',
-                'text-text-muted hover:bg-surface-raised hover:text-text-heading',
-                'transition-colors duration-150',
+              {/* closeable=false이면 X 버튼 숨김 */}
+              {closeable && (
+                <button
+                  type="button"
+                  onClick={onClose}
+                  aria-label="모달 닫기"
+                  className={cn(
+                    'absolute right-xl flex items-center justify-center size-8 rounded-lg',
+                    'text-text-muted hover:bg-surface-raised hover:text-text-heading',
+                    'transition-colors duration-150',
+                  )}
+                >
+                  <X className="size-4" aria-hidden="true" />
+                </button>
               )}
-            >
-              <X className="size-4" aria-hidden="true" />
-            </button>
-          </div>
+            </div>
+          ) : (
+            /*
+             * left 모드(기본): 타이틀 좌측, X 버튼 우측 (justify-between).
+             * 일반 확인·선택 모달에서 사용.
+             */
+            <div className="flex shrink-0 items-center justify-between px-xl pt-md pb-md">
+              {title ? (
+                <h2 id="modal-title" className="text-base font-bold text-text-heading">
+                  {title}
+                </h2>
+              ) : (
+                /* 닫기 버튼을 오른쪽으로 밀기 위한 spacer */
+                <span aria-hidden="true" />
+              )}
+              {/* closeable=false이면 X 버튼 숨김 */}
+              {closeable && (
+                <button
+                  type="button"
+                  onClick={onClose}
+                  aria-label="모달 닫기"
+                  className={cn(
+                    'ml-auto flex items-center justify-center size-8 rounded-lg',
+                    'text-text-muted hover:bg-surface-raised hover:text-text-heading',
+                    'transition-colors duration-150',
+                  )}
+                >
+                  <X className="size-4" aria-hidden="true" />
+                </button>
+              )}
+            </div>
+          )
         )}
 
         {/*
