@@ -311,7 +311,6 @@
                     if (res.success) {
                         Toast.success('설정이 저장되었습니다.');
                         self.load(1); // 설정 변경 이력이 맨 위에 추가되므로 1페이지로 이동
-                        EventBus.emit('admin:emergencyNotice:statusChanged', payload);
                     } else {
                         Toast.error(res.message || '설정 저장에 실패했습니다.');
                     }
@@ -336,7 +335,6 @@
                     if (res.success) {
                         Toast.success('긴급공지가 배포되었습니다.');
                         self.load(1); // 새 이력이 맨 위에 추가되므로 1페이지로 이동
-                        EventBus.emit('admin:emergencyNotice:statusChanged', { status: 'DEPLOYED' });
                     } else {
                         Toast.error(res.message || '배포에 실패했습니다.');
                     }
@@ -361,7 +359,6 @@
                     if (res.success) {
                         Toast.success('긴급공지 배포가 종료되었습니다.');
                         self.load(1); // 새 이력이 맨 위에 추가되므로 1페이지로 이동
-                        EventBus.emit('admin:emergencyNotice:statusChanged', { status: 'ENDED' });
                     } else {
                         Toast.error(res.message || '배포 종료에 실패했습니다.');
                     }
