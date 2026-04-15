@@ -24,6 +24,7 @@ import { UsageHistoryPage }         from '@/pages/card/UsageHistoryPage';
 import { PaymentStatementPage }     from '@/pages/card/PaymentStatementPage';
 import { ImmediatePaymentPage }     from '@/pages/card/ImmediatePaymentPage';
 import { ImmediatePayPage }         from '@/pages/card/ImmediatePayPage';
+import type { CardInfo }            from '@/pages/card/ImmediatePayPage/types';
 import { ImmediatePayRequestPage }  from '@/pages/card/ImmediatePayRequestPage';
 import { ImmediatePayMethodPage }   from '@/pages/card/ImmediatePayMethodPage';
 import { ImmediatePayCompletePage } from '@/pages/card/ImmediatePayCompletePage';
@@ -119,16 +120,30 @@ export function CardDashboardRoute() {
   const [statementAmount,  setStatementAmount]  = useState(0);
   /** StatementHeroCard: 결제일 레이블 (예: "1월 25일") */
   const [statementDueDate, setStatementDueDate] = useState('');
+  /** SummaryCard(spending): 당월 이용내역 합산 금액 */
+  const [spendingAmount,   setSpendingAmount]   = useState(0);
 
   useEffect(() => {
     if (!user?.userId) return;
-    axiosInstance.get('/payment-statement')
-      .then((r) => {
-        const data = r.data;
-        setStatementAmount(data.totalAmount ?? 0);
+
+    /* 당월 범위 계산 (YYYYMMDD 형식) */
+    const now     = new Date();
+    const year    = now.getFullYear();
+    const month   = String(now.getMonth() + 1).padStart(2, '0');
+    const lastDay = new Date(year, now.getMonth() + 1, 0).getDate();
+    const fromDate = `${year}${month}01`;
+    const toDate   = `${year}${month}${String(lastDay).padStart(2, '0')}`;
+
+    Promise.all([
+      axiosInstance.get('/payment-statement').then((r) => r.data),
+      axiosInstance.get(`/transactions?fromDate=${fromDate}&toDate=${toDate}`).then((r) => r.data),
+    ])
+      .then(([stmtData, txData]) => {
+        setStatementAmount(stmtData.totalAmount ?? 0);
         // billingPeriod.dueDate(YYYY.MM.DD) 우선 사용, 없으면 raw dueDate(YYMMDD) 파싱
-        const rawDue = data.billingPeriod?.dueDate ?? data.dueDate ?? '';
+        const rawDue = stmtData.billingPeriod?.dueDate ?? stmtData.dueDate ?? '';
         setStatementDueDate(parseDueDateKo(rawDue));
+        setSpendingAmount(txData.paymentSummary?.totalAmount ?? 0);
       })
       .catch(console.error);
   }, [user?.userId]);
@@ -138,6 +153,7 @@ export function CardDashboardRoute() {
       userName={user?.userName}
       statementAmount={statementAmount}
       statementDueDate={statementDueDate}
+      spendingAmount={spendingAmount}
       onMenu={()             => navigate(PATHS.CARD.MENU, { state: { background: location } })}
       onNotification={()     => {}}
       onStatementDetail={()  => navigate(PATHS.CARD.PAYMENT_STATEMENT)}
@@ -257,6 +273,55 @@ function fmtDueDateLabel(raw: string): string {
   return '';
 }
 
+
+/**
+ * 결제일이 오늘 이후인지 판단해 '예정' 배지 표시 여부를 결정한다.
+ *
+ * 판단 우선순위:
+ *   1. billingPeriod.dueDate(YYYY.MM.DD) — API가 계산한 정확한 결제예정일
+ *   2. billingPeriod 없을 때 — yearMonth + paymentDay로 결제일 직접 구성
+ */
+function isPaymentUpcoming(
+  billingPeriod: StmtBillingPeriod | null,
+  yearMonth: string,
+  paymentDay?: string | null,
+): boolean {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0); // 시간 무시, 날짜 단위 비교
+
+  if (billingPeriod?.dueDate) {
+    /* YYYY.MM.DD 형식 파싱 */
+    const [y, m, d] = billingPeriod.dueDate.split('.').map(Number);
+    return new Date(y, m - 1, d) >= today;
+  }
+
+  /* billingPeriod 없을 때: yearMonth + paymentDay로 결제일 구성해 비교 */
+  const [y, m] = yearMonth.split('-').map(Number);
+  const day = paymentDay ? Number(paymentDay) : 1; // paymentDay 없으면 1일로 보수적 처리
+  return new Date(y, m - 1, day) >= today;
+}
+
+/**
+ * 계좌번호 마스킹 — 하이픈 구조는 유지하고 중간 구간을 * 로 치환한다.
+ *
+ *   하이픈 있는 경우: 첫·마지막 세그먼트 유지, 중간 세그먼트 전부 마스킹
+ *     e.g. "123-456789-01234" → "123-******-01234"
+ *   하이픈 없는 경우: 앞 3자리·뒤 4자리 유지, 나머지 마스킹
+ *     e.g. "1234567890" → "123***7890"
+ */
+function maskAccountNumber(account: string): string {
+  if (!account) return '';
+  const parts = account.split('-');
+  if (parts.length >= 3) {
+    /* 중간 세그먼트(들)를 같은 길이의 * 로 교체 */
+    const masked = parts.slice(1, -1).map((p) => '*'.repeat(p.length));
+    return [parts[0], ...masked, parts[parts.length - 1]].join('-');
+  }
+  /* 하이픈 없는 숫자열: 앞 3 + * + 뒤 4 */
+  const digits = account.replace(/\D/g, '');
+  if (digits.length <= 7) return account; // 너무 짧으면 마스킹 생략
+  return digits.slice(0, 3) + '*'.repeat(digits.length - 7) + digits.slice(-4);
+}
 
 /** YYMMDD or YYYYMMDD → { dateFull, dateYM, dateMD } */
 function parseDueDate(raw: string) {
@@ -391,7 +456,7 @@ export function PaymentStatementRoute() {
     } : null);
     const paymentInfoRows = cardInfoSrc ? [
       { label: '결제은행명', value: cardInfoSrc.paymentBank },
-      { label: '결제계좌',   value: cardInfoSrc.paymentAccount },
+      { label: '결제계좌',   value: maskAccountNumber(cardInfoSrc.paymentAccount) },
       { label: '결제일',     value: `${cardInfoSrc.paymentDay}일` },
     ] : [];
     const billingRows = billingPeriod ? [
@@ -404,7 +469,7 @@ export function PaymentStatementRoute() {
 
     return {
       paymentData:   { dateFull, dateYM, dateMD, totalAmount: paymentTotalAmt, revolving: 0, cardLoan: 0, cashAdvance: 0, infoSections, paymentItems: paymentItems },
-      statementData: { totalAmount: statementTotalAmt, badge: '예정', paymentItems: allPaymentItems, infoSections },
+      statementData: { totalAmount: statementTotalAmt, badge: isPaymentUpcoming(billingPeriod, yearMonthRef.current, cardInfoSrc?.paymentDay) ? '예정' : undefined, paymentItems: allPaymentItems, infoSections },
     };
   }, [allItems, rawCards, stmtCardInfo, billingPeriod]);
 

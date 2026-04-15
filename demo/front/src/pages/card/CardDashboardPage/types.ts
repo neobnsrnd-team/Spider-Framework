@@ -15,6 +15,11 @@ export interface CardDashboardPageProps {
    */
   statementAmount?: number;
   /**
+   * SummaryCard(spending)에 표시할 당월 이용내역 합산 금액.
+   * /api/transactions?fromDate=YYYYMM01&toDate=YYYYMMlastDay 의 paymentSummary.totalAmount.
+   */
+  spendingAmount?: number;
+  /**
    * StatementHeroCard에 표시할 결제일 레이블 (예: "1월 25일").
    * /api/payment-statement billingPeriod.dueDate 에서 변환.
    */

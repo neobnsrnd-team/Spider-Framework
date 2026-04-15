@@ -118,9 +118,14 @@ export function CardPaymentSummary({
             <ChevronDown className="size-4" />
           </button>
         )}
-        <span className="text-sm text-text-muted">
-          {dateFull} 출금예정 ({dateMD}기준)
-        </span>
+        {/* dateFull이 있을 때만 출금예정일 표시 — items가 없으면 비어있음 */}
+        {dateFull ? (
+          <span className="text-sm text-text-muted">
+            {dateFull} 출금예정 ({dateMD}기준)
+          </span>
+        ) : (
+          <span className="text-sm text-text-muted">결제 예정일 정보 없음</span>
+        )}
         <span className="text-3xl font-bold text-brand pt-lg">{formatAmount(totalAmount)}</span>
       </div>
 

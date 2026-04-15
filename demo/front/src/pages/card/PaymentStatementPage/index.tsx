@@ -38,6 +38,7 @@ import { BottomSheet } from "@cl/modules/common/BottomSheet";
 import { SelectableListItem } from "@cl/modules/common/SelectableListItem";
 import { CollapsibleSection } from "@cl/modules/common/CollapsibleSection";
 import { Typography } from "@cl/core/Typography";
+import { EmptyState } from "@cl/modules/common/EmptyState";
 import { CardPaymentSummary } from "@cl/biz/card/CardPaymentSummary";
 import { CardInfoPanel } from "@cl/biz/card/CardInfoPanel";
 import { CardPaymentItem } from "@cl/biz/card/CardPaymentItem";
@@ -197,31 +198,39 @@ export function PaymentStatementPage({
             {/* 결제정보 · 카드 이용기간 안내 */}
             <CardInfoPanel sections={paymentData.infoSections} />
 
-            {/* 카드별 금액 목록 */}
-            <div className="flex flex-col">
-              <Typography
-                variant="body-sm"
-                weight="bold"
-                color="heading"
-                className="mb-xs"
-              >
-                카드별 금액
-              </Typography>
-              <div className="flex flex-col divide-y divide-border-subtle">
-                {paymentData.paymentItems.map((item) => (
-                  <CardPaymentItem
-                    key={item.id}
-                    icon={item.icon}
-                    iconBgClassName={item.iconBgClassName}
-                    cardEnName={item.cardEnName}
-                    cardName={item.cardName}
-                    amount={item.amount}
-                    onDetailClick={item.onDetailClick}
-                    onClick={item.onClick}
-                  />
-                ))}
+            {/* 카드별 금액 목록 — items가 없으면 빈 상태 메시지 표시 */}
+            {paymentData.paymentItems.length > 0 ? (
+              <div className="flex flex-col">
+                <Typography
+                  variant="body-sm"
+                  weight="bold"
+                  color="heading"
+                  className="mb-xs"
+                >
+                  카드별 금액
+                </Typography>
+                <div className="flex flex-col divide-y divide-border-subtle">
+                  {paymentData.paymentItems.map((item) => (
+                    <CardPaymentItem
+                      key={item.id}
+                      icon={item.icon}
+                      iconBgClassName={item.iconBgClassName}
+                      cardEnName={item.cardEnName}
+                      cardName={item.cardName}
+                      amount={item.amount}
+                      onDetailClick={item.onDetailClick}
+                      onClick={item.onClick}
+                    />
+                  ))}
+                </div>
               </div>
-            </div>
+            ) : (
+              /* 선택 청구월에 결제 예정 내역이 없는 경우 */
+              <EmptyState
+                title="결제 예정 내역이 없습니다"
+                description="선택한 청구월에 청구된 금액이 없습니다."
+              />
+            )}
           </div>
         )}
 
@@ -240,31 +249,39 @@ export function PaymentStatementPage({
 
             <Divider />
 
-            {/* 카드별 금액 목록 */}
-            <div className="flex flex-col">
-              <Typography
-                variant="body-sm"
-                weight="bold"
-                color="heading"
-                className="mb-xs"
-              >
-                카드별 금액
-              </Typography>
-              <div className="flex flex-col divide-y divide-border-subtle">
-                {statementData.paymentItems.map((item) => (
-                  <CardPaymentItem
-                    key={item.id}
-                    icon={item.icon}
-                    iconBgClassName={item.iconBgClassName}
-                    cardEnName={item.cardEnName}
-                    cardName={item.cardName}
-                    amount={item.amount}
-                    onDetailClick={item.onDetailClick}
-                    onClick={item.onClick}
-                  />
-                ))}
+            {/* 카드별 금액 목록 — items가 없으면 빈 상태 메시지 표시 */}
+            {statementData.paymentItems.length > 0 ? (
+              <div className="flex flex-col">
+                <Typography
+                  variant="body-sm"
+                  weight="bold"
+                  color="heading"
+                  className="mb-xs"
+                >
+                  카드별 금액
+                </Typography>
+                <div className="flex flex-col divide-y divide-border-subtle">
+                  {statementData.paymentItems.map((item) => (
+                    <CardPaymentItem
+                      key={item.id}
+                      icon={item.icon}
+                      iconBgClassName={item.iconBgClassName}
+                      cardEnName={item.cardEnName}
+                      cardName={item.cardName}
+                      amount={item.amount}
+                      onDetailClick={item.onDetailClick}
+                      onClick={item.onClick}
+                    />
+                  ))}
+                </div>
               </div>
-            </div>
+            ) : (
+              /* 선택 청구월에 이용 내역이 없는 경우 */
+              <EmptyState
+                title="이용 내역이 없습니다"
+                description="선택한 청구월에 이용한 내역이 없습니다."
+              />
+            )}
 
             {/* 결제정보 안내 */}
             <CardInfoPanel sections={statementData.infoSections} />

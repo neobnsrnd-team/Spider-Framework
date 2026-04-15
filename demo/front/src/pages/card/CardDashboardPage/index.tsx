@@ -109,6 +109,7 @@ export function CardDashboardPage({
   userName,
   statementAmount,
   statementDueDate,
+  spendingAmount,
   onNotification,
   onMenu,
   onStatementDetail,
@@ -301,7 +302,7 @@ export function CardDashboardPage({
           <SummaryCard
             variant="spending"
             title="이번 달 소비"
-            amount={842_300}
+            amount={spendingAmount ?? 0}
             hidden={amountHidden}
             icon={<Wallet size={32} />}
             actions={[
