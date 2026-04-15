@@ -1,6 +1,9 @@
 package com.example.admin_demo.domain.reactgenerate.mapper;
 
+import com.example.admin_demo.domain.reactgenerate.dto.ReactGenerateHistoryResponse;
 import com.example.admin_demo.domain.reactgenerate.dto.ReactGenerateResponse;
+import com.example.admin_demo.domain.reactgenerate.dto.ReactGenerateSearchRequest;
+import java.util.List;
 import org.apache.ibatis.annotations.Param;
 
 /**
@@ -37,4 +40,16 @@ public interface ReactGenerateMapper {
 
     /** 렌더링 실패 또는 코드 생성 실패 시 STATUS를 FAILED로, FAIL_REASON을 기록한다. */
     void updateToFailed(@Param("codeId") String codeId, @Param("failReason") String failReason);
+
+    /**
+     * 검색 조건에 맞는 이력 목록을 생성일시 내림차순으로 조회한다.
+     * CLOB 컬럼(REACT_CODE 등)은 제외하고 목록 표시에 필요한 컬럼만 반환한다.
+     */
+    List<ReactGenerateHistoryResponse> selectList(@Param("req") ReactGenerateSearchRequest req);
+
+    /** 검색 조건에 맞는 전체 건수를 반환한다 (페이지네이션용). */
+    int selectCount(@Param("req") ReactGenerateSearchRequest req);
+
+    /** 검색 조건에 맞는 전체 목록을 페이지네이션 없이 조회한다 (엑셀 내보내기용). */
+    List<ReactGenerateHistoryResponse> selectAllForExport(@Param("req") ReactGenerateSearchRequest req);
 }
