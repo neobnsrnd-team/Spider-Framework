@@ -300,25 +300,10 @@
         // Load profile on page load
         window.Profile.load();
 
-        // ── EventBus 구독 ────────────────────────────────────────────────
-        // 사용자 관리 탭에서 사용자 정보를 수정하면 이 탭의 프로필 자동 갱신.
-        // off()에서 동일 참조가 필요하므로 핸들러를 Profile 객체에 보관한다.
-        window.Profile._onUserChanged = function () { window.Profile.load(); };
-        EventBus.on('admin:userManage:userChanged', window.Profile._onUserChanged);
-
-        // $page: init 시점에 DOM에 유일하게 존재하는 [data-tab-page] 요소.
-        var $page = $('[data-tab-page]');
-
         // 캐시에서 복원 시(tab:activated) 프로필 최신화
-        $page.on('tab:activated', function () {
+        $('[data-tab-page]').on('tab:activated', function () {
             window.Profile.load();
         });
-
-        // 탭 닫힐 때(tab:removed) EventBus 핸들러 정리 — 메모리 누수 방지
-        $page.on('tab:removed', function () {
-            EventBus.off('admin:userManage:userChanged', window.Profile._onUserChanged);
-        });
-        // ────────────────────────────────────────────────────────────────
     </script>
 </th:block>
 </body>
