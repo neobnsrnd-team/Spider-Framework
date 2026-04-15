@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-route
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { pageRoutes, modalRoutes } from '@/routes'
 import { AuthProvider, useAuth } from '@/contexts/AuthContext'
+import { useSessionActivity } from '@/hooks/useSessionActivity'
 import { PATHS } from '@/constants/paths'
 
 const queryClient = new QueryClient({
@@ -27,6 +28,9 @@ function AppRoutes() {
   const location   = useLocation()
   const background = (location.state as { background?: Location })?.background
   const { isLoggedIn } = useAuth()
+
+  // 클릭 이벤트 쓰로틀링 + 비활성 타임아웃으로 세션 만료 감지
+  useSessionActivity()
 
   // 로그인 안 된 상태에서 로그인 페이지 외 접근 시 리다이렉트
   if (!isLoggedIn && location.pathname !== PATHS.LOGIN) {

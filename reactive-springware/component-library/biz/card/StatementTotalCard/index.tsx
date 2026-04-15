@@ -48,7 +48,7 @@ export function StatementTotalCard({
       className={cn(
         'flex flex-col gap-md',
         'bg-surface rounded-2xl overflow-hidden shadow-card',
-        'px-md pt-md pb-lg',
+        'px-md',
         className,
       )}
     >

@@ -4,9 +4,20 @@
  *
  * - 로그인 정보(userId, userName, userGrade, token)를 localStorage에 저장해
  *   새로고침 후에도 세션이 유지됩니다.
+ * - Refresh Token은 httpOnly 쿠키로 백엔드가 관리하므로 이 Context에서는 다루지 않습니다.
+ * - 마운트 시 registerAuthCallbacks()를 통해 Axios 인터셉터와 콜백을 연결합니다.
+ *   - onRefreshed : Access Token 갱신 성공 시 React 상태 동기화
+ *   - onFailure   : Refresh 실패 시 강제 로그아웃 (세션 완전 만료)
  * - useAuth() 훅으로 어느 컴포넌트에서든 로그인 상태를 읽고 login/logout을 호출합니다.
  */
-import { createContext, useContext, useState, type ReactNode } from 'react';
+import {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  type ReactNode,
+} from 'react';
+import { registerAuthCallbacks } from '@/api/axiosInstance';
 
 const STORAGE_KEY = 'hnc_auth';
 
@@ -14,16 +25,15 @@ export interface AuthUser {
   userId:    string;
   userName:  string;
   userGrade: string;
-  token:     string;
+  token:     string; // Access Token (localStorage 저장, 짧은 TTL)
+  // Refresh Token은 httpOnly 쿠키로 백엔드 관리 — 이 인터페이스에 포함하지 않음
 }
 
 interface AuthContextValue {
-  user:          AuthUser | null;
-  isLoggedIn:    boolean;
-  login:         (user: AuthUser) => void;
-  logout:        () => void;
-  /** Authorization 헤더를 자동 첨부하고, 401 시 alert + 로그아웃 처리 */
-  fetchWithAuth: (input: RequestInfo, init?: RequestInit) => Promise<Response>;
+  user:       AuthUser | null;
+  isLoggedIn: boolean;
+  login:      (user: AuthUser) => void;
+  logout:     () => void;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -40,9 +50,9 @@ function readStorage(): AuthUser | null {
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(readStorage);
 
-  const login = (user: AuthUser) => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(user));
-    setUser(user);
+  const login = (newUser: AuthUser) => {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(newUser));
+    setUser(newUser);
   };
 
   const logout = () => {
@@ -50,21 +60,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null);
   };
 
-  const fetchWithAuth = async (input: RequestInfo, init: RequestInit = {}): Promise<Response> => {
-    const token = (JSON.parse(localStorage.getItem(STORAGE_KEY) ?? 'null') as AuthUser | null)?.token;
-    const res = await fetch(input, {
-      ...init,
-      headers: { ...init.headers, ...(token ? { Authorization: `Bearer ${token}` } : {}) },
-    });
-    if (res.status === 401) {
-      alert('세션이 만료되었습니다. 다시 로그인해 주세요.');
-      logout();
-    }
-    return res;
-  };
+  /**
+   * Axios 인터셉터와 인증 콜백 연결.
+   *
+   * 마운트 시 한 번만 등록한다. setState를 직접 참조하므로
+   * user/logout 의존성 없이도 항상 최신 상태를 갱신한다.
+   */
+  useEffect(() => {
+    registerAuthCallbacks(
+      // Access Token 갱신 성공: token 필드만 교체 (나머지 사용자 정보 유지)
+      (newToken: string) => {
+        setUser(prev => (prev ? { ...prev, token: newToken } : prev));
+      },
+      // Refresh 실패: 완전 세션 만료 → alert 노출 후 localStorage + 상태 초기화
+      () => {
+        alert('세션이 만료되었습니다. 다시 로그인해 주세요.');
+        localStorage.removeItem(STORAGE_KEY);
+        setUser(null);
+      },
+    );
+  }, []); // 마운트 시 한 번만 등록
 
   return (
-    <AuthContext.Provider value={{ user, isLoggedIn: !!user, login, logout, fetchWithAuth }}>
+    <AuthContext.Provider value={{ user, isLoggedIn: !!user, login, logout }}>
       {children}
     </AuthContext.Provider>
   );
