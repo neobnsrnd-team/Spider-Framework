@@ -92,6 +92,7 @@ export function CardPaymentSummary({
   onCardLoan,
   onCashAdvance,
   onDateClick,
+  hideDateButton = false,
   className,
 }: CardPaymentSummaryProps) {
   return (
@@ -104,17 +105,19 @@ export function CardPaymentSummary({
       )}
     >
       {/* 상단: 총 청구금액 */}
-      <div className="flex flex-col items-center gap-xs pt-lg px-md">
-        {/* 날짜 영역 — onDateClick 전달 시 버튼으로 렌더링해 날짜 선택 모달 진입 */}
-        <button
-          type="button"
-          onClick={onDateClick}
-          disabled={!onDateClick}
-          className="flex items-center gap-xs text-lg text-text-muted disabled:cursor-default"
-        >
-          {dateYM}
-          <ChevronDown className="size-4" />
-        </button>
+      <div className="flex flex-col items-center gap-xs px-md">
+        {/* 날짜 영역 — hideDateButton=true이면 숨김. onDateClick 전달 시 클릭 가능 */}
+        {!hideDateButton && (
+          <button
+            type="button"
+            onClick={onDateClick}
+            disabled={!onDateClick}
+            className="flex items-center gap-xs text-lg text-text-muted disabled:cursor-default"
+          >
+            {dateYM}
+            <ChevronDown className="size-4" />
+          </button>
+        )}
         <span className="text-sm text-text-muted">
           {dateFull} 출금예정 ({dateMD}기준)
         </span>

@@ -40,7 +40,10 @@ export function PageLayout({
   ...props
 }: PageLayoutProps) {
   return (
-    <div className={cn('flex flex-col min-h-dvh', className)} {...props}>
+    /* h-dvh: 컨테이너를 정확히 뷰포트 높이로 고정해 스크롤이 body가 아닌
+       하위 main 영역 내부에서만 발생하도록 한다. min-h-dvh 사용 시 body가
+       스크롤되어 sticky 헤더와 z-index 충돌이 발생할 수 있음. */
+    <div className={cn('flex flex-col h-dvh', className)} {...props}>
       {/* ── 상단 고정 헤더 ────────────────────────────── */}
       <header className="sticky top-0 z-sticky bg-surface border-b border-border-subtle">
         {/* relative: 타이틀 absolute 포지셔닝의 기준점 */}

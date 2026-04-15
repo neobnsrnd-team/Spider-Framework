@@ -5,7 +5,6 @@
  * 화면 구성:
  *   - 상단바: 뒤로가기 / 활성 탭명 타이틀 / 닫기(X) 버튼
  *   - TabNav(underline, fullWidth): 결제예정금액 | 이용대금명세서
- *   - Select: 카드 목록 선택
  *   - [결제예정금액 탭]
  *       CardPaymentSummary → CardInfoPanel → 카드별 금액(CardPaymentItem)
  *   - [이용대금명세서 탭]
@@ -16,11 +15,8 @@
  *   실제 앱 구현 시 모든 상태·핸들러는 usePaymentStatement Hook으로 분리한다.
  *
  * @param initialTab          - 초기 활성 탭 ('payment' | 'statement', 기본: 'payment')
- * @param cardOptions         - 카드 선택 드롭다운 옵션 목록
- * @param initialCardValue    - 초기 선택 카드 value
  * @param paymentData         - 결제예정금액 탭 데이터
  * @param statementData       - 이용대금명세서 탭 데이터
- * @param onCardChange        - 카드 변경 핸들러
  * @param onDateClick         - 날짜 클릭 핸들러
  * @param onRevolving         - 리볼빙 버튼 클릭
  * @param onCardLoan          - 카드론 버튼 클릭
@@ -31,30 +27,29 @@
  * @param onBack              - 뒤로가기 핸들러
  * @param onClose             - 닫기(X) 핸들러
  */
-import React, { useState, useMemo } from 'react';
-import { X } from 'lucide-react';
+import { useState, useMemo } from "react";
+import { X, ChevronDown } from "lucide-react";
 
-import { PageLayout } from '@cl/layout/PageLayout';
-import { Button } from '@cl/core/Button';
-import { Select } from '@cl/core/Select';
-import { TabNav } from '@cl/modules/common/TabNav';
-import { Divider } from '@cl/modules/common/Divider';
-import { BottomSheet } from '@cl/modules/common/BottomSheet';
-import { SelectableListItem } from '@cl/modules/common/SelectableListItem';
-import { CollapsibleSection } from '@cl/modules/common/CollapsibleSection';
-import { Typography } from '@cl/core/Typography';
-import { CardPaymentSummary } from '@cl/biz/card/CardPaymentSummary';
-import { CardInfoPanel } from '@cl/biz/card/CardInfoPanel';
-import { CardPaymentItem } from '@cl/biz/card/CardPaymentItem';
-import { StatementTotalCard } from '@cl/biz/card/StatementTotalCard';
+import { PageLayout } from "@cl/layout/PageLayout";
+import { Button } from "@cl/core/Button";
+import { TabNav } from "@cl/modules/common/TabNav";
+import { Divider } from "@cl/modules/common/Divider";
+import { BottomSheet } from "@cl/modules/common/BottomSheet";
+import { SelectableListItem } from "@cl/modules/common/SelectableListItem";
+import { CollapsibleSection } from "@cl/modules/common/CollapsibleSection";
+import { Typography } from "@cl/core/Typography";
+import { CardPaymentSummary } from "@cl/biz/card/CardPaymentSummary";
+import { CardInfoPanel } from "@cl/biz/card/CardInfoPanel";
+import { CardPaymentItem } from "@cl/biz/card/CardPaymentItem";
+import { StatementTotalCard } from "@cl/biz/card/StatementTotalCard";
 
-import type { PaymentStatementPageProps, StatementTab } from './types';
-import { cn } from '@lib/cn';
+import type { PaymentStatementPageProps, StatementTab } from "./types";
+import { cn } from "@lib/cn";
 
 /** 탭 메타 — id/label 한 곳에서 관리해 타이틀·TabNav 둘 다 참조 */
 const TAB_ITEMS: { id: StatementTab; label: string }[] = [
-  { id: 'payment', label: '결제예정금액' },
-  { id: 'statement', label: '이용대금명세서' },
+  { id: "payment", label: "결제예정금액" },
+  { id: "statement", label: "이용대금명세서" },
 ];
 
 /** 월 옵션 단일 항목 */
@@ -78,7 +73,7 @@ function generateMonthOptions(): MonthOption[] {
     const year = d.getFullYear();
     const month = d.getMonth() + 1;
     options.push({
-      value: `${year}-${String(month).padStart(2, '0')}`,
+      value: `${year}-${String(month).padStart(2, "0")}`,
       /* 두 자리 연도 + 월. 예: '26년 4월' */
       dateYM: `${String(year).slice(2)}년 ${month}월`,
     });
@@ -89,23 +84,21 @@ function generateMonthOptions(): MonthOption[] {
 /** 오늘 기준 현재 월 value. 예: '2026-04' */
 function todayMonthValue(): string {
   const today = new Date();
-  return `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`;
+  return `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}`;
 }
 
 /** 헤더 아이콘 버튼 공통 스타일 */
 const iconBtnCls = cn(
-  'flex items-center justify-center size-9 rounded-full',
-  'text-text-muted hover:bg-surface-raised hover:text-text-heading',
-  'transition-colors duration-150',
+  "flex items-center justify-center size-9 rounded-full",
+  "text-text-muted hover:bg-surface-raised hover:text-text-heading",
+  "transition-colors duration-150",
 );
 
 export function PaymentStatementPage({
-  initialTab = 'payment',
-  cardOptions,
-  initialCardValue,
+  initialTab = "payment",
+  initialMonth,
   paymentData,
   statementData,
-  onCardChange,
   onDateClick,
   onRevolving,
   onCardLoan,
@@ -117,33 +110,28 @@ export function PaymentStatementPage({
   onClose,
 }: PaymentStatementPageProps) {
   const [activeTab, setActiveTab] = useState<StatementTab>(initialTab);
-  const [selectedCard, setSelectedCard] = useState(
-    /* 초기 카드 value — 미전달 시 첫 번째 옵션으로 fallback */
-    initialCardValue ?? cardOptions[0]?.value ?? '',
-  );
   const [dateSheetOpen, setDateSheetOpen] = useState(false);
-  const [selectedMonth, setSelectedMonth] = useState(todayMonthValue);
+  /** 초기값: 전달받은 initialMonth 우선, 없으면 오늘 기준 월 */
+  const [selectedMonth, setSelectedMonth] = useState(
+    initialMonth ?? todayMonthValue(),
+  );
 
   /** 월 옵션 목록 — 렌더마다 재계산하지 않도록 메모이제이션 */
-  const monthOptions = useMemo(generateMonthOptions, []);
+  const monthOptions = useMemo(() => generateMonthOptions(), []);
 
   /** 현재 선택된 월의 dateYM 레이블. CardPaymentSummary에 전달 */
   const selectedDateYM =
-    monthOptions.find((o) => o.value === selectedMonth)?.dateYM ?? paymentData.dateYM;
+    monthOptions.find((o) => o.value === selectedMonth)?.dateYM ??
+    paymentData.dateYM;
 
   /** 활성 탭 레이블을 헤더 타이틀로 사용 */
-  const activeLabel = TAB_ITEMS.find((t) => t.id === activeTab)?.label ?? '';
-
-  function handleCardChange(value: string) {
-    setSelectedCard(value);
-    onCardChange?.(value);
-  }
+  const activeLabel = TAB_ITEMS.find((t) => t.id === activeTab)?.label ?? "";
 
   function handleMonthSelect(option: MonthOption) {
     setSelectedMonth(option.value);
     setDateSheetOpen(false);
-    /* 외부 핸들러에도 선택 결과 전파 */
-    onDateClick?.();
+    /* 선택된 월 값('YYYY-MM')을 외부 핸들러에 전파 */
+    onDateClick?.(option.value);
   }
 
   return (
@@ -163,8 +151,8 @@ export function PaymentStatementPage({
           />
         }
       >
-        {/* ── 탭 + 카드 선택 — 스크롤 영역 최상단 고정 ────────────────── */}
-        <div className="flex flex-col gap-md px-standard pt-md pb-sm">
+        {/* ── 탭 + 조회 월 선택 버튼 — 스크롤 영역 최상단 ────────── */}
+        <div className="flex flex-col px-standard pt-md pb-sm gap-sm">
           {/* underline 탭: 두 탭이 균등하게 너비를 나눔 */}
           <TabNav
             items={TAB_ITEMS}
@@ -173,18 +161,20 @@ export function PaymentStatementPage({
             variant="pill"
             fullWidth
           />
-
-          {/* 카드 선택 드롭다운 */}
-          <Select
-            options={cardOptions}
-            value={selectedCard}
-            onChange={handleCardChange}
-            aria-label="카드 선택"
-          />
+          {/* 조회 월 선택 버튼 — 가운데 정렬, 두 탭 공통 기간 필터 역할 */}
+          <Button
+            variant="ghost"
+            size="md"
+            rightIcon={<ChevronDown className="size-4" />}
+            onClick={() => setDateSheetOpen(true)}
+            className="mx-auto text-lg text-text-muted"
+          >
+            {selectedDateYM}
+          </Button>
         </div>
 
         {/* ── 결제예정금액 탭 콘텐츠 ─────────────────────────────────── */}
-        {activeTab === 'payment' && (
+        {activeTab === "payment" && (
           <div className="flex flex-col gap-lg px-standard pb-xl">
             {/* 총 청구금액 요약 카드 — 날짜 클릭 시 월 선택 BottomSheet 오픈 */}
             <CardPaymentSummary
@@ -195,6 +185,7 @@ export function PaymentStatementPage({
               revolving={paymentData.revolving}
               cardLoan={paymentData.cardLoan}
               cashAdvance={paymentData.cashAdvance}
+              hideDateButton
               onDateClick={() => setDateSheetOpen(true)}
               onRevolving={onRevolving}
               onCardLoan={onCardLoan}
@@ -208,7 +199,12 @@ export function PaymentStatementPage({
 
             {/* 카드별 금액 목록 */}
             <div className="flex flex-col">
-              <Typography variant="body-sm" weight="bold" color="heading" className="mb-xs">
+              <Typography
+                variant="body-sm"
+                weight="bold"
+                color="heading"
+                className="mb-xs"
+              >
                 카드별 금액
               </Typography>
               <div className="flex flex-col divide-y divide-border-subtle">
@@ -230,7 +226,7 @@ export function PaymentStatementPage({
         )}
 
         {/* ── 이용대금명세서 탭 콘텐츠 ──────────────────────────────── */}
-        {activeTab === 'statement' && (
+        {activeTab === "statement" && (
           <div className="flex flex-col gap-lg px-standard pb-xl">
             {/* 총 결제금액 카드 — 분할납부·즉시결제·리볼빙 액션 포함 */}
             <StatementTotalCard
@@ -246,7 +242,12 @@ export function PaymentStatementPage({
 
             {/* 카드별 금액 목록 */}
             <div className="flex flex-col">
-              <Typography variant="body-sm" weight="bold" color="heading" className="mb-xs">
+              <Typography
+                variant="body-sm"
+                weight="bold"
+                color="heading"
+                className="mb-xs"
+              >
                 카드별 금액
               </Typography>
               <div className="flex flex-col divide-y divide-border-subtle">
@@ -274,37 +275,46 @@ export function PaymentStatementPage({
              * 각 항목은 기본 접힘(defaultExpanded=false)으로 시작.
              * 실제 안내 본문은 운영 정책에 따라 교체한다. */}
             <div className="flex flex-col gap-xs">
-              <Typography variant="body-sm" weight="bold" color="heading" className="mb-xs">
+              <Typography
+                variant="body-sm"
+                weight="bold"
+                color="heading"
+                className="mb-xs"
+              >
                 꼭! 알아두세요
               </Typography>
 
               {[
                 {
-                  title: '이용안내',
+                  title: "이용안내",
                   content:
-                    '이용대금명세서는 매월 결제일 기준으로 발행됩니다. 결제 금액은 카드사 정책에 따라 변동될 수 있으며, 정확한 내용은 고객센터로 문의하시기 바랍니다.',
+                    "이용대금명세서는 매월 결제일 기준으로 발행됩니다. 결제 금액은 카드사 정책에 따라 변동될 수 있으며, 정확한 내용은 고객센터로 문의하시기 바랍니다.",
                   defaultExpanded: true,
                 },
                 {
-                  title: '해외 이용안내',
+                  title: "해외 이용안내",
                   content:
-                    '해외에서 사용한 금액은 국제 브랜드사(Visa, Mastercard 등)의 환율 및 해외서비스 수수료가 적용됩니다. 결제일 기준 환율이 적용되어 실제 청구 금액이 달라질 수 있습니다.',
+                    "해외에서 사용한 금액은 국제 브랜드사(Visa, Mastercard 등)의 환율 및 해외서비스 수수료가 적용됩니다. 결제일 기준 환율이 적용되어 실제 청구 금액이 달라질 수 있습니다.",
                 },
                 {
-                  title: '일부결제금액이월약정(리볼빙) 안내',
+                  title: "일부결제금액이월약정(리볼빙) 안내",
                   content:
-                    '리볼빙 이용 시 일정 금액만 결제하고 나머지는 다음 달로 이월됩니다. 이월된 금액에는 수수료가 부과되며, 장기 이용 시 이자 부담이 증가할 수 있습니다.',
+                    "리볼빙 이용 시 일정 금액만 결제하고 나머지는 다음 달로 이월됩니다. 이월된 금액에는 수수료가 부과되며, 장기 이용 시 이자 부담이 증가할 수 있습니다.",
                 },
                 {
-                  title: '마이너스대출 안내',
+                  title: "마이너스대출 안내",
                   content:
-                    '마이너스대출(한도대출)은 승인된 한도 내에서 자유롭게 이용 가능합니다. 이용 금액에 대해 일별 이자가 발생하며, 약정된 이율이 적용됩니다.',
+                    "마이너스대출(한도대출)은 승인된 한도 내에서 자유롭게 이용 가능합니다. 이용 금액에 대해 일별 이자가 발생하며, 약정된 이율이 적용됩니다.",
                 },
               ].map(({ title, content }) => (
                 <CollapsibleSection
                   key={title}
                   header={
-                    <Typography variant="body-sm" weight="medium" color="heading">
+                    <Typography
+                      variant="body-sm"
+                      weight="medium"
+                      color="heading"
+                    >
                       {title}
                     </Typography>
                   }

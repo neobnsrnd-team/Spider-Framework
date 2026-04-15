@@ -107,6 +107,8 @@ const BOTTOM_NAV_ITEMS = (onBottomNavChange: (id: string) => void) => [
 
 export function CardDashboardPage({
   userName,
+  statementAmount,
+  statementDueDate,
   onNotification,
   onMenu,
   onStatementDetail,
@@ -245,8 +247,8 @@ export function CardDashboardPage({
         {/* ── 이번 달 명세서 히어로 카드 ────────────────── */}
         <div className="px-standard pt-standard">
           <StatementHeroCard
-            amount={1_250_000}
-            dueDate="1월 25일"
+            amount={statementAmount ?? 0}
+            dueDate={statementDueDate ?? '—'}
             onDetail={onStatementDetail}
             hidden={amountHidden}
           />

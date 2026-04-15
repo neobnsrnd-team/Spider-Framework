@@ -29,5 +29,7 @@ export interface CardPaymentSummaryProps {
   onCashAdvance?: () => void;
   /** 날짜(년월) 영역 클릭 핸들러. 전달 시 날짜 선택 모달 등을 열 수 있음 */
   onDateClick?: () => void;
+  /** true이면 년월 선택 버튼(dateYM + ChevronDown)을 숨김. 기본: false */
+  hideDateButton?: boolean;
   className?: string;
 }

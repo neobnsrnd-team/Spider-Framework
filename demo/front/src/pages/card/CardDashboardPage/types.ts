@@ -9,6 +9,17 @@ export interface CardDashboardPageProps {
   /** 로그인 사용자명 — StatementHeroCard 위 인사말에 표시 */
   userName?: string;
 
+  /**
+   * StatementHeroCard에 표시할 이번 달 결제 예정 금액.
+   * /api/payment-statement 에서 공여기간 기준으로 집계된 totalAmount.
+   */
+  statementAmount?: number;
+  /**
+   * StatementHeroCard에 표시할 결제일 레이블 (예: "1월 25일").
+   * /api/payment-statement billingPeriod.dueDate 에서 변환.
+   */
+  statementDueDate?: string;
+
   /** 알림 아이콘 클릭 */
   onNotification?: () => void;
   /** 메뉴 아이콘 클릭 */
