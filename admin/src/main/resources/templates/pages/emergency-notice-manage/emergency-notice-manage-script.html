@@ -7,6 +7,9 @@
     // 쓰기 권한 여부 (Thymeleaf → JS)
     var HAS_WRITE = /*[[${userAuthorities != null && userAuthorities.contains('EMERGENCY_NOTICE:W')}]]*/ false;
 
+    // Demo Frontend 미리보기 URL (Thymeleaf → JS)
+    var DEMO_FRONTEND_URL = /*[[${demoFrontendUrl}]]*/ 'http://localhost:5173';
+
     // 언어 레이블 매핑
     var LANG_LABEL = {
         'EMERGENCY_KO': '한국어 (KO)',
@@ -24,17 +27,52 @@
             + ' ' + raw.substring(8, 10) + ':' + raw.substring(10, 12) + ':' + raw.substring(12, 14);
     }
 
+    // 배포 상태 레이블·뱃지 매핑
+    var DEPLOY_STATUS_MAP = {
+        'DRAFT':    { label: '미배포',  badgeClass: 'bg-secondary' },
+        'DEPLOYED': { label: '배포 중', badgeClass: 'bg-success'   },
+        'ENDED':    { label: '배포 종료', badgeClass: 'bg-danger'   }
+    };
+
     window.EmergencyNoticePage = {
-        data: [],        // 서버에서 받은 공지 목록 원본
+        data: [],         // 서버에서 받은 공지 목록 원본
         displayType: 'N', // 서버에서 받은 노출 타입
+        isDirty: false,   // 저장 후 변경 여부 — true이면 미리보기 버튼 비활성화
 
         init: function () {
             this.load();
+            this.loadDeployStatus(); // 배포 상태 뱃지 별도 조회
             if (HAS_WRITE) {
                 var self = this;
                 document.getElementById('btnSave')
                         .addEventListener('click', function () { self.save(); });
             }
+        },
+
+        // 배포 상태 뱃지 조회 (긴급공지 목록 조회와 별개로 호출)
+        loadDeployStatus: function () {
+            $.ajax({
+                url: API_BASE_URL + '/emergency-notice-deploys',
+                method: 'GET',
+                success: function (res) {
+                    if (res.success && res.data) {
+                        var statusKey = res.data.deployStatus || 'DRAFT';
+                        var info = DEPLOY_STATUS_MAP[statusKey] || { label: statusKey, badgeClass: 'bg-secondary' };
+                        var badge = document.getElementById('noticeDeployStatusBadge');
+                        if (badge) {
+                            badge.textContent = info.label;
+                            badge.className   = 'badge small ' + info.badgeClass;
+                        }
+                    }
+                },
+                error: function () {
+                    var badge = document.getElementById('noticeDeployStatusBadge');
+                    if (badge) {
+                        badge.textContent = '조회 실패';
+                        badge.className   = 'badge bg-warning small';
+                    }
+                }
+            });
         },
 
         // 긴급공지 목록 + 노출 타입 조회
@@ -63,6 +101,9 @@
 
         // 테이블 + 노출 타입 렌더링
         render: function () {
+            // 새 데이터 로드 시 clean 상태로 초기화
+            this.isDirty = false;
+
             // 노출 타입 드롭다운 설정
             var displayTypeEl = document.getElementById('displayType');
             if (displayTypeEl) {
@@ -94,7 +135,9 @@
                     + '<td class="text-center text-body-secondary small">' + dtime + '</td>'
                     + '<td class="text-center text-body-secondary small">' + userId + '</td>'
                     + '<td class="text-center">'
-                    +   '<button type="button" class="btn btn-outline-secondary btn-sm"'
+                    // 저장 후 변경 시 비활성화 처리를 위해 data-preview-btn 속성 부여
+                    // 행의 언어 코드(propertyId)를 인자로 전달하여 해당 언어로 미리보기
+                    +   '<button type="button" class="btn btn-outline-secondary btn-sm" data-preview-btn'
                     +   ' onclick="EmergencyNoticePage.preview(\'' + row.propertyId + '\')">'
                     +   '<i class="bi bi-eye"></i>'
                     +   '</button>'
@@ -106,6 +149,35 @@
             tbody.innerHTML = rows.length > 0
                 ? rows.join('')
                 : '<tr><td colspan="6" class="text-center text-body-secondary py-4">조회된 긴급공지가 없습니다.</td></tr>';
+
+            // 렌더링 후 dirty 감지 리스너 부착
+            this.attachDirtyListeners();
+        },
+
+        /**
+         * 입력 필드 변경 감지 리스너 부착.
+         * 제목·내용·노출타입 변경 시 isDirty = true 로 전환하여 미리보기 버튼을 비활성화한다.
+         */
+        attachDirtyListeners: function () {
+            var self = this;
+            document.querySelectorAll('#noticeTableBody .notice-title, #noticeTableBody .notice-content')
+                .forEach(function (el) {
+                    el.addEventListener('input', function () { self.markDirty(); });
+                });
+            var displayTypeEl = document.getElementById('displayType');
+            if (displayTypeEl) {
+                displayTypeEl.addEventListener('change', function () { self.markDirty(); });
+            }
+        },
+
+        /** 미저장 변경 상태로 전환 — 미리보기 버튼 비활성화 */
+        markDirty: function () {
+            if (this.isDirty) return;
+            this.isDirty = true;
+            document.querySelectorAll('[data-preview-btn]').forEach(function (btn) {
+                btn.disabled = true;
+                btn.title = '변경사항을 먼저 저장해주세요';
+            });
         },
 
         // 일괄 저장
@@ -154,24 +226,17 @@
             });
         },
 
-        // 미리보기: 현재 입력 중인 제목/내용을 모달로 표시
-        preview: function (propertyId) {
-            var tr = document.querySelector('#noticeTableBody tr[data-property-id="' + propertyId + '"]');
-            if (!tr) return;
-
-            var lang    = LANG_LABEL[propertyId] || propertyId;
-            var title   = tr.querySelector('.notice-title').value;
-            var content = tr.querySelector('.notice-content').value;
-
-            // XSS 방지 후 \n → <br> 변환하여 HTML 렌더링
-            var titleEscaped   = HtmlUtils.escape(title);
-            var contentEscaped = HtmlUtils.escape(content);
-            var contentHtml    = contentEscaped.replace(/\n/g, '<br>');
-
-            document.getElementById('previewModalLang').textContent    = lang;
-            document.getElementById('previewModalTitle').textContent   = titleEscaped;
-            document.getElementById('previewModalContent').innerHTML   = contentHtml;
-
+        /**
+         * 미리보기: Demo Frontend iframe을 통해 저장된 공지를 실제 앱 UI로 표시한다.
+         * 저장 전 변경사항이 있을 경우(isDirty) 호출되지 않는다 (버튼 비활성화로 방지).
+         * iframe에 타임스탬프 쿼리 파라미터를 부여해 항상 최신 데이터를 로드한다.
+         */
+        preview: function (lang) {
+            if (this.isDirty) return;
+            var iframe = document.getElementById('noticePreviewIframe');
+            // 타임스탬프로 캐시 우회 + 행의 언어 코드를 전달하여 해당 언어 공지를 표시
+            var langParam = lang ? '&lang=' + encodeURIComponent(lang) : '';
+            iframe.src = DEMO_FRONTEND_URL + '/preview/notice?t=' + Date.now() + langParam;
             new bootstrap.Modal(document.getElementById('noticePreviewModal')).show();
         }
     };

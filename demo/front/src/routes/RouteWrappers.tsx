@@ -12,7 +12,8 @@
  * - 모달 오버레이: XxxModal (예: HanaCardMenuModal)
  */
 import { useState, useEffect, useRef, useMemo } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
+import { useNavigate, useLocation, useSearchParams } from "react-router-dom";
+import type { NoticePayload } from "@/hooks/useEmergencyNotice";
 import { useAuth } from "@/contexts/AuthContext";
 import { axiosInstance } from "@/api/axiosInstance";
 import {
@@ -29,6 +30,8 @@ import {
 
 import { LoginPage } from "@/pages/common/LoginPage";
 import { CardDashboardPage } from "@/pages/card/CardDashboardPage";
+import { EmergencyNoticeBanner } from "@/components/EmergencyNoticeBanner";
+import { useEmergencyNotice } from "@/hooks/useEmergencyNotice";
 import { HanaCardMenuPage } from "@/pages/card/HanaCardMenuPage";
 import { UsageHistoryPage } from "@/pages/card/UsageHistoryPage";
 import { PaymentStatementPage } from "@/pages/card/PaymentStatementPage";
@@ -143,6 +146,7 @@ export function CardDashboardRoute() {
   const navigate = useNavigate();
   const location = useLocation();
   const { user } = useAuth();
+  const { notice } = useEmergencyNotice(); // SSE 긴급공지 구독
 
   /** StatementHeroCard: 공여기간 기준 이번 달 결제 예정 금액 */
   const [statementAmount, setStatementAmount] = useState(0);
@@ -180,27 +184,31 @@ export function CardDashboardRoute() {
   }, [user?.userId]);
 
   return (
-    <CardDashboardPage
-      userName={user?.userName}
-      statementAmount={statementAmount}
-      statementDueDate={statementDueDate}
-      spendingAmount={spendingAmount}
-      onMenu={() =>
-        navigate(PATHS.CARD.MENU, { state: { background: location } })
-      }
-      onNotification={() => {}}
-      onStatementDetail={() => navigate(PATHS.CARD.PAYMENT_STATEMENT)}
-      onShortLoan={() => {}}
-      onLongLoan={() => {}}
-      onRevolving={() => {}}
-      onCardPerformance={() => {}}
-      onUsageHistory={() => navigate(PATHS.CARD.USAGE_HISTORY)}
-      onMyCards={() => navigate(PATHS.CARD.MY_CARD_MANAGEMENT)}
-      onCoupons={() => {}}
-      onLimitCheck={() => {}}
-      onInstallment={() => {}}
-      onCardApply={() => {}}
-    />
+    <>
+      {/* 배포 중인 긴급공지가 있을 때 화면 최상단에 배너 표시 */}
+      {notice && <EmergencyNoticeBanner data={notice} />}
+      <CardDashboardPage
+        userName={user?.userName}
+        statementAmount={statementAmount}
+        statementDueDate={statementDueDate}
+        spendingAmount={spendingAmount}
+        onMenu={() =>
+          navigate(PATHS.CARD.MENU, { state: { background: location } })
+        }
+        onNotification={() => {}}
+        onStatementDetail={() => navigate(PATHS.CARD.PAYMENT_STATEMENT)}
+        onShortLoan={() => {}}
+        onLongLoan={() => {}}
+        onRevolving={() => {}}
+        onCardPerformance={() => {}}
+        onUsageHistory={() => navigate(PATHS.CARD.USAGE_HISTORY)}
+        onMyCards={() => navigate(PATHS.CARD.MY_CARD_MANAGEMENT)}
+        onCoupons={() => {}}
+        onLimitCheck={() => {}}
+        onInstallment={() => {}}
+        onCardApply={() => {}}
+      />
+    </>
   );
 }
 
@@ -1091,6 +1099,72 @@ export function UserManagementRoute() {
       onEditUser={() => {}}
       onDeleteUser={() => {}}
     />
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/* Admin 미리보기 전용                                                    */
+/* ------------------------------------------------------------------ */
+
+/**
+ * 긴급공지 미리보기 페이지.
+ *
+ * Admin 관리 화면의 iframe에서 호출되는 공개 경로(/preview/notice).
+ * 인증 없이 접근 가능하며, DEPLOY_STATUS와 무관하게 최신 저장된 공지 내용을 표시한다.
+ * displayType이 'N'(사용안함)인 경우에도 내용 확인을 위해 배너를 강제 표시하고 안내 문구를 노출한다.
+ */
+export function NoticePreviewRoute() {
+  const [searchParams]        = useSearchParams();
+  // lang 파라미터: Admin 미리보기 버튼에서 언어 코드(EMERGENCY_KO / EMERGENCY_EN)를 전달한다.
+  const lang                  = searchParams.get('lang') ?? 'EMERGENCY_KO';
+  const [data,    setData]    = useState<NoticePayload | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error,   setError]   = useState(false);
+
+  useEffect(() => {
+    fetch('/api/notices/preview')
+      .then((r) => {
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+        return r.json() as Promise<NoticePayload>;
+      })
+      .then(setData)
+      .catch(() => setError(true))
+      .finally(() => setLoading(false));
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen text-sm text-text-muted">
+        로딩 중...
+      </div>
+    );
+  }
+
+  if (error || !data) {
+    return (
+      <div className="flex items-center justify-center min-h-screen text-sm text-text-muted">
+        공지 데이터를 불러올 수 없습니다.
+      </div>
+    );
+  }
+
+  // 미리보기 모드: displayType이 N이어도 배너를 강제 표시 (내용 확인 목적)
+  const isUnused   = data.displayType === 'N';
+  const previewData: NoticePayload = isUnused
+    ? { ...data, displayType: 'A' }
+    : data;
+
+  return (
+    <div className="min-h-screen bg-bg-base">
+      {/* 미리보기 모드 안내 */}
+      <div className="flex items-center justify-center py-1 bg-blue-50 border-b border-blue-200">
+        <span className="text-xs text-blue-600 font-medium">
+          미리보기 모드
+          {isUnused && <span className="ml-1 text-orange-500">(노출 타입: 사용안함 — 실제 배포 시 미표시)</span>}
+        </span>
+      </div>
+      <EmergencyNoticeBanner data={previewData} forceOpen lang={lang} />
+    </div>
   );
 }
 

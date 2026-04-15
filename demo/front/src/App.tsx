@@ -32,8 +32,9 @@ function AppRoutes() {
   // 클릭 이벤트 쓰로틀링 + 비활성 타임아웃으로 세션 만료 감지
   useSessionActivity()
 
-  // 로그인 안 된 상태에서 로그인 페이지 외 접근 시 리다이렉트
-  if (!isLoggedIn && location.pathname !== PATHS.LOGIN) {
+  // 로그인 안 된 상태에서 로그인 페이지 및 미리보기 경로 외 접근 시 리다이렉트
+  // /preview/* 는 Admin iframe 미리보기용 공개 경로이므로 인증 불필요
+  if (!isLoggedIn && location.pathname !== PATHS.LOGIN && !location.pathname.startsWith('/preview')) {
     return <Navigate to={PATHS.LOGIN} replace />
   }
 

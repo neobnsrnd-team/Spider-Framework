@@ -51,3 +51,21 @@ app:
 # XML Property 디렉토리 (테스트용 임시 경로)
 xml-property:
   directory: ${java.io.tmpdir}/xml-properties-test
+
+# Claude API (테스트 환경에서는 실제 호출 없음 — 0초 타임아웃 방지를 위해 더미 값 설정)
+claude:
+  api:
+    url: https://api.anthropic.com/v1/messages
+    key: test-key
+    model: claude-sonnet-4-6
+    max-tokens: 8192
+    connect-timeout-seconds: 10
+    read-timeout-seconds: 120
+
+# Figma API (테스트 환경에서는 실제 호출 없음 — 0초 타임아웃 방지를 위해 더미 값 설정)
+figma:
+  api:
+    url: https://api.figma.com
+    token: test-token
+    connect-timeout-seconds: 10
+    read-timeout-seconds: 30

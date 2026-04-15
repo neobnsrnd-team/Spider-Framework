@@ -32,6 +32,13 @@ export interface ModalProps {
   /** true이면 배경 클릭으로 닫기 비활성화 */
   disableBackdropClose?: boolean;
   /**
+   * false이면 X 닫기 버튼을 숨기고 ESC 키 닫기도 비활성화한다.
+   * disableBackdropClose와 함께 사용하면 프로그래밍 방식으로만 닫힘.
+   * critical 공지 등 사용자가 강제로 확인해야 하는 경우에 사용한다.
+   * @default true
+   */
+  closeable?: boolean;
+  /**
    * 헤더 타이틀 정렬.
    * - 'left'  (기본): 타이틀 좌측, X 버튼 우측 (일반 확인 모달)
    * - 'center': 타이틀 중앙, X 버튼 절대 우측 (경고·안내 모달)

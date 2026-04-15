@@ -3,8 +3,11 @@
  * @description Express 서버 진입점 + 카드 관련 API 엔드포인트
  *
  * API 목록
- *   GET  /api/cards               카드 목록 (슬라이더·드롭다운용)
- *   GET  /api/cards/:cardId/transactions  카드별 이용내역
+ *   GET  /api/cards                          카드 목록 (슬라이더·드롭다운용)
+ *   GET  /api/cards/:cardId/transactions     카드별 이용내역
+ *   GET  /api/notices/sse                    긴급공지 SSE 스트림 (Demo Frontend 구독)
+ *   POST /api/notices/sync                   긴급공지 배포 동기화 (Admin 호출)
+ *   POST /api/notices/end                    긴급공지 배포 종료 (Admin 호출)
  *
  * DB ↔ 프론트 매핑 규칙 (이 파일 하단 mapper 함수 참고)
  *   Oracle 컬럼명(UPPER_SNAKE)  →  React 프롭(camelCase)
@@ -21,6 +24,7 @@ const { apiLogger } = require("./utils/logger");
 const jwt = require("jsonwebtoken");
 const { initPool, withConnection, closePool } = require("./db");
 const { detectBrand, maskCardNumber } = require("./utils/cardBrand");
+const { addClient, broadcastNotice, clientCount } = require("./utils/sseManager");
 const { getBillingPeriod }            = require("./utils/billingPeriod");
 const { getBillingSummaryByMonth }    = require("./utils/billingByMonth");
 
@@ -30,6 +34,18 @@ const JWT_ACCESS_EXPIRES_IN  = process.env.JWT_ACCESS_EXPIRES_IN  || "30m";
 // Refresh Token: 긴 TTL — httpOnly 쿠키로 관리 (JS 접근 불가)
 const JWT_REFRESH_SECRET     = process.env.JWT_REFRESH_SECRET     || "dev-refresh-secret";
 const JWT_REFRESH_EXPIRES_IN = process.env.JWT_REFRESH_EXPIRES_IN || "7d";
+/** Admin → Demo Backend 호출 시 사용하는 공유 비밀 키 */
+const ADMIN_SECRET  = process.env.ADMIN_SECRET  || "admin-secret";
+
+/**
+ * 현재 배포 중인 긴급공지 인메모리 상태.
+ * null이면 배포 중인 공지 없음.
+ * Admin이 POST /api/notices/sync 호출 시 업데이트된다.
+ * Demo Backend 재기동 시 restoreNoticeState()로 DB에서 복구된다.
+ *
+ * @type {{ notices: Array<{lang: string, title: string, content: string}>, displayType: string, closeableYn: string, hideTodayYn: string } | null}
+ */
+let currentNotice = null;
 
 /**
  * POC용 인메모리 Refresh Token 저장소.
@@ -37,6 +53,28 @@ const JWT_REFRESH_EXPIRES_IN = process.env.JWT_REFRESH_EXPIRES_IN || "7d";
  * Map<userId, refreshToken>
  */
 const refreshTokenStore = new Map();
+
+/**
+ * 로컬 환경 전용 미들웨어 — localhost 요청만 허용한다.
+ * /api/dev/* 진단 엔드포인트에 적용. 개발 완료 후 해당 라우트와 함께 삭제 예정.
+ */
+function localOnly(req, res, next) {
+  const ip = req.ip || req.connection.remoteAddress || "";
+  // ::1 = IPv6 루프백, 127.0.0.1 = IPv4 루프백
+  if (ip === "::1" || ip === "127.0.0.1" || ip.endsWith("127.0.0.1")) {
+    return next();
+  }
+  return res.status(403).json({ error: "로컬 환경에서만 접근할 수 있습니다." });
+}
+
+/** Admin 전용 엔드포인트 인증 미들웨어 — X-Admin-Secret 헤더 검증 */
+function verifyAdminSecret(req, res, next) {
+  const secret = req.headers["x-admin-secret"];
+  if (!secret || secret !== ADMIN_SECRET) {
+    return res.status(403).json({ error: "관리자 인증이 필요합니다." });
+  }
+  next();
+}
 
 /** 보호 라우트에 적용할 JWT 검증 미들웨어 */
 function verifyToken(req, res, next) {
@@ -77,7 +115,8 @@ app.use(cookieParser());
 app.use(apiLogger);
 
 // ── 개발용: D_SPIDERLINK의 POC_ 테이블 목록 및 컬럼 확인 ────────────────────
-app.get("/api/dev/raw", async (_req, res) => {
+// verifyToken 적용 — 인증된 사용자만 raw DB 데이터에 접근 가능
+app.get("/api/dev/raw", localOnly, async (_req, res) => {
   try {
     const result = await withConnection((conn) =>
       conn.execute(
@@ -92,7 +131,7 @@ app.get("/api/dev/raw", async (_req, res) => {
   }
 });
 
-app.get("/api/dev/tables", async (_req, res) => {
+app.get("/api/dev/tables", localOnly, async (_req, res) => {
   try {
     const result = await withConnection((conn) =>
       conn.execute(
@@ -120,7 +159,7 @@ app.get("/api/dev/tables", async (_req, res) => {
  * WHERE "이용자" = :userId 필터에서 레코드가 누락되는 주 원인이므로
  * 원본 값(value)과 TRIM 값(trimmedValue)을 함께 반환한다.
  */
-app.get("/api/dev/usage-stat", async (_req, res) => {
+app.get("/api/dev/usage-stat", localOnly, async (_req, res) => {
   try {
     const [countResult, distResult] = await Promise.all([
       withConnection((conn) =>
@@ -153,7 +192,7 @@ app.get("/api/dev/usage-stat", async (_req, res) => {
   }
 });
 
-app.get("/api/dev/columns/:tbl", async (req, res) => {
+app.get("/api/dev/columns/:tbl", localOnly, async (req, res) => {
   try {
     const tbl = req.params.tbl.toUpperCase();
     const result = await withConnection((conn) =>
@@ -938,15 +977,191 @@ app.get("/api/cards/:cardId/payable-amount", verifyToken, async (req, res) => {
 });
 
 // ════════════════════════════════════════════════════════════════════════════
+// 긴급공지 SSE 엔드포인트
+// ════════════════════════════════════════════════════════════════════════════
+
+/**
+ * GET /api/notices/sse
+ * Demo Frontend가 연결하는 SSE 스트림.
+ * 연결 즉시 현재 인메모리 공지 상태를 전송하고, 이후 변경 시마다 이벤트를 보낸다.
+ */
+app.get("/api/notices/sse", (req, res) => {
+  // SSE 응답 헤더 설정
+  res.setHeader("Content-Type",  "text/event-stream");
+  res.setHeader("Cache-Control", "no-cache");
+  res.setHeader("Connection",    "keep-alive");
+  res.flushHeaders();
+
+  // 연결 즉시 현재 공지 상태 전송 (재접속 시 최신 상태 즉시 반영)
+  const initData = JSON.stringify(currentNotice);
+  res.write(`event: notice\ndata: ${initData}\n\n`);
+
+  // 연결 목록에 추가 (close 이벤트 시 자동 제거)
+  addClient(res);
+
+  console.log(`[SSE] 클라이언트 연결 (현재 ${clientCount()}명)`);
+});
+
+/**
+ * POST /api/notices/sync
+ * Admin이 긴급공지를 배포할 때 호출한다.
+ * 인메모리 상태를 업데이트하고 연결된 모든 SSE 클라이언트에게 브로드캐스트한다.
+ *
+ * Request Body:
+ *   {
+ *     notices:     [{ lang: 'EMERGENCY_KO', title: '...', content: '...' }, ...],
+ *     displayType: 'A' | 'B' | 'C' | 'N',
+ *     closeableYn: 'Y' | 'N',   -- 닫기 버튼 노출 여부
+ *     hideTodayYn: 'Y' | 'N'    -- 오늘 하루 보지 않기 체크박스 노출 여부
+ *   }
+ */
+app.post("/api/notices/sync", verifyAdminSecret, (req, res) => {
+  const { notices, displayType, closeableYn, hideTodayYn } = req.body;
+
+  if (!notices || !Array.isArray(notices) || !displayType) {
+    return res.status(400).json({ error: "notices 배열과 displayType이 필요합니다." });
+  }
+
+  currentNotice = {
+    notices,
+    displayType,
+    closeableYn:  closeableYn  ?? "Y",
+    hideTodayYn:  hideTodayYn  ?? "Y",
+  };
+  broadcastNotice(currentNotice);
+
+  console.log(`[SSE] 긴급공지 배포 동기화 완료: displayType=${displayType}, 클라이언트=${clientCount()}명`);
+  res.json({ success: true });
+});
+
+/**
+ * POST /api/notices/end
+ * Admin이 긴급공지 배포를 종료할 때 호출한다.
+ * 인메모리 상태를 null로 초기화하고 연결된 모든 SSE 클라이언트에게 null을 브로드캐스트한다.
+ */
+app.post("/api/notices/end", verifyAdminSecret, (req, res) => {
+  currentNotice = null;
+  broadcastNotice(null);
+
+  console.log(`[SSE] 긴급공지 배포 종료: 클라이언트=${clientCount()}명`);
+  res.json({ success: true });
+});
+
+/**
+ * GET /api/notices/preview
+ * Admin 미리보기 전용 엔드포인트.
+ * DEPLOY_STATUS에 관계없이 FWK_PROPERTY에서 최신 저장된 공지 내용을 반환한다.
+ * 저장 후 배포 전 상태를 Admin에서 미리 확인하는 용도로 사용된다.
+ */
+app.get("/api/notices/preview", async (req, res) => {
+  try {
+    const result = await withConnection(async (conn) => {
+      // USE_YN 행에서 현재 노출 타입 조회 (배포 상태 무관)
+      const statusRes = await conn.execute(
+        `SELECT DEFAULT_VALUE AS DISPLAY_TYPE
+           FROM FWK_PROPERTY
+          WHERE PROPERTY_GROUP_ID = 'notice'
+            AND PROPERTY_ID = 'USE_YN'`
+      );
+      const row = statusRes.rows?.[0];
+
+      // 언어별 공지 내용 조회
+      const noticeRes = await conn.execute(
+        `SELECT PROPERTY_ID AS LANG, PROPERTY_DESC AS TITLE, DEFAULT_VALUE AS CONTENT
+           FROM FWK_PROPERTY
+          WHERE PROPERTY_GROUP_ID = 'notice'
+            AND PROPERTY_ID IN ('EMERGENCY_KO', 'EMERGENCY_EN')
+          ORDER BY PROPERTY_ID`
+      );
+
+      return {
+        notices: (noticeRes.rows || []).map((r) => ({
+          lang:    r.LANG,
+          title:   r.TITLE   || "",
+          content: r.CONTENT || "",
+        })),
+        displayType: row?.DISPLAY_TYPE || "N",
+      };
+    });
+
+    res.json(result);
+  } catch (err) {
+    console.error("[Preview] 공지 데이터 조회 실패:", err);
+    res.status(500).json({ error: "공지 데이터를 불러오지 못했습니다." });
+  }
+});
+
+// ════════════════════════════════════════════════════════════════════════════
 // 서버 기동 — DB 풀이 준비된 후에만 listen
 // ════════════════════════════════════════════════════════════════════════════
 
+/**
+ * 서버 재기동 시 FWK_PROPERTY에서 배포 상태를 복구한다.
+ * DEPLOY_STATUS='DEPLOYED'인 경우 인메모리 공지를 채운다.
+ * DB 조회 실패 시 경고 로그만 출력하고 공지 없이 기동한다.
+ */
+async function restoreNoticeState() {
+  try {
+    const result = await withConnection(async (conn) => {
+      // USE_YN 행에서 배포 상태 확인
+      // outFormat은 db.js에서 전역으로 OUT_FORMAT_OBJECT로 설정되어 있으므로 별도 지정 불필요
+      const statusRes = await conn.execute(
+        `SELECT DEFAULT_VALUE AS DISPLAY_TYPE, DEPLOY_STATUS
+           FROM FWK_PROPERTY
+          WHERE PROPERTY_GROUP_ID = 'notice'
+            AND PROPERTY_ID = 'USE_YN'`
+      );
+      const row = statusRes.rows?.[0];
+      if (!row || row.DEPLOY_STATUS !== "DEPLOYED") return null;
+
+      // DEPLOYED 상태면 공지 내용 조회
+      const noticeRes = await conn.execute(
+        `SELECT PROPERTY_ID AS LANG, PROPERTY_DESC AS TITLE, DEFAULT_VALUE AS CONTENT
+           FROM FWK_PROPERTY
+          WHERE PROPERTY_GROUP_ID = 'notice'
+            AND PROPERTY_ID IN ('EMERGENCY_KO', 'EMERGENCY_EN')
+          ORDER BY PROPERTY_ID`
+      );
+      // 노출 설정(닫기 버튼, 오늘 하루 보지 않기) 조회
+      const settingsRes = await conn.execute(
+        `SELECT PROPERTY_ID, DEFAULT_VALUE
+           FROM FWK_PROPERTY
+          WHERE PROPERTY_GROUP_ID = 'notice'
+            AND PROPERTY_ID IN ('CLOSEABLE_YN', 'HIDE_TODAY_YN')`
+      );
+      const settingsMap = {};
+      (settingsRes.rows || []).forEach((r) => { settingsMap[r.PROPERTY_ID] = r.DEFAULT_VALUE; });
+
+      return {
+        notices:     (noticeRes.rows || []).map((r) => ({
+          lang:    r.LANG,
+          title:   r.TITLE   || "",
+          content: r.CONTENT || "",
+        })),
+        displayType:  row.DISPLAY_TYPE || "N",
+        closeableYn:  settingsMap["CLOSEABLE_YN"]  ?? "Y",
+        hideTodayYn:  settingsMap["HIDE_TODAY_YN"] ?? "Y",
+      };
+    });
+
+    if (result) {
+      currentNotice = result;
+      console.log(`[Server] 긴급공지 상태 복구 완료: displayType=${result.displayType}`);
+    } else {
+      console.log("[Server] 배포 중인 긴급공지 없음 — 초기 상태로 기동");
+    }
+  } catch (err) {
+    console.warn("[Server] 긴급공지 상태 복구 실패 (비치명적):", err.message);
+  }
+}
+
 async function start() {
   try {
-    await initPool(); // ① 커넥션 풀 먼저 생성
+    await initPool();           // ① 커넥션 풀 먼저 생성
+    await restoreNoticeState(); // ② 재기동 시 배포 상태 복구
 
     app.listen(PORT, () => {
-      // ② 풀 준비 완료 후 서버 오픈
+      // ③ 풀 준비 완료 후 서버 오픈
       console.log(`[Server] http://localhost:${PORT} 에서 실행 중`);
     });
   } catch (err) {

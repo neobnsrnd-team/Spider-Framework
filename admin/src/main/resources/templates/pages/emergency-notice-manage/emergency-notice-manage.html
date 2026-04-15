@@ -11,6 +11,12 @@
         </h4>
     </div>
 
+    <!-- 현재 배포 상태 표시 (읽기 전용) -->
+    <div class="d-flex align-items-center gap-2 mb-3">
+        <span class="text-body-secondary small">배포 상태:</span>
+        <span id="noticeDeployStatusBadge" class="badge bg-secondary small">로딩 중...</span>
+    </div>
+
     <!-- 노출 타입 설정 -->
     <div class="card mb-3">
         <div class="card-header small fw-semibold">노출 설정</div>
@@ -62,24 +68,23 @@
         <button class="btn btn-primary btn-sm" id="btnSave">저장</button>
     </div>
 
-    <!-- 미리보기 모달 -->
+    <!-- 미리보기 모달 (Demo Frontend iframe) -->
     <div class="modal fade" id="noticePreviewModal" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered" style="max-width: 450px;">
+        <div class="modal-dialog modal-dialog-centered" style="max-width: 430px;">
             <div class="modal-content">
                 <div class="modal-header py-2">
                     <h6 class="modal-title">
                         <i class="bi bi-megaphone-fill text-warning me-1"></i>
-                        긴급공지 미리보기 &mdash; <span id="previewModalLang"></span>
+                        긴급공지 미리보기
                     </h6>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
-                <div class="modal-body text-center">
-                    <div class="fw-bold mb-2" id="previewModalTitle"></div>
-                    <hr class="my-2">
-                    <div id="previewModalContent" class="small text-body-secondary"></div>
-                </div>
-                <div class="modal-footer py-2">
-                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">닫기</button>
+                <div class="modal-body p-0">
+                    <!-- Demo Frontend /preview/notice 를 iframe으로 임베드 -->
+                    <iframe id="noticePreviewIframe"
+                            src="about:blank"
+                            style="width: 100%; height: 520px; border: none; display: block;"
+                            title="긴급공지 미리보기"></iframe>
                 </div>
             </div>
         </div>

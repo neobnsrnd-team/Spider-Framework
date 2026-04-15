@@ -28,6 +28,9 @@ public class PageController {
     @Value("${app.title:Neo Spider Admin}")
     private String appTitle;
 
+    @Value("${demo.frontend.url:http://localhost:5173}")
+    private String demoFrontendUrl;
+
     private final BoardService boardService;
 
     @ModelAttribute
@@ -110,11 +113,19 @@ public class PageController {
     }
 
     // ── 인프라 관리 ── system_oper_manage, property_db_manage, xml_property_manage, was_group_manage, was_instance,
-    // emergency_notice_manage
+    // emergency_notice_manage, emergency_notice_deploy_manage
 
     @GetMapping("/emergency-notices")
     public String emergencyNotices(HttpServletRequest request, Model model) {
+        // iframe 미리보기 URL 주입 — Demo Frontend 미리보기 경로로 사용
+        model.addAttribute("demoFrontendUrl", demoFrontendUrl);
         return resolveView(request, "pages/emergency-notice-manage/emergency-notice-manage :: content", model);
+    }
+
+    @GetMapping("/emergency-notice-deploys")
+    public String emergencyNoticeDeploys(HttpServletRequest request, Model model) {
+        return resolveView(
+                request, "pages/emergency-notice-deploy-manage/emergency-notice-deploy-manage :: content", model);
     }
 
     @GetMapping("/reload")
