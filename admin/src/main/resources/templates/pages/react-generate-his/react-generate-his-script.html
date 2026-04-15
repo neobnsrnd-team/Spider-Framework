@@ -268,9 +268,10 @@
                 // 화면 미리보기: postMessage로 Preview App에 코드 전달
                 const frame = document.getElementById('detailPreviewFrame');
                 const sendCode = () => {
+                    // 같은 출처(origin)로만 메시지 전송하여 외부 수신 차단
                     frame.contentWindow.postMessage(
                         { type: 'UPDATE_CODE', code: data.reactCode, codeId: data.codeId },
-                        '*'
+                        window.location.origin
                     );
                 };
                 if (frame.contentDocument?.readyState === 'complete') {
@@ -279,12 +280,8 @@
                     frame.onload = sendCode;
                 }
 
-                // 코드 미리보기 (XSS 방어)
-                const escaped = data.reactCode
-                    .replace(/&/g, '&amp;')
-                    .replace(/</g, '&lt;')
-                    .replace(/>/g, '&gt;');
-                document.getElementById('detailCodeDisplay').innerHTML = escaped;
+                // 코드 미리보기: textContent 할당으로 HTML 파싱을 우회해 XSS를 원천 차단
+                document.getElementById('detailCodeDisplay').textContent = data.reactCode;
 
                 // 화면 미리보기 탭을 기본으로 활성화
                 new bootstrap.Tab(document.getElementById('detailTab-screen')).show();
@@ -362,7 +359,7 @@
         // 미리보기 섹션이 열려 있었으면 Preview App 초기화
         const frame = document.getElementById('detailPreviewFrame');
         if (frame.contentDocument?.readyState === 'complete') {
-            frame.contentWindow.postMessage({ type: 'UPDATE_CODE', code: '' }, '*');
+            frame.contentWindow.postMessage({ type: 'UPDATE_CODE', code: '' }, window.location.origin);
         }
         document.getElementById('detailCodeDisplay').innerHTML = '';
         // 다음 열기 시 로딩 상태로 리셋

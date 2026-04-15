@@ -16,14 +16,14 @@ import com.example.admin_demo.domain.reactgenerate.figma.client.FigmaNodeRespons
 import com.example.admin_demo.domain.reactgenerate.mapper.ReactGenerateMapper;
 import com.example.admin_demo.domain.reactgenerate.validator.CodeValidationResult;
 import com.example.admin_demo.domain.reactgenerate.validator.CodeValidator;
+import com.example.admin_demo.global.exception.InternalException;
 import com.example.admin_demo.global.exception.InvalidInputException;
 import com.example.admin_demo.global.exception.NotFoundException;
 import com.example.admin_demo.global.exception.base.BaseException;
 import com.example.admin_demo.global.log.event.ErrorLogEvent;
-import com.example.admin_demo.global.util.TraceIdUtil;
-import com.example.admin_demo.global.exception.InternalException;
 import com.example.admin_demo.global.util.ExcelColumnDefinition;
 import com.example.admin_demo.global.util.ExcelExportUtil;
+import com.example.admin_demo.global.util.TraceIdUtil;
 import java.io.IOException;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -293,13 +293,27 @@ public class ReactGenerateService {
     }
 
     /**
-     * 생성된 코드를 관리자 승인 요청 상태로 변경한다.
+     * 생성된 코드를 승인 요청 상태로 변경한다.
+     *
+     * <p>클라이언트 측 버튼 노출 조건(작성자 여부)과 별개로,
+     * 서버에서도 요청자가 코드 작성자인지 검증하여 API 직접 호출 우회를 방지한다.
+     *
+     * @param id            승인 요청할 코드 ID
+     * @param requestUserId 요청자 ID (로그인 사용자)
+     * @throws InvalidInputException 요청자가 코드 작성자가 아닐 때
      */
-    public ReactGenerateApprovalResponse requestApproval(String id) {
-        requireExists(id);
+    public ReactGenerateApprovalResponse requestApproval(String id, String requestUserId) {
+        ReactGenerateResponse existing = reactGenerateMapper.selectById(id);
+        if (existing == null) {
+            throw new NotFoundException("생성 결과를 찾을 수 없습니다. codeId=" + id);
+        }
+        // 작성자 본인만 승인 요청 가능 — 클라이언트 우회 방지
+        if (!requestUserId.equals(existing.getCreateUserId())) {
+            throw new InvalidInputException("코드 작성자만 승인 요청할 수 있습니다.");
+        }
 
         reactGenerateMapper.updateStatus(id, ReactGenerateStatus.PENDING_APPROVAL.name(), null, null);
-        log.info("승인 요청 — codeId: {}", id);
+        log.info("승인 요청 — codeId: {}, requestUserId: {}", id, requestUserId);
 
         return ReactGenerateApprovalResponse.builder()
                 .codeId(id)
@@ -311,7 +325,7 @@ public class ReactGenerateService {
      * 관리자가 생성 코드를 승인한다.
      */
     public ReactGenerateApprovalResponse approve(String id, String approvedBy) {
-        requireExists(id);
+        requireExists(id); // 존재 여부 검증
 
         String now = LocalDateTime.now().format(FORMATTER);
         reactGenerateMapper.updateStatus(id, ReactGenerateStatus.APPROVED.name(), approvedBy, now);
@@ -371,6 +385,8 @@ public class ReactGenerateService {
      * @return list(목록), totalCount(전체 건수), page, size
      */
     public Map<String, Object> getHistory(ReactGenerateSearchRequest req) {
+        // LIKE 검색 시 SQL 와일드카드(%, _)를 이스케이프하여 의도치 않은 전체 매칭을 방지
+        req.setCreateUserId(escapeLike(req.getCreateUserId()));
         List<ReactGenerateHistoryResponse> list = reactGenerateMapper.selectList(req);
         int totalCount = reactGenerateMapper.selectCount(req);
         return Map.of("list", list, "totalCount", totalCount, "page", req.getPage(), "size", req.getSize());
@@ -399,11 +415,13 @@ public class ReactGenerateService {
      * @throws InvalidInputException 결과 건수가 최대 행 수를 초과할 때
      */
     public byte[] exportHistory(ReactGenerateSearchRequest req) {
-        List<ReactGenerateHistoryResponse> data = reactGenerateMapper.selectAllForExport(req);
-        if (!ExcelExportUtil.isWithinLimit(data.size())) {
+        // 전체 데이터 로드 전 건수 먼저 확인 → 초과 시 즉시 예외로 OOM 방지
+        int totalCount = reactGenerateMapper.selectCount(req);
+        if (!ExcelExportUtil.isWithinLimit(totalCount)) {
             throw new InvalidInputException(
-                    "엑셀 다운로드 최대 행 수(" + ExcelExportUtil.MAX_ROW_LIMIT + ")를 초과했습니다: " + data.size());
+                    "엑셀 다운로드 최대 행 수(" + ExcelExportUtil.MAX_ROW_LIMIT + ")를 초과했습니다: " + totalCount);
         }
+        List<ReactGenerateHistoryResponse> data = reactGenerateMapper.selectAllForExport(req);
 
         List<ExcelColumnDefinition> columns = List.of(
                 new ExcelColumnDefinition("Figma URL", 50, "figmaUrl"),
@@ -434,9 +452,22 @@ public class ReactGenerateService {
 
     /** DB 저장 형식(yyyyMMddHHmmss)을 사람이 읽기 쉬운 형식(yyyy-MM-dd HH:mm)으로 변환한다. */
     private String formatDtimeForExcel(String dtime) {
-        if (dtime == null || dtime.length() < 12) return dtime != null ? dtime : "";
-        return dtime.substring(0, 4) + "-" + dtime.substring(4, 6) + "-" + dtime.substring(6, 8)
-                + " " + dtime.substring(8, 10) + ":" + dtime.substring(10, 12);
+        if (dtime == null || dtime.length() != 14) return dtime != null ? dtime : "";
+        try {
+            return LocalDateTime.parse(dtime, FORMATTER).format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm"));
+        } catch (Exception e) {
+            log.warn("날짜 형식 변환 실패 — dtime: {}", dtime);
+            return dtime;
+        }
+    }
+
+    /**
+     * LIKE 검색 시 SQL 와일드카드 문자(%, _)를 이스케이프한다.
+     * Oracle ESCAPE '\' 절과 함께 사용되며, null이면 그대로 반환한다.
+     */
+    private String escapeLike(String value) {
+        if (value == null) return null;
+        return value.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_");
     }
 
     /** 영문 상태 코드를 한글 레이블로 변환한다. */
@@ -452,9 +483,11 @@ public class ReactGenerateService {
     }
 
     /** CODE_ID로 이력을 조회하고, 없으면 NotFoundException을 던진다. */
-    private void requireExists(String id) {
-        if (reactGenerateMapper.selectById(id) == null) {
+    private ReactGenerateResponse requireExists(String id) {
+        ReactGenerateResponse response = reactGenerateMapper.selectById(id);
+        if (response == null) {
             throw new NotFoundException("생성 결과를 찾을 수 없습니다. codeId=" + id);
         }
+        return response;
     }
 }

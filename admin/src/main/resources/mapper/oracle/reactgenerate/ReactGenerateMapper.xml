@@ -57,8 +57,8 @@
                 AND STATUS = #{req.status}
             </if>
             <if test="req.createUserId != null and req.createUserId != ''">
-                <!-- 부분 일치 검색 -->
-                AND CREATE_USER_ID LIKE '%' || #{req.createUserId} || '%'
+                <!-- 부분 일치 검색. 서비스에서 %, _ 이스케이프 처리 후 전달됨 -->
+                AND CREATE_USER_ID LIKE '%' || #{req.createUserId} || '%' ESCAPE '\'
             </if>
             <if test="req.fromDate != null and req.fromDate != ''">
                 <!-- DB 저장 형식이 yyyyMMddHHmmss이므로 시작일의 00:00:00부터 포함 -->

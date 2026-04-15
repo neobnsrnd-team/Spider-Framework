@@ -42,7 +42,8 @@ public class ReactGenerateController {
     @PostMapping("/{id}/request-approval")
     @PreAuthorize("hasAuthority('REACT_GENERATE:W')")
     public ResponseEntity<ApiResponse<ReactGenerateApprovalResponse>> requestApproval(@PathVariable String id) {
-        return ResponseEntity.ok(ApiResponse.success(reactGenerateService.requestApproval(id)));
+        String currentUserId = SecurityUtil.getCurrentUserId();
+        return ResponseEntity.ok(ApiResponse.success(reactGenerateService.requestApproval(id, currentUserId)));
     }
 
     @PostMapping("/{id}/approve")
@@ -74,10 +75,10 @@ public class ReactGenerateController {
         byte[] excelBytes = reactGenerateService.exportHistory(req);
         String fileName = ExcelExportUtil.generateFileName("ReactGenerateHistory", LocalDate.now());
         HttpHeaders headers = new HttpHeaders();
-        headers.setContentDisposition(ContentDisposition.attachment().filename(fileName).build());
+        headers.setContentDisposition(
+                ContentDisposition.attachment().filename(fileName).build());
         headers.setContentType(
-                MediaType.parseMediaType(
-                        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"));
+                MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"));
         return ResponseEntity.ok().headers(headers).body(excelBytes);
     }
 

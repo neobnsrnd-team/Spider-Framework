@@ -29,7 +29,7 @@ public class ReactGenerateSearchRequest {
     /** 현재 페이지 번호 (1-based). */
     private int page = 1;
 
-    /** 페이지당 표시 건수. 기본값 20. */
+    /** 페이지당 표시 건수. 기본값 10. */
     private int size = 10;
 
     /**
