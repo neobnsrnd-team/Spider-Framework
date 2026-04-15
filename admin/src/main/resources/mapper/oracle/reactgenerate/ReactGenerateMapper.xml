@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<!--
+    ReactGenerate Mapper (REACT_GENERATE_HIS)
+    - React 코드 생성 이력 INSERT / SELECT / UPDATE
+-->
+<mapper namespace="com.example.admin_demo.domain.reactgenerate.mapper.ReactGenerateMapper">
+
+    <!-- ==================== INSERT ==================== -->
+
+    <insert id="insert">
+        INSERT INTO REACT_GENERATE_HIS (
+            ID,
+            FIGMA_URL,
+            REQUIREMENTS,
+            SYSTEM_PROMPT,
+            USER_PROMPT,
+            REACT_CODE,
+            STATUS,
+            CREATED_BY,
+            CREATED_AT
+        ) VALUES (
+            #{id,jdbcType=VARCHAR},
+            #{figmaUrl,jdbcType=VARCHAR},
+            #{requirements,jdbcType=CLOB},
+            #{systemPrompt,jdbcType=CLOB},
+            #{userPrompt,jdbcType=CLOB},
+            #{reactCode,jdbcType=CLOB},
+            'GENERATED',
+            #{createdBy,jdbcType=VARCHAR},
+            #{createdAt,jdbcType=VARCHAR}
+        )
+    </insert>
+
+    <!-- ==================== SELECT ==================== -->
+
+    <sql id="selectColumns">
+        ID          AS id,
+        FIGMA_URL   AS figmaUrl,
+        REACT_CODE  AS reactCode,
+        STATUS      AS status,
+        CREATED_AT  AS createdAt
+    </sql>
+
+    <select id="selectById" resultType="com.example.admin_demo.domain.reactgenerate.dto.ReactGenerateResponse">
+        SELECT
+            <include refid="selectColumns"/>
+        FROM REACT_GENERATE_HIS
+        WHERE ID = #{id,jdbcType=VARCHAR}
+    </select>
+
+    <!-- ==================== UPDATE ==================== -->
+
+    <update id="updateStatus">
+        UPDATE REACT_GENERATE_HIS
+        SET
+            STATUS      = #{status,jdbcType=VARCHAR},
+            APPROVED_BY = #{approvedBy,jdbcType=VARCHAR},
+            APPROVED_AT = #{approvedAt,jdbcType=VARCHAR}
+        WHERE ID = #{id,jdbcType=VARCHAR}
+    </update>
+
+</mapper>

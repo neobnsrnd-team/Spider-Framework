@@ -29,8 +29,8 @@ import type { LoginPageProps } from "./types";
 export type { LoginPageProps } from "./types";
 
 export function LoginPage({
-  userId = '',
-  password = '',
+  userId = "",
+  password = "",
   onUserIdChange,
   onPasswordChange,
   hasError = false,
@@ -98,15 +98,17 @@ export function LoginPage({
             helperText={
               hasError ? "아이디 또는 비밀번호가 틀렸습니다" : undefined
             }
+            // iconOnly 모드에서는 children이 숨겨지므로 leftIcon으로 아이콘을 전달한다
             rightElement={
-              <button
-                type="button"
-                onClick={onTogglePassword}
+              <Button
+                variant="ghost"
+                size="sm"
+                iconOnly
                 aria-label={showPassword ? "비밀번호 숨김" : "비밀번호 표시"}
+                onClick={onTogglePassword}
                 className="text-text-muted"
-              >
-                {showPassword ? <Eye size={20} /> : <EyeOff size={20} />}
-              </button>
+                leftIcon={showPassword ? <Eye size={20} /> : <EyeOff size={20} />}
+              />
             }
           />
         </Stack>

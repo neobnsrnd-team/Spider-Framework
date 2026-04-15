@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<th:block th:fragment="script">
+<script th:inline="javascript">
+    const HAS_REACT_WRITE = /*[[${userAuthorities != null && userAuthorities.contains('REACT_GENERATE:W')}]]*/ false;
+
+    let currentId = null;
+    let currentStatus = null;
+
+    const STATUS_LABEL = {
+        GENERATED:        { text: '생성 완료',  cls: 'bg-secondary' },
+        PENDING_APPROVAL: { text: '승인 대기',  cls: 'bg-warning text-dark' },
+        APPROVED:         { text: '승인 완료',  cls: 'bg-success' }
+    };
+
+    function updateStatusBadge(status) {
+        currentStatus = status;
+        const info = STATUS_LABEL[status] || { text: status, cls: 'bg-secondary' };
+        const badge = $('#statusBadge');
+        badge.text(info.text).removeClass().addClass('badge ' + info.cls);
+
+        // 버튼 상태 업데이트
+        $('#btnRequestApproval').prop('disabled', status !== 'GENERATED');
+        if ($('#btnApprove').length) {
+            $('#btnApprove').prop('disabled', status !== 'PENDING_APPROVAL');
+        }
+    }
+
+    // ─── 생성 ───────────────────────────────────────────────
+    $('#btnGenerate').on('click', function () {
+        const figmaUrl = $('#figmaUrlInput').val().trim();
+        if (!figmaUrl) {
+            Toast.warning('Figma URL을 입력해주세요.');
+            return;
+        }
+        if (!figmaUrl.startsWith('https://www.figma.com/')) {
+            Toast.warning('올바른 Figma URL 형식이 아닙니다.');
+            return;
+        }
+
+        $('#resultSection').addClass('d-none');
+        $('#generatingIndicator').removeClass('d-none');
+        $('#btnGenerate').prop('disabled', true);
+
+        const requirements = $('#requirementsInput').val().trim() || null;
+
+        $.ajax({
+            url: API_BASE_URL + '/react-generate/generate',
+            method: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify({ figmaUrl: figmaUrl, requirements: requirements }),
+            success: function (res) {
+                if (res.success && res.data) {
+                    renderResult(res.data);
+                } else {
+                    Toast.error(res.message || '코드 생성에 실패했습니다.');
+                }
+            },
+            error: function (xhr) {
+                const msg = xhr.responseJSON?.message || '코드 생성 중 오류가 발생했습니다.';
+                Toast.error(msg);
+            },
+            complete: function () {
+                $('#generatingIndicator').addClass('d-none');
+                $('#btnGenerate').prop('disabled', false);
+            }
+        });
+    });
+
+    function renderResult(data) {
+        currentId = data.id;
+
+        // 메타 정보
+        $('#resultMeta').text('생성일시: ' + (data.createdAt || ''));
+
+        // 화면 미리보기: postMessage로 Preview App에 생성 코드 전달
+        // iframe이 이미 로드되어 있으면 즉시 전달, 아직 로딩 중이면 onload 후 전달
+        const frame = document.getElementById('previewFrame');
+        const sendCode = () => {
+            frame.contentWindow.postMessage(
+                { type: 'UPDATE_CODE', code: data.reactCode || '' },
+                '*'
+            );
+        };
+        if (frame.contentDocument?.readyState === 'complete') {
+            sendCode();
+        } else {
+            frame.onload = sendCode;
+        }
+
+        // 코드 미리보기 (escape XSS)
+        const escaped = (data.reactCode || '').replace(/&/g, '&amp;')
+                                               .replace(/</g, '&lt;')
+                                               .replace(/>/g, '&gt;');
+        document.getElementById('codeDisplay').innerHTML = escaped;
+
+        updateStatusBadge(data.status);
+        $('#resultSection').removeClass('d-none');
+
+        // 첫 탭 활성화
+        const screenTab = new bootstrap.Tab(document.getElementById('tab-screen'));
+        screenTab.show();
+    }
+
+    // ─── 코드 복사 ───────────────────────────────────────────
+    $('#btnCopyCode').on('click', function () {
+        const code = document.getElementById('codeDisplay').textContent;
+        navigator.clipboard.writeText(code).then(function () {
+            Toast.success('코드가 클립보드에 복사되었습니다.');
+        }).catch(function () {
+            Toast.error('복사에 실패했습니다.');
+        });
+    });
+
+    // ─── 승인 요청 ───────────────────────────────────────────
+    $('#btnRequestApproval').on('click', function () {
+        if(alert('구현 예정입니다.')) return;
+
+        if (!currentId) return;
+        if (!confirm('승인을 요청하시겠습니까?')) return;
+
+        $.ajax({
+            url: API_BASE_URL + '/react-generate/' + currentId + '/request-approval',
+            method: 'POST',
+            success: function (res) {
+                if (res.success && res.data) {
+                    updateStatusBadge(res.data.status);
+                    Toast.success('승인 요청이 완료되었습니다.');
+                } else {
+                    Toast.error(res.message || '승인 요청에 실패했습니다.');
+                }
+            },
+            error: function (xhr) {
+                Toast.error(xhr.responseJSON?.message || '승인 요청 중 오류가 발생했습니다.');
+            }
+        });
+    });
+
+    // ─── 승인 ────────────────────────────────────────────────
+    $('#btnApprove').on('click', function () {
+        if(alert('구현 예정입니다.')) return;
+
+        if (!currentId) return;
+        if (!confirm('해당 코드를 승인하시겠습니까?')) return;
+
+        $.ajax({
+            url: API_BASE_URL + '/react-generate/' + currentId + '/approve',
+            method: 'POST',
+            success: function (res) {
+                if (res.success && res.data) {
+                    updateStatusBadge(res.data.status);
+                    Toast.success('승인이 완료되었습니다. (승인자: ' + (res.data.approvedBy || '') + ')');
+                } else {
+                    Toast.error(res.message || '승인에 실패했습니다.');
+                }
+            },
+            error: function (xhr) {
+                Toast.error(xhr.responseJSON?.message || '승인 처리 중 오류가 발생했습니다.');
+            }
+        });
+    });
+
+    // ─── Enter 키 지원 ──────────────────────────────────────
+    $('#figmaUrlInput').on('keydown', function (e) {
+        if (e.key === 'Enter') {
+            $('#btnGenerate').trigger('click');
+        }
+    });
+</script>
+</th:block>
+</body>
+</html>

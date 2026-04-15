@@ -12,14 +12,6 @@ export type { CardInfoSection };
 /** 탭 식별자 */
 export type StatementTab = 'payment' | 'statement';
 
-/** 카드 선택 드롭다운 옵션 */
-export interface CardOption {
-  /** select value. 예: 'card-1' */
-  value: string;
-  /** select 표시 레이블. 예: '하나 머니 체크카드' */
-  label: string;
-}
-
 /** 카드별 결제 항목 — CardPaymentItem 1행에 대응 */
 export interface CardPaymentEntry {
   id: string;
@@ -76,18 +68,17 @@ export interface StatementTabData {
 export interface PaymentStatementPageProps {
   /** 초기 활성 탭 (기본: 'payment') */
   initialTab?: StatementTab;
-  /** 카드 선택 드롭다운 목록 */
-  cardOptions: CardOption[];
-  /** 초기 선택 카드 value */
-  initialCardValue?: string;
+  /**
+   * 월 선택 피커의 초기 선택 값 ('YYYY-MM').
+   * 미전달 시 오늘 날짜 기준 월로 초기화된다.
+   */
+  initialMonth?: string;
   /** 결제예정금액 탭 데이터 */
   paymentData: PaymentTabData;
   /** 이용대금명세서 탭 데이터 */
   statementData: StatementTabData;
-  /** 카드 변경 핸들러 */
-  onCardChange?: (value: string) => void;
-  /** 날짜(년월) 클릭 핸들러 */
-  onDateClick?: () => void;
+  /** 날짜(년월) 클릭 핸들러. 선택된 월을 'YYYY-MM' 형식으로 전달 */
+  onDateClick?: (yearMonth: string) => void;
   /** 리볼빙 버튼 클릭 */
   onRevolving?: () => void;
   /** 카드론 버튼 클릭 */
