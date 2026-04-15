@@ -23,19 +23,19 @@
  * @param onBack             - 뒤로가기
  * @param onClose            - 닫기(X)
  */
-import React, { useState } from 'react';
-import { X, Search } from 'lucide-react';
+import React, { useState } from "react";
+import { X, Search } from "lucide-react";
 
-import { PageLayout } from '@cl/layout/PageLayout';
-import { Button } from '@cl/core/Button';
-import { Typography } from '@cl/core/Typography';
-import { BillingPeriodLabel } from '@cl/biz/card/BillingPeriodLabel';
-import { CardPaymentActions } from '@cl/biz/card/CardPaymentActions';
+import { PageLayout } from "@cl/layout/PageLayout";
+import { Button } from "@cl/core/Button";
+import { Typography } from "@cl/core/Typography";
+import { BillingPeriodLabel } from "@cl/biz/card/BillingPeriodLabel";
+import { CardPaymentActions } from "@cl/biz/card/CardPaymentActions";
 
-import { UsageTransactionItem } from '@cl/biz/card/UsageTransactionItem';
-import { UsageHistoryFilterSheet } from '@cl/biz/card/UsageHistoryFilterSheet';
+import { UsageTransactionItem } from "@cl/biz/card/UsageTransactionItem";
+import { UsageHistoryFilterSheet } from "@cl/biz/card/UsageHistoryFilterSheet";
 
-import type { UsageHistoryPageProps, SearchFilter } from './types';
+import type { UsageHistoryPageProps, SearchFilter } from "./types";
 
 // ── 상수 ────────────────────────────────────────────────────
 
@@ -47,46 +47,57 @@ const PAGE_SIZE = 10;
  * 적용된 필터의 조회기간을 기반으로 BillingPeriodLabel의 시작/종료일을 계산한다.
  * @param filter - 적용된 검색 필터 (filter.customMonth 포함)
  */
-function computeBillingPeriod(filter: SearchFilter): { startDate: string; endDate: string } {
+function computeBillingPeriod(filter: SearchFilter): {
+  startDate: string;
+  endDate: string;
+} {
   const today = new Date();
   let start: Date;
   let end: Date;
 
-  if (filter.period === 'thisMonth') {
+  if (filter.period === "thisMonth") {
     start = new Date(today.getFullYear(), today.getMonth(), 1);
     end = new Date(today.getFullYear(), today.getMonth() + 1, 0);
-  } else if (filter.period === '1month') {
-    start = new Date(today.getFullYear(), today.getMonth() - 1, today.getDate());
+  } else if (filter.period === "1month") {
+    start = new Date(
+      today.getFullYear(),
+      today.getMonth() - 1,
+      today.getDate(),
+    );
     end = today;
-  } else if (filter.period === '3months') {
-    start = new Date(today.getFullYear(), today.getMonth() - 3, today.getDate());
+  } else if (filter.period === "3months") {
+    start = new Date(
+      today.getFullYear(),
+      today.getMonth() - 3,
+      today.getDate(),
+    );
     end = today;
   } else {
     /* custom: SearchFilter.customMonth 기준 월 1일 ~ 말일 */
-    const [year, month] = (filter.customMonth ?? '').split('-').map(Number);
+    const [year, month] = (filter.customMonth ?? "").split("-").map(Number);
     start = new Date(year, month - 1, 1);
     end = new Date(year, month, 0);
   }
 
   const fmt = (d: Date) =>
-    `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, '0')}.${String(d.getDate()).padStart(2, '0')}`;
+    `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, "0")}.${String(d.getDate()).padStart(2, "0")}`;
   return { startDate: fmt(start), endDate: fmt(end) };
 }
 
 /** 금액 포맷 */
 function formatAmount(n: number) {
-  return `${Math.abs(n).toLocaleString('ko-KR')}원`;
+  return `${Math.abs(n).toLocaleString("ko-KR")}원`;
 }
 
 // ── 메인 페이지 ───────────────────────────────────────────
 
 const DEFAULT_FILTER: SearchFilter = {
-  approval: 'approved',
-  cardType: 'all',
-  selectedCard: 'all',
-  region: 'all',
-  usageType: 'all',
-  period: 'thisMonth',
+  approval: "approved",
+  cardType: "all",
+  selectedCard: "all",
+  region: "all",
+  usageType: "all",
+  period: "thisMonth",
 };
 
 export function UsageHistoryPage({
@@ -104,7 +115,8 @@ export function UsageHistoryPage({
 }: UsageHistoryPageProps) {
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
   const [searchOpen, setSearchOpen] = useState(false);
-  const [appliedFilter, setAppliedFilter] = useState<SearchFilter>(DEFAULT_FILTER);
+  const [appliedFilter, setAppliedFilter] =
+    useState<SearchFilter>(DEFAULT_FILTER);
 
   const visibleTx = transactions.slice(0, visibleCount);
   const hasMore = visibleCount < transactions.length;
@@ -138,13 +150,20 @@ export function UsageHistoryPage({
         }
       >
         {/* ── 결제 요약 카드 ─────────────────────────────── */}
-        <div className="px-standard pt-md pb-lg">
-          <div className="flex flex-col gap-md bg-surface rounded-2xl shadow-card px-md py-lg">
+        <div className="px-standard pt-md">
+          <div className="flex flex-col gap-md bg-surface rounded-2xl shadow-card px-md">
             <div className="flex flex-col gap-xs">
-              <Typography variant="caption" color="muted">
-                {paymentSummary.date ? `${paymentSummary.date} 출금예정` : '출금예정일 정보 없음'}
+              <Typography variant="body-sm" color="muted">
+                {paymentSummary.date
+                  ? `${paymentSummary.date} 출금예정`
+                  : "출금예정일 정보 없음"}
               </Typography>
-              <Typography variant="subheading" weight="bold" color="heading" numeric>
+              <Typography
+                variant="heading"
+                weight="bold"
+                color="heading"
+                numeric
+              >
                 {formatAmount(paymentSummary.totalAmount)}
               </Typography>
             </div>
@@ -191,7 +210,11 @@ export function UsageHistoryPage({
               <div className="flex flex-col divide-y divide-border-subtle">
                 {visibleTx.map((tx) => (
                   /* onClick 전달 → 항목 클릭 시 상세 BottomSheet 노출 */
-                  <UsageTransactionItem key={tx.id} tx={tx} onClick={() => {}} />
+                  <UsageTransactionItem
+                    key={tx.id}
+                    tx={tx}
+                    onClick={() => {}}
+                  />
                 ))}
               </div>
               {hasMore && (

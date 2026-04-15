@@ -14,15 +14,29 @@
 
 require("dotenv").config();
 
-const express = require("express");
-const cors = require("cors");
+const express      = require("express");
+const cors         = require("cors");
+const cookieParser = require("cookie-parser");
 const { apiLogger } = require("./utils/logger");
 const jwt = require("jsonwebtoken");
 const { initPool, withConnection, closePool } = require("./db");
 const { detectBrand, maskCardNumber } = require("./utils/cardBrand");
+const { getBillingPeriod }            = require("./utils/billingPeriod");
+const { getBillingSummaryByMonth }    = require("./utils/billingByMonth");
 
-const JWT_SECRET = process.env.JWT_SECRET || "dev-secret";
-const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || "8h";
+const JWT_SECRET          = process.env.JWT_SECRET          || "dev-secret";
+// Access Token: 짧은 TTL — 만료 시 Refresh Token으로 재발급
+const JWT_ACCESS_EXPIRES_IN  = process.env.JWT_ACCESS_EXPIRES_IN  || "30m";
+// Refresh Token: 긴 TTL — httpOnly 쿠키로 관리 (JS 접근 불가)
+const JWT_REFRESH_SECRET     = process.env.JWT_REFRESH_SECRET     || "dev-refresh-secret";
+const JWT_REFRESH_EXPIRES_IN = process.env.JWT_REFRESH_EXPIRES_IN || "7d";
+
+/**
+ * POC용 인메모리 Refresh Token 저장소.
+ * 프로덕션에서는 Redis 또는 DB 테이블로 교체해야 한다.
+ * Map<userId, refreshToken>
+ */
+const refreshTokenStore = new Map();
 
 /** 보호 라우트에 적용할 JWT 검증 미들웨어 */
 function verifyToken(req, res, next) {
@@ -53,9 +67,13 @@ app.use(
         return cb(null, true);
       cb(new Error(`CORS blocked: ${origin}`));
     },
+    // withCredentials 요청(httpOnly 쿠키 전송)을 허용하기 위해 필수
+    credentials: true,
   }),
 );
 app.use(express.json());
+// httpOnly 쿠키(Refresh Token) 파싱
+app.use(cookieParser());
 app.use(apiLogger);
 
 // ── 개발용: D_SPIDERLINK의 POC_ 테이블 목록 및 컬럼 확인 ────────────────────
@@ -90,6 +108,51 @@ app.get("/api/dev/tables", async (_req, res) => {
   }
 });
 
+/**
+ * GET /api/dev/usage-stat
+ * POC_카드사용내역 "이용자" 컬럼 분포 진단용 엔드포인트.
+ *
+ * 반환:
+ *   totalCount   — 테이블 전체 레코드 수
+ *   distribution — { value, trimmedValue, count } 목록 (이용자 값별 건수)
+ *
+ * "이용자" 값의 선행/후행 공백이나 대소문자 차이가
+ * WHERE "이용자" = :userId 필터에서 레코드가 누락되는 주 원인이므로
+ * 원본 값(value)과 TRIM 값(trimmedValue)을 함께 반환한다.
+ */
+app.get("/api/dev/usage-stat", async (_req, res) => {
+  try {
+    const [countResult, distResult] = await Promise.all([
+      withConnection((conn) =>
+        conn.execute(
+          `SELECT COUNT(*) AS TOTAL_CNT FROM D_SPIDERLINK.POC_카드사용내역`,
+        ),
+      ),
+      withConnection((conn) =>
+        conn.execute(
+          `SELECT "이용자"        AS RAW_VAL,
+                  TRIM("이용자") AS TRIM_VAL,
+                  COUNT(*)       AS CNT
+             FROM D_SPIDERLINK.POC_카드사용내역
+            GROUP BY "이용자", TRIM("이용자")
+            ORDER BY CNT DESC`,
+        ),
+      ),
+    ]);
+
+    res.json({
+      totalCount:   countResult.rows[0]?.TOTAL_CNT ?? 0,
+      distribution: (distResult.rows || []).map((r) => ({
+        value:        r.RAW_VAL,       // DB에 실제 저장된 값 (공백 포함 가능)
+        trimmedValue: r.TRIM_VAL,      // 앞뒤 공백 제거 후 값
+        count:        r.CNT,
+      })),
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 app.get("/api/dev/columns/:tbl", async (req, res) => {
   try {
     const tbl = req.params.tbl.toUpperCase();
@@ -98,8 +161,9 @@ app.get("/api/dev/columns/:tbl", async (req, res) => {
         `SELECT COLUMN_NAME, DATA_TYPE
            FROM ALL_TAB_COLUMNS
           WHERE OWNER = 'D_SPIDERLINK'
-            AND TABLE_NAME = '${tbl}'
+            AND TABLE_NAME = :tbl
           ORDER BY COLUMN_ID`,
+        { tbl }, // SQL 인젝션 방지: bind variable 사용
       ),
     );
     res.json({ table: tbl, columns: result.rows });
@@ -164,21 +228,39 @@ app.post("/api/auth/login", async (req, res) => {
       console.warn("[login] LAST_LOGIN_DTIME 업데이트 실패:", e.message),
     );
 
-    const token = jwt.sign(
-      {
-        userId: row.USER_ID,
-        userName: row.USER_NAME,
-        userGrade: row.USER_GRADE,
-      },
-      JWT_SECRET,
-      { expiresIn: JWT_EXPIRES_IN },
-    );
+    const payload = {
+      userId:    row.USER_ID,
+      userName:  row.USER_NAME,
+      userGrade: row.USER_GRADE,
+    };
+
+    // Access Token: 짧은 TTL, Authorization 헤더로 전달
+    const accessToken = jwt.sign(payload, JWT_SECRET, {
+      expiresIn: JWT_ACCESS_EXPIRES_IN,
+    });
+
+    // Refresh Token: 긴 TTL, httpOnly 쿠키로 전달 (JS 접근 불가 → XSS 방지)
+    const refreshToken = jwt.sign(payload, JWT_REFRESH_SECRET, {
+      expiresIn: JWT_REFRESH_EXPIRES_IN,
+    });
+
+    // 인메모리 저장소에 등록 (탈취 감지용 — 저장값과 다르면 무효화)
+    refreshTokenStore.set(row.USER_ID, refreshToken);
+
+    // SameSite=lax: CSRF 방지 / path=/api/auth: 인증 경로에만 쿠키 전송
+    res.cookie("refreshToken", refreshToken, {
+      httpOnly: true,
+      secure:   false, // POC: HTTP 허용 (프로덕션에서는 true + HTTPS 필수)
+      sameSite: "lax",
+      maxAge:   7 * 24 * 60 * 60 * 1000, // 7일 (ms)
+      path:     "/api/auth",
+    });
 
     return res.json({
-      success: true,
-      token,
-      userId: row.USER_ID,
-      userName: row.USER_NAME,
+      success:   true,
+      token:     accessToken, // 기존 키 유지 (프론트 AuthUser.token 호환)
+      userId:    row.USER_ID,
+      userName:  row.USER_NAME,
       userGrade: row.USER_GRADE,
     });
   } catch (err) {
@@ -187,6 +269,55 @@ app.post("/api/auth/login", async (req, res) => {
       .status(500)
       .json({ success: false, message: "서버 오류가 발생했습니다." });
   }
+});
+
+/**
+ * POST /api/auth/refresh
+ * Refresh Token(httpOnly 쿠키)으로 새 Access Token 발급.
+ * 저장된 토큰과 불일치 시 탈취로 간주하고 해당 유저의 토큰을 무효화한다.
+ */
+app.post("/api/auth/refresh", (req, res) => {
+  const refreshToken = req.cookies?.refreshToken;
+
+  if (!refreshToken) {
+    return res.status(401).json({ error: "Refresh Token이 없습니다." });
+  }
+
+  try {
+    const decoded = jwt.verify(refreshToken, JWT_REFRESH_SECRET);
+    const stored  = refreshTokenStore.get(decoded.userId);
+
+    // 저장된 토큰과 불일치 → 탈취된 토큰으로 간주, 즉시 무효화
+    if (stored !== refreshToken) {
+      refreshTokenStore.delete(decoded.userId);
+      return res.status(401).json({ error: "유효하지 않은 Refresh Token입니다." });
+    }
+
+    const newAccessToken = jwt.sign(
+      { userId: decoded.userId, userName: decoded.userName, userGrade: decoded.userGrade },
+      JWT_SECRET,
+      { expiresIn: JWT_ACCESS_EXPIRES_IN },
+    );
+
+    return res.json({ accessToken: newAccessToken });
+  } catch {
+    return res.status(401).json({ error: "Refresh Token이 만료되었거나 유효하지 않습니다." });
+  }
+});
+
+/**
+ * POST /api/auth/logout
+ * Authorization: Bearer <accessToken>
+ * 인메모리 Refresh Token 삭제 + 쿠키 만료 처리.
+ */
+app.post("/api/auth/logout", verifyToken, (req, res) => {
+  // 인메모리 저장소에서 Refresh Token 제거
+  refreshTokenStore.delete(req.user.userId);
+
+  // 클라이언트 쿠키 만료 (maxAge=0)
+  res.clearCookie("refreshToken", { path: "/api/auth" });
+
+  return res.json({ success: true });
 });
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -448,10 +579,13 @@ function getDateRange(period, customMonth) {
 app.get("/api/transactions", verifyToken, async (req, res) => {
   try {
     const userId = req.user.userId;
-    const { cardId, period, customMonth, usageType } = req.query;
+    const { cardId, period, customMonth, usageType, fromDate: qFromDate, toDate: qToDate } = req.query;
 
-    // ── 날짜 범위 계산 ────────────────────────────────────────────
-    const { fromDate, toDate } = getDateRange(period, customMonth);
+    // ── 날짜 범위 계산 ─────────────────────────────────────────────
+    // fromDate/toDate 직접 전달 시 우선 사용, 없으면 period/customMonth로 계산
+    const { fromDate: rangeFrom, toDate: rangeTo } = getDateRange(period, customMonth);
+    const fromDate = qFromDate || rangeFrom;
+    const toDate   = qToDate   || rangeTo;
 
     // ── 동적 WHERE 절 구성 ───────────────────────────────────────
     let sql = `
@@ -510,73 +644,147 @@ app.get("/api/transactions", verifyToken, async (req, res) => {
  * GET /api/payment-statement
  * 결제예정금액 / 이용대금명세서 탭 데이터를 반환합니다.
  *
+ * Query Params (모두 선택):
+ *   paymentDay — 카드 결제일(1~31). 공여기간 계산 기준. 미전달 시 DB 첫 카드 결제일 사용.
+ *   yearMonth  — 'YYYY-MM'. 전달 시 결제예정일(YYMMDD) LIKE 필터로 전환 (공여기간 미적용).
+ *
  * Response 200:
  *   {
- *     dueDate: string,          // YYMMDD (결제예정일)
- *     totalAmount: number,      // 승인 건 이용금액 합계
- *     items: [{ cardNo, cardName, amount }],
- *     cardInfo: { paymentBank, paymentAccount, paymentDay }
+ *     dueDate      : string,   // YYMMDD (결제예정일, 대표값)
+ *     totalAmount  : number,
+ *     items        : [{ cardNo, cardName, amount, dueDate }],
+ *     cardInfo     : { paymentBank, paymentAccount, paymentDay } | null,
+ *     billingPeriod: { usageStart, usageEnd, dueDate } | null  // 'YYYY.MM.DD' 형식
  *   }
  */
 app.get("/api/payment-statement", verifyToken, async (req, res) => {
   try {
     const userId = req.user.userId;
+    const { yearMonth, paymentDay } = req.query;
 
-    const [txResult, cardResult] = await withConnection((conn) =>
-      Promise.all([
-        // 승인된 거래만 카드별 집계
-        conn.execute(
-          `SELECT "카드번호", "카드명", "이용금액", "결제예정일"
-             FROM D_SPIDERLINK.POC_카드사용내역
-            WHERE "이용자" = :userId AND "승인여부" = 'Y'`,
-          { userId },
-        ),
-        // 첫 번째 카드의 결제정보 (infoSections 용)
-        conn.execute(
-          `SELECT "결제은행명", "결제계좌", "결제일"
-             FROM D_SPIDERLINK.POC_카드리스트
-            WHERE "사용자아이디" = :userId
-              AND ROWNUM = 1
-            ORDER BY "결제순번" NULLS LAST`,
-          { userId },
-        ),
-      ]),
+    // ── 1. 카드 정보 조회 (결제은행·계좌·결제일) ───────────────────
+    // 전체 카드를 조회하여 카드별 결제일(cardSettings)을 구성한다.
+    // getBillingSummaryByMonth가 각 카드의 공여기간을 개별 적용하기 위해 필요.
+    const cardResult = await withConnection((conn) =>
+      conn.execute(
+        `SELECT "카드번호", "결제은행명", "결제계좌", "결제일"
+           FROM D_SPIDERLINK.POC_카드리스트
+          WHERE "사용자아이디" = :userId
+          ORDER BY "결제순번" NULLS LAST`,
+        { userId },
+      ),
     );
+    const cardRows = cardResult.rows || [];
 
-    const txRows   = txResult.rows   || [];
-    const cardRows = cardResult.rows  || [];
-
-    // ── 가장 많이 등장하는 결제예정일 ──────────────────────────
-    const dueDateCount = {};
-    txRows.forEach((r) => {
-      const d = r["결제예정일"];
-      if (d) dueDateCount[d] = (dueDateCount[d] || 0) + 1;
+    // { 카드번호: 결제일(number) } — getBillingSummaryByMonth에 전달
+    const cardSettings = {};
+    cardRows.forEach((row) => {
+      const no = String(row["카드번호"] ?? "").trim();
+      if (no) cardSettings[no] = Number(row["결제일"] ?? 25);
     });
-    const dueDate =
-      Object.entries(dueDateCount).sort((a, b) => b[1] - a[1])[0]?.[0] ?? "";
 
-    // ── 카드+결제예정일 조합별 이용금액 합계 (결제일이 다를 수 있음) ──
-    const cardMap = {};
-    txRows.forEach((r) => {
-      const key = `${r["카드번호"]}_${r["결제예정일"] ?? ""}`;
-      if (!cardMap[key])
-        cardMap[key] = { cardNo: r["카드번호"], cardName: r["카드명"] ?? "", amount: 0, dueDate: r["결제예정일"] ?? "" };
-      cardMap[key].amount += Number(r["이용금액"] ?? 0);
-    });
-    const items       = Object.values(cardMap);
-    const totalAmount = items.reduce((sum, item) => sum + item.amount, 0);
-
-    // ── 결제정보 (첫 번째 카드 기준) ──────────────────────────
-    const ci = cardRows[0];
+    const ci = cardRows[0] ?? null;
     const cardInfo = ci
       ? {
           paymentBank:    ci["결제은행명"] ?? "",
           paymentAccount: String(ci["결제계좌"] ?? ""),
-          paymentDay:     ci["결제일"] ?? "",
+          paymentDay:     String(ci["결제일"] ?? ""),
         }
       : null;
 
-    res.json({ dueDate, totalAmount, items, cardInfo });
+    // ── 2. 이용내역 조회 범위 결정 ──────────────────────────────────
+    // 이용일자(useDate)를 포함해야 getBillingSummaryByMonth가 공여기간을 계산할 수 있다.
+    let txSql = `SELECT "카드번호", "카드명", "이용금액", "결제예정일", "이용일자"
+                   FROM D_SPIDERLINK.POC_카드사용내역
+                  WHERE "이용자" = :userId AND "승인여부" = 'Y'`;
+    const txBinds = { userId };
+    let billingPeriodFormatted = null;
+
+    if (yearMonth) {
+      /* 카드별 공여기간 기반 필터:
+       * 어떤 결제일(1~27)이든 선택 청구월의 이용 시작일은 최소 2개월 전 이후다.
+       * 보수적 범위(targetMonth-2 ~ targetMonth 말일)로 DB를 조회하고,
+       * 정밀 필터링은 getBillingSummaryByMonth가 카드별로 수행한다. */
+      const [y, m] = yearMonth.split("-").map(Number);
+      let fromYear = y, fromMonth = m - 2;
+      if (fromMonth <= 0) { fromYear--; fromMonth += 12; }
+      const toDay = new Date(y, m, 0).getDate(); // targetMonth 말일
+      txBinds.fromDate = `${fromYear}${String(fromMonth).padStart(2, "0")}01`;
+      txBinds.toDate   = `${y}${String(m).padStart(2, "0")}${String(toDay).padStart(2, "0")}`;
+      txSql += ` AND "이용일자" >= :fromDate AND "이용일자" <= :toDate`;
+    } else {
+      /* 공여기간 필터: 전달받은 paymentDay 또는 DB 결제일 기준으로 이용일자 범위 산정 */
+      const D = paymentDay ?? cardInfo?.paymentDay;
+      if (D) {
+        try {
+          const bp = getBillingPeriod(new Date(), D);
+          txSql += ` AND "이용일자" >= :fromDate AND "이용일자" <= :toDate`;
+          txBinds.fromDate = bp.fromDate; // YYYYMMDD
+          txBinds.toDate   = bp.toDate;   // YYYYMMDD
+          billingPeriodFormatted = bp.formatted; // { usageStart, usageEnd, dueDate }
+        } catch (e) {
+          console.warn("[payment-statement] 공여기간 계산 실패:", e.message);
+        }
+      }
+    }
+
+    // ── 3. 이용내역 조회 ─────────────────────────────────────────────
+    const txResult = await withConnection((conn) => conn.execute(txSql, txBinds));
+    const txRows = txResult.rows || [];
+
+    // ── 4. 집계 (yearMonth 유무에 따라 분기) ──────────────────────────
+    let items, totalAmount, dueDate;
+
+    if (yearMonth) {
+      /* 카드별 결제일 공여기간을 개별 적용해 청구월을 정확히 판단 */
+      const rawItems = txRows.map((r) => ({
+        cardNo:   String(r["카드번호"] ?? ""),
+        cardName: r["카드명"] ?? "",
+        useDate:  String(r["이용일자"] ?? ""),
+        amount:   Number(r["이용금액"] ?? 0),
+        dueDate:  r["결제예정일"] ?? "",
+      }));
+      const summary = getBillingSummaryByMonth(rawItems, yearMonth, cardSettings);
+
+      /* 카드+결제예정일 조합별 재집계 (응답 포맷을 기존과 동일하게 유지) */
+      const cardMap = {};
+      summary.items.forEach((item) => {
+        const key = `${item.cardNo}_${item.dueDate}`;
+        if (!cardMap[key]) cardMap[key] = { cardNo: item.cardNo, cardName: item.cardName, amount: 0, dueDate: item.dueDate };
+        cardMap[key].amount += item.amount;
+      });
+      items       = Object.values(cardMap);
+      totalAmount = summary.totalAmount;
+
+      /* 대표 결제예정일 — 가장 많이 등장하는 값 */
+      const cnt = {};
+      summary.items.forEach((i) => { if (i.dueDate) cnt[i.dueDate] = (cnt[i.dueDate] || 0) + 1; });
+      dueDate = Object.entries(cnt).sort((a, b) => b[1] - a[1])[0]?.[0] ?? "";
+
+    } else {
+      /* 공여기간 기반 조회 — 기존 집계 로직 유지 */
+      const cardMap = {};
+      txRows.forEach((r) => {
+        const key = `${r["카드번호"]}_${r["결제예정일"] ?? ""}`;
+        if (!cardMap[key]) cardMap[key] = { cardNo: r["카드번호"], cardName: r["카드명"] ?? "", amount: 0, dueDate: r["결제예정일"] ?? "" };
+        cardMap[key].amount += Number(r["이용금액"] ?? 0);
+      });
+      items       = Object.values(cardMap);
+      totalAmount = items.reduce((sum, i) => sum + i.amount, 0);
+
+      const cnt = {};
+      txRows.forEach((r) => { const d = r["결제예정일"]; if (d) cnt[d] = (cnt[d] || 0) + 1; });
+      dueDate = Object.entries(cnt).sort((a, b) => b[1] - a[1])[0]?.[0] ?? "";
+    }
+
+    res.json({
+      dueDate,
+      totalAmount,
+      items,
+      cardInfo,
+      /** 공여기간 정보 — yearMonth 선택 시 null, 결제일 기반 조회 시 'YYYY.MM.DD' 형식 */
+      billingPeriod: billingPeriodFormatted,
+    });
   } catch (err) {
     console.error("[GET /api/payment-statement]", err);
     res.status(500).json({ error: "DB 조회 중 오류가 발생했습니다." });
