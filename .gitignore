@@ -37,6 +37,7 @@ build/
 ### Environment Configuration ###
 admin/.env
 src/main/resources/application-local.yaml
+demo/backend/.env
 
 ### Claude temp files ###
 tmpclaude-*
@@ -71,3 +72,6 @@ docs/plan
 .claude/worktrees/
 .claude/launch.json
 .claude/skills/
+
+### Oh My Claude Code ###
+.omc/

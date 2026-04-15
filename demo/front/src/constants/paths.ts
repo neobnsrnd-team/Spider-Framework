@@ -12,6 +12,11 @@
 export const PATHS = {
   LOGIN: "/login",
 
+  /** Admin 미리보기 전용 경로 — 인증 없이 접근 가능 */
+  PREVIEW: {
+    NOTICE: "/preview/notice",
+  },
+
   CARD: {
     DASHBOARD: "/card/dashboard",
     MENU: "/card/menu",

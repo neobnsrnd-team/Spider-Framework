@@ -38,6 +38,9 @@ menu-resource:
     v3_emergency_notice_manage:
       R: EMERGENCY_NOTICE:R
       W: EMERGENCY_NOTICE:W
+    v3_emergency_notice_deploy_manage:
+      R: EMERGENCY_NOTICE:R
+      W: EMERGENCY_NOTICE:W
     v3_was_status:
       R: WAS_GATEWAY_STATUS:R
       W: WAS_GATEWAY_STATUS:W

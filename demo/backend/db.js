@@ -20,6 +20,7 @@ const oracledb = require('oracledb');
 
 // ── Thick Mode 초기화 ────────────────────────────────────────────────────────
 // initOracleClient() 는 require() 직후, 다른 oracledb 호출보다 먼저 실행해야 합니다.
+// Oracle Client가 없는 환경에서도 SSE 등 DB 불필요 기능은 동작할 수 있도록 try-catch 처리.
 const clientOpts = {};
 if (process.env.ORACLE_CLIENT_PATH) {
   clientOpts.libDir = process.env.ORACLE_CLIENT_PATH;

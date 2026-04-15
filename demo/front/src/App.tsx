@@ -28,8 +28,9 @@ function AppRoutes() {
   const background = (location.state as { background?: Location })?.background
   const { isLoggedIn } = useAuth()
 
-  // 로그인 안 된 상태에서 로그인 페이지 외 접근 시 리다이렉트
-  if (!isLoggedIn && location.pathname !== PATHS.LOGIN) {
+  // 로그인 안 된 상태에서 로그인 페이지 및 미리보기 경로 외 접근 시 리다이렉트
+  // /preview/* 는 Admin iframe 미리보기용 공개 경로이므로 인증 불필요
+  if (!isLoggedIn && location.pathname !== PATHS.LOGIN && !location.pathname.startsWith('/preview')) {
     return <Navigate to={PATHS.LOGIN} replace />
   }
 
