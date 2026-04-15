@@ -517,6 +517,7 @@
                         Toast.success('변경사항이 저장되었습니다.');
                         this.load();
                         $('#selectAll').prop('checked', false);
+                        EventBus.emit('admin:userManage:roleChanged');
                     },
                     error: (xhr) => {
                         console.error('Failed to save changes:', xhr);
