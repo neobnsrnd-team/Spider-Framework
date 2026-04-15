@@ -70,10 +70,17 @@ function broadcastNotice(payload) {
 
     clients.forEach((res) => {
         try {
-            res.write(message);
+            const ok = res.write(message);
+            // write()가 false를 반환하면 쓰기 버퍼 포화(Backpressure) 상태.
+            // 데이터 유실 및 메모리 부하를 방지하기 위해 해당 연결을 종료한다.
+            if (!ok) {
+                clients.delete(res);
+                res.end();
+            }
         } catch (err) {
-            // 이미 닫힌 연결은 제거
+            // 이미 닫힌 연결 또는 쓰기 오류 — 스트림을 명확히 닫고 목록에서 제거
             clients.delete(res);
+            res.end();
         }
     });
 }

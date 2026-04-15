@@ -38,7 +38,9 @@ interface EmergencyNoticeBannerProps {
  * YYYY-MM-DD 형식이므로 날짜가 바뀌면 키가 달라져 자동 무효화된다.
  */
 function getTodayHideKey(): string {
-  const today = new Date().toISOString().slice(0, 10);
+  // toLocaleDateString('en-CA')는 로컬 시간대 기준 YYYY-MM-DD를 반환한다.
+  // toISOString()은 UTC 기준이므로 한국 시간 자정 전후로 날짜가 어긋날 수 있어 사용하지 않는다.
+  const today = new Date().toLocaleDateString("en-CA");
   return `emergency-notice-hidden-${today}`;
 }
 
@@ -106,8 +108,12 @@ export function EmergencyNoticeBanner({ data, onClose, forceOpen = false, lang =
 
   const contentLines = parseContent(notice.content || "").split("\n");
 
-  /* X 버튼: hideToday 미반영 — 단순 닫기 */
+  /* X 버튼: hideToday가 체크된 경우 localStorage에 저장 후 닫기
+   * 확인 버튼과 동일한 저장 동작을 수행하여 사용자가 X를 눌러도 설정이 유실되지 않는다. */
   const handleClose = () => {
+    if (hideToday) {
+      localStorage.setItem(getTodayHideKey(), "1");
+    }
     setOpen(false);
     onClose?.();
   };

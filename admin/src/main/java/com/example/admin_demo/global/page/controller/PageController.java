@@ -124,7 +124,8 @@ public class PageController {
 
     @GetMapping("/emergency-notice-deploys")
     public String emergencyNoticeDeploys(HttpServletRequest request, Model model) {
-        return resolveView(request, "pages/emergency-notice-deploy-manage/emergency-notice-deploy-manage :: content", model);
+        return resolveView(
+                request, "pages/emergency-notice-deploy-manage/emergency-notice-deploy-manage :: content", model);
     }
 
     @GetMapping("/reload")

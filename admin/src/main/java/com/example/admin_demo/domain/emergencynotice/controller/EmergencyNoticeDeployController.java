@@ -3,6 +3,7 @@ package com.example.admin_demo.domain.emergencynotice.controller;
 import com.example.admin_demo.domain.emergencynotice.dto.EmergencyNoticeSettingsRequest;
 import com.example.admin_demo.domain.emergencynotice.service.EmergencyNoticeDeployService;
 import com.example.admin_demo.global.dto.ApiResponse;
+import jakarta.validation.Valid;
 import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -76,7 +77,8 @@ public class EmergencyNoticeDeployController {
      */
     @PatchMapping("/settings")
     @PreAuthorize("hasAuthority('EMERGENCY_NOTICE:W')")
-    public ResponseEntity<ApiResponse<Void>> updateSettings(@RequestBody EmergencyNoticeSettingsRequest request) {
+    public ResponseEntity<ApiResponse<Void>> updateSettings(
+            @Valid @RequestBody EmergencyNoticeSettingsRequest request) {
         emergencyNoticeDeployService.updateSettings(request.getCloseableYn(), request.getHideTodayYn());
         return ResponseEntity.ok(ApiResponse.success(null));
     }

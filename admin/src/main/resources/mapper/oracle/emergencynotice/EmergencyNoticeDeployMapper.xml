@@ -94,6 +94,27 @@
         </if>
     </select>
 
+    <!--
+        쓰기 작업 전 행 잠금용 배포 상태 조회 (SELECT FOR UPDATE).
+        동시 요청이 같은 상태를 읽고 중복 배포·종료하는 TOCTOU 경쟁을 방지한다.
+        반드시 쓰기(@Transactional) 트랜잭션 내에서만 호출해야 한다.
+    -->
+    <select id="selectDeployStatusForUpdate" resultType="com.example.admin_demo.domain.emergencynotice.dto.EmergencyNoticeDeployStatusResponse">
+        SELECT p.DEPLOY_STATUS AS deployStatus,
+               p.START_DTIME   AS startDtime,
+               p.END_DTIME     AS endDtime,
+               (SELECT q.DEFAULT_VALUE FROM FWK_PROPERTY q
+                WHERE  q.PROPERTY_GROUP_ID = 'notice'
+                AND    q.PROPERTY_ID       = 'CLOSEABLE_YN')  AS closeableYn,
+               (SELECT q.DEFAULT_VALUE FROM FWK_PROPERTY q
+                WHERE  q.PROPERTY_GROUP_ID = 'notice'
+                AND    q.PROPERTY_ID       = 'HIDE_TODAY_YN') AS hideTodayYn
+        FROM   FWK_PROPERTY p
+        WHERE  p.PROPERTY_GROUP_ID = 'notice'
+        AND    p.PROPERTY_ID       = 'USE_YN'
+        FOR UPDATE
+    </select>
+
     <!-- 배포 시작: DEPLOY_STATUS='DEPLOYED', START_DTIME=now, END_DTIME=NULL -->
     <update id="updateDeployStart">
         UPDATE FWK_PROPERTY
@@ -151,8 +172,7 @@
                P.PROPERTY_ID,
                NVL((SELECT MAX(H.VERSION)
                     FROM   FWK_PROPERTY_HISTORY H
-                    WHERE  H.PROPERTY_GROUP_ID = P.PROPERTY_GROUP_ID
-                    AND    H.PROPERTY_ID       = P.PROPERTY_ID), 0) + 1,
+                    WHERE  H.PROPERTY_GROUP_ID = 'notice'), 0) + 1,
                P.PROPERTY_NAME,
                P.PROPERTY_DESC,
                P.DATA_TYPE,

@@ -17,8 +17,16 @@ public interface EmergencyNoticeDeployMapper {
 
     /**
      * 현재 배포 상태 조회 (USE_YN 행의 DEPLOY_STATUS, START_DTIME, END_DTIME)
+     * 읽기 전용 트랜잭션에서 사용한다.
      */
     EmergencyNoticeDeployStatusResponse selectDeployStatus();
+
+    /**
+     * 현재 배포 상태를 행 잠금(SELECT FOR UPDATE)과 함께 조회한다.
+     * 동시 요청이 같은 상태를 읽고 중복 배포하는 TOCTOU 경쟁을 방지하기 위해
+     * 쓰기 트랜잭션 최초 진입 시 반드시 이 메서드를 사용한다.
+     */
+    EmergencyNoticeDeployStatusResponse selectDeployStatusForUpdate();
 
     /**
      * 배포 이력 조회 (USE_YN 행의 FWK_PROPERTY_HISTORY, VERSION DESC).
@@ -30,9 +38,7 @@ public interface EmergencyNoticeDeployMapper {
      * @param pageSize 페이지당 최대 건수
      */
     List<EmergencyNoticeHistoryResponse> selectHistory(
-            @Param("reason") String reason,
-            @Param("offset") int offset,
-            @Param("pageSize") int pageSize);
+            @Param("reason") String reason, @Param("offset") int offset, @Param("pageSize") int pageSize);
 
     /**
      * 배포 이력 전체 건수 조회 (페이징 처리를 위한 totalCount).

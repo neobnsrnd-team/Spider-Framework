@@ -54,6 +54,19 @@ let currentNotice = null;
  */
 const refreshTokenStore = new Map();
 
+/**
+ * 로컬 환경 전용 미들웨어 — localhost 요청만 허용한다.
+ * /api/dev/* 진단 엔드포인트에 적용. 개발 완료 후 해당 라우트와 함께 삭제 예정.
+ */
+function localOnly(req, res, next) {
+  const ip = req.ip || req.connection.remoteAddress || "";
+  // ::1 = IPv6 루프백, 127.0.0.1 = IPv4 루프백
+  if (ip === "::1" || ip === "127.0.0.1" || ip.endsWith("127.0.0.1")) {
+    return next();
+  }
+  return res.status(403).json({ error: "로컬 환경에서만 접근할 수 있습니다." });
+}
+
 /** Admin 전용 엔드포인트 인증 미들웨어 — X-Admin-Secret 헤더 검증 */
 function verifyAdminSecret(req, res, next) {
   const secret = req.headers["x-admin-secret"];
@@ -102,7 +115,8 @@ app.use(cookieParser());
 app.use(apiLogger);
 
 // ── 개발용: D_SPIDERLINK의 POC_ 테이블 목록 및 컬럼 확인 ────────────────────
-app.get("/api/dev/raw", async (_req, res) => {
+// verifyToken 적용 — 인증된 사용자만 raw DB 데이터에 접근 가능
+app.get("/api/dev/raw", localOnly, async (_req, res) => {
   try {
     const result = await withConnection((conn) =>
       conn.execute(
@@ -117,7 +131,7 @@ app.get("/api/dev/raw", async (_req, res) => {
   }
 });
 
-app.get("/api/dev/tables", async (_req, res) => {
+app.get("/api/dev/tables", localOnly, async (_req, res) => {
   try {
     const result = await withConnection((conn) =>
       conn.execute(
@@ -145,7 +159,7 @@ app.get("/api/dev/tables", async (_req, res) => {
  * WHERE "이용자" = :userId 필터에서 레코드가 누락되는 주 원인이므로
  * 원본 값(value)과 TRIM 값(trimmedValue)을 함께 반환한다.
  */
-app.get("/api/dev/usage-stat", async (_req, res) => {
+app.get("/api/dev/usage-stat", localOnly, async (_req, res) => {
   try {
     const [countResult, distResult] = await Promise.all([
       withConnection((conn) =>
@@ -178,7 +192,7 @@ app.get("/api/dev/usage-stat", async (_req, res) => {
   }
 });
 
-app.get("/api/dev/columns/:tbl", async (req, res) => {
+app.get("/api/dev/columns/:tbl", localOnly, async (req, res) => {
   try {
     const tbl = req.params.tbl.toUpperCase();
     const result = await withConnection((conn) =>
