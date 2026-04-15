@@ -1,4 +1,4 @@
-package com.example.admin_demo.domain.reactgenerate.ai;
+package com.example.admin_demo.domain.reactgenerate.ai.client;
 
 import org.springframework.boot.context.properties.ConfigurationProperties;
 

@@ -42,6 +42,8 @@
         $('#resultSection').addClass('d-none');
         $('#generatingIndicator').removeClass('d-none');
         $('#btnGenerate').prop('disabled', true);
+        // 생성 중에는 초기화 버튼도 비활성화하여 요청 중간에 폼이 바뀌는 것을 방지
+        $('#btnReset').prop('disabled', true);
 
         const requirements = $('#requirementsInput').val().trim() || null;
 
@@ -64,22 +66,24 @@
             complete: function () {
                 $('#generatingIndicator').addClass('d-none');
                 $('#btnGenerate').prop('disabled', false);
+                $('#btnReset').prop('disabled', false);
             }
         });
     });
 
     function renderResult(data) {
-        currentId = data.id;
+        currentId = data.codeId;
 
         // 메타 정보
-        $('#resultMeta').text('생성일시: ' + (data.createdAt || ''));
+        $('#resultMeta').text('생성일시: ' + (data.createDtime || ''));
 
-        // 화면 미리보기: postMessage로 Preview App에 생성 코드 전달
+        // 화면 미리보기: postMessage로 Preview App에 생성 코드와 codeId 전달
+        // codeId는 Preview App이 렌더링 오류 보고 시 레코드 특정에 사용한다
         // iframe이 이미 로드되어 있으면 즉시 전달, 아직 로딩 중이면 onload 후 전달
         const frame = document.getElementById('previewFrame');
         const sendCode = () => {
             frame.contentWindow.postMessage(
-                { type: 'UPDATE_CODE', code: data.reactCode || '' },
+                { type: 'UPDATE_CODE', code: data.reactCode || '', codeId: data.codeId },
                 '*'
             );
         };
@@ -115,8 +119,6 @@
 
     // ─── 승인 요청 ───────────────────────────────────────────
     $('#btnRequestApproval').on('click', function () {
-        if(alert('구현 예정입니다.')) return;
-
         if (!currentId) return;
         if (!confirm('승인을 요청하시겠습니까?')) return;
 
@@ -139,7 +141,8 @@
 
     // ─── 승인 ────────────────────────────────────────────────
     $('#btnApprove').on('click', function () {
-        if(alert('구현 예정입니다.')) return;
+        alert('구현 예정입니다.');
+        return;
 
         if (!currentId) return;
         if (!confirm('해당 코드를 승인하시겠습니까?')) return;
@@ -161,11 +164,46 @@
         });
     });
 
+    // ─── 초기화 ─────────────────────────────────────────────
+    $('#btnReset').on('click', function () {
+        // 입력 폼 초기화
+        $('#figmaUrlInput').val('');
+        $('#requirementsInput').val('');
+
+        // 결과 영역 숨김 및 내부 상태 초기화
+        $('#resultSection').addClass('d-none');
+        $('#resultMeta').text('');
+        document.getElementById('codeDisplay').innerHTML = '';
+        currentId = null;
+        currentStatus = null;
+
+        // Preview App에 빈 코드를 전달하여 미리보기 화면 초기화
+        const frame = document.getElementById('previewFrame');
+        if (frame.contentDocument?.readyState === 'complete') {
+            frame.contentWindow.postMessage({ type: 'UPDATE_CODE', code: '' }, '*');
+        }
+
+        $('#figmaUrlInput').focus();
+    });
+
     // ─── Enter 키 지원 ──────────────────────────────────────
     $('#figmaUrlInput').on('keydown', function (e) {
         if (e.key === 'Enter') {
             $('#btnGenerate').trigger('click');
         }
+    });
+
+    // ─── Preview App 렌더링 오류 수신 ───────────────────────
+    // iframe(Preview App)이 postMessage로 전달한 RENDER_ERROR를 수신해 서버에 기록한다.
+    // fire-and-forget: 오류 기록 실패가 UX에 영향을 주지 않도록 에러 핸들러 생략
+    window.addEventListener('message', function (e) {
+        if (e.data?.type !== 'RENDER_ERROR' || !currentId) return;
+        $.ajax({
+            url: API_BASE_URL + '/react-generate/render-error',
+            method: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify({ codeId: currentId, errorMessage: e.data.error })
+        });
     });
 </script>
 </th:block>

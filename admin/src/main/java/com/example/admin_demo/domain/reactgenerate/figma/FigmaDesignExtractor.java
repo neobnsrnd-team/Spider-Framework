@@ -1,5 +1,7 @@
 package com.example.admin_demo.domain.reactgenerate.figma;
 
+import com.example.admin_demo.domain.reactgenerate.figma.client.FigmaNode;
+import com.example.admin_demo.domain.reactgenerate.figma.client.FigmaNodeResponse;
 import com.example.admin_demo.global.exception.NotFoundException;
 import java.util.Collections;
 import java.util.List;

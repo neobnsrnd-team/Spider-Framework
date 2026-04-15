@@ -1,4 +1,4 @@
-package com.example.admin_demo.domain.reactgenerate.figma;
+package com.example.admin_demo.domain.reactgenerate.figma.client;
 
 import com.example.admin_demo.global.exception.InternalException;
 import com.example.admin_demo.global.exception.NotFoundException;

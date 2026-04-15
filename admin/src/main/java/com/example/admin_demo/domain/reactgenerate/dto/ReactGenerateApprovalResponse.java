@@ -11,8 +11,8 @@ import lombok.NoArgsConstructor;
 @Builder
 public class ReactGenerateApprovalResponse {
 
-    private String id;
+    private String codeId;
     private String status;
-    private String approvedBy;
-    private String approvedAt;
+    private String approvalUserId;
+    private String approvalDtime;
 }

@@ -21,6 +21,8 @@ import { ErrorBoundary } from './ErrorBoundary'
 
 interface RendererProps {
   code: string
+  /** 렌더링 오류 보고 시 FWK_RPS_CODE_HIS 레코드 특정에 사용 */
+  codeId: string | null
 }
 
 /**
@@ -78,18 +80,23 @@ function patchExport(src: string): string {
   )
 }
 
-/** 렌더링 오류를 서버 오류 이력에 비동기로 전송한다 (fire-and-forget). */
-function reportRenderError(message: string): void {
+/**
+ * 렌더링 오류를 서버 오류 이력에 비동기로 전송한다 (fire-and-forget).
+ *
+ * @param message 오류 메시지
+ * @param codeId  FWK_RPS_CODE_HIS 레코드 특정용 ID (없으면 null — DB 업데이트 생략)
+ */
+function reportRenderError(message: string, codeId: string | null): void {
   fetch('/api/react-generate/render-error', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ errorMessage: message }),
+    body: JSON.stringify({ codeId, errorMessage: message }),
   }).catch(() => {
     // 로깅 실패가 UI 흐름을 방해하면 안 됨
   })
 }
 
-export default function Renderer({ code }: RendererProps) {
+export default function Renderer({ code, codeId }: RendererProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   // ReactDOM.Root를 ref로 보관해 code 변경 시 unmount 없이 재렌더링한다
   const rootRef = useRef<ReturnType<typeof ReactDOM.createRoot> | null>(null)
@@ -132,14 +139,14 @@ export default function Renderer({ code }: RendererProps) {
           ErrorBoundary,
           {
             key: renderKeyRef.current,
-            onError: (error: Error) => reportRenderError(error.message),
+            onError: (error: Error) => reportRenderError(error.message, codeId),
           },
           React.createElement(Component),
         ),
       )
     } catch (e) {
       // 트랜스파일 오류 (Babel 변환 실패, new Function 실패 등) — 동기 오류
-      reportRenderError(String(e))
+      reportRenderError(String(e), codeId)
 
       // 이전 React 렌더 결과를 언마운트한 뒤 오류 메시지를 직접 DOM에 삽입
       rootRef.current?.unmount()
