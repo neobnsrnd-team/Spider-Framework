@@ -73,7 +73,7 @@ import {
 /* ------------------------------------------------------------------ */
 
 /** localStorage 키 상수 */
-const LS_SAVED_ID   = "hnc_saved_id";
+const LS_SAVED_ID = "hnc_saved_id";
 const LS_AUTO_LOGIN = "hnc_auto_login";
 
 export function LoginRoute() {
@@ -81,11 +81,17 @@ export function LoginRoute() {
   const { login, isLoggedIn } = useAuth();
 
   // 이전 방문에서 저장된 값으로 초기화
-  const [saveId,    setSaveId]    = useState(() => !!localStorage.getItem(LS_SAVED_ID));
-  const [autoLogin, setAutoLogin] = useState(() => !!localStorage.getItem(LS_AUTO_LOGIN));
+  const [saveId, setSaveId] = useState(
+    () => !!localStorage.getItem(LS_SAVED_ID),
+  );
+  const [autoLogin, setAutoLogin] = useState(
+    () => !!localStorage.getItem(LS_AUTO_LOGIN),
+  );
 
   // 아이디 저장이 켜져 있으면 저장된 아이디로 초기화, 아니면 빈 문자열
-  const [userId,   setUserId]   = useState(() => localStorage.getItem(LS_SAVED_ID) ?? "");
+  const [userId, setUserId] = useState(
+    () => localStorage.getItem(LS_SAVED_ID) ?? "",
+  );
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [hasError, setHasError] = useState(false);
@@ -96,13 +102,13 @@ export function LoginRoute() {
 
   /**
    * 자동 로그인 처리: 플래그가 있고 이미 로그인 상태이면 대시보드로 이동한다.
-   * - 마운트 시 한 번만 확인하므로 의존성 배열을 비워둔다.
+   * isLoggedIn 또는 navigate가 바뀔 때마다 재평가한다.
    */
   useEffect(() => {
     if (isLoggedIn && localStorage.getItem(LS_AUTO_LOGIN)) {
       navigate(PATHS.CARD.DASHBOARD, { replace: true });
     }
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [isLoggedIn, navigate]);
 
   const handleLogin = async () => {
     setHasError(false);
@@ -126,10 +132,10 @@ export function LoginRoute() {
           localStorage.removeItem(LS_AUTO_LOGIN);
         }
         login({
-          userId:    data.userId,
-          userName:  data.userName,
+          userId: data.userId,
+          userName: data.userName,
           userGrade: data.userGrade,
-          token:     data.token,
+          token: data.token,
           lastLogin: data.lastLogin ?? "", // 최초 로그인 시 LAST_LOGIN_DTIME이 null이면 빈 문자열
         });
         navigate(PATHS.CARD.DASHBOARD);
@@ -220,7 +226,7 @@ export function CardDashboardRoute() {
       .get<{ lastLogin: string }>("/auth/me")
       .then(({ data }) => { if (data.lastLogin) setLastLogin(data.lastLogin); })
       .catch(() => {}); // 실패해도 화면 진입은 허용
-  }, [user?.userId]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [user?.userId, user?.lastLogin, setLastLogin]);
 
   // 대시보드 진입 시 이전 즉시결제 플로우의 세션 데이터를 일괄 삭제한다.
   // 완료 화면에서 삭제하지 않는 이유: 완료 화면을 건너뛰고 직접 대시보드로 오는 경우에도
