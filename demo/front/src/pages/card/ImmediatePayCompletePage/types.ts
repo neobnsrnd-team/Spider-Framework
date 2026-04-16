@@ -1,6 +1,6 @@
 /**
  * @file types.ts
- * @description ImmediatePayCompletePage (STEP 4 — 완료) 타입 정의.
+ * @description ImmediatePayCompletePage (STEP 4 — 완료/오류) 타입 정의.
  */
 
 export interface ImmediatePayCompletePageProps {
@@ -16,6 +16,11 @@ export interface ImmediatePayCompletePageProps {
   availableLimit: number;
   /** 처리일시. 예: '2026.04.09 14:32' */
   completedAt: string;
+  /**
+   * 결제 처리 중 발생한 오류 메시지.
+   * 값이 있으면 오류 화면을 표시하고, 없으면 성공 화면을 표시한다.
+   */
+  error?: string;
   /** 확인 버튼 클릭 (홈 또는 이전 화면으로 이동) */
   onConfirm?: () => void;
 }

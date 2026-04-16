@@ -721,7 +721,10 @@ app.get("/api/payment-statement", verifyToken, async (req, res) => {
           txBinds.toDate = bp.toDate; // YYYYMMDD
           billingPeriodFormatted = bp.formatted; // { usageStart, usageEnd, dueDate }
         } catch (e) {
-          console.warn("[payment-statement] 공여기간 계산 실패:", e.message);
+          // 공여기간 계산 실패 시 날짜 조건 없이 쿼리가 실행되면 전체 데이터가 조회되므로
+          // 조용히 무시하지 않고 에러를 상위로 전파해 500 응답을 반환한다
+          console.error("[payment-statement] 공여기간 계산 실패:", e.message);
+          throw new Error(`공여기간 계산 실패 (결제일: ${D}): ${e.message}`);
         }
       }
     }
@@ -888,7 +891,7 @@ app.post("/api/cards/:cardId/immediate-pay", verifyToken, async (req, res) => {
   try {
     const userId = req.user.userId;
     const { cardId } = req.params;
-    const { pin, amount } = req.body;
+    const { pin, amount, accountNumber } = req.body;
     const requestAmount = Number(amount);
 
     // PIN 검증 — 오늘 날짜의 MMDD (월·일 각 2자리, 예: 4월 15일 → "0415")
@@ -931,7 +934,66 @@ app.post("/api/cards/:cardId/immediate-pay", verifyToken, async (req, res) => {
 
     const result = await withConnection(async (conn) => {
       try {
-        // ── 1. 미결제 내역 조회 ─────────────────────────────────────
+        // ── 1. 뱅킹 계좌 잔액 차감 ──────────────────────────────────
+        // 잔액 부족 여부를 가장 먼저 확인해 이후 카드 처리 전에 실패를 조기 반환한다.
+        // FOR UPDATE로 동시 출금 요청에 의한 중복 차감을 방지한다.
+        const { rows: acctRows } = await conn.execute(
+          `SELECT "계좌잔액"
+             FROM D_SPIDERLINK.POC_뱅킹계좌정보
+            WHERE "계좌번호"    = :accountNumber
+              AND "사용자아이디" = :userId
+            FOR UPDATE`,
+          { accountNumber, userId },
+        );
+
+        if (!acctRows || acctRows.length === 0) {
+          // 계좌 미존재는 비즈니스 오류 — 시스템 오류 메시지로 감추지 않고 사용자에게 전달
+          const err = new Error("출금 계좌를 찾을 수 없습니다.");
+          err.code = "ACCOUNT_NOT_FOUND";
+          throw err;
+        }
+
+        const currentBalance = Number(acctRows[0]["계좌잔액"]);
+        if (currentBalance < requestAmount) {
+          // 잔액 부족은 서버 오류가 아니라 비즈니스 오류이므로 별도 에러 코드로 처리
+          const err = new Error("잔액이 부족합니다.");
+          err.code = "INSUFFICIENT_BALANCE";
+          throw err;
+        }
+
+        const newAccountBalance = currentBalance - requestAmount;
+
+        await conn.execute(
+          `UPDATE D_SPIDERLINK.POC_뱅킹계좌정보
+              SET "계좌잔액" = :newAccountBalance
+            WHERE "계좌번호"    = :accountNumber
+              AND "사용자아이디" = :userId`,
+          { newAccountBalance, accountNumber, userId },
+        );
+
+        // ── 2. 뱅킹 거래내역 INSERT ─────────────────────────────────
+        // 거래일시: DB 서버 SYSDATE 사용 — JS new Date()는 UTC 기준이라
+        // KST 자정~오전 9시 사이에 날짜가 하루 밀리는 버그가 있음
+        await conn.execute(
+          `INSERT INTO D_SPIDERLINK.POC_뱅킹거래내역
+             ("계좌번호", "거래일시", "거래점", "출금액", "입금액", "잔액",
+              "보낸분받는분", "적요", "송금메모", "입금계좌번호", "사용자아이디")
+           VALUES
+             (:accountNumber,
+              TO_CHAR(SYSDATE, 'YYYYMMDDHH24MISS'),
+              '하나카드',
+              :requestAmount,
+              0,
+              :newAccountBalance,
+              '하나카드사',
+              '카드즉시결제',
+              NULL,
+              :cardId,
+              :userId)`,
+          { accountNumber, requestAmount, newAccountBalance, cardId, userId },
+        );
+
+        // ── 3. 미결제 내역 조회 ─────────────────────────────────────
         // FOR UPDATE로 해당 행을 잠가 동시 결제 요청으로 인한 이중 차감을 방지한다.
         const { rows } = await conn.execute(
           `SELECT ROWID,
@@ -951,7 +1013,7 @@ app.post("/api/cards/:cardId/immediate-pay", verifyToken, async (req, res) => {
         let totalPaid = 0; // 이번 결제에서 실제 차감된 총합계
         let processedCount = 0; // 업데이트된 내역 건수
 
-        // ── 2. 이용일자 오래된 순으로 순차 차감 ────────────────────
+        // ── 4. POC_카드사용내역 UPDATE — 이용일자 오래된 순으로 순차 차감
         for (const row of rows) {
           if (remaining <= 0) break;
 
@@ -994,20 +1056,20 @@ app.post("/api/cards/:cardId/immediate-pay", verifyToken, async (req, res) => {
           processedCount++;
         }
 
-        // ── 3. 한도 복원 ────────────────────────────────────────────
-        // 결제된 총합계만큼 이용가능금액을 가산하고 사용금액을 차감한다.
+        // ── 5. POC_카드리스트 UPDATE — 한도 복원 ────────────────────
+        // 결제된 총합계만큼 사용금액을 차감한다.
+        // 이용가능금액 컬럼은 없음 — 한도금액 - 사용금액으로 계산되는 파생값
         if (totalPaid > 0) {
           await conn.execute(
             `UPDATE D_SPIDERLINK.POC_카드리스트
                 SET "사용금액" = "사용금액" - :totalPaid
               WHERE "사용자아이디" = :userId
                 AND "카드번호"     = :cardId`,
-            // 이용가능금액 컬럼은 없음 — 한도금액 - 사용금액으로 계산되는 파생값
             { totalPaid, userId, cardId },
           );
         }
 
-        // ── 4. 커밋 — 모든 UPDATE가 성공해야 반영된다 ──────────────
+        // ── 6. 커밋 — 모든 UPDATE/INSERT가 성공해야 반영된다 ────────
         await conn.commit();
 
         // 처리일시는 DB 서버 시각 기준으로 반환 — 클라이언트 시각과 불일치 방지
@@ -1025,12 +1087,19 @@ app.post("/api/cards/:cardId/immediate-pay", verifyToken, async (req, res) => {
       } catch (err) {
         // 어느 한 단계라도 실패하면 전체 롤백하여 데이터 무결성 보장
         await conn.rollback();
+        // 잔액 부족은 비즈니스 오류이므로 code를 유지한 채 상위로 전파
         throw err;
       }
     });
 
     res.json(result);
   } catch (err) {
+    // 비즈니스 오류는 사용자에게 구체적인 사유를 전달하기 위해 422로 응답한다.
+    // 시스템 오류(DB 장애 등)는 내부 상세를 노출하지 않고 일반 메시지만 반환한다.
+    const BUSINESS_ERROR_CODES = ["INSUFFICIENT_BALANCE", "ACCOUNT_NOT_FOUND"];
+    if (BUSINESS_ERROR_CODES.includes(err.code)) {
+      return res.status(422).json({ error: err.message });
+    }
     console.error("[POST /api/cards/:cardId/immediate-pay]", err);
     res.status(500).json({ error: "즉시결제 처리 중 오류가 발생했습니다." });
   }
