@@ -72,10 +72,26 @@ import {
 /* 공통 / 인증                                                           */
 /* ------------------------------------------------------------------ */
 
+/** localStorage 키 상수 */
+const LS_SAVED_ID = "hnc_saved_id";
+const LS_AUTO_LOGIN = "hnc_auto_login";
+
 export function LoginRoute() {
   const navigate = useNavigate();
-  const { login } = useAuth();
-  const [userId, setUserId] = useState("");
+  const { login, isLoggedIn } = useAuth();
+
+  // 이전 방문에서 저장된 값으로 초기화
+  const [saveId, setSaveId] = useState(
+    () => !!localStorage.getItem(LS_SAVED_ID),
+  );
+  const [autoLogin, setAutoLogin] = useState(
+    () => !!localStorage.getItem(LS_AUTO_LOGIN),
+  );
+
+  // 아이디 저장이 켜져 있으면 저장된 아이디로 초기화, 아니면 빈 문자열
+  const [userId, setUserId] = useState(
+    () => localStorage.getItem(LS_SAVED_ID) ?? "",
+  );
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [hasError, setHasError] = useState(false);
@@ -83,6 +99,16 @@ export function LoginRoute() {
   const [sessionMessage, setSessionMessage] = useState(
     () => sessionStorage.getItem("sessionExpiredMessage") ?? "",
   );
+
+  /**
+   * 자동 로그인 처리: 플래그가 있고 이미 로그인 상태이면 대시보드로 이동한다.
+   * isLoggedIn 또는 navigate가 바뀔 때마다 재평가한다.
+   */
+  useEffect(() => {
+    if (isLoggedIn && localStorage.getItem(LS_AUTO_LOGIN)) {
+      navigate(PATHS.CARD.DASHBOARD, { replace: true });
+    }
+  }, [isLoggedIn, navigate]);
 
   const handleLogin = async () => {
     setHasError(false);
@@ -93,11 +119,24 @@ export function LoginRoute() {
         password,
       });
       if (data.success) {
+        // 아이디 저장: 체크 시 userId를 localStorage에 보관, 해제 시 삭제
+        if (saveId) {
+          localStorage.setItem(LS_SAVED_ID, userId);
+        } else {
+          localStorage.removeItem(LS_SAVED_ID);
+        }
+        // 자동 로그인: 체크 시 플래그를 저장해 다음 방문 시 대시보드로 자동 이동
+        if (autoLogin) {
+          localStorage.setItem(LS_AUTO_LOGIN, "1");
+        } else {
+          localStorage.removeItem(LS_AUTO_LOGIN);
+        }
         login({
           userId: data.userId,
           userName: data.userName,
           userGrade: data.userGrade,
           token: data.token,
+          lastLogin: data.lastLogin ?? "", // 최초 로그인 시 LAST_LOGIN_DTIME이 null이면 빈 문자열
         });
         navigate(PATHS.CARD.DASHBOARD);
       } else {
@@ -119,6 +158,10 @@ export function LoginRoute() {
         showPassword={showPassword}
         onTogglePassword={() => setShowPassword((v) => !v)}
         onLogin={handleLogin}
+        saveId={saveId}
+        onSaveIdChange={setSaveId}
+        autoLogin={autoLogin}
+        onAutoLoginChange={setAutoLogin}
       />
       <Modal
         open={!!sessionMessage}
@@ -165,7 +208,7 @@ function parseDueDateKo(raw: string): string {
 export function CardDashboardRoute() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { user } = useAuth();
+  const { user, setLastLogin } = useAuth();
   const { notice } = useEmergencyNotice(); // SSE 긴급공지 구독
 
   /** StatementHeroCard: 공여기간 기준 이번 달 결제 예정 금액 */
@@ -174,6 +217,29 @@ export function CardDashboardRoute() {
   const [statementDueDate, setStatementDueDate] = useState("");
   /** SummaryCard(spending): 당월 이용내역 합산 금액 */
   const [spendingAmount, setSpendingAmount] = useState(0);
+
+  // lastLogin이 없는 경우(변경 전 로그인 세션, 자동 로그인 등) /api/auth/me로 보완한다.
+  // Access Token이 유효한 동안은 refresh가 호출되지 않으므로 대시보드 진입 시점에 한 번 확인한다.
+  useEffect(() => {
+    if (!user?.userId || user.lastLogin) return;
+    axiosInstance
+      .get<{ lastLogin: string }>("/auth/me")
+      .then(({ data }) => { if (data.lastLogin) setLastLogin(data.lastLogin); })
+      .catch(() => {}); // 실패해도 화면 진입은 허용
+  }, [user?.userId, user?.lastLogin, setLastLogin]);
+
+  // 대시보드 진입 시 이전 즉시결제 플로우의 세션 데이터를 일괄 삭제한다.
+  // 완료 화면에서 삭제하지 않는 이유: 완료 화면을 건너뛰고 직접 대시보드로 오는 경우에도
+  // 잔여 세션이 남지 않도록 대시보드 진입 시점을 기준으로 정리한다.
+  useEffect(() => {
+    [
+      "immediatePaySelectedCard",
+      "immediatePayAmountInfo",
+      "immediatePayRequestData",
+      "immediatePaySelectedAccount",
+      "immediatePayCompletedAt",
+    ].forEach((key) => sessionStorage.removeItem(key));
+  }, []); // 대시보드 마운트 시 한 번만 실행
 
   useEffect(() => {
     if (!user?.userId) return;
@@ -1003,20 +1069,11 @@ export function ImmediatePayCompleteRoute() {
   const navigate = useNavigate();
 
   // 이전 단계에서 세션에 저장된 카드·결제·계좌·금액·처리일시 정보를 읽는다.
+  // 세션 삭제는 대시보드 진입 시 수행한다 (CardDashboardRoute useEffect 참고).
   const storedCard = sessionStorage.getItem("immediatePaySelectedCard");
   const storedRequest = sessionStorage.getItem("immediatePayRequestData");
   const storedAccount = sessionStorage.getItem("immediatePaySelectedAccount");
   const storedAmountInfo = sessionStorage.getItem("immediatePayAmountInfo");
-  // 화면이 마운트되면(데이터 읽기 완료 후) 즉시결제 플로우 세션을 일괄 삭제한다.
-  useEffect(() => {
-    [
-      "immediatePaySelectedCard",
-      "immediatePayAmountInfo",
-      "immediatePayRequestData",
-      "immediatePaySelectedAccount",
-      "immediatePayCompletedAt",
-    ].forEach((key) => sessionStorage.removeItem(key));
-  }, []);
 
   // 서버 반환 처리일시 사용. 세션 없음·"undefined" 문자열인 경우 클라이언트 현재 시각으로 대체
   const rawCompletedAt = sessionStorage.getItem("immediatePayCompletedAt");
@@ -1336,7 +1393,7 @@ export function NoticePreviewRoute() {
  */
 export function HanaCardMenuModal() {
   const navigate = useNavigate();
-  const { logout } = useAuth();
+  const { user, logout } = useAuth();
 
   const menuItems: MenuItem[] = [
     {
@@ -1393,8 +1450,8 @@ export function HanaCardMenuModal() {
   return (
     <ModalSlideOver onClose={() => navigate(-1)}>
       <HanaCardMenuPage
-        userName="홍길동님"
-        lastLogin="2026.04.09 10:00:00"
+        userName={user ? `${user.userName}님` : ""}
+        lastLogin={user?.lastLogin ?? ""}
         categories={[
           { id: "all", label: "전체" },
           { id: "history", label: "이용내역" },

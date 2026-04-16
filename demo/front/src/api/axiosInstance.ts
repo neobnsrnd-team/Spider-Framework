@@ -27,7 +27,7 @@ const        STORAGE_KEY = 'hnc_auth';
 // ── 모듈 레벨 인증 콜백 ─────────────────────────────────────────────────────
 // React 컴포넌트 트리 외부에서 AuthContext 메서드를 호출하기 위한 참조.
 // AuthProvider 마운트 시 registerAuthCallbacks()로 등록된다.
-type TokenRefreshedCb = (newToken: string) => void;
+type TokenRefreshedCb = (newToken: string, lastLogin?: string) => void;
 type AuthFailureCb   = () => void;
 
 let _onTokenRefreshed: TokenRefreshedCb | null = null;
@@ -157,20 +157,25 @@ axiosInstance.interceptors.response.use(
     try {
       // axiosInstance 대신 axios 직접 사용 → 이 인터셉터 재진입 방지
       // withCredentials: true 로 httpOnly 쿠키(Refresh Token) 자동 전송
-      const { data } = await axios.post<{ accessToken: string }>(
+      const { data } = await axios.post<{ accessToken: string; lastLogin?: string }>(
         `${API_BASE}/auth/refresh`,
         {},
         { withCredentials: true },
       );
 
-      const newToken = data.accessToken;
+      const newToken  = data.accessToken;
+      const lastLogin = data.lastLogin;
 
-      // localStorage의 Access Token만 갱신 (Refresh Token은 쿠키로 백엔드 관리)
+      // localStorage의 Access Token과 lastLogin을 함께 갱신한다.
+      // lastLogin이 없는 경우(구버전 서버 호환) 기존 값을 유지한다.
       const raw  = localStorage.getItem(STORAGE_KEY);
       const auth = raw ? JSON.parse(raw) : {};
-      localStorage.setItem(STORAGE_KEY, JSON.stringify({ ...auth, token: newToken }));
+      localStorage.setItem(
+        STORAGE_KEY,
+        JSON.stringify({ ...auth, token: newToken, ...(lastLogin ? { lastLogin } : {}) }),
+      );
 
-      _onTokenRefreshed?.(newToken);
+      _onTokenRefreshed?.(newToken, lastLogin);
 
       isRefreshing = false;
       flushQueue(newToken);

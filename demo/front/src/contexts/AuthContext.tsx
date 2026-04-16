@@ -25,15 +25,18 @@ export interface AuthUser {
   userId:    string;
   userName:  string;
   userGrade: string;
-  token:     string; // Access Token (localStorage 저장, 짧은 TTL)
+  token:     string;     // Access Token (localStorage 저장, 짧은 TTL)
+  lastLogin: string;     // 이전 로그인 시각 (로그인 응답 시 업데이트 전 값, 'YYYY.MM.DD HH:MM:SS')
   // Refresh Token은 httpOnly 쿠키로 백엔드 관리 — 이 인터페이스에 포함하지 않음
 }
 
 interface AuthContextValue {
-  user:       AuthUser | null;
-  isLoggedIn: boolean;
-  login:      (user: AuthUser) => void;
-  logout:     () => void;
+  user:             AuthUser | null;
+  isLoggedIn:       boolean;
+  login:            (user: AuthUser) => void;
+  logout:           () => void;
+  /** lastLogin만 갱신한다. 자동 로그인 후 /api/auth/me로 보완할 때 사용. */
+  setLastLogin:     (lastLogin: string) => void;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -57,7 +60,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const logout = () => {
     localStorage.removeItem(STORAGE_KEY);
+    // 로그아웃 시 자동 로그인 해제 — 다음 방문에서 로그인 화면을 다시 거치도록 한다
+    localStorage.removeItem('hnc_auto_login');
     setUser(null);
+  };
+
+  const setLastLogin = (lastLogin: string) => {
+    setUser(prev => {
+      if (!prev) return prev;
+      const next = { ...prev, lastLogin };
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+      return next;
+    });
   };
 
   /**
@@ -68,9 +82,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
    */
   useEffect(() => {
     registerAuthCallbacks(
-      // Access Token 갱신 성공: token 필드만 교체 (나머지 사용자 정보 유지)
-      (newToken: string) => {
-        setUser(prev => (prev ? { ...prev, token: newToken } : prev));
+      // Access Token 갱신 성공: token·lastLogin 교체 (나머지 사용자 정보 유지)
+      // lastLogin이 전달된 경우(자동 로그인 등) '최근 접속 일시'를 즉시 갱신한다.
+      (newToken: string, lastLogin?: string) => {
+        setUser(prev =>
+          prev
+            ? { ...prev, token: newToken, ...(lastLogin ? { lastLogin } : {}) }
+            : prev,
+        );
       },
       // Refresh 실패: 완전 세션 만료 → 로그인 페이지 Modal용 메시지를 세션에 남기고 상태 초기화
       () => {
@@ -82,7 +101,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []); // 마운트 시 한 번만 등록
 
   return (
-    <AuthContext.Provider value={{ user, isLoggedIn: !!user, login, logout }}>
+    <AuthContext.Provider value={{ user, isLoggedIn: !!user, login, logout, setLastLogin }}>
       {children}
     </AuthContext.Provider>
   );

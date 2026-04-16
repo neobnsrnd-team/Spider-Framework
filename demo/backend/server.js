@@ -17,25 +17,30 @@
 
 require("dotenv").config();
 
-const express      = require("express");
-const cors         = require("cors");
+const express = require("express");
+const cors = require("cors");
 const cookieParser = require("cookie-parser");
 const { apiLogger } = require("./utils/logger");
 const jwt = require("jsonwebtoken");
 const { initPool, withConnection, closePool } = require("./db");
 const { detectBrand, maskCardNumber } = require("./utils/cardBrand");
-const { addClient, broadcastNotice, clientCount } = require("./utils/sseManager");
-const { getBillingPeriod }            = require("./utils/billingPeriod");
-const { getBillingSummaryByMonth }    = require("./utils/billingByMonth");
+const {
+  addClient,
+  broadcastNotice,
+  clientCount,
+} = require("./utils/sseManager");
+const { getBillingPeriod } = require("./utils/billingPeriod");
+const { getBillingSummaryByMonth } = require("./utils/billingByMonth");
 
-const JWT_SECRET          = process.env.JWT_SECRET          || "dev-secret";
+const JWT_SECRET = process.env.JWT_SECRET || "dev-secret";
 // Access Token: 짧은 TTL — 만료 시 Refresh Token으로 재발급
-const JWT_ACCESS_EXPIRES_IN  = process.env.JWT_ACCESS_EXPIRES_IN  || "30m";
+const JWT_ACCESS_EXPIRES_IN = process.env.JWT_ACCESS_EXPIRES_IN || "30m";
 // Refresh Token: 긴 TTL — httpOnly 쿠키로 관리 (JS 접근 불가)
-const JWT_REFRESH_SECRET     = process.env.JWT_REFRESH_SECRET     || "dev-refresh-secret";
+const JWT_REFRESH_SECRET =
+  process.env.JWT_REFRESH_SECRET || "dev-refresh-secret";
 const JWT_REFRESH_EXPIRES_IN = process.env.JWT_REFRESH_EXPIRES_IN || "7d";
 /** Admin → Demo Backend 호출 시 사용하는 공유 비밀 키 */
-const ADMIN_SECRET  = process.env.ADMIN_SECRET  || "admin-secret";
+const ADMIN_SECRET = process.env.ADMIN_SECRET || "admin-secret";
 
 /**
  * 현재 배포 중인 긴급공지 인메모리 상태.
@@ -190,11 +195,11 @@ app.get("/api/dev/usage-stat", localOnly, async (_req, res) => {
     ]);
 
     res.json({
-      totalCount:   countResult.rows[0]?.TOTAL_CNT ?? 0,
+      totalCount: countResult.rows[0]?.TOTAL_CNT ?? 0,
       distribution: (distResult.rows || []).map((r) => ({
-        value:        r.RAW_VAL,       // DB에 실제 저장된 값 (공백 포함 가능)
-        trimmedValue: r.TRIM_VAL,      // 앞뒤 공백 제거 후 값
-        count:        r.CNT,
+        value: r.RAW_VAL, // DB에 실제 저장된 값 (공백 포함 가능)
+        trimmedValue: r.TRIM_VAL, // 앞뒤 공백 제거 후 값
+        count: r.CNT,
       })),
     });
   } catch (err) {
@@ -221,7 +226,80 @@ app.get("/api/dev/columns/:tbl", localOnly, async (req, res) => {
   }
 });
 
+/**
+ * GET /api/dev/user-logins
+ * POC_USER 테이블의 전체 사용자 로그인 현황 진단용 엔드포인트.
+ * 개발 완료 후 이 라우트와 함께 삭제 예정.
+ */
+app.get("/api/dev/user-logins", localOnly, async (_req, res) => {
+  try {
+    const result = await withConnection((conn) =>
+      conn.execute(
+        `SELECT USER_ID, USER_NAME,
+                LAST_LOGIN_DTIME,
+                CASE
+                  WHEN LAST_LOGIN_DTIME IS NULL THEN '(없음)'
+                  ELSE TO_CHAR(
+                    TO_DATE(LAST_LOGIN_DTIME, 'YYYYMMDDHH24MISS'),
+                    'YYYY.MM.DD HH24:MI:SS'
+                  )
+                END AS LAST_LOGIN_FORMATTED
+           FROM D_SPIDERLINK.POC_USER
+          ORDER BY USER_ID`,
+      ),
+    );
+    res.json({
+      users: (result.rows || []).map((r) => ({
+        userId:             r.USER_ID,
+        userName:           r.USER_NAME,
+        lastLoginRaw:       r.LAST_LOGIN_DTIME,
+        lastLoginFormatted: r.LAST_LOGIN_FORMATTED,
+      })),
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // ── 인증 ─────────────────────────────────────────────────────────────────────
+
+/**
+ * GET /api/auth/me
+ * Authorization: Bearer <accessToken>
+ * 현재 로그인 사용자의 프로필과 최근 접속 일시를 반환한다.
+ * 자동 로그인 후 Access Token이 아직 유효해 refresh가 발생하지 않은 경우에도
+ * 프론트엔드가 lastLogin을 즉시 채울 수 있도록 제공한다.
+ */
+app.get("/api/auth/me", verifyToken, async (req, res) => {
+  try {
+    const { userId } = req.user;
+
+    const result = await withConnection((conn) =>
+      conn.execute(
+        `SELECT USER_NAME, USER_GRADE,
+                TO_CHAR(SYSDATE, 'YYYYMMDDHH24MISS') AS LAST_LOGIN_DTIME
+           FROM D_SPIDERLINK.POC_USER
+          WHERE USER_ID = :userId`,
+        { userId },
+      ),
+    );
+
+    const row = result.rows?.[0];
+    if (!row) {
+      return res.status(404).json({ error: "사용자를 찾을 수 없습니다." });
+    }
+
+    return res.json({
+      userId,
+      userName:  row.USER_NAME,
+      userGrade: row.USER_GRADE,
+      lastLogin: formatLoginDtime(row.LAST_LOGIN_DTIME),
+    });
+  } catch (err) {
+    console.error("[GET /api/auth/me]", err);
+    return res.status(500).json({ error: "서버 오류가 발생했습니다." });
+  }
+});
 
 /**
  * POST /api/auth/login
@@ -241,7 +319,8 @@ app.post("/api/auth/login", async (req, res) => {
   try {
     const result = await withConnection(async (conn) => {
       return conn.execute(
-        `SELECT USER_ID, USER_NAME, USER_GRADE, LOG_YN
+        `SELECT USER_ID, USER_NAME, USER_GRADE, LOG_YN,
+                TO_CHAR(SYSDATE, 'YYYYMMDDHH24MISS') AS LAST_LOGIN_DTIME
            FROM D_SPIDERLINK.POC_USER
           WHERE USER_ID = :userId AND PASSWORD = :password`,
         { userId, password },
@@ -278,8 +357,8 @@ app.post("/api/auth/login", async (req, res) => {
     );
 
     const payload = {
-      userId:    row.USER_ID,
-      userName:  row.USER_NAME,
+      userId: row.USER_ID,
+      userName: row.USER_NAME,
       userGrade: row.USER_GRADE,
     };
 
@@ -299,18 +378,20 @@ app.post("/api/auth/login", async (req, res) => {
     // SameSite=lax: CSRF 방지 / path=/api/auth: 인증 경로에만 쿠키 전송
     res.cookie("refreshToken", refreshToken, {
       httpOnly: true,
-      secure:   false, // POC: HTTP 허용 (프로덕션에서는 true + HTTPS 필수)
+      secure: false, // POC: HTTP 허용 (프로덕션에서는 true + HTTPS 필수)
       sameSite: "lax",
-      maxAge:   7 * 24 * 60 * 60 * 1000, // 7일 (ms)
-      path:     "/api/auth",
+      maxAge: 7 * 24 * 60 * 60 * 1000, // 7일 (ms)
+      path: "/api/auth",
     });
 
     return res.json({
-      success:   true,
-      token:     accessToken, // 기존 키 유지 (프론트 AuthUser.token 호환)
-      userId:    row.USER_ID,
-      userName:  row.USER_NAME,
+      success: true,
+      token: accessToken, // 기존 키 유지 (프론트 AuthUser.token 호환)
+      userId: row.USER_ID,
+      userName: row.USER_NAME,
       userGrade: row.USER_GRADE,
+      // LAST_LOGIN_DTIME 업데이트 전 값 — 이전 접속 시각을 메뉴 화면에 표시하기 위해 반환
+      lastLogin: formatLoginDtime(row.LAST_LOGIN_DTIME),
     });
   } catch (err) {
     console.error("[POST /api/auth/login]", err);
@@ -324,6 +405,7 @@ app.post("/api/auth/login", async (req, res) => {
  * POST /api/auth/refresh
  * Refresh Token(httpOnly 쿠키)으로 새 Access Token 발급.
  * 저장된 토큰과 불일치 시 탈취로 간주하고 해당 유저의 토큰을 무효화한다.
+ * 자동 로그인 등 재진입 시점을 포함해 세션 활동이 감지되므로 LAST_LOGIN_DTIME을 갱신한다.
  */
 app.post("/api/auth/refresh", (req, res) => {
   const refreshToken = req.cookies?.refreshToken;
@@ -334,23 +416,51 @@ app.post("/api/auth/refresh", (req, res) => {
 
   try {
     const decoded = jwt.verify(refreshToken, JWT_REFRESH_SECRET);
-    const stored  = refreshTokenStore.get(decoded.userId);
+    const stored = refreshTokenStore.get(decoded.userId);
 
     // 저장된 토큰과 불일치 → 탈취된 토큰으로 간주, 즉시 무효화
     if (stored !== refreshToken) {
       refreshTokenStore.delete(decoded.userId);
-      return res.status(401).json({ error: "유효하지 않은 Refresh Token입니다." });
+      return res
+        .status(401)
+        .json({ error: "유효하지 않은 Refresh Token입니다." });
     }
 
     const newAccessToken = jwt.sign(
-      { userId: decoded.userId, userName: decoded.userName, userGrade: decoded.userGrade },
+      {
+        userId: decoded.userId,
+        userName: decoded.userName,
+        userGrade: decoded.userGrade,
+      },
       JWT_SECRET,
       { expiresIn: JWT_ACCESS_EXPIRES_IN },
     );
 
-    return res.json({ accessToken: newAccessToken });
+    // LAST_LOGIN_DTIME 갱신 — 실패해도 토큰 발급은 허용
+    withConnection((conn) =>
+      conn.execute(
+        `UPDATE D_SPIDERLINK.POC_USER
+            SET LAST_LOGIN_DTIME = TO_CHAR(SYSDATE, 'YYYYMMDDHH24MISS')
+          WHERE USER_ID = :userId`,
+        { userId: decoded.userId },
+        { autoCommit: true },
+      ),
+    ).catch((e) =>
+      console.warn("[refresh] LAST_LOGIN_DTIME 업데이트 실패:", e.message),
+    );
+
+    // 갱신 시각을 프론트에 전달해 '최근 접속 일시' 표시를 즉시 반영한다.
+    // DB 업데이트는 비동기이므로 SYSDATE 대신 JS 현재 시각을 동일 포맷으로 생성한다.
+    const n = new Date();
+    const refreshedAt = formatLoginDtime(
+      `${n.getFullYear()}${String(n.getMonth() + 1).padStart(2, "0")}${String(n.getDate()).padStart(2, "0")}${String(n.getHours()).padStart(2, "0")}${String(n.getMinutes()).padStart(2, "0")}${String(n.getSeconds()).padStart(2, "0")}`,
+    );
+
+    return res.json({ accessToken: newAccessToken, lastLogin: refreshedAt });
   } catch {
-    return res.status(401).json({ error: "Refresh Token이 만료되었거나 유효하지 않습니다." });
+    return res
+      .status(401)
+      .json({ error: "Refresh Token이 만료되었거나 유효하지 않습니다." });
   }
 });
 
@@ -467,6 +577,16 @@ function mapTxStatCode(code) {
 }
 
 /**
+ * LAST_LOGIN_DTIME(YYYYMMDDHH24MISS 14자리) → 'YYYY.MM.DD HH:MM:SS'
+ * @param {string|null} raw
+ */
+function formatLoginDtime(raw) {
+  const s = String(raw ?? "").replace(/\D/g, "");
+  if (s.length !== 14) return raw ?? "";
+  return `${s.slice(0, 4)}.${s.slice(4, 6)}.${s.slice(6, 8)} ${s.slice(8, 10)}:${s.slice(10, 12)}:${s.slice(12, 14)}`;
+}
+
+/**
  * 날짜(YYYYMMDD) + 시각(HHmmss) → 'YYYY.MM.DD HH:mm'
  * @param {string|null} date
  * @param {string|null} time
@@ -476,9 +596,11 @@ function formatDateTime(date, time) {
   const t = String(time ?? "").replace(/\D/g, "");
   // YYYYMMDD(8자리) 또는 YYMMDD(6자리) 모두 처리
   let datePart = d;
-  if (d.length === 8)       // YYYYMMDD
+  if (d.length === 8)
+    // YYYYMMDD
     datePart = `${d.slice(0, 4)}.${d.slice(4, 6)}.${d.slice(6, 8)}`;
-  else if (d.length === 6)  // YYMMDD
+  else if (d.length === 6)
+    // YYMMDD
     datePart = `20${d.slice(0, 2)}.${d.slice(2, 4)}.${d.slice(4, 6)}`;
   const timePart = t.length >= 4 ? `${t.slice(0, 2)}:${t.slice(2, 4)}` : "";
   return timePart ? `${datePart} ${timePart}` : datePart;
@@ -491,9 +613,11 @@ function formatDateTime(date, time) {
 function formatDateKo(raw) {
   if (!raw) return "";
   const s = String(raw).replace(/\D/g, "");
-  if (s.length === 8)  // YYYYMMDD
+  if (s.length === 8)
+    // YYYYMMDD
     return `${Number(s.slice(4, 6))}월 ${Number(s.slice(6, 8))}일`;
-  if (s.length === 6)  // YYMMDD
+  if (s.length === 6)
+    // YYMMDD
     return `${Number(s.slice(2, 4))}월 ${Number(s.slice(4, 6))}일`;
   return String(raw);
 }
@@ -628,13 +752,23 @@ function getDateRange(period, customMonth) {
 app.get("/api/transactions", verifyToken, async (req, res) => {
   try {
     const userId = req.user.userId;
-    const { cardId, period, customMonth, usageType, fromDate: qFromDate, toDate: qToDate } = req.query;
+    const {
+      cardId,
+      period,
+      customMonth,
+      usageType,
+      fromDate: qFromDate,
+      toDate: qToDate,
+    } = req.query;
 
     // ── 날짜 범위 계산 ─────────────────────────────────────────────
     // fromDate/toDate 직접 전달 시 우선 사용, 없으면 period/customMonth로 계산
-    const { fromDate: rangeFrom, toDate: rangeTo } = getDateRange(period, customMonth);
+    const { fromDate: rangeFrom, toDate: rangeTo } = getDateRange(
+      period,
+      customMonth,
+    );
     const fromDate = qFromDate || rangeFrom;
-    const toDate   = qToDate   || rangeTo;
+    const toDate = qToDate || rangeTo;
 
     // ── 동적 WHERE 절 구성 ───────────────────────────────────────
     let sql = `
@@ -735,9 +869,9 @@ app.get("/api/payment-statement", verifyToken, async (req, res) => {
     const ci = cardRows[0] ?? null;
     const cardInfo = ci
       ? {
-          paymentBank:    ci["결제은행명"] ?? "",
+          paymentBank: ci["결제은행명"] ?? "",
           paymentAccount: String(ci["결제계좌"] ?? ""),
-          paymentDay:     String(ci["결제일"] ?? ""),
+          paymentDay: String(ci["결제일"] ?? ""),
         }
       : null;
 
@@ -755,11 +889,15 @@ app.get("/api/payment-statement", verifyToken, async (req, res) => {
        * 보수적 범위(targetMonth-2 ~ targetMonth 말일)로 DB를 조회하고,
        * 정밀 필터링은 getBillingSummaryByMonth가 카드별로 수행한다. */
       const [y, m] = yearMonth.split("-").map(Number);
-      let fromYear = y, fromMonth = m - 2;
-      if (fromMonth <= 0) { fromYear--; fromMonth += 12; }
+      let fromYear = y,
+        fromMonth = m - 2;
+      if (fromMonth <= 0) {
+        fromYear--;
+        fromMonth += 12;
+      }
       const toDay = new Date(y, m, 0).getDate(); // targetMonth 말일
       txBinds.fromDate = `${fromYear}${String(fromMonth).padStart(2, "0")}01`;
-      txBinds.toDate   = `${y}${String(m).padStart(2, "0")}${String(toDay).padStart(2, "0")}`;
+      txBinds.toDate = `${y}${String(m).padStart(2, "0")}${String(toDay).padStart(2, "0")}`;
       txSql += ` AND "이용일자" >= :fromDate AND "이용일자" <= :toDate`;
     } else {
       /* 공여기간 필터: 전달받은 paymentDay 또는 DB 결제일 기준으로 이용일자 범위 산정 */
@@ -769,7 +907,7 @@ app.get("/api/payment-statement", verifyToken, async (req, res) => {
           const bp = getBillingPeriod(new Date(), D);
           txSql += ` AND "이용일자" >= :fromDate AND "이용일자" <= :toDate`;
           txBinds.fromDate = bp.fromDate; // YYYYMMDD
-          txBinds.toDate   = bp.toDate;   // YYYYMMDD
+          txBinds.toDate = bp.toDate; // YYYYMMDD
           billingPeriodFormatted = bp.formatted; // { usageStart, usageEnd, dueDate }
         } catch (e) {
           console.warn("[payment-statement] 공여기간 계산 실패:", e.message);
@@ -778,7 +916,9 @@ app.get("/api/payment-statement", verifyToken, async (req, res) => {
     }
 
     // ── 3. 이용내역 조회 ─────────────────────────────────────────────
-    const txResult = await withConnection((conn) => conn.execute(txSql, txBinds));
+    const txResult = await withConnection((conn) =>
+      conn.execute(txSql, txBinds),
+    );
     const txRows = txResult.rows || [];
 
     // ── 4. 집계 (yearMonth 유무에 따라 분기) ──────────────────────────
@@ -787,42 +927,62 @@ app.get("/api/payment-statement", verifyToken, async (req, res) => {
     if (yearMonth) {
       /* 카드별 결제일 공여기간을 개별 적용해 청구월을 정확히 판단 */
       const rawItems = txRows.map((r) => ({
-        cardNo:   String(r["카드번호"] ?? ""),
+        cardNo: String(r["카드번호"] ?? ""),
         cardName: r["카드명"] ?? "",
-        useDate:  String(r["이용일자"] ?? ""),
-        amount:   Number(r["이용금액"] ?? 0),
-        dueDate:  r["결제예정일"] ?? "",
+        useDate: String(r["이용일자"] ?? ""),
+        amount: Number(r["이용금액"] ?? 0),
+        dueDate: r["결제예정일"] ?? "",
       }));
-      const summary = getBillingSummaryByMonth(rawItems, yearMonth, cardSettings);
+      const summary = getBillingSummaryByMonth(
+        rawItems,
+        yearMonth,
+        cardSettings,
+      );
 
       /* 카드+결제예정일 조합별 재집계 (응답 포맷을 기존과 동일하게 유지) */
       const cardMap = {};
       summary.items.forEach((item) => {
         const key = `${item.cardNo}_${item.dueDate}`;
-        if (!cardMap[key]) cardMap[key] = { cardNo: item.cardNo, cardName: item.cardName, amount: 0, dueDate: item.dueDate };
+        if (!cardMap[key])
+          cardMap[key] = {
+            cardNo: item.cardNo,
+            cardName: item.cardName,
+            amount: 0,
+            dueDate: item.dueDate,
+          };
         cardMap[key].amount += item.amount;
       });
-      items       = Object.values(cardMap);
+      items = Object.values(cardMap);
       totalAmount = summary.totalAmount;
 
       /* 대표 결제예정일 — 가장 많이 등장하는 값 */
       const cnt = {};
-      summary.items.forEach((i) => { if (i.dueDate) cnt[i.dueDate] = (cnt[i.dueDate] || 0) + 1; });
+      summary.items.forEach((i) => {
+        if (i.dueDate) cnt[i.dueDate] = (cnt[i.dueDate] || 0) + 1;
+      });
       dueDate = Object.entries(cnt).sort((a, b) => b[1] - a[1])[0]?.[0] ?? "";
-
     } else {
       /* 공여기간 기반 조회 — 기존 집계 로직 유지 */
       const cardMap = {};
       txRows.forEach((r) => {
         const key = `${r["카드번호"]}_${r["결제예정일"] ?? ""}`;
-        if (!cardMap[key]) cardMap[key] = { cardNo: r["카드번호"], cardName: r["카드명"] ?? "", amount: 0, dueDate: r["결제예정일"] ?? "" };
+        if (!cardMap[key])
+          cardMap[key] = {
+            cardNo: r["카드번호"],
+            cardName: r["카드명"] ?? "",
+            amount: 0,
+            dueDate: r["결제예정일"] ?? "",
+          };
         cardMap[key].amount += Number(r["이용금액"] ?? 0);
       });
-      items       = Object.values(cardMap);
+      items = Object.values(cardMap);
       totalAmount = items.reduce((sum, i) => sum + i.amount, 0);
 
       const cnt = {};
-      txRows.forEach((r) => { const d = r["결제예정일"]; if (d) cnt[d] = (cnt[d] || 0) + 1; });
+      txRows.forEach((r) => {
+        const d = r["결제예정일"];
+        if (d) cnt[d] = (cnt[d] || 0) + 1;
+      });
       dueDate = Object.entries(cnt).sort((a, b) => b[1] - a[1])[0]?.[0] ?? "";
     }
 
@@ -962,8 +1122,8 @@ app.get("/api/cards/:cardId/payable-amount", verifyToken, async (req, res) => {
               AND "카드번호"     = :cardId
               AND "누적결제금액" < "이용금액"
               AND "결제상태코드" <> '9'`,
-              /* 결제상태코드 9(취소건)는 즉시결제 대상에서 제외.
-               * 0:미결제, 1:완납, 2:부분결제, 9:취소 */
+          /* 결제상태코드 9(취소건)는 즉시결제 대상에서 제외.
+           * 0:미결제, 1:완납, 2:부분결제, 9:취소 */
           { userId, cardId },
         ),
         /* 카드 한도금액 조회 */
@@ -978,7 +1138,7 @@ app.get("/api/cards/:cardId/payable-amount", verifyToken, async (req, res) => {
     );
 
     const payableAmount = Number(usageResult.rows?.[0]?.PAYABLE_AMOUNT ?? 0);
-    const creditLimit   = Number(cardResult.rows?.[0]?.CREDIT_LIMIT   ?? 0);
+    const creditLimit = Number(cardResult.rows?.[0]?.CREDIT_LIMIT ?? 0);
     res.json({ payableAmount, creditLimit });
   } catch (err) {
     console.error("[GET /api/cards/:cardId/payable-amount]", err);
@@ -1013,17 +1173,17 @@ app.get("/api/cards/:cardId/payable-amount", verifyToken, async (req, res) => {
  */
 app.post("/api/cards/:cardId/immediate-pay", verifyToken, async (req, res) => {
   try {
-    const userId        = req.user.userId;
-    const { cardId }    = req.params;
+    const userId = req.user.userId;
+    const { cardId } = req.params;
     const { pin, amount } = req.body;
     const requestAmount = Number(amount);
 
     // PIN 검증 — 오늘 날짜의 MMDD (월·일 각 2자리, 예: 4월 15일 → "0415")
-    const now      = new Date();
-    const mm       = String(now.getMonth() + 1).padStart(2, "0");
-    const dd       = String(now.getDate()).padStart(2, "0");
+    const now = new Date();
+    const mm = String(now.getMonth() + 1).padStart(2, "0");
+    const dd = String(now.getDate()).padStart(2, "0");
     const validPin = `${mm}${dd}`;
-    const pinKey   = `${userId}:${cardId}`; // 사용자·카드 조합 단위로 횟수 관리
+    const pinKey = `${userId}:${cardId}`; // 사용자·카드 조합 단위로 횟수 관리
     const attempts = pinAttemptStore.get(pinKey) ?? 0;
 
     if (attempts >= PIN_MAX_ATTEMPTS) {
@@ -1051,7 +1211,9 @@ app.post("/api/cards/:cardId/immediate-pay", verifyToken, async (req, res) => {
     pinAttemptStore.delete(pinKey);
 
     if (!requestAmount || requestAmount <= 0) {
-      return res.status(400).json({ error: "결제요청금액이 유효하지 않습니다." });
+      return res
+        .status(400)
+        .json({ error: "결제요청금액이 유효하지 않습니다." });
     }
 
     const result = await withConnection(async (conn) => {
@@ -1072,28 +1234,28 @@ app.post("/api/cards/:cardId/immediate-pay", verifyToken, async (req, res) => {
           { userId, cardId },
         );
 
-        let remaining      = requestAmount; // 아직 배분하지 못한 결제 잔여금
-        let totalPaid      = 0;             // 이번 결제에서 실제 차감된 총합계
-        let processedCount = 0;             // 업데이트된 내역 건수
+        let remaining = requestAmount; // 아직 배분하지 못한 결제 잔여금
+        let totalPaid = 0; // 이번 결제에서 실제 차감된 총합계
+        let processedCount = 0; // 업데이트된 내역 건수
 
         // ── 2. 이용일자 오래된 순으로 순차 차감 ────────────────────
         for (const row of rows) {
           if (remaining <= 0) break;
 
-          const 결제잔액    = Number(row["결제잔액"]);
+          const 결제잔액 = Number(row["결제잔액"]);
           const 누적결제금액 = Number(row["누적결제금액"]);
 
           let deducted, newBalance, newStatusCode;
 
           if (remaining >= 결제잔액) {
             // 완납: 이 내역의 잔액을 전부 결제하고 남은 금액을 다음 건으로 이월
-            deducted      = 결제잔액;
-            newBalance    = 0;
+            deducted = 결제잔액;
+            newBalance = 0;
             newStatusCode = "1"; // 1: 완납
           } else {
             // 부분결제: 남은 요청금액만큼만 차감하고 루프 종료
-            deducted      = remaining;
-            newBalance    = 결제잔액 - remaining;
+            deducted = remaining;
+            newBalance = 결제잔액 - remaining;
             newStatusCode = "2"; // 2: 부분결제
           }
 
@@ -1142,7 +1304,11 @@ app.post("/api/cards/:cardId/immediate-pay", verifyToken, async (req, res) => {
           )
         ).rows;
 
-        return { paidAmount: totalPaid, processedCount, completedAt: COMPLETED_AT };
+        return {
+          paidAmount: totalPaid,
+          processedCount,
+          completedAt: COMPLETED_AT,
+        };
       } catch (err) {
         // 어느 한 단계라도 실패하면 전체 롤백하여 데이터 무결성 보장
         await conn.rollback();
@@ -1180,9 +1346,9 @@ app.delete("/api/cards/:cardId/pin-attempts", verifyToken, (req, res) => {
  */
 app.get("/api/notices/sse", (req, res) => {
   // SSE 응답 헤더 설정
-  res.setHeader("Content-Type",  "text/event-stream");
+  res.setHeader("Content-Type", "text/event-stream");
   res.setHeader("Cache-Control", "no-cache");
-  res.setHeader("Connection",    "keep-alive");
+  res.setHeader("Connection", "keep-alive");
   res.flushHeaders();
 
   // 연결 즉시 현재 공지 상태 전송 (재접속 시 최신 상태 즉시 반영)
@@ -1212,18 +1378,22 @@ app.post("/api/notices/sync", verifyAdminSecret, (req, res) => {
   const { notices, displayType, closeableYn, hideTodayYn } = req.body;
 
   if (!notices || !Array.isArray(notices) || !displayType) {
-    return res.status(400).json({ error: "notices 배열과 displayType이 필요합니다." });
+    return res
+      .status(400)
+      .json({ error: "notices 배열과 displayType이 필요합니다." });
   }
 
   currentNotice = {
     notices,
     displayType,
-    closeableYn:  closeableYn  ?? "Y",
-    hideTodayYn:  hideTodayYn  ?? "Y",
+    closeableYn: closeableYn ?? "Y",
+    hideTodayYn: hideTodayYn ?? "Y",
   };
   broadcastNotice(currentNotice);
 
-  console.log(`[SSE] 긴급공지 배포 동기화 완료: displayType=${displayType}, 클라이언트=${clientCount()}명`);
+  console.log(
+    `[SSE] 긴급공지 배포 동기화 완료: displayType=${displayType}, 클라이언트=${clientCount()}명`,
+  );
   res.json({ success: true });
 });
 
@@ -1254,7 +1424,7 @@ app.get("/api/notices/preview", async (req, res) => {
         `SELECT DEFAULT_VALUE AS DISPLAY_TYPE
            FROM FWK_PROPERTY
           WHERE PROPERTY_GROUP_ID = 'notice'
-            AND PROPERTY_ID = 'USE_YN'`
+            AND PROPERTY_ID = 'USE_YN'`,
       );
       const row = statusRes.rows?.[0];
 
@@ -1264,13 +1434,13 @@ app.get("/api/notices/preview", async (req, res) => {
            FROM FWK_PROPERTY
           WHERE PROPERTY_GROUP_ID = 'notice'
             AND PROPERTY_ID IN ('EMERGENCY_KO', 'EMERGENCY_EN')
-          ORDER BY PROPERTY_ID`
+          ORDER BY PROPERTY_ID`,
       );
 
       return {
         notices: (noticeRes.rows || []).map((r) => ({
-          lang:    r.LANG,
-          title:   r.TITLE   || "",
+          lang: r.LANG,
+          title: r.TITLE || "",
           content: r.CONTENT || "",
         })),
         displayType: row?.DISPLAY_TYPE || "N",
@@ -1302,7 +1472,7 @@ async function restoreNoticeState() {
         `SELECT DEFAULT_VALUE AS DISPLAY_TYPE, DEPLOY_STATUS
            FROM FWK_PROPERTY
           WHERE PROPERTY_GROUP_ID = 'notice'
-            AND PROPERTY_ID = 'USE_YN'`
+            AND PROPERTY_ID = 'USE_YN'`,
       );
       const row = statusRes.rows?.[0];
       if (!row || row.DEPLOY_STATUS !== "DEPLOYED") return null;
@@ -1313,33 +1483,37 @@ async function restoreNoticeState() {
            FROM FWK_PROPERTY
           WHERE PROPERTY_GROUP_ID = 'notice'
             AND PROPERTY_ID IN ('EMERGENCY_KO', 'EMERGENCY_EN')
-          ORDER BY PROPERTY_ID`
+          ORDER BY PROPERTY_ID`,
       );
       // 노출 설정(닫기 버튼, 오늘 하루 보지 않기) 조회
       const settingsRes = await conn.execute(
         `SELECT PROPERTY_ID, DEFAULT_VALUE
            FROM FWK_PROPERTY
           WHERE PROPERTY_GROUP_ID = 'notice'
-            AND PROPERTY_ID IN ('CLOSEABLE_YN', 'HIDE_TODAY_YN')`
+            AND PROPERTY_ID IN ('CLOSEABLE_YN', 'HIDE_TODAY_YN')`,
       );
       const settingsMap = {};
-      (settingsRes.rows || []).forEach((r) => { settingsMap[r.PROPERTY_ID] = r.DEFAULT_VALUE; });
+      (settingsRes.rows || []).forEach((r) => {
+        settingsMap[r.PROPERTY_ID] = r.DEFAULT_VALUE;
+      });
 
       return {
-        notices:     (noticeRes.rows || []).map((r) => ({
-          lang:    r.LANG,
-          title:   r.TITLE   || "",
+        notices: (noticeRes.rows || []).map((r) => ({
+          lang: r.LANG,
+          title: r.TITLE || "",
           content: r.CONTENT || "",
         })),
-        displayType:  row.DISPLAY_TYPE || "N",
-        closeableYn:  settingsMap["CLOSEABLE_YN"]  ?? "Y",
-        hideTodayYn:  settingsMap["HIDE_TODAY_YN"] ?? "Y",
+        displayType: row.DISPLAY_TYPE || "N",
+        closeableYn: settingsMap["CLOSEABLE_YN"] ?? "Y",
+        hideTodayYn: settingsMap["HIDE_TODAY_YN"] ?? "Y",
       };
     });
 
     if (result) {
       currentNotice = result;
-      console.log(`[Server] 긴급공지 상태 복구 완료: displayType=${result.displayType}`);
+      console.log(
+        `[Server] 긴급공지 상태 복구 완료: displayType=${result.displayType}`,
+      );
     } else {
       console.log("[Server] 배포 중인 긴급공지 없음 — 초기 상태로 기동");
     }
@@ -1350,7 +1524,7 @@ async function restoreNoticeState() {
 
 async function start() {
   try {
-    await initPool();           // ① 커넥션 풀 먼저 생성
+    await initPool(); // ① 커넥션 풀 먼저 생성
     await restoreNoticeState(); // ② 재기동 시 배포 상태 복구
 
     app.listen(PORT, () => {
