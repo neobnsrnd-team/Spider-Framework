@@ -27,6 +27,7 @@ import java.util.regex.Pattern;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 
@@ -78,6 +79,7 @@ public class ReactApprovalService {
      * @throws NotFoundException     해당 codeId가 존재하지 않을 때
      * @throws InvalidInputException PENDING_APPROVAL이 아닌 상태이거나, 요청자 본인이거나, 동시 요청으로 선점 실패 시
      */
+    @Transactional
     public ReactGenerateApprovalResponse approve(String id, String approverUserId) {
         ReactGenerateResponse existing = requirePendingApproval(id);
 
