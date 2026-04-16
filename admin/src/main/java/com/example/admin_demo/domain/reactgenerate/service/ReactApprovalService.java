@@ -14,6 +14,10 @@ import com.example.admin_demo.domain.reactgenerate.enums.ReactGenerateStatus;
 import com.example.admin_demo.domain.reactgenerate.mapper.ReactGenerateMapper;
 import com.example.admin_demo.global.exception.InvalidInputException;
 import com.example.admin_demo.global.exception.NotFoundException;
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
@@ -23,6 +27,8 @@ import java.util.regex.Pattern;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 @Slf4j
 @Service
@@ -30,6 +36,7 @@ import org.springframework.stereotype.Service;
 public class ReactApprovalService {
 
     private final ReactGenerateMapper reactGenerateMapper;
+    private final ReactDeployProperties deployProperties;
 
     private static final DateTimeFormatter FORMATTER = DateTimeFormatter.ofPattern("yyyyMMddHHmmss");
 
@@ -94,6 +101,16 @@ public class ReactApprovalService {
             throw new InvalidInputException("이미 처리된 승인 요청입니다.");
         }
         log.info("승인 완료 — codeId: {}, approver: {}", id, approverUserId);
+
+        // 트랜잭션 커밋 성공 후 React 컴포넌트 파일을 demo/front에 기록한다.
+        // afterCommit에서 실행하여 DB 롤백 시 파일이 생성되지 않도록 보장한다.
+        String reactCode = existing.getReactCode();
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCommit() {
+                writeReactCodeToFile(id, reactCode);
+            }
+        });
 
         return ReactGenerateApprovalResponse.builder()
                 .codeId(id)
@@ -238,6 +255,35 @@ public class ReactApprovalService {
     private void requireExists(String id) {
         if (reactGenerateMapper.selectById(id) == null) {
             throw new NotFoundException("생성 결과를 찾을 수 없습니다. codeId=" + id);
+        }
+    }
+
+    /**
+     * 승인된 React 코드를 demo/front/src/generated/{codeId}.tsx 파일로 기록한다.
+     *
+     * <p>파일은 트랜잭션 커밋 후(afterCommit) 생성되므로 DB 롤백과 무관하게
+     * 커밋이 확정된 경우에만 파일이 생성된다.
+     *
+     * <p>파일 쓰기 실패는 승인 결과에 영향을 주지 않는다 — DB에는 이미 APPROVED로 기록되었으므로
+     * 로그만 남기고 계속 진행한다. (재배포 시 파일을 다시 생성할 수 있음)
+     *
+     * @param codeId    배포할 코드 ID (파일명으로 사용)
+     * @param reactCode 저장할 React TSX 코드
+     */
+    private void writeReactCodeToFile(String codeId, String reactCode) {
+        if (reactCode == null || reactCode.isBlank()) {
+            log.warn("React 파일 생성 건너뜀 — REACT_CODE가 비어 있음. codeId={}", codeId);
+            return;
+        }
+        try {
+            Path dir = Path.of(deployProperties.getOutputDir());
+            Files.createDirectories(dir); // 디렉토리가 없으면 생성
+            Path target = dir.resolve(codeId + ".tsx");
+            Files.writeString(target, reactCode, StandardCharsets.UTF_8);
+            log.info("React 컴포넌트 파일 생성 완료 — path={}, codeId={}", target.toAbsolutePath(), codeId);
+        } catch (IOException e) {
+            // 파일 쓰기 실패는 비치명적 — DB 승인은 이미 커밋됨
+            log.error("React 컴포넌트 파일 생성 실패 — outputDir={}, codeId={}", deployProperties.getOutputDir(), codeId, e);
         }
     }
 }

@@ -549,6 +549,12 @@ $(document).ready(function () {
     document.addEventListener('tab:deactivated:v3_react_approval', function () {
         EventBus.off('admin:reactApproval:statusChanged');
     });
+
+    // ── tab:activated — 탭으로 돌아올 때마다 최신 데이터 재조회 (이슈 #20 패턴)
+    $('[data-tab-page]').on('tab:activated', function () {
+        ReactApprovalPending.load(ReactApprovalPending.currentPage);
+        ReactApprovalHis.load();
+    });
 });
 /*]]>*/
 </script>

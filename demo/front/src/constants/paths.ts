@@ -15,6 +15,8 @@ export const PATHS = {
   /** Admin 미리보기 전용 경로 — 인증 없이 접근 가능 */
   PREVIEW: {
     NOTICE: "/preview/notice",
+    /** 승인된 React 컴포넌트 미리보기. :codeId = FWK_RPS_CODE_HIS.CODE_ID */
+    REACT: "/preview/react/:codeId",
   },
 
   CARD: {

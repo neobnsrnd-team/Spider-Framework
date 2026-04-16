@@ -11,8 +11,8 @@
  * - 일반 페이지: XxxRoute (예: LoginRoute)
  * - 모달 오버레이: XxxModal (예: HanaCardMenuModal)
  */
-import { useState, useEffect, useRef, useMemo } from "react";
-import { useNavigate, useLocation, useSearchParams } from "react-router-dom";
+import { useState, useEffect, useRef, useMemo, type ComponentType } from "react";
+import { useNavigate, useLocation, useSearchParams, useParams } from "react-router-dom";
 import type { NoticePayload } from "@/hooks/useEmergencyNotice";
 import { useAuth } from "@/contexts/AuthContext";
 import { axiosInstance } from "@/api/axiosInstance";
@@ -1378,6 +1378,72 @@ export function NoticePreviewRoute() {
         </span>
       </div>
       <EmergencyNoticeBanner data={previewData} forceOpen lang={lang} />
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/* Admin 승인 배포 컴포넌트 미리보기                                       */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Admin에서 승인 시 생성된 React 컴포넌트 미리보기 페이지.
+ *
+ * /preview/react/:codeId 경로로 접근하며, 인증 없이 사용 가능하다.
+ * import.meta.glob으로 src/generated/ 디렉토리의 .tsx 파일을 동적으로 탐색하여
+ * :codeId에 해당하는 컴포넌트를 렌더링한다.
+ *
+ * Vite HMR이 파일 추가를 감지하므로 Admin에서 승인 즉시 새 경로가 활성화된다.
+ */
+export function ReactDeployedRoute() {
+  const { codeId } = useParams<{ codeId: string }>();
+  const [Component, setComponent] = useState<ComponentType | null>(null);
+  const [notFound, setNotFound] = useState(false);
+
+  useEffect(() => {
+    if (!codeId) {
+      setNotFound(true);
+      return;
+    }
+
+    // src/generated/*.tsx 파일 전체를 지연 로드(lazy) 맵으로 확보
+    // import.meta.glob은 Vite가 빌드 타임에 glob 패턴을 해석하므로 동적 경로 조합 불가
+    // → 전체 맵을 먼저 만든 뒤 codeId로 키를 선택한다
+    const modules = import.meta.glob<{ default: ComponentType }>("/src/generated/*.tsx");
+    const key = `/src/generated/${codeId}.tsx`;
+
+    if (!modules[key]) {
+      setNotFound(true);
+      return;
+    }
+
+    modules[key]()
+      .then((mod) => setComponent(() => mod.default))
+      .catch(() => setNotFound(true));
+  }, [codeId]);
+
+  return (
+    <div className="min-h-screen bg-bg-base">
+      {/* 미리보기 모드 안내 배너 */}
+      <div className="flex items-center justify-center py-1 bg-blue-50 border-b border-blue-200">
+        <span className="text-xs text-blue-600 font-medium">
+          배포된 React 컴포넌트 미리보기 — {codeId}
+        </span>
+      </div>
+
+      {notFound && (
+        <div className="flex items-center justify-center min-h-[80vh] text-sm text-text-muted">
+          배포된 컴포넌트를 찾을 수 없습니다. (codeId: {codeId})
+        </div>
+      )}
+
+      {!notFound && !Component && (
+        <div className="flex items-center justify-center min-h-[80vh] text-sm text-text-muted">
+          로딩 중...
+        </div>
+      )}
+
+      {Component && <Component />}
     </div>
   );
 }
