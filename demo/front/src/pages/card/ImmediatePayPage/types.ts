@@ -16,6 +16,10 @@ export interface CardInfo {
   name: string;
   /** 마스킹된 카드번호. 예: '1234-56**-****-7890' */
   maskedNumber: string;
+  /** 결제은행명. POC_카드리스트.결제은행명 */
+  paymentBank: string;
+  /** 결제계좌. POC_카드리스트.결제계좌 */
+  paymentAccount: string;
 }
 
 export interface ImmediatePayPageProps {
