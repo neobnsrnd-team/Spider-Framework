@@ -40,6 +40,19 @@ public interface ReactGenerateMapper {
             @Param("approvalDtime") String approvalDtime,
             @Param("failReason") String failReason);
 
+    /**
+     * 현재 STATUS가 requiredStatus인 경우에만 상태를 변경하고 변경된 행 수를 반환한다.
+     * Race Condition 방지를 위해 approve 처리 시 사용한다.
+     * 반환값이 0이면 다른 요청이 이미 상태를 변경했음을 의미한다.
+     */
+    int updateStatusConditional(
+            @Param("codeId") String codeId,
+            @Param("status") String status,
+            @Param("approvalUserId") String approvalUserId,
+            @Param("approvalDtime") String approvalDtime,
+            @Param("failReason") String failReason,
+            @Param("requiredStatus") String requiredStatus);
+
     /** 렌더링 실패 또는 코드 생성 실패 시 STATUS를 FAILED로, FAIL_REASON을 기록한다. */
     void updateToFailed(@Param("codeId") String codeId, @Param("failReason") String failReason);
 

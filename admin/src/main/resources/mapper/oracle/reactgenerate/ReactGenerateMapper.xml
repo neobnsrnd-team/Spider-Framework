@@ -240,6 +240,22 @@
         WHERE CODE_ID = #{codeId,jdbcType=VARCHAR}
     </update>
 
+    <!--
+        Race condition 방지용 조건부 UPDATE.
+        WHERE 절에 requiredStatus 조건을 추가하여, 현재 STATUS가 예상 상태가 아니면
+        UPDATE가 발생하지 않아 0을 반환한다. 반환값으로 선점 여부를 판단한다.
+    -->
+    <update id="updateStatusConditional">
+        UPDATE FWK_RPS_CODE_HIS
+        SET
+            STATUS           = #{status,jdbcType=VARCHAR},
+            APPROVAL_USER_ID = #{approvalUserId,jdbcType=VARCHAR},
+            APPROVAL_DTIME   = #{approvalDtime,jdbcType=VARCHAR},
+            FAIL_REASON      = #{failReason,jdbcType=CLOB}
+        WHERE CODE_ID = #{codeId,jdbcType=VARCHAR}
+          AND STATUS  = #{requiredStatus,jdbcType=VARCHAR}
+    </update>
+
     <update id="updateToFailed">
         UPDATE FWK_RPS_CODE_HIS
         SET

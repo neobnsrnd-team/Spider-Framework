@@ -11,11 +11,15 @@ import com.example.admin_demo.domain.reactgenerate.dto.ReactRejectRequest;
 import com.example.admin_demo.domain.reactgenerate.service.ReactApprovalService;
 import com.example.admin_demo.global.dto.ApiResponse;
 import com.example.admin_demo.global.util.SecurityUtil;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -25,9 +29,9 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @Slf4j
+@Validated // @RequestParam에 적용된 @Min/@Max 검증을 활성화
 @RestController
 @RequestMapping("/api/react-approval")
-@PreAuthorize("hasAuthority('REACT_APPROVAL:R')")
 @RequiredArgsConstructor
 public class ReactApprovalController {
 
@@ -36,21 +40,23 @@ public class ReactApprovalController {
     /**
      * 승인 대기(PENDING_APPROVAL) 목록을 페이지네이션 형태로 조회한다.
      *
-     * @param page 페이지 번호 (기본값 1)
-     * @param size 페이지당 건수 (기본값 10)
+     * @param page 페이지 번호 (기본값 1, 최솟값 1)
+     * @param size 페이지당 건수 (기본값 10, 범위 1~100)
      * @return list(목록), totalCount, page, size
      */
     @GetMapping
+    @PreAuthorize("hasAuthority('REACT_APPROVAL:R')")
     public ResponseEntity<ApiResponse<Map<String, Object>>> getPendingList(
-            @RequestParam(defaultValue = "1") int page, @RequestParam(defaultValue = "10") int size) {
+            @RequestParam(defaultValue = "1") @Min(1) int page,
+            @RequestParam(defaultValue = "10") @Min(1) @Max(100) int size) {
         return ResponseEntity.ok(ApiResponse.success(reactApprovalService.getPendingList(page, size)));
     }
 
     /**
      * 승인 이력(APPROVED / REJECTED) 목록을 페이지네이션 형태로 조회한다.
      *
-     * @param page           페이지 번호 (기본값 1)
-     * @param size           페이지당 건수 (기본값 10)
+     * @param page           페이지 번호 (기본값 1, 최솟값 1)
+     * @param size           페이지당 건수 (기본값 10, 범위 1~100)
      * @param status         상태 필터 (APPROVED / REJECTED, 미입력 시 전체)
      * @param approvalUserId 처리자 ID 부분 일치 검색
      * @param createUserId   요청자 ID 부분 일치 검색
@@ -59,9 +65,10 @@ public class ReactApprovalController {
      * @return list(목록), totalCount, page, size
      */
     @GetMapping("/history")
+    @PreAuthorize("hasAuthority('REACT_APPROVAL:R')")
     public ResponseEntity<ApiResponse<Map<String, Object>>> getHistory(
-            @RequestParam(defaultValue = "1") int page,
-            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(defaultValue = "1") @Min(1) int page,
+            @RequestParam(defaultValue = "10") @Min(1) @Max(100) int size,
             @RequestParam(defaultValue = "") String status,
             @RequestParam(defaultValue = "") String approvalUserId,
             @RequestParam(defaultValue = "") String createUserId,
@@ -91,13 +98,14 @@ public class ReactApprovalController {
      *
      * <p>상태에 관계없이 어느 단계에서든 반려 가능하다.
      *
-     * @param id 반려할 코드 ID
+     * @param id      반려할 코드 ID
+     * @param request 반려 사유 (최대 500자, 선택)
      * @return 변경된 상태 및 반려자 정보
      */
     @PostMapping("/{id}/reject")
     @PreAuthorize("hasAuthority('REACT_APPROVAL:W')")
     public ResponseEntity<ApiResponse<ReactGenerateApprovalResponse>> reject(
-            @PathVariable String id, @RequestBody(required = false) ReactRejectRequest request) {
+            @PathVariable String id, @RequestBody(required = false) @Valid ReactRejectRequest request) {
         String currentUserId = SecurityUtil.getCurrentUserId();
         String reason = request != null ? request.getReason() : null;
         return ResponseEntity.ok(ApiResponse.success(reactApprovalService.reject(id, currentUserId, reason)));

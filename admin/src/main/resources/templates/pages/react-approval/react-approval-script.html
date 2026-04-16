@@ -24,6 +24,25 @@ function approvalFormatDtime(dtime) {
            dtime.substring(6, 8) + ' ' + dtime.substring(8, 10) + ':' + dtime.substring(10, 12);
 }
 
+/**
+ * URL이 http/https 프로토콜을 사용하는지 검증한다.
+ * javascript: 등 위험 프로토콜을 가진 URL을 href에 바인딩하지 않기 위해 사용한다.
+ *
+ * @param {string} url - 검증할 URL 문자열
+ * @returns {boolean} http/https 프로토콜이면 true, 그 외 또는 파싱 불가이면 false
+ */
+function isSafeUrl(url) {
+    if (!url) return false;
+    try {
+        const parsed = new URL(url);
+        // http/https 프로토콜만 허용 — javascript:, data: 등 위험 프로토콜 차단
+        return parsed.protocol === 'https:' || parsed.protocol === 'http:';
+    } catch {
+        // URL 파싱 실패 = 유효하지 않은 URL
+        return false;
+    }
+}
+
 // ═══════════════════════════════════════════════════════
 //  승인 대기 목록 모듈
 // ═══════════════════════════════════════════════════════
@@ -367,7 +386,12 @@ const ReactApprovalDetail = {
         const statusInfo = APPROVAL_STATUS_LABEL[data.status] || { text: data.status, cls: 'bg-secondary' };
         const safeUrl    = HtmlUtils.escape(data.figmaUrl || '');
 
-        $('#approvalDetailFigmaUrl').attr('href', safeUrl).text(safeUrl || '—');
+        // 안전한 URL(http/https)만 href 속성을 설정하고, 그 외에는 링크 없이 텍스트만 표시 (XSS 방지)
+        if (isSafeUrl(data.figmaUrl)) {
+            $('#approvalDetailFigmaUrl').attr('href', safeUrl).text(safeUrl || '—');
+        } else {
+            $('#approvalDetailFigmaUrl').removeAttr('href').text(safeUrl || '—');
+        }
         $('#approvalDetailStatusBadge')
             .text(statusInfo.text).removeClass().addClass('badge ' + statusInfo.cls);
         $('#approvalDetailCreateUserId').text(data.createUserId || '—');

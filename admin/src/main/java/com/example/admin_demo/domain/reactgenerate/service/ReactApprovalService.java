@@ -18,6 +18,7 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Map;
+import java.util.regex.Pattern;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -30,6 +31,9 @@ public class ReactApprovalService {
     private final ReactGenerateMapper reactGenerateMapper;
 
     private static final DateTimeFormatter FORMATTER = DateTimeFormatter.ofPattern("yyyyMMddHHmmss");
+
+    /** yyyyMMdd 형식 검증 패턴 — 날짜 파라미터를 SQL에 전달하기 전 형식을 검증한다. */
+    private static final Pattern YYYYMMDD = Pattern.compile("^\\d{8}$");
 
     /**
      * 승인 대기(PENDING_APPROVAL) 목록과 전체 건수를 조회한다.
@@ -55,10 +59,13 @@ public class ReactApprovalService {
      *   <li>코드 요청자 본인은 승인 불가 — 클라이언트 우회 방지를 위해 서버에서 재검증</li>
      * </ul>
      *
-     * @param id            승인할 코드 ID
+     * <p>Race Condition 방지: WHERE 조건에 STATUS = PENDING_APPROVAL을 포함한 조건부 UPDATE를 사용하여
+     * 동시 요청이 들어와도 DB 레벨에서 단 하나의 요청만 처리되도록 보장한다.
+     *
+     * @param id             승인할 코드 ID
      * @param approverUserId 승인자 ID (로그인 사용자)
-     * @throws NotFoundException      해당 codeId가 존재하지 않을 때
-     * @throws InvalidInputException  PENDING_APPROVAL이 아닌 상태이거나 요청자 본인일 때
+     * @throws NotFoundException     해당 codeId가 존재하지 않을 때
+     * @throws InvalidInputException PENDING_APPROVAL이 아닌 상태이거나, 요청자 본인이거나, 동시 요청으로 선점 실패 시
      */
     public ReactGenerateApprovalResponse approve(String id, String approverUserId) {
         ReactGenerateResponse existing = requirePendingApproval(id);
@@ -69,8 +76,19 @@ public class ReactApprovalService {
         }
 
         String now = LocalDateTime.now().format(FORMATTER);
-        // 승인 시 failReason은 null로 초기화
-        reactGenerateMapper.updateStatus(id, ReactGenerateStatus.APPROVED.name(), approverUserId, now, null);
+        // PENDING_APPROVAL 상태인 경우에만 UPDATE (동시 승인 Race Condition 방지)
+        // 두 요청이 동시에 들어와도 DB가 WHERE 조건으로 하나만 처리하고 나머지는 0행을 반환
+        int updated = reactGenerateMapper.updateStatusConditional(
+                id,
+                ReactGenerateStatus.APPROVED.name(),
+                approverUserId,
+                now,
+                null, // 승인 시 failReason은 null로 초기화
+                ReactGenerateStatus.PENDING_APPROVAL.name());
+        if (updated == 0) {
+            // 선점 실패: 동시 요청이 먼저 상태를 변경함
+            throw new InvalidInputException("이미 처리된 승인 요청입니다.");
+        }
         log.info("승인 완료 — codeId: {}, approver: {}", id, approverUserId);
 
         return ReactGenerateApprovalResponse.builder()
@@ -89,6 +107,7 @@ public class ReactApprovalService {
      *
      * @param id             반려할 코드 ID
      * @param rejectorUserId 반려자 ID (로그인 사용자)
+     * @param reason         반려 사유 (nullable, 최대 500자)
      * @throws NotFoundException 해당 codeId가 존재하지 않을 때
      */
     public ReactGenerateApprovalResponse reject(String id, String rejectorUserId, String reason) {
@@ -127,6 +146,10 @@ public class ReactApprovalService {
             String createUserId,
             String fromDate,
             String toDate) {
+        // 날짜 형식 검증 — SQL DTIME 비교 파라미터이므로 형식 불일치 시 DB 오류 가능
+        validateDateFormat(fromDate, "처리일시 시작");
+        validateDateFormat(toDate, "처리일시 종료");
+
         int offset = (page - 1) * size;
         int endRow = offset + size;
         // 빈 문자열은 null로 통일하여 mapper의 전체 조회 분기를 타도록 한다
@@ -144,6 +167,19 @@ public class ReactApprovalService {
     /** null이거나 공백만 있으면 null, 아니면 원본 문자열 반환. */
     private static String nullIfBlank(String value) {
         return (value != null && !value.isBlank()) ? value : null;
+    }
+
+    /**
+     * 날짜 문자열이 yyyyMMdd 형식인지 검증한다.
+     * 빈 문자열과 null은 허용하며, 형식 불일치 시 {@link InvalidInputException}을 던진다.
+     *
+     * @param date      검증할 날짜 문자열
+     * @param fieldName 오류 메시지에 표시할 필드명
+     */
+    private static void validateDateFormat(String date, String fieldName) {
+        if (date != null && !date.isBlank() && !YYYYMMDD.matcher(date).matches()) {
+            throw new InvalidInputException(fieldName + " 날짜 형식이 올바르지 않습니다. (yyyyMMdd 형식으로 입력하세요)");
+        }
     }
 
     /** CODE_ID로 이력을 조회하고, PENDING_APPROVAL 상태가 아니면 예외를 던진다. */
