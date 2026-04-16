@@ -22,11 +22,8 @@ import { Typography } from '@cl/core/Typography';
 import { LabelValueRow } from '@cl/modules/common/LabelValueRow';
 import { Divider } from '@cl/modules/common/Divider';
 
+import { formatAmount } from '@/utils/format';
 import type { ImmediatePayCompletePageProps } from './types';
-
-function formatAmount(n: number) {
-  return `${n.toLocaleString('ko-KR')}원`;
-}
 
 export function ImmediatePayCompletePage({
   cardName,

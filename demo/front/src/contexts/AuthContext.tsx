@@ -72,9 +72,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       (newToken: string) => {
         setUser(prev => (prev ? { ...prev, token: newToken } : prev));
       },
-      // Refresh 실패: 완전 세션 만료 → alert 노출 후 localStorage + 상태 초기화
+      // Refresh 실패: 완전 세션 만료 → 로그인 페이지 Modal용 메시지를 세션에 남기고 상태 초기화
       () => {
-        alert('세션이 만료되었습니다. 다시 로그인해 주세요.');
+        sessionStorage.setItem('sessionExpiredMessage', '세션이 만료되었습니다. 다시 로그인해 주세요.');
         localStorage.removeItem(STORAGE_KEY);
         setUser(null);
       },

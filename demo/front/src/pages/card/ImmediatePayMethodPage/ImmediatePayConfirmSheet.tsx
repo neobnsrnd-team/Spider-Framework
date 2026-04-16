@@ -19,6 +19,8 @@ import { Typography } from "@cl/core/Typography";
 import { Divider } from "@cl/modules/common/Divider";
 import { LabelValueRow } from "@cl/modules/common/LabelValueRow";
 
+import { formatAmount } from "@/utils/format";
+
 interface ImmediatePayConfirmSheetProps {
   open: boolean;
   /** 결제 요청 금액 (원) */
@@ -33,11 +35,6 @@ interface ImmediatePayConfirmSheetProps {
   availableLimit: number;
   onClose: () => void;
   onConfirm: () => void;
-}
-
-/** 금액 포맷 (정수 → "1,234,567원") */
-function formatAmount(n: number) {
-  return `${n.toLocaleString("ko-KR")}원`;
 }
 
 export function ImmediatePayConfirmSheet({

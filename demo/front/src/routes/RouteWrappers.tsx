@@ -46,6 +46,7 @@ import { MyCardManagementPage } from "@/pages/card/MyCardManagementPage";
 import { UserManagementPage } from "@/pages/card/UserManagementPage";
 import { PinConfirmSheet } from "@cl/modules/common/PinConfirmSheet";
 import { BottomSheet } from "@cl/modules/common/BottomSheet";
+import { Modal } from "@cl/modules/common/Modal";
 import { CardInfoPanel } from "@cl/biz/card/CardInfoPanel";
 import { ModalSlideOver } from "@cl/layout/ModalSlideOver";
 
@@ -78,6 +79,10 @@ export function LoginRoute() {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [hasError, setHasError] = useState(false);
+  // 세션 만료 시 AuthContext·useSessionActivity가 sessionStorage에 저장한 메시지를 읽어 Modal로 표시
+  const [sessionMessage, setSessionMessage] = useState(
+    () => sessionStorage.getItem("sessionExpiredMessage") ?? "",
+  );
 
   const handleLogin = async () => {
     setHasError(false);
@@ -104,16 +109,29 @@ export function LoginRoute() {
   };
 
   return (
-    <LoginPage
-      userId={userId}
-      password={password}
-      onUserIdChange={setUserId}
-      onPasswordChange={setPassword}
-      hasError={hasError}
-      showPassword={showPassword}
-      onTogglePassword={() => setShowPassword((v) => !v)}
-      onLogin={handleLogin}
-    />
+    <>
+      <LoginPage
+        userId={userId}
+        password={password}
+        onUserIdChange={setUserId}
+        onPasswordChange={setPassword}
+        hasError={hasError}
+        showPassword={showPassword}
+        onTogglePassword={() => setShowPassword((v) => !v)}
+        onLogin={handleLogin}
+      />
+      <Modal
+        open={!!sessionMessage}
+        onClose={() => {
+          sessionStorage.removeItem("sessionExpiredMessage");
+          setSessionMessage("");
+        }}
+        size="sm"
+        titleAlign="center"
+      >
+        {sessionMessage}
+      </Modal>
+    </>
   );
 }
 
@@ -158,6 +176,8 @@ export function CardDashboardRoute() {
   useEffect(() => {
     if (!user?.userId) return;
 
+    const controller = new AbortController();
+
     /* 당월 범위 계산 (YYYYMMDD 형식) */
     const now = new Date();
     const year = now.getFullYear();
@@ -167,9 +187,13 @@ export function CardDashboardRoute() {
     const toDate = `${year}${month}${String(lastDay).padStart(2, "0")}`;
 
     Promise.all([
-      axiosInstance.get("/payment-statement").then((r) => r.data),
       axiosInstance
-        .get(`/transactions?fromDate=${fromDate}&toDate=${toDate}`)
+        .get("/payment-statement", { signal: controller.signal })
+        .then((r) => r.data),
+      axiosInstance
+        .get(`/transactions?fromDate=${fromDate}&toDate=${toDate}`, {
+          signal: controller.signal,
+        })
         .then((r) => r.data),
     ])
       .then(([stmtData, txData]) => {
@@ -180,7 +204,12 @@ export function CardDashboardRoute() {
         setStatementDueDate(parseDueDateKo(rawDue));
         setSpendingAmount(txData.paymentSummary?.totalAmount ?? 0);
       })
-      .catch(console.error);
+      .catch((err: { code?: string }) => {
+        // AbortController 취소 시 axios가 ERR_CANCELED 코드를 반환하므로 무시
+        if (err.code !== "ERR_CANCELED") console.error(err);
+      });
+
+    return () => controller.abort();
   }, [user?.userId]);
 
   return (
@@ -652,8 +681,11 @@ export function ImmediatePayRoute() {
 
   useEffect(() => {
     if (!user?.userId) return;
+
+    const controller = new AbortController();
+
     axiosInstance
-      .get<{ cards: ApiCardFull[] }>("/cards")
+      .get<{ cards: ApiCardFull[] }>("/cards", { signal: controller.signal })
       .then((r) => {
         // ApiCardFull → CardInfo (id, name, maskedNumber만 사용)
         setCards(
@@ -663,9 +695,17 @@ export function ImmediatePayRoute() {
             maskedNumber: c.maskedNumber,
           })),
         );
+        setLoading(false);
       })
-      .catch(console.error)
-      .finally(() => setLoading(false));
+      .catch((err: { code?: string }) => {
+        // abort된 경우 loading을 유지 — StrictMode 2차 실행에서 정상 완료 후 false로 전환
+        if (err.code !== "ERR_CANCELED") {
+          console.error(err);
+          setLoading(false);
+        }
+      });
+
+    return () => controller.abort();
   }, [user?.userId]);
 
   if (loading) return null;
@@ -707,9 +747,13 @@ export function ImmediatePayRequestRoute() {
   const [payableAmount, setPayableAmount] = useState<number>(0);
   useEffect(() => {
     if (!card.id) return;
+
+    const controller = new AbortController();
+
     axiosInstance
       .get<{ payableAmount: number; creditLimit: number }>(
         `/cards/${card.id}/payable-amount`,
+        { signal: controller.signal },
       )
       .then((r) => {
         setPayableAmount(r.data.payableAmount);
@@ -722,9 +766,15 @@ export function ImmediatePayRequestRoute() {
           }),
         );
       })
-      .catch((err) =>
-        console.error("[ImmediatePayRequestRoute] 결제가능금액 조회 실패", err),
-      );
+      .catch((err: { code?: string }) => {
+        if (err.code !== "ERR_CANCELED")
+          console.error(
+            "[ImmediatePayRequestRoute] 결제가능금액 조회 실패",
+            err,
+          );
+      });
+
+    return () => controller.abort();
   }, [card.id]);
 
   // [검증 4] 카드 정보 없음 — 직접 URL 접근·새로고침 등으로 세션이 비어있는 경우
@@ -791,6 +841,8 @@ export function ImmediatePayMethodRoute() {
   const [pinError, setPinError] = useState<string | undefined>();
   // PIN 횟수 초과 여부 — true일 때만 PinConfirmSheet에 초기화 버튼을 표시한다.
   const [pinExceeded, setPinExceeded] = useState(false);
+  // 결제 API 에러 메시지 — 비어 있으면 Modal을 닫은 상태로 간주한다.
+  const [payErrorMessage, setPayErrorMessage] = useState("");
 
   // STEP 1·2에서 세션에 저장된 카드 정보·결제 요청 데이터·금액 정보를 읽는다.
   const storedCard = sessionStorage.getItem("immediatePaySelectedCard");
@@ -888,10 +940,16 @@ export function ImmediatePayMethodRoute() {
         }}
         onConfirm={async (pin) => {
           try {
-            await axiosInstance.post(`/cards/${card.id}/immediate-pay`, {
+            const { data } = await axiosInstance.post<{
+              paidAmount: number;
+              processedCount: number;
+              completedAt: string;
+            }>(`/cards/${card.id}/immediate-pay`, {
               pin,
               amount: payAmount,
             });
+            // 서버 처리일시를 세션에 저장 → STEP 4 완료 화면에서 사용
+            sessionStorage.setItem("immediatePayCompletedAt", data.completedAt);
             setPinOpen(false);
             navigate(PATHS.CARD.IMMEDIATE_PAY_COMPLETE, { replace: true });
           } catch (err: unknown) {
@@ -912,13 +970,27 @@ export function ImmediatePayMethodRoute() {
                 `PIN이 올바르지 않습니다. (${data.attemptsLeft}회 남음)`,
               );
             } else {
-              alert(data?.error ?? "결제 처리 중 오류가 발생했습니다.");
+              // PIN 실패·횟수 초과 외의 예외 → Modal로 안내 후 대시보드로 이동
+              setPayErrorMessage(
+                data?.error ?? "결제 처리 중 오류가 발생했습니다.",
+              );
               setPinOpen(false);
-              navigate(PATHS.CARD.DASHBOARD, { replace: true });
             }
           }
         }}
       />
+      <Modal
+        open={!!payErrorMessage}
+        onClose={() => {
+          setPayErrorMessage("");
+          navigate(PATHS.CARD.DASHBOARD, { replace: true });
+        }}
+        title="결제 오류"
+        size="sm"
+        titleAlign="center"
+      >
+        {payErrorMessage}
+      </Modal>
     </>
   );
 }
@@ -927,11 +999,38 @@ export function ImmediatePayMethodRoute() {
 export function ImmediatePayCompleteRoute() {
   const navigate = useNavigate();
 
-  // 이전 단계에서 세션에 저장된 카드·결제·계좌·금액 정보를 읽는다.
+  // 이전 단계에서 세션에 저장된 카드·결제·계좌·금액·처리일시 정보를 읽는다.
   const storedCard = sessionStorage.getItem("immediatePaySelectedCard");
   const storedRequest = sessionStorage.getItem("immediatePayRequestData");
   const storedAccount = sessionStorage.getItem("immediatePaySelectedAccount");
   const storedAmountInfo = sessionStorage.getItem("immediatePayAmountInfo");
+  // 화면이 마운트되면(데이터 읽기 완료 후) 즉시결제 플로우 세션을 일괄 삭제한다.
+  useEffect(() => {
+    [
+      "immediatePaySelectedCard",
+      "immediatePayAmountInfo",
+      "immediatePayRequestData",
+      "immediatePaySelectedAccount",
+      "immediatePayCompletedAt",
+    ].forEach((key) => sessionStorage.removeItem(key));
+  }, []);
+
+  // 서버 반환 처리일시 사용. 세션 없음·"undefined" 문자열인 경우 클라이언트 현재 시각으로 대체
+  const rawCompletedAt = sessionStorage.getItem("immediatePayCompletedAt");
+  const storedCompletedAt =
+    rawCompletedAt && rawCompletedAt !== "undefined"
+      ? rawCompletedAt
+      : new Date()
+          .toLocaleString("ko-KR", {
+            year: "numeric",
+            month: "2-digit",
+            day: "2-digit",
+            hour: "2-digit",
+            minute: "2-digit",
+            hour12: false,
+          })
+          .replace(/\. /g, ".")
+          .replace(",", "");
 
   const card = storedCard
     ? (JSON.parse(storedCard) as { name: string; maskedNumber: string })
@@ -953,18 +1052,7 @@ export function ImmediatePayCompleteRoute() {
   const availableLimit =
     amountInfo.creditLimit - (amountInfo.payableAmount - request.payAmount);
 
-  // 처리일시는 이 화면이 렌더링되는 시점(PIN 인증 완료 직후)으로 기록한다.
-  const completedAt = new Date()
-    .toLocaleString("ko-KR", {
-      year: "numeric",
-      month: "2-digit",
-      day: "2-digit",
-      hour: "2-digit",
-      minute: "2-digit",
-      hour12: false,
-    })
-    .replace(/\. /g, ".")
-    .replace(",", "");
+  const completedAt = storedCompletedAt;
 
   return (
     <ImmediatePayCompletePage
@@ -1019,8 +1107,11 @@ export function MyCardManagementRoute() {
 
   useEffect(() => {
     if (!user?.userId) return;
+
+    const controller = new AbortController();
+
     axiosInstance
-      .get<{ cards: ApiCardFull[] }>("/cards")
+      .get<{ cards: ApiCardFull[] }>("/cards", { signal: controller.signal })
       .then((r) => {
         const { cards: raw } = r.data;
         setRawCards(raw);
@@ -1049,9 +1140,17 @@ export function MyCardManagementRoute() {
             balance: c.balance,
           })),
         );
+        setLoading(false);
       })
-      .catch(console.error)
-      .finally(() => setLoading(false));
+      .catch((err: { code?: string }) => {
+        // abort된 경우 loading을 유지 — StrictMode 2차 실행에서 정상 완료 후 false로 전환
+        if (err.code !== "ERR_CANCELED") {
+          console.error(err);
+          setLoading(false);
+        }
+      });
+
+    return () => controller.abort();
   }, [user?.userId]);
 
   if (loading) return null;
@@ -1166,14 +1265,21 @@ export function NoticePreviewRoute() {
   const [error, setError] = useState(false);
 
   useEffect(() => {
-    fetch("/api/notices/preview")
+    const controller = new AbortController();
+
+    fetch("/api/notices/preview", { signal: controller.signal })
       .then((r) => {
         if (!r.ok) throw new Error(`HTTP ${r.status}`);
         return r.json() as Promise<NoticePayload>;
       })
       .then(setData)
-      .catch(() => setError(true))
+      .catch((err: { name?: string }) => {
+        // AbortController 취소 시 발생하는 AbortError는 무시
+        if (err.name !== "AbortError") setError(true);
+      })
       .finally(() => setLoading(false));
+
+    return () => controller.abort();
   }, []);
 
   if (loading) {

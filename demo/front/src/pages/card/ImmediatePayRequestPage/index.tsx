@@ -32,6 +32,7 @@ import { StepIndicator } from "@cl/modules/common/StepIndicator";
 import { TabNav } from "@cl/modules/common/TabNav";
 import { LabelValueRow } from "@cl/modules/common/LabelValueRow";
 
+import { formatAmount } from "@/utils/format";
 import type { ImmediatePayRequestPageProps, PaymentType } from "./types";
 
 /** 결제 유형 탭 항목 */
@@ -39,11 +40,6 @@ const PAYMENT_TYPE_TABS = [
   { id: "total", label: "총 이용금액 결제" },
   { id: "per-item", label: "이용건별 결제" },
 ] as const;
-
-/** 금액 포맷 (정수 → "1,234,567원") */
-function formatAmount(n: number) {
-  return `${n.toLocaleString("ko-KR")}원`;
-}
 
 export function ImmediatePayRequestPage({
   initialPaymentType = "total",

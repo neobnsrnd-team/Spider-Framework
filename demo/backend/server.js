@@ -1072,9 +1072,6 @@ app.post("/api/cards/:cardId/immediate-pay", verifyToken, async (req, res) => {
           { userId, cardId },
         );
 
-        // 오늘 날짜를 YYYYMMDD 형식으로 생성
-        const today = new Date().toISOString().slice(0, 10).replace(/-/g, "");
-
         let remaining      = requestAmount; // 아직 배분하지 못한 결제 잔여금
         let totalPaid      = 0;             // 이번 결제에서 실제 차감된 총합계
         let processedCount = 0;             // 업데이트된 내역 건수
@@ -1101,17 +1098,18 @@ app.post("/api/cards/:cardId/immediate-pay", verifyToken, async (req, res) => {
           }
 
           await conn.execute(
+            // 최종결제일자는 DB 서버의 SYSDATE를 직접 사용 — JS new Date()는 UTC 기준이라
+            // KST 자정~오전 9시 사이에 날짜가 하루 밀리는 버그가 있음
             `UPDATE D_SPIDERLINK.POC_카드사용내역
                 SET "결제잔액"     = :newBalance,
                     "누적결제금액" = :newAccumulated,
                     "결제상태코드" = :newStatusCode,
-                    "최종결제일자" = :today
+                    "최종결제일자" = TO_CHAR(SYSDATE, 'YYYYMMDD')
               WHERE ROWID = :rid`,
             {
               newBalance,
               newAccumulated: 누적결제금액 + deducted,
               newStatusCode,
-              today,
               rid: row.ROWID, // ROWID는 Oracle 예약 의사컬럼이라 바인드 변수명으로 사용 불가 → rid로 대체
             },
           );
@@ -1136,7 +1134,15 @@ app.post("/api/cards/:cardId/immediate-pay", verifyToken, async (req, res) => {
 
         // ── 4. 커밋 — 모든 UPDATE가 성공해야 반영된다 ──────────────
         await conn.commit();
-        return { paidAmount: totalPaid, processedCount };
+
+        // 처리일시는 DB 서버 시각 기준으로 반환 — 클라이언트 시각과 불일치 방지
+        const [{ COMPLETED_AT }] = (
+          await conn.execute(
+            `SELECT TO_CHAR(SYSDATE, 'YYYY.MM.DD HH24:MI') AS COMPLETED_AT FROM DUAL`,
+          )
+        ).rows;
+
+        return { paidAmount: totalPaid, processedCount, completedAt: COMPLETED_AT };
       } catch (err) {
         // 어느 한 단계라도 실패하면 전체 롤백하여 데이터 무결성 보장
         await conn.rollback();

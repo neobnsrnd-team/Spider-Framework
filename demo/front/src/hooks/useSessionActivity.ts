@@ -64,9 +64,9 @@ export function useSessionActivity(): void {
       const payload = JSON.parse(atob(parts[1])) as { exp?: number };
 
       if (payload.exp && now > payload.exp * 1000) {
-        // Access Token 만료 — Axios Refresh가 처리하지 못한 경우 강제 로그아웃
+        // Access Token 만료 — 로그인 페이지 Modal용 메시지를 세션에 남기고 강제 로그아웃
+        sessionStorage.setItem('sessionExpiredMessage', '세션이 만료되었습니다. 다시 로그인해 주세요.');
         logout();
-        alert('세션이 만료되었습니다. 다시 로그인해 주세요.');
         navigate(PATHS.LOGIN, { replace: true });
       }
     } catch {
@@ -92,8 +92,9 @@ export function useSessionActivity(): void {
 
     const intervalId = setInterval(() => {
       if (Date.now() - lastActivityRef.current > SESSION_TIMEOUT_MS) {
+        // 비활성 세션 만료 — 로그인 페이지 Modal용 메시지를 세션에 남기고 강제 로그아웃
+        sessionStorage.setItem('sessionExpiredMessage', '세션이 만료되었습니다. 다시 로그인해 주세요.');
         logout();
-        alert('세션이 만료되었습니다. 다시 로그인해 주세요.');
         navigate(PATHS.LOGIN, { replace: true });
       }
     }, 60_000); // 1분마다 체크
