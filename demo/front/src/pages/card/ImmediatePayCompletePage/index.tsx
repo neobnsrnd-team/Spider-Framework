@@ -22,16 +22,15 @@ import { Typography } from '@cl/core/Typography';
 import { LabelValueRow } from '@cl/modules/common/LabelValueRow';
 import { Divider } from '@cl/modules/common/Divider';
 
+import { formatAmount } from '@/utils/format';
 import type { ImmediatePayCompletePageProps } from './types';
-
-function formatAmount(n: number) {
-  return `${n.toLocaleString('ko-KR')}원`;
-}
 
 export function ImmediatePayCompletePage({
   cardName,
+  cardNumber,
   amount,
   account,
+  availableLimit,
   completedAt,
   onConfirm,
 }: ImmediatePayCompletePageProps) {
@@ -65,10 +64,12 @@ export function ImmediatePayCompletePage({
             결제 정보
           </Typography>
           <div className="flex flex-col gap-xs">
-            <LabelValueRow label="카드명" value={cardName} />
-            <LabelValueRow label="결제금액" value={formatAmount(amount)} />
-            <LabelValueRow label="출금계좌" value={account} />
-            <LabelValueRow label="처리일시" value={completedAt} />
+            <LabelValueRow label="카드명"           value={cardName} />
+            <LabelValueRow label="카드번호"          value={cardNumber} />
+            <LabelValueRow label="결제금액"          value={formatAmount(amount)} />
+            <LabelValueRow label="출금계좌"          value={account} />
+            <LabelValueRow label="이용가능한도"      value={formatAmount(availableLimit)} />
+            <LabelValueRow label="처리일시"          value={completedAt} />
           </div>
         </div>
       </div>

@@ -108,12 +108,24 @@ axiosInstance.interceptors.request.use((config: InternalAxiosRequestConfig) => {
 
 // ── 응답 인터셉터 ───────────────────────────────────────────────────────────
 /**
- * 401 응답 수신 시 처리 흐름:
+ * 응답 오류 처리 흐름:
+ *
+ * [401 — Access Token 만료·무효]
+ *   재시도 로직을 실행한다.
  *   1. 이미 재시도한 요청(_retry) → 그냥 reject (무한 루프 방지)
  *   2. Refresh 진행 중 → 대기열 등록, 완료 후 새 토큰으로 재시도
  *   3. Refresh 시도 (/api/auth/refresh, httpOnly 쿠키 자동 전송)
  *      - 성공 → localStorage 갱신 + React 상태 콜백 + 원래 요청 재시도
  *      - 실패 → 대기열 전체 reject + onAuthFailure 콜백 실행
+ *
+ * [400 / 403 — 비즈니스 오류 (예: PIN 틀림·횟수 초과)]
+ *   재시도하지 않고 즉시 reject한다.
+ *   호출부 catch 블록에서 response.data를 읽어 사용자에게 오류 메시지를 표시한다.
+ *   → PIN 오류를 401로 응답하면 인터셉터가 재시도하면서 실패 카운트가
+ *     중복 증가하므로, 서버는 반드시 403을 사용해야 한다.
+ *
+ * [그 외 오류 (500 등)]
+ *   동일하게 즉시 reject한다.
  */
 axiosInstance.interceptors.response.use(
   (response: AxiosResponse) => response,

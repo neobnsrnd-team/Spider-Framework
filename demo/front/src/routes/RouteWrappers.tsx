@@ -11,63 +11,94 @@
  * - 일반 페이지: XxxRoute (예: LoginRoute)
  * - 모달 오버레이: XxxModal (예: HanaCardMenuModal)
  */
-import { useState, useEffect, useRef, useMemo } from 'react';
-import { useNavigate, useLocation, useSearchParams } from 'react-router-dom';
-import type { NoticePayload }              from '@/hooks/useEmergencyNotice';
-import { useAuth }                         from '@/contexts/AuthContext';
-import { axiosInstance }                   from '@/api/axiosInstance';
-import { Landmark, Building, Receipt, FileText, Wallet, Settings, Gift, CreditCard, Headphones } from 'lucide-react';
+import { useState, useEffect, useRef, useMemo } from "react";
+import { useNavigate, useLocation, useSearchParams } from "react-router-dom";
+import type { NoticePayload } from "@/hooks/useEmergencyNotice";
+import { useAuth } from "@/contexts/AuthContext";
+import { axiosInstance } from "@/api/axiosInstance";
+import {
+  Landmark,
+  Building,
+  Receipt,
+  FileText,
+  Wallet,
+  Settings,
+  Gift,
+  CreditCard,
+  Headphones,
+} from "lucide-react";
 
-import { LoginPage }                from '@/pages/common/LoginPage';
-import { CardDashboardPage }        from '@/pages/card/CardDashboardPage';
-import { EmergencyNoticeBanner }    from '@/components/EmergencyNoticeBanner';
-import { useEmergencyNotice }       from '@/hooks/useEmergencyNotice';
-import { HanaCardMenuPage }         from '@/pages/card/HanaCardMenuPage';
-import { UsageHistoryPage }         from '@/pages/card/UsageHistoryPage';
-import { PaymentStatementPage }     from '@/pages/card/PaymentStatementPage';
-import { ImmediatePaymentPage }     from '@/pages/card/ImmediatePaymentPage';
-import { ImmediatePayPage }         from '@/pages/card/ImmediatePayPage';
-import type { CardInfo }            from '@/pages/card/ImmediatePayPage/types';
-import { ImmediatePayRequestPage }  from '@/pages/card/ImmediatePayRequestPage';
-import { ImmediatePayMethodPage }   from '@/pages/card/ImmediatePayMethodPage';
-import { ImmediatePayCompletePage } from '@/pages/card/ImmediatePayCompletePage';
-import { MyCardManagementPage }     from '@/pages/card/MyCardManagementPage';
-import { UserManagementPage }       from '@/pages/card/UserManagementPage';
-import { PinConfirmSheet }          from '@cl/modules/common/PinConfirmSheet';
-import { BottomSheet }              from '@cl/modules/common/BottomSheet';
-import { CardInfoPanel }            from '@cl/biz/card/CardInfoPanel';
-import { ModalSlideOver }           from '@cl/layout/ModalSlideOver';
+import { LoginPage } from "@/pages/common/LoginPage";
+import { CardDashboardPage } from "@/pages/card/CardDashboardPage";
+import { EmergencyNoticeBanner } from "@/components/EmergencyNoticeBanner";
+import { useEmergencyNotice } from "@/hooks/useEmergencyNotice";
+import { HanaCardMenuPage } from "@/pages/card/HanaCardMenuPage";
+import { UsageHistoryPage } from "@/pages/card/UsageHistoryPage";
+import { PaymentStatementPage } from "@/pages/card/PaymentStatementPage";
+import { ImmediatePaymentPage } from "@/pages/card/ImmediatePaymentPage";
+import { ImmediatePayPage } from "@/pages/card/ImmediatePayPage";
+import type { CardInfo } from "@/pages/card/ImmediatePayPage/types";
+import { ImmediatePayRequestPage } from "@/pages/card/ImmediatePayRequestPage";
+import { ImmediatePayMethodPage } from "@/pages/card/ImmediatePayMethodPage";
+import { ImmediatePayConfirmSheet } from "@/pages/card/ImmediatePayMethodPage/ImmediatePayConfirmSheet";
+import { ImmediatePayCompletePage } from "@/pages/card/ImmediatePayCompletePage";
+import { MyCardManagementPage } from "@/pages/card/MyCardManagementPage";
+import { UserManagementPage } from "@/pages/card/UserManagementPage";
+import { PinConfirmSheet } from "@cl/modules/common/PinConfirmSheet";
+import { BottomSheet } from "@cl/modules/common/BottomSheet";
+import { Modal } from "@cl/modules/common/Modal";
+import { CardInfoPanel } from "@cl/biz/card/CardInfoPanel";
+import { ModalSlideOver } from "@cl/layout/ModalSlideOver";
 
-import type { MenuItem }     from '@/pages/card/HanaCardMenuPage/types';
-import type { CardItem }     from '@/pages/card/MyCardManagementPage/types';
-import type { Transaction, SearchFilter }              from '@/pages/card/UsageHistoryPage/types';
-import type { PaymentTabData, StatementTabData, CardPaymentEntry } from '@/pages/card/PaymentStatementPage/types';
-import { PATHS }          from '@/constants/paths';
+import type { MenuItem } from "@/pages/card/HanaCardMenuPage/types";
+import type { CardItem } from "@/pages/card/MyCardManagementPage/types";
+import type {
+  Transaction,
+  SearchFilter,
+} from "@/pages/card/UsageHistoryPage/types";
+import type {
+  PaymentTabData,
+  StatementTabData,
+  CardPaymentEntry,
+} from "@/pages/card/PaymentStatementPage/types";
+import { PATHS } from "@/constants/paths";
 import {
   MOCK_USERS,
   MOCK_MANAGEMENT_ROWS,
   MOCK_CAUTIONS,
-} from '@/mocks/cardMocks';
+} from "@/mocks/cardMocks";
 
 /* ------------------------------------------------------------------ */
 /* 공통 / 인증                                                           */
 /* ------------------------------------------------------------------ */
 
 export function LoginRoute() {
-  const navigate       = useNavigate();
-  const { login }      = useAuth();
-  const [userId,       setUserId]       = useState('');
-  const [password,     setPassword]     = useState('');
+  const navigate = useNavigate();
+  const { login } = useAuth();
+  const [userId, setUserId] = useState("");
+  const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-  const [hasError,     setHasError]     = useState(false);
+  const [hasError, setHasError] = useState(false);
+  // 세션 만료 시 AuthContext·useSessionActivity가 sessionStorage에 저장한 메시지를 읽어 Modal로 표시
+  const [sessionMessage, setSessionMessage] = useState(
+    () => sessionStorage.getItem("sessionExpiredMessage") ?? "",
+  );
 
   const handleLogin = async () => {
     setHasError(false);
     try {
       // withCredentials: true 이므로 백엔드가 Set-Cookie로 httpOnly Refresh Token을 심는다
-      const { data } = await axiosInstance.post('/auth/login', { userId, password });
+      const { data } = await axiosInstance.post("/auth/login", {
+        userId,
+        password,
+      });
       if (data.success) {
-        login({ userId: data.userId, userName: data.userName, userGrade: data.userGrade, token: data.token });
+        login({
+          userId: data.userId,
+          userName: data.userName,
+          userGrade: data.userGrade,
+          token: data.token,
+        });
         navigate(PATHS.CARD.DASHBOARD);
       } else {
         setHasError(true);
@@ -78,16 +109,31 @@ export function LoginRoute() {
   };
 
   return (
-    <LoginPage
-      userId={userId}
-      password={password}
-      onUserIdChange={setUserId}
-      onPasswordChange={setPassword}
-      hasError={hasError}
-      showPassword={showPassword}
-      onTogglePassword={() => setShowPassword((v) => !v)}
-      onLogin={handleLogin}
-    />
+    <>
+      <LoginPage
+        userId={userId}
+        password={password}
+        onUserIdChange={setUserId}
+        onPasswordChange={setPassword}
+        hasError={hasError}
+        showPassword={showPassword}
+        onTogglePassword={() => setShowPassword((v) => !v)}
+        onLogin={handleLogin}
+      />
+      <Modal
+        open={!!sessionMessage}
+        onClose={() => {
+          sessionStorage.removeItem("sessionExpiredMessage");
+          setSessionMessage("");
+        }}
+        title="세션 만료"
+        size="sm"
+        titleAlign="center"
+        className="text-sm text-center"
+      >
+        {sessionMessage}
+      </Modal>
+    </>
   );
 }
 
@@ -100,56 +146,72 @@ export function LoginRoute() {
  * billingPeriod.dueDate(YYYY.MM.DD) 또는 dueDate(YYMMDD) 모두 처리한다.
  */
 function parseDueDateKo(raw: string): string {
-  if (!raw) return '';
+  if (!raw) return "";
   // YYYY.MM.DD
-  const dots = raw.split('.');
+  const dots = raw.split(".");
   if (dots.length === 3 && dots[0].length === 4) {
     return `${Number(dots[1])}월 ${Number(dots[2])}일`;
   }
   // YYMMDD (결제예정일 DB 형식)
-  if (raw.length === 6) return `${Number(raw.slice(2, 4))}월 ${Number(raw.slice(4, 6))}일`;
+  if (raw.length === 6)
+    return `${Number(raw.slice(2, 4))}월 ${Number(raw.slice(4, 6))}일`;
   // YYYYMMDD
-  if (raw.length === 8) return `${Number(raw.slice(4, 6))}월 ${Number(raw.slice(6, 8))}일`;
-  return '';
+  if (raw.length === 8)
+    return `${Number(raw.slice(4, 6))}월 ${Number(raw.slice(6, 8))}일`;
+  return "";
 }
 
 /** 햄버거 메뉴 클릭 시 background location 패턴으로 /card/menu 를 모달로 열기 */
 export function CardDashboardRoute() {
-  const navigate      = useNavigate();
-  const location      = useLocation();
-  const { user }      = useAuth();
-  const { notice }    = useEmergencyNotice(); // SSE 긴급공지 구독
+  const navigate = useNavigate();
+  const location = useLocation();
+  const { user } = useAuth();
+  const { notice } = useEmergencyNotice(); // SSE 긴급공지 구독
 
   /** StatementHeroCard: 공여기간 기준 이번 달 결제 예정 금액 */
-  const [statementAmount,  setStatementAmount]  = useState(0);
+  const [statementAmount, setStatementAmount] = useState(0);
   /** StatementHeroCard: 결제일 레이블 (예: "1월 25일") */
-  const [statementDueDate, setStatementDueDate] = useState('');
+  const [statementDueDate, setStatementDueDate] = useState("");
   /** SummaryCard(spending): 당월 이용내역 합산 금액 */
-  const [spendingAmount,   setSpendingAmount]   = useState(0);
+  const [spendingAmount, setSpendingAmount] = useState(0);
 
   useEffect(() => {
     if (!user?.userId) return;
 
+    const controller = new AbortController();
+
     /* 당월 범위 계산 (YYYYMMDD 형식) */
-    const now     = new Date();
-    const year    = now.getFullYear();
-    const month   = String(now.getMonth() + 1).padStart(2, '0');
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, "0");
     const lastDay = new Date(year, now.getMonth() + 1, 0).getDate();
     const fromDate = `${year}${month}01`;
-    const toDate   = `${year}${month}${String(lastDay).padStart(2, '0')}`;
+    const toDate = `${year}${month}${String(lastDay).padStart(2, "0")}`;
 
     Promise.all([
-      axiosInstance.get('/payment-statement').then((r) => r.data),
-      axiosInstance.get(`/transactions?fromDate=${fromDate}&toDate=${toDate}`).then((r) => r.data),
+      axiosInstance
+        .get("/payment-statement", { signal: controller.signal })
+        .then((r) => r.data),
+      axiosInstance
+        .get(`/transactions?fromDate=${fromDate}&toDate=${toDate}`, {
+          signal: controller.signal,
+        })
+        .then((r) => r.data),
     ])
       .then(([stmtData, txData]) => {
         setStatementAmount(stmtData.totalAmount ?? 0);
         // billingPeriod.dueDate(YYYY.MM.DD) 우선 사용, 없으면 raw dueDate(YYMMDD) 파싱
-        const rawDue = stmtData.billingPeriod?.dueDate ?? stmtData.dueDate ?? '';
+        const rawDue =
+          stmtData.billingPeriod?.dueDate ?? stmtData.dueDate ?? "";
         setStatementDueDate(parseDueDateKo(rawDue));
         setSpendingAmount(txData.paymentSummary?.totalAmount ?? 0);
       })
-      .catch(console.error);
+      .catch((err: { code?: string }) => {
+        // AbortController 취소 시 axios가 ERR_CANCELED 코드를 반환하므로 무시
+        if (err.code !== "ERR_CANCELED") console.error(err);
+      });
+
+    return () => controller.abort();
   }, [user?.userId]);
 
   return (
@@ -161,19 +223,21 @@ export function CardDashboardRoute() {
         statementAmount={statementAmount}
         statementDueDate={statementDueDate}
         spendingAmount={spendingAmount}
-        onMenu={()             => navigate(PATHS.CARD.MENU, { state: { background: location } })}
-        onNotification={()     => {}}
-        onStatementDetail={()  => navigate(PATHS.CARD.PAYMENT_STATEMENT)}
-        onShortLoan={()        => {}}
-        onLongLoan={()         => {}}
-        onRevolving={()        => {}}
-        onCardPerformance={()  => {}}
-        onUsageHistory={()     => navigate(PATHS.CARD.USAGE_HISTORY)}
-        onMyCards={()          => navigate(PATHS.CARD.MY_CARD_MANAGEMENT)}
-        onCoupons={()          => {}}
-        onLimitCheck={()       => {}}
-        onInstallment={()      => {}}
-        onCardApply={()        => {}}
+        onMenu={() =>
+          navigate(PATHS.CARD.MENU, { state: { background: location } })
+        }
+        onNotification={() => {}}
+        onStatementDetail={() => navigate(PATHS.CARD.PAYMENT_STATEMENT)}
+        onShortLoan={() => {}}
+        onLongLoan={() => {}}
+        onRevolving={() => {}}
+        onCardPerformance={() => {}}
+        onUsageHistory={() => navigate(PATHS.CARD.USAGE_HISTORY)}
+        onMyCards={() => navigate(PATHS.CARD.MY_CARD_MANAGEMENT)}
+        onCoupons={() => {}}
+        onLimitCheck={() => {}}
+        onInstallment={() => {}}
+        onCardApply={() => {}}
       />
     </>
   );
@@ -185,32 +249,38 @@ export function CardDashboardRoute() {
 
 /** 분할납부·즉시결제 클릭 시 즉시결제 안내로 이동 */
 export function UsageHistoryRoute() {
-  const navigate   = useNavigate();
-  const { user }   = useAuth();
-  const [transactions,   setTransactions]   = useState<Transaction[]>([]);
-  const [totalCount,     setTotalCount]     = useState(0);
-  const [paymentSummary, setPaymentSummary] = useState({ date: '', totalAmount: 0 });
-  const [cardOptions,    setCardOptions]    = useState<{ value: string; label: string }[]>([]);
-  const [loading,        setLoading]        = useState(true);
+  const navigate = useNavigate();
+  const { user } = useAuth();
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [totalCount, setTotalCount] = useState(0);
+  const [paymentSummary, setPaymentSummary] = useState({
+    date: "",
+    totalAmount: 0,
+  });
+  const [cardOptions, setCardOptions] = useState<
+    { value: string; label: string }[]
+  >([]);
+  const [loading, setLoading] = useState(true);
 
   /** SearchFilter → query string 변환 후 이용내역 재조회 */
   const fetchTransactions = (filter?: SearchFilter) => {
     const params = new URLSearchParams();
     if (filter) {
-      if (filter.selectedCard && filter.selectedCard !== 'all')
-        params.set('cardId', filter.selectedCard);
-      if (filter.period) params.set('period', filter.period);
-      if (filter.customMonth) params.set('customMonth', filter.customMonth);
-      if (filter.usageType && filter.usageType !== 'all')
-        params.set('usageType', filter.usageType);
+      if (filter.selectedCard && filter.selectedCard !== "all")
+        params.set("cardId", filter.selectedCard);
+      if (filter.period) params.set("period", filter.period);
+      if (filter.customMonth) params.set("customMonth", filter.customMonth);
+      if (filter.usageType && filter.usageType !== "all")
+        params.set("usageType", filter.usageType);
     }
-    const qs = params.toString() ? `?${params}` : '';
-    axiosInstance.get(`/transactions${qs}`)
+    const qs = params.toString() ? `?${params}` : "";
+    axiosInstance
+      .get(`/transactions${qs}`)
       .then((r) => {
         const data = r.data;
         setTransactions(data.transactions ?? []);
         setTotalCount(data.totalCount ?? 0);
-        setPaymentSummary(data.paymentSummary ?? { date: '', totalAmount: 0 });
+        setPaymentSummary(data.paymentSummary ?? { date: "", totalAmount: 0 });
       })
       .catch(console.error);
   };
@@ -218,21 +288,25 @@ export function UsageHistoryRoute() {
   useEffect(() => {
     if (!user?.userId) return;
     /* 이번 달 첫째 날 ~ 마지막 날을 YYYYMMDD 형식으로 계산 */
-    const now      = new Date();
-    const year     = now.getFullYear();
-    const month    = String(now.getMonth() + 1).padStart(2, '0');
-    const lastDay  = new Date(year, now.getMonth() + 1, 0).getDate(); // 월의 실제 마지막 날
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, "0");
+    const lastDay = new Date(year, now.getMonth() + 1, 0).getDate(); // 월의 실제 마지막 날
     const fromDate = `${year}${month}01`;
-    const toDate   = `${year}${month}${String(lastDay).padStart(2, '0')}`;
+    const toDate = `${year}${month}${String(lastDay).padStart(2, "0")}`;
 
     Promise.all([
-      axiosInstance.get(`/transactions?fromDate=${fromDate}&toDate=${toDate}`).then((r) => r.data),
-      axiosInstance.get('/cards').then((r) => r.data),
+      axiosInstance
+        .get(`/transactions?fromDate=${fromDate}&toDate=${toDate}`)
+        .then((r) => r.data),
+      axiosInstance.get("/cards").then((r) => r.data),
     ])
       .then(([txData, cardData]) => {
         setTransactions(txData.transactions ?? []);
         setTotalCount(txData.totalCount ?? 0);
-        setPaymentSummary(txData.paymentSummary ?? { date: '', totalAmount: 0 });
+        setPaymentSummary(
+          txData.paymentSummary ?? { date: "", totalAmount: 0 },
+        );
         setCardOptions(
           (cardData.cards ?? []).map((c: { id: string; name: string }) => ({
             value: c.id,
@@ -252,13 +326,13 @@ export function UsageHistoryRoute() {
       totalCount={totalCount}
       paymentSummary={paymentSummary}
       cardOptions={cardOptions}
-      onBack={()               => navigate(-1)}
-      onClose={()              => navigate(PATHS.CARD.DASHBOARD, { replace: true })}
-      onLoadMore={()           => {}}
-      onRevolving={()          => {}}
+      onBack={() => navigate(-1)}
+      onClose={() => navigate(PATHS.CARD.DASHBOARD, { replace: true })}
+      onLoadMore={() => {}}
+      onRevolving={() => {}}
       onSearch={fetchTransactions}
-      onInstallment={()        => navigate(PATHS.CARD.IMMEDIATE_PAYMENT)}
-      onImmediatePayment={()   => navigate(PATHS.CARD.IMMEDIATE_PAYMENT)}
+      onInstallment={() => navigate(PATHS.CARD.IMMEDIATE_PAYMENT)}
+      onImmediatePayment={() => navigate(PATHS.CARD.IMMEDIATE_PAYMENT)}
     />
   );
 }
@@ -268,19 +342,39 @@ export function UsageHistoryRoute() {
 /* ------------------------------------------------------------------ */
 
 /** /api/payment-statement 응답 items 단건 타입 */
-interface StmtApiItem { cardNo: string; cardName: string; amount: number; dueDate: string }
+interface StmtApiItem {
+  cardNo: string;
+  cardName: string;
+  amount: number;
+  dueDate: string;
+}
 /** /api/payment-statement 응답 billingPeriod 타입 */
-interface StmtBillingPeriod { usageStart: string; usageEnd: string; dueDate: string }
+interface StmtBillingPeriod {
+  usageStart: string;
+  usageEnd: string;
+  dueDate: string;
+}
 /** /api/payment-statement 전체 응답 타입 */
-interface StmtApiResponse { dueDate: string; totalAmount: number; items: StmtApiItem[]; cardInfo: { paymentBank: string; paymentAccount: string; paymentDay: string } | null; billingPeriod: StmtBillingPeriod | null }
+interface StmtApiResponse {
+  dueDate: string;
+  totalAmount: number;
+  items: StmtApiItem[];
+  cardInfo: {
+    paymentBank: string;
+    paymentAccount: string;
+    paymentDay: string;
+  } | null;
+  billingPeriod: StmtBillingPeriod | null;
+}
 
 /** YYMMDD or YYYYMMDD → "M월 D일 결제" 레이블 */
 function fmtDueDateLabel(raw: string): string {
-  if (raw.length === 6) return `${Number(raw.slice(2, 4))}월 ${Number(raw.slice(4, 6))}일 결제`;
-  if (raw.length === 8) return `${Number(raw.slice(4, 6))}월 ${Number(raw.slice(6, 8))}일 결제`;
-  return '';
+  if (raw.length === 6)
+    return `${Number(raw.slice(2, 4))}월 ${Number(raw.slice(4, 6))}일 결제`;
+  if (raw.length === 8)
+    return `${Number(raw.slice(4, 6))}월 ${Number(raw.slice(6, 8))}일 결제`;
+  return "";
 }
-
 
 /**
  * 결제일이 오늘 이후인지 판단해 '예정' 배지 표시 여부를 결정한다.
@@ -299,12 +393,12 @@ function isPaymentUpcoming(
 
   if (billingPeriod?.dueDate) {
     /* YYYY.MM.DD 형식 파싱 */
-    const [y, m, d] = billingPeriod.dueDate.split('.').map(Number);
+    const [y, m, d] = billingPeriod.dueDate.split(".").map(Number);
     return new Date(y, m - 1, d) >= today;
   }
 
   /* billingPeriod 없을 때: yearMonth + paymentDay로 결제일 구성해 비교 */
-  const [y, m] = yearMonth.split('-').map(Number);
+  const [y, m] = yearMonth.split("-").map(Number);
   const day = paymentDay ? Number(paymentDay) : 1; // paymentDay 없으면 1일로 보수적 처리
   return new Date(y, m - 1, day) >= today;
 }
@@ -318,30 +412,42 @@ function isPaymentUpcoming(
  *     e.g. "1234567890" → "123***7890"
  */
 function maskAccountNumber(account: string): string {
-  if (!account) return '';
-  const parts = account.split('-');
+  if (!account) return "";
+  const parts = account.split("-");
   if (parts.length >= 3) {
     /* 중간 세그먼트(들)를 같은 길이의 * 로 교체 */
-    const masked = parts.slice(1, -1).map((p) => '*'.repeat(p.length));
-    return [parts[0], ...masked, parts[parts.length - 1]].join('-');
+    const masked = parts.slice(1, -1).map((p) => "*".repeat(p.length));
+    return [parts[0], ...masked, parts[parts.length - 1]].join("-");
   }
   /* 하이픈 없는 숫자열: 앞 3 + * + 뒤 4 */
-  const digits = account.replace(/\D/g, '');
+  const digits = account.replace(/\D/g, "");
   if (digits.length <= 7) return account; // 너무 짧으면 마스킹 생략
-  return digits.slice(0, 3) + '*'.repeat(digits.length - 7) + digits.slice(-4);
+  return digits.slice(0, 3) + "*".repeat(digits.length - 7) + digits.slice(-4);
 }
 
 /** YYMMDD or YYYYMMDD → { dateFull, dateYM, dateMD } */
 function parseDueDate(raw: string) {
   if (raw.length === 6) {
-    const y = `20${raw.slice(0, 2)}`, m = raw.slice(2, 4), d = raw.slice(4, 6);
-    return { dateFull: `${y}.${m}.${d}`, dateYM: `${raw.slice(0, 2)}년 ${Number(m)}월`, dateMD: `${m}.${d}` };
+    const y = `20${raw.slice(0, 2)}`,
+      m = raw.slice(2, 4),
+      d = raw.slice(4, 6);
+    return {
+      dateFull: `${y}.${m}.${d}`,
+      dateYM: `${raw.slice(0, 2)}년 ${Number(m)}월`,
+      dateMD: `${m}.${d}`,
+    };
   }
   if (raw.length === 8) {
-    const y = raw.slice(0, 4), m = raw.slice(4, 6), d = raw.slice(6, 8);
-    return { dateFull: `${y}.${m}.${d}`, dateYM: `${y.slice(2)}년 ${Number(m)}월`, dateMD: `${m}.${d}` };
+    const y = raw.slice(0, 4),
+      m = raw.slice(4, 6),
+      d = raw.slice(6, 8);
+    return {
+      dateFull: `${y}.${m}.${d}`,
+      dateYM: `${y.slice(2)}년 ${Number(m)}월`,
+      dateMD: `${m}.${d}`,
+    };
   }
-  return { dateFull: '', dateYM: '', dateMD: '' };
+  return { dateFull: "", dateYM: "", dateMD: "" };
 }
 
 /**
@@ -361,31 +467,34 @@ function parseDueDate(raw: string) {
  */
 function getInitialBillingMonth(): string {
   const today = new Date();
-  const day   = today.getDate();
+  const day = today.getDate();
   /* 1일로 고정한 뒤 월 이동 — setDate 후 setMonth 방식의 오버플로우 없음 */
-  const base  = new Date(today.getFullYear(), today.getMonth(), 1);
+  const base = new Date(today.getFullYear(), today.getMonth(), 1);
   if (day >= 15) {
     // 15일 이후: 다음 달로 이동
     base.setMonth(base.getMonth() + 1);
   }
   // 1~14일: base 그대로(이번 달)
-  return `${base.getFullYear()}-${String(base.getMonth() + 1).padStart(2, '0')}`;
+  return `${base.getFullYear()}-${String(base.getMonth() + 1).padStart(2, "0")}`;
 }
 
 /** 즉시결제·분할납부 클릭 시 즉시결제 안내로 이동 */
 export function PaymentStatementRoute() {
-  const navigate   = useNavigate();
-  const { user }   = useAuth();
+  const navigate = useNavigate();
+  const { user } = useAuth();
 
   /** 전체 카드 이용내역 items */
-  const [allItems,    setAllItems]    = useState<StmtApiItem[]>([]);
+  const [allItems, setAllItems] = useState<StmtApiItem[]>([]);
   /** /api/cards 에서 가져온 카드 상세 (결제은행·계좌·결제일 표시용) */
-  const [rawCards,    setRawCards]    = useState<ApiCardFull[]>([]);
+  const [rawCards, setRawCards] = useState<ApiCardFull[]>([]);
   /** /api/payment-statement 응답의 cardInfo — rawCards 없을 때 fallback */
-  const [stmtCardInfo, setStmtCardInfo] = useState<StmtApiResponse['cardInfo']>(null);
+  const [stmtCardInfo, setStmtCardInfo] =
+    useState<StmtApiResponse["cardInfo"]>(null);
   /** API 응답의 공여기간 정보 — infoSections 표시에 사용 */
-  const [billingPeriod, setBillingPeriod] = useState<StmtBillingPeriod | null>(null);
-  const [loading,     setLoading]     = useState(true);
+  const [billingPeriod, setBillingPeriod] = useState<StmtBillingPeriod | null>(
+    null,
+  );
+  const [loading, setLoading] = useState(true);
   /**
    * 현재 적용된 날짜 필터 — 날짜 변경 시 재조회에 사용.
    * getInitialBillingMonth()로 오늘 날짜 기준 최적 청구월을 초기값으로 설정한다.
@@ -400,9 +509,10 @@ export function PaymentStatementRoute() {
   function fetchItems(yearMonth = yearMonthRef.current) {
     yearMonthRef.current = yearMonth;
     const params = new URLSearchParams();
-    if (yearMonth) params.set('yearMonth', yearMonth);
-    const qs = params.toString() ? `?${params}` : '';
-    axiosInstance.get<StmtApiResponse>(`/payment-statement${qs}`)
+    if (yearMonth) params.set("yearMonth", yearMonth);
+    const qs = params.toString() ? `?${params}` : "";
+    axiosInstance
+      .get<StmtApiResponse>(`/payment-statement${qs}`)
       .then((r) => {
         const data = r.data;
         setAllItems(data.items ?? []);
@@ -417,8 +527,10 @@ export function PaymentStatementRoute() {
     /* 초기 조회: getInitialBillingMonth() 기준 청구월 */
     const initQs = `?yearMonth=${yearMonthRef.current}`;
     Promise.all([
-      axiosInstance.get<StmtApiResponse>(`/payment-statement${initQs}`).then((r) => r.data),
-      axiosInstance.get<{ cards: ApiCardFull[] }>('/cards').then((r) => r.data),
+      axiosInstance
+        .get<StmtApiResponse>(`/payment-statement${initQs}`)
+        .then((r) => r.data),
+      axiosInstance.get<{ cards: ApiCardFull[] }>("/cards").then((r) => r.data),
     ])
       .then(([stmtData, cardData]) => {
         setAllItems(stmtData.items ?? []);
@@ -437,47 +549,79 @@ export function PaymentStatementRoute() {
    * - infoSections: 첫 번째 카드의 결제정보 + 공여기간
    */
   const { paymentData, statementData } = useMemo<{
-    paymentData:   PaymentTabData;
+    paymentData: PaymentTabData;
     statementData: StatementTabData;
   }>(() => {
     /* 결제예정금액 탭 — 백엔드가 청구월 기준으로 필터링한 allItems 사용 */
     const paymentTotalAmt = allItems.reduce((s, i) => s + i.amount, 0);
-    const firstDue = allItems[0]?.dueDate ?? '';
+    const firstDue = allItems[0]?.dueDate ?? "";
     const { dateFull, dateYM, dateMD } = parseDueDate(firstDue);
     const paymentItems: CardPaymentEntry[] = allItems.map((item) => ({
-      id:         `${item.cardNo}_${item.dueDate}`,
-      icon:       <CreditCard className="size-5" />,
+      id: `${item.cardNo}_${item.dueDate}`,
+      icon: <CreditCard className="size-5" />,
       cardEnName: fmtDueDateLabel(item.dueDate),
-      cardName:   item.cardName,
-      amount:     item.amount,
+      cardName: item.cardName,
+      amount: item.amount,
     }));
 
     /* 이용대금명세서 탭 — 동일 항목 재사용 */
     const statementTotalAmt = paymentTotalAmt;
-    const allPaymentItems   = paymentItems;
+    const allPaymentItems = paymentItems;
 
     /* 결제정보: stmtCardInfo(payment-statement API) 우선, 없으면 rawCards[0] fallback */
-    const cardInfoSrc = stmtCardInfo ?? (rawCards[0] ? {
-      paymentBank:    rawCards[0].paymentBank,
-      paymentAccount: rawCards[0].paymentAccount,
-      paymentDay:     rawCards[0].paymentDay,
-    } : null);
-    const paymentInfoRows = cardInfoSrc ? [
-      { label: '결제은행명', value: cardInfoSrc.paymentBank },
-      { label: '결제계좌',   value: maskAccountNumber(cardInfoSrc.paymentAccount) },
-      { label: '결제일',     value: `${cardInfoSrc.paymentDay}일` },
-    ] : [];
-    const billingRows = billingPeriod ? [
-      { label: '이용 시작', value: billingPeriod.usageStart },
-      { label: '이용 종료', value: billingPeriod.usageEnd },
-    ] : [];
-    const infoSections = cardInfoSrc ? [
-      { title: '결제정보', rows: [...paymentInfoRows, ...billingRows] },
-    ] : [];
+    const cardInfoSrc =
+      stmtCardInfo ??
+      (rawCards[0]
+        ? {
+            paymentBank: rawCards[0].paymentBank,
+            paymentAccount: rawCards[0].paymentAccount,
+            paymentDay: rawCards[0].paymentDay,
+          }
+        : null);
+    const paymentInfoRows = cardInfoSrc
+      ? [
+          { label: "결제은행명", value: cardInfoSrc.paymentBank },
+          {
+            label: "결제계좌",
+            value: maskAccountNumber(cardInfoSrc.paymentAccount),
+          },
+          { label: "결제일", value: `${cardInfoSrc.paymentDay}일` },
+        ]
+      : [];
+    const billingRows = billingPeriod
+      ? [
+          { label: "이용 시작", value: billingPeriod.usageStart },
+          { label: "이용 종료", value: billingPeriod.usageEnd },
+        ]
+      : [];
+    const infoSections = cardInfoSrc
+      ? [{ title: "결제정보", rows: [...paymentInfoRows, ...billingRows] }]
+      : [];
 
     return {
-      paymentData:   { dateFull, dateYM, dateMD, totalAmount: paymentTotalAmt, revolving: 0, cardLoan: 0, cashAdvance: 0, infoSections, paymentItems: paymentItems },
-      statementData: { totalAmount: statementTotalAmt, badge: isPaymentUpcoming(billingPeriod, yearMonthRef.current, cardInfoSrc?.paymentDay) ? '예정' : undefined, paymentItems: allPaymentItems, infoSections },
+      paymentData: {
+        dateFull,
+        dateYM,
+        dateMD,
+        totalAmount: paymentTotalAmt,
+        revolving: 0,
+        cardLoan: 0,
+        cashAdvance: 0,
+        infoSections,
+        paymentItems: paymentItems,
+      },
+      statementData: {
+        totalAmount: statementTotalAmt,
+        badge: isPaymentUpcoming(
+          billingPeriod,
+          yearMonthRef.current,
+          cardInfoSrc?.paymentDay,
+        )
+          ? "예정"
+          : undefined,
+        paymentItems: allPaymentItems,
+        infoSections,
+      },
     };
   }, [allItems, rawCards, stmtCardInfo, billingPeriod]);
 
@@ -488,15 +632,15 @@ export function PaymentStatementRoute() {
       initialMonth={yearMonthRef.current}
       paymentData={paymentData}
       statementData={statementData}
-      onBack={()               => navigate(-1)}
-      onClose={()              => navigate(PATHS.CARD.DASHBOARD, { replace: true })}
+      onBack={() => navigate(-1)}
+      onClose={() => navigate(PATHS.CARD.DASHBOARD, { replace: true })}
       onDateClick={(yearMonth) => fetchItems(yearMonth)}
-      onRevolving={()          => {}}
-      onCardLoan={()           => {}}
-      onCashAdvance={()        => {}}
-      onStatementDetail={()    => navigate(PATHS.CARD.USAGE_HISTORY)}
-      onInstallment={()        => navigate(PATHS.CARD.IMMEDIATE_PAYMENT)}
-      onImmediatePayment={()   => navigate(PATHS.CARD.IMMEDIATE_PAYMENT)}
+      onRevolving={() => {}}
+      onCardLoan={() => {}}
+      onCashAdvance={() => {}}
+      onStatementDetail={() => navigate(PATHS.CARD.USAGE_HISTORY)}
+      onInstallment={() => navigate(PATHS.CARD.IMMEDIATE_PAYMENT)}
+      onImmediatePayment={() => navigate(PATHS.CARD.IMMEDIATE_PAYMENT)}
     />
   );
 }
@@ -511,45 +655,59 @@ export function ImmediatePaymentRoute() {
   return (
     <ImmediatePaymentPage
       hanaAccount={{
-        title: '하나은행 결제계좌',
-        hours: '365일 06:00~23:30',
-        icon:  <Landmark className="size-5" />,
+        title: "하나은행 결제계좌",
+        hours: "365일 06:00~23:30",
+        icon: <Landmark className="size-5" />,
       }}
       otherAccount={{
-        title: '타행 결제계좌',
-        hours: '365일 06:00~23:30',
-        icon:  <Building className="size-5" />,
+        title: "타행 결제계좌",
+        hours: "365일 06:00~23:30",
+        icon: <Building className="size-5" />,
       }}
       cautions={MOCK_CAUTIONS}
       onImmediatePayment={() => navigate(PATHS.CARD.IMMEDIATE_PAY)}
-      onItemPayment={()      => navigate(PATHS.CARD.IMMEDIATE_PAY)}
-      onAutoPayment={()      => {}}
-      onBack={()             => navigate(-1)}
-      onClose={()            => navigate(PATHS.CARD.DASHBOARD, { replace: true })}
+      onItemPayment={() => navigate(PATHS.CARD.IMMEDIATE_PAY)}
+      onAutoPayment={() => {}}
+      onBack={() => navigate(-1)}
+      onClose={() => navigate(PATHS.CARD.DASHBOARD, { replace: true })}
     />
   );
 }
 
 /** STEP 1 — 카드·결제유형 선택, 다음 클릭 시 STEP 2 로 이동 */
 export function ImmediatePayRoute() {
-  const navigate            = useNavigate();
-  const { user }            = useAuth();
-  const [cards, setCards]   = useState<CardInfo[]>([]);
+  const navigate = useNavigate();
+  const { user } = useAuth();
+  const [cards, setCards] = useState<CardInfo[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (!user?.userId) return;
-    axiosInstance.get<{ cards: ApiCardFull[] }>('/cards')
+
+    const controller = new AbortController();
+
+    axiosInstance
+      .get<{ cards: ApiCardFull[] }>("/cards", { signal: controller.signal })
       .then((r) => {
         // ApiCardFull → CardInfo (id, name, maskedNumber만 사용)
-        setCards(r.data.cards.map((c) => ({
-          id:           c.id,
-          name:         c.name,
-          maskedNumber: c.maskedNumber,
-        })));
+        setCards(
+          r.data.cards.map((c) => ({
+            id: c.id,
+            name: c.name,
+            maskedNumber: c.maskedNumber,
+          })),
+        );
+        setLoading(false);
       })
-      .catch(console.error)
-      .finally(() => setLoading(false));
+      .catch((err: { code?: string }) => {
+        // abort된 경우 loading을 유지 — StrictMode 2차 실행에서 정상 완료 후 false로 전환
+        if (err.code !== "ERR_CANCELED") {
+          console.error(err);
+          setLoading(false);
+        }
+      });
+
+    return () => controller.abort();
   }, [user?.userId]);
 
   if (loading) return null;
@@ -560,10 +718,19 @@ export function ImmediatePayRoute() {
       initialCardId={cards[0]?.id}
       initialPaymentType="total"
       onPaymentTypeChange={() => {}}
-      onCardChange={()        => {}}
-      onBack={()              => navigate(-1)}
-      onClose={()             => navigate(PATHS.CARD.DASHBOARD, { replace: true })}
-      onNext={()              => navigate(PATHS.CARD.IMMEDIATE_PAY_REQUEST)}
+      onCardChange={() => {}}
+      onBack={() => navigate(-1)}
+      onClose={() => navigate(PATHS.CARD.DASHBOARD, { replace: true })}
+      onNext={(cardId) => {
+        // STEP 1에서 선택한 카드를 sessionStorage에 저장해 STEP 2로 전달
+        const card = cards.find((c) => c.id === cardId);
+        if (card)
+          sessionStorage.setItem(
+            "immediatePaySelectedCard",
+            JSON.stringify(card),
+          );
+        navigate(PATHS.CARD.IMMEDIATE_PAY_REQUEST);
+      }}
     />
   );
 }
@@ -571,58 +738,262 @@ export function ImmediatePayRoute() {
 /** STEP 2 — 결제금액 확인, 다음 클릭 시 STEP 3 으로 이동 */
 export function ImmediatePayRequestRoute() {
   const navigate = useNavigate();
+
+  // STEP 1에서 sessionStorage에 저장된 카드 정보를 읽는다.
+  const storedCard = sessionStorage.getItem("immediatePaySelectedCard");
+  const card: CardInfo = storedCard
+    ? (JSON.parse(storedCard) as CardInfo)
+    : { id: "", name: "", maskedNumber: "" };
+
+  // POC_카드사용내역에서 누적결제금액 < 이용금액인 건의 미결제 잔액 합산을 조회한다.
+  const [payableAmount, setPayableAmount] = useState<number>(0);
+  useEffect(() => {
+    if (!card.id) return;
+
+    const controller = new AbortController();
+
+    axiosInstance
+      .get<{ payableAmount: number; creditLimit: number }>(
+        `/cards/${card.id}/payable-amount`,
+        { signal: controller.signal },
+      )
+      .then((r) => {
+        setPayableAmount(r.data.payableAmount);
+        // STEP 3 확인 시트에서 결제 후 이용가능한도 계산에 필요한 값을 세션에 저장한다.
+        sessionStorage.setItem(
+          "immediatePayAmountInfo",
+          JSON.stringify({
+            payableAmount: r.data.payableAmount,
+            creditLimit: r.data.creditLimit,
+          }),
+        );
+      })
+      .catch((err: { code?: string }) => {
+        if (err.code !== "ERR_CANCELED")
+          console.error(
+            "[ImmediatePayRequestRoute] 결제가능금액 조회 실패",
+            err,
+          );
+      });
+
+    return () => controller.abort();
+  }, [card.id]);
+
+  // [검증 4] 카드 정보 없음 — 직접 URL 접근·새로고침 등으로 세션이 비어있는 경우
+  if (!card.id) {
+    return (
+      <div className="flex flex-col items-center justify-center h-full gap-md px-standard text-center">
+        <p className="text-sm text-muted">
+          카드 정보가 없습니다.
+          <br />
+          이전 단계에서 카드를 선택해 주세요.
+        </p>
+        <button
+          className="text-sm text-brand underline"
+          onClick={() => navigate(-1)}
+        >
+          이전으로 돌아가기
+        </button>
+      </div>
+    );
+  }
+
   return (
     <ImmediatePayRequestPage
-      card={{
-        id:           'card-1',
-        name:         '하나 머니 체크카드',
-        maskedNumber: '1234-56**-****-7890',
-      }}
-      payableAmount={101000}
-      paymentBreakdown={[
-        { dateLabel: '2026.04.14 결제', amount: 91100 },
-        { dateLabel: '2026.05.14 결제', amount:  9900 },
-      ]}
+      card={card}
+      payableAmount={payableAmount}
       amountHelperText="금액 입금 시 당사의 입금공제 순서에 따라 처리되며, 특정 건만 처리 할 수 없습니다."
       cautions={[
-        { title: '결제 제한 안내', content: '결제일 당일 출금 가능 잔액이 부족할 경우 즉시결제가 취소될 수 있습니다.' },
-        { title: '취소 불가 안내', content: '즉시결제 신청 후에는 취소가 불가합니다.' },
+        {
+          title: "결제 제한 안내",
+          content:
+            "결제일 당일 출금 가능 잔액이 부족할 경우 즉시결제가 취소될 수 있습니다.",
+        },
+        {
+          title: "취소 불가 안내",
+          content: "즉시결제 신청 후에는 취소가 불가합니다.",
+        },
       ]}
       onChangeCard={() => navigate(-1)}
-      onNext={()       => navigate(PATHS.CARD.IMMEDIATE_PAY_METHOD)}
-      onBack={()       => navigate(-1)}
-      onClose={()      => navigate(PATHS.CARD.DASHBOARD, { replace: true })}
+      onNext={(usageType, payAmount) => {
+        // STEP 3에서 신청정보 확인에 표시할 데이터를 세션에 저장한다.
+        sessionStorage.setItem(
+          "immediatePayRequestData",
+          JSON.stringify({ usageType, payAmount }),
+        );
+        navigate(PATHS.CARD.IMMEDIATE_PAY_METHOD);
+      }}
+      onBack={() => navigate(-1)}
+      onClose={() => navigate(PATHS.CARD.DASHBOARD, { replace: true })}
     />
   );
 }
 
-/** STEP 3 — 출금계좌 선택, 신청 클릭 시 PIN 입력 시트 열기 → 완료 시 STEP 4 로 이동 */
+/** STEP 3 — 출금계좌 선택, 신청 클릭 시 확인 시트 → PIN 입력 시트 → 완료 시 STEP 4 로 이동 */
 export function ImmediatePayMethodRoute() {
-  const navigate          = useNavigate();
+  const navigate = useNavigate();
+  const [confirmOpen, setConfirmOpen] = useState(false);
   const [pinOpen, setPinOpen] = useState(false);
+  // 신청 클릭 시 선택된 계좌를 확인 시트에 전달하기 위해 저장한다.
+  const [selectedAccount, setSelectedAccount] = useState({
+    bankName: "",
+    maskedAccount: "",
+  });
+  // PIN 오류 메시지 — PinConfirmSheet에 전달해 도트 아래에 표시한다.
+  const [pinError, setPinError] = useState<string | undefined>();
+  // PIN 횟수 초과 여부 — true일 때만 PinConfirmSheet에 초기화 버튼을 표시한다.
+  const [pinExceeded, setPinExceeded] = useState(false);
+  // 결제 API 에러 메시지 — 비어 있으면 Modal을 닫은 상태로 간주한다.
+  const [payErrorMessage, setPayErrorMessage] = useState("");
+
+  // STEP 1·2에서 세션에 저장된 카드 정보·결제 요청 데이터·금액 정보를 읽는다.
+  const storedCard = sessionStorage.getItem("immediatePaySelectedCard");
+  const storedRequest = sessionStorage.getItem("immediatePayRequestData");
+  const storedAmountInfo = sessionStorage.getItem("immediatePayAmountInfo");
+  const card: CardInfo = storedCard
+    ? (JSON.parse(storedCard) as CardInfo)
+    : { id: "", name: "", maskedNumber: "" };
+  const { usageType, payAmount } = storedRequest
+    ? (JSON.parse(storedRequest) as { usageType: string; payAmount: number })
+    : { usageType: "lump", payAmount: 0 };
+  const { payableAmount: totalPayable, creditLimit } = storedAmountInfo
+    ? (JSON.parse(storedAmountInfo) as {
+        payableAmount: number;
+        creditLimit: number;
+      })
+    : { payableAmount: 0, creditLimit: 0 };
+
+  // 이용구분 코드 → 표시 문자열
+  const usageTypeLabel = usageType === "lump" ? "일시불" : "금액별";
+
+  // 결제 후 이용가능한도 = 한도금액 - (미결제금액 - 결제금액)
+  const availableLimit = creditLimit - (totalPayable - payAmount);
+
+  const ACCOUNTS = [
+    { id: "acc-1", bankName: "하나은행", maskedAccount: "123-456789-01***" },
+    { id: "acc-2", bankName: "국민은행", maskedAccount: "987-654321-99***" },
+  ];
 
   return (
     <>
       <ImmediatePayMethodPage
         summaryItems={[
-          { label: '청구단위', value: '하나 머니 체크카드 1234-56**-****-7890' },
-          { label: '이용구분', value: '일시불' },
-          { label: '결제금액', value: '1,234,567원' },
+          {
+            label: "청구단위",
+            value: (
+              <span className="text-sm font-bold text-text-heading">
+                {card.name}
+                <br />
+                {card.maskedNumber}
+              </span>
+            ),
+          },
+          { label: "이용구분", value: usageTypeLabel },
+          {
+            label: "결제금액",
+            value: `${payAmount.toLocaleString("ko-KR")}원`,
+          },
         ]}
-        accounts={[
-          { id: 'acc-1', bankName: '하나은행', maskedAccount: '123-456789-01***' },
-          { id: 'acc-2', bankName: '국민은행', maskedAccount: '987-654321-99***' },
-        ]}
+        accounts={ACCOUNTS}
         initialAccountId="acc-1"
-        onApply={()  => setPinOpen(true)}
-        onBack={()   => navigate(-1)}
-        onClose={()  => navigate(PATHS.CARD.DASHBOARD, { replace: true })}
+        onApply={(accountId) => {
+          // 선택된 계좌를 state와 세션에 저장 후 확인 시트를 표시한다.
+          // 세션 저장: STEP 4 완료 화면에서 출금계좌를 표시하는 데 사용된다.
+          const found = ACCOUNTS.find((a) => a.id === accountId);
+          if (found) {
+            setSelectedAccount(found);
+            sessionStorage.setItem(
+              "immediatePaySelectedAccount",
+              JSON.stringify(found),
+            );
+          }
+          setConfirmOpen(true);
+        }}
+        onBack={() => navigate(-1)}
+        onClose={() => navigate(PATHS.CARD.DASHBOARD, { replace: true })}
+        pinExceeded={pinExceeded}
+        onResetPinAttempts={async () => {
+          await axiosInstance.delete(`/cards/${card.id}/pin-attempts`);
+          setPinExceeded(false);
+        }}
+      />
+      {/* 즉시결제 확인 시트 — PIN 입력 전 최종 결제 내용 확인 */}
+      <ImmediatePayConfirmSheet
+        open={confirmOpen}
+        payAmount={payAmount}
+        cardName={card.name}
+        cardNumber={card.maskedNumber}
+        account={`${selectedAccount.bankName} ${selectedAccount.maskedAccount}`.trim()}
+        availableLimit={availableLimit}
+        onClose={() => setConfirmOpen(false)}
+        onConfirm={() => {
+          setConfirmOpen(false);
+          setPinOpen(true);
+        }}
       />
       <PinConfirmSheet
         open={pinOpen}
-        onClose={()    => setPinOpen(false)}
-        onConfirm={()  => navigate(PATHS.CARD.IMMEDIATE_PAY_COMPLETE, { replace: true })}
+        errorMessage={pinError}
+        onClose={() => {
+          setPinOpen(false);
+          setPinError(undefined);
+          // pinExceeded는 여기서 초기화하지 않는다 —
+          // 시트를 닫아도 초과 상태는 유지되어야 페이지의 초기화 버튼이 표시된다
+        }}
+        onConfirm={async (pin) => {
+          try {
+            const { data } = await axiosInstance.post<{
+              paidAmount: number;
+              processedCount: number;
+              completedAt: string;
+            }>(`/cards/${card.id}/immediate-pay`, {
+              pin,
+              amount: payAmount,
+            });
+            // 서버 처리일시를 세션에 저장 → STEP 4 완료 화면에서 사용
+            sessionStorage.setItem("immediatePayCompletedAt", data.completedAt);
+            setPinOpen(false);
+            navigate(PATHS.CARD.IMMEDIATE_PAY_COMPLETE, { replace: true });
+          } catch (err: unknown) {
+            const data = (
+              err as {
+                response?: { data?: { error?: string; attemptsLeft?: number } };
+              }
+            )?.response?.data;
+            if (data?.attemptsLeft === 0) {
+              // 횟수 소진 — 시트에 초과 메시지를 표시한 채로 유지하고,
+              // 페이지에 초기화 버튼을 준비한다 (시트를 닫으면 버튼이 보임)
+              setPinError(
+                "PIN 입력 횟수를 초과하였습니다. 초기화 후 다시 시도해 주세요.",
+              );
+              setPinExceeded(true);
+            } else if (data?.attemptsLeft !== undefined) {
+              setPinError(
+                `PIN이 올바르지 않습니다. (${data.attemptsLeft}회 남음)`,
+              );
+            } else {
+              // PIN 실패·횟수 초과 외의 예외 → Modal로 안내 후 대시보드로 이동
+              setPayErrorMessage(
+                data?.error ?? "결제 처리 중 오류가 발생했습니다.",
+              );
+              setPinOpen(false);
+            }
+          }
+        }}
       />
+      <Modal
+        open={!!payErrorMessage}
+        onClose={() => {
+          setPayErrorMessage("");
+          navigate(PATHS.CARD.DASHBOARD, { replace: true });
+        }}
+        title="결제 오류"
+        size="sm"
+        titleAlign="center"
+        className="text-sm text-center"
+      >
+        {payErrorMessage}
+      </Modal>
     </>
   );
 }
@@ -630,12 +1001,70 @@ export function ImmediatePayMethodRoute() {
 /** STEP 4 — 완료 화면, 확인 클릭 시 대시보드로 이동 */
 export function ImmediatePayCompleteRoute() {
   const navigate = useNavigate();
+
+  // 이전 단계에서 세션에 저장된 카드·결제·계좌·금액·처리일시 정보를 읽는다.
+  const storedCard = sessionStorage.getItem("immediatePaySelectedCard");
+  const storedRequest = sessionStorage.getItem("immediatePayRequestData");
+  const storedAccount = sessionStorage.getItem("immediatePaySelectedAccount");
+  const storedAmountInfo = sessionStorage.getItem("immediatePayAmountInfo");
+  // 화면이 마운트되면(데이터 읽기 완료 후) 즉시결제 플로우 세션을 일괄 삭제한다.
+  useEffect(() => {
+    [
+      "immediatePaySelectedCard",
+      "immediatePayAmountInfo",
+      "immediatePayRequestData",
+      "immediatePaySelectedAccount",
+      "immediatePayCompletedAt",
+    ].forEach((key) => sessionStorage.removeItem(key));
+  }, []);
+
+  // 서버 반환 처리일시 사용. 세션 없음·"undefined" 문자열인 경우 클라이언트 현재 시각으로 대체
+  const rawCompletedAt = sessionStorage.getItem("immediatePayCompletedAt");
+  const storedCompletedAt =
+    rawCompletedAt && rawCompletedAt !== "undefined"
+      ? rawCompletedAt
+      : new Date()
+          .toLocaleString("ko-KR", {
+            year: "numeric",
+            month: "2-digit",
+            day: "2-digit",
+            hour: "2-digit",
+            minute: "2-digit",
+            hour12: false,
+          })
+          .replace(/\. /g, ".")
+          .replace(",", "");
+
+  const card = storedCard
+    ? (JSON.parse(storedCard) as { name: string; maskedNumber: string })
+    : { name: "", maskedNumber: "" };
+  const request = storedRequest
+    ? (JSON.parse(storedRequest) as { payAmount: number })
+    : { payAmount: 0 };
+  const account = storedAccount
+    ? (JSON.parse(storedAccount) as { bankName: string; maskedAccount: string })
+    : { bankName: "", maskedAccount: "" };
+  const amountInfo = storedAmountInfo
+    ? (JSON.parse(storedAmountInfo) as {
+        payableAmount: number;
+        creditLimit: number;
+      })
+    : { payableAmount: 0, creditLimit: 0 };
+
+  // 결제 후 이용가능한도 = 한도금액 - (미결제금액 - 결제금액)
+  const availableLimit =
+    amountInfo.creditLimit - (amountInfo.payableAmount - request.payAmount);
+
+  const completedAt = storedCompletedAt;
+
   return (
     <ImmediatePayCompletePage
-      cardName="하나 머니 체크카드"
-      amount={1234567}
-      account="하나은행 123-456789-01***"
-      completedAt="2026.04.09 14:32"
+      cardName={card.name}
+      cardNumber={card.maskedNumber}
+      amount={request.payAmount}
+      account={`${account.bankName} ${account.maskedAccount}`.trim()}
+      availableLimit={availableLimit}
+      completedAt={completedAt}
       onConfirm={() => navigate(PATHS.CARD.DASHBOARD, { replace: true })}
     />
   );
@@ -647,89 +1076,121 @@ export function ImmediatePayCompleteRoute() {
 
 /** brand 값 → 카드 배경 그라디언트 */
 const CARD_GRADIENTS: Record<string, string> = {
-  VISA:       'linear-gradient(135deg, #008485, #14b8a6)',
-  Mastercard: 'linear-gradient(135deg, #1a1a2e, #16213e)',
-  AMEX:       'linear-gradient(135deg, #2d6a4f, #1b4332)',
-  JCB:        'linear-gradient(135deg, #1e40af, #1e3a8a)',
-  UnionPay:   'linear-gradient(135deg, #c0392b, #96281b)',
+  VISA: "linear-gradient(135deg, #008485, #14b8a6)",
+  Mastercard: "linear-gradient(135deg, #1a1a2e, #16213e)",
+  AMEX: "linear-gradient(135deg, #2d6a4f, #1b4332)",
+  JCB: "linear-gradient(135deg, #1e40af, #1e3a8a)",
+  UnionPay: "linear-gradient(135deg, #c0392b, #96281b)",
 };
 
 /** GET /api/cards 응답의 카드 전체 필드 */
 interface ApiCardFull {
-  id:             string;
-  name:           string;
-  brand:          string;
-  maskedNumber:   string;
-  balance:        number;
-  expiry:         string;
-  paymentBank:    string;
+  id: string;
+  name: string;
+  brand: string;
+  maskedNumber: string;
+  balance: number;
+  expiry: string;
+  paymentBank: string;
   paymentAccount: string;
-  paymentDay:     string;
-  limitAmount:    number;
-  usedAmount:     number;
+  paymentDay: string;
+  limitAmount: number;
+  usedAmount: number;
 }
 
 export function MyCardManagementRoute() {
-  const navigate    = useNavigate();
-  const { user }    = useAuth();
-  const [cards, setCards]     = useState<CardItem[]>([]);
+  const navigate = useNavigate();
+  const { user } = useAuth();
+  const [cards, setCards] = useState<CardItem[]>([]);
   const [rawCards, setRawCards] = useState<ApiCardFull[]>([]);
   const [loading, setLoading] = useState(true);
   /** 칩 탭에서 선택된 카드 ID — onCardSelect 콜백으로 동기화 */
-  const [selectedCardId, setSelectedCardId] = useState('');
+  const [selectedCardId, setSelectedCardId] = useState("");
   const [modalOpen, setModalOpen] = useState(false);
 
   useEffect(() => {
     if (!user?.userId) return;
-    axiosInstance.get<{ cards: ApiCardFull[] }>('/cards')
+
+    const controller = new AbortController();
+
+    axiosInstance
+      .get<{ cards: ApiCardFull[] }>("/cards", { signal: controller.signal })
       .then((r) => {
         const { cards: raw } = r.data;
         setRawCards(raw);
         setCards(
           raw.map((c) => ({
-            id:      c.id,
-            name:    c.name,
-            brand:   c.brand as 'VISA' | 'Mastercard' | 'AMEX' | 'JCB' | 'UnionPay',
-            image:   (
-              <div style={{
-                width: '100%', height: '100%', borderRadius: 12,
-                background: CARD_GRADIENTS[c.brand] ?? 'linear-gradient(135deg, #374151, #1f2937)',
-              }} />
+            id: c.id,
+            name: c.name,
+            brand: c.brand as
+              | "VISA"
+              | "Mastercard"
+              | "AMEX"
+              | "JCB"
+              | "UnionPay",
+            image: (
+              <div
+                style={{
+                  width: "100%",
+                  height: "100%",
+                  borderRadius: 12,
+                  background:
+                    CARD_GRADIENTS[c.brand] ??
+                    "linear-gradient(135deg, #374151, #1f2937)",
+                }}
+              />
             ),
             balance: c.balance,
-          }))
+          })),
         );
+        setLoading(false);
       })
-      .catch(console.error)
-      .finally(() => setLoading(false));
+      .catch((err: { code?: string }) => {
+        // abort된 경우 loading을 유지 — StrictMode 2차 실행에서 정상 완료 후 false로 전환
+        if (err.code !== "ERR_CANCELED") {
+          console.error(err);
+          setLoading(false);
+        }
+      });
+
+    return () => controller.abort();
   }, [user?.userId]);
 
   if (loading) return null;
 
   /** 현재 선택된 카드의 전체 API 데이터 (선택 전에는 첫 번째 카드 사용) */
-  const activeCard = rawCards.find((c) => c.id === selectedCardId) ?? rawCards[0];
+  const activeCard =
+    rawCards.find((c) => c.id === selectedCardId) ?? rawCards[0];
 
   /** 모달에 표시할 카드정보 섹션 */
-  const cardInfoSections = activeCard ? [
-    {
-      title: '카드정보',
-      rows: [
-        { label: '카드번호', value: activeCard.maskedNumber },
-        { label: '카드구분', value: activeCard.name },
-        { label: '유효기간', value: activeCard.expiry },
-      ],
-    },
-    {
-      title: '결제정보',
-      rows: [
-        { label: '결제은행명', value: activeCard.paymentBank },
-        { label: '결제계좌',   value: activeCard.paymentAccount },
-        { label: '결제일',     value: `${activeCard.paymentDay}일` },
-        { label: '한도금액',   value: `${activeCard.limitAmount.toLocaleString()}원` },
-        { label: '사용금액',   value: `${activeCard.usedAmount.toLocaleString()}원` },
-      ],
-    },
-  ] : [];
+  const cardInfoSections = activeCard
+    ? [
+        {
+          title: "카드정보",
+          rows: [
+            { label: "카드번호", value: activeCard.maskedNumber },
+            { label: "카드구분", value: activeCard.name },
+            { label: "유효기간", value: activeCard.expiry },
+          ],
+        },
+        {
+          title: "결제정보",
+          rows: [
+            { label: "결제은행명", value: activeCard.paymentBank },
+            { label: "결제계좌", value: activeCard.paymentAccount },
+            { label: "결제일", value: `${activeCard.paymentDay}일` },
+            {
+              label: "한도금액",
+              value: `${activeCard.limitAmount.toLocaleString()}원`,
+            },
+            {
+              label: "사용금액",
+              value: `${activeCard.usedAmount.toLocaleString()}원`,
+            },
+          ],
+        },
+      ]
+    : [];
 
   /**
    * 관리 행 목록 — 선택된 카드 데이터로 동적 구성
@@ -737,8 +1198,19 @@ export function MyCardManagementRoute() {
    *   - 1번 "결제계좌": subText = 결제은행명 + 계좌번호
    */
   const managementRows = MOCK_MANAGEMENT_ROWS.map((row, i) => {
-    if (i === 0) return { ...row, subText: activeCard?.maskedNumber, onClick: () => setModalOpen(true) };
-    if (i === 1) return { ...row, subText: activeCard ? `${activeCard.paymentBank} ${activeCard.paymentAccount}` : row.subText };
+    if (i === 0)
+      return {
+        ...row,
+        subText: activeCard?.maskedNumber,
+        onClick: () => setModalOpen(true),
+      };
+    if (i === 1)
+      return {
+        ...row,
+        subText: activeCard
+          ? `${activeCard.paymentBank} ${activeCard.paymentAccount}`
+          : row.subText,
+      };
     return row;
   });
 
@@ -748,7 +1220,7 @@ export function MyCardManagementRoute() {
         cards={cards}
         managementRows={managementRows}
         onCardSelect={setSelectedCardId}
-        onBack={()  => navigate(-1)}
+        onBack={() => navigate(-1)}
         onClose={() => navigate(PATHS.CARD.DASHBOARD, { replace: true })}
       />
       <BottomSheet
@@ -767,11 +1239,11 @@ export function UserManagementRoute() {
   return (
     <UserManagementPage
       users={MOCK_USERS}
-      onBack={()       => navigate(-1)}
-      onMenuClick={()  => {}}
-      onAddUser={()    => {}}
-      onEditUser={()   => {}}
-      onDeleteUser={()  => {}}
+      onBack={() => navigate(-1)}
+      onMenuClick={() => {}}
+      onAddUser={() => {}}
+      onEditUser={() => {}}
+      onDeleteUser={() => {}}
     />
   );
 }
@@ -788,22 +1260,29 @@ export function UserManagementRoute() {
  * displayType이 'N'(사용안함)인 경우에도 내용 확인을 위해 배너를 강제 표시하고 안내 문구를 노출한다.
  */
 export function NoticePreviewRoute() {
-  const [searchParams]        = useSearchParams();
+  const [searchParams] = useSearchParams();
   // lang 파라미터: Admin 미리보기 버튼에서 언어 코드(EMERGENCY_KO / EMERGENCY_EN)를 전달한다.
-  const lang                  = searchParams.get('lang') ?? 'EMERGENCY_KO';
-  const [data,    setData]    = useState<NoticePayload | null>(null);
+  const lang = searchParams.get("lang") ?? "EMERGENCY_KO";
+  const [data, setData] = useState<NoticePayload | null>(null);
   const [loading, setLoading] = useState(true);
-  const [error,   setError]   = useState(false);
+  const [error, setError] = useState(false);
 
   useEffect(() => {
-    fetch('/api/notices/preview')
+    const controller = new AbortController();
+
+    fetch("/api/notices/preview", { signal: controller.signal })
       .then((r) => {
         if (!r.ok) throw new Error(`HTTP ${r.status}`);
         return r.json() as Promise<NoticePayload>;
       })
       .then(setData)
-      .catch(() => setError(true))
+      .catch((err: { name?: string }) => {
+        // AbortController 취소 시 발생하는 AbortError는 무시
+        if (err.name !== "AbortError") setError(true);
+      })
       .finally(() => setLoading(false));
+
+    return () => controller.abort();
   }, []);
 
   if (loading) {
@@ -823,9 +1302,9 @@ export function NoticePreviewRoute() {
   }
 
   // 미리보기 모드: displayType이 N이어도 배너를 강제 표시 (내용 확인 목적)
-  const isUnused   = data.displayType === 'N';
+  const isUnused = data.displayType === "N";
   const previewData: NoticePayload = isUnused
-    ? { ...data, displayType: 'A' }
+    ? { ...data, displayType: "A" }
     : data;
 
   return (
@@ -834,7 +1313,11 @@ export function NoticePreviewRoute() {
       <div className="flex items-center justify-center py-1 bg-blue-50 border-b border-blue-200">
         <span className="text-xs text-blue-600 font-medium">
           미리보기 모드
-          {isUnused && <span className="ml-1 text-orange-500">(노출 타입: 사용안함 — 실제 배포 시 미표시)</span>}
+          {isUnused && (
+            <span className="ml-1 text-orange-500">
+              (노출 타입: 사용안함 — 실제 배포 시 미표시)
+            </span>
+          )}
         </span>
       </div>
       <EmergencyNoticeBanner data={previewData} forceOpen lang={lang} />
@@ -852,17 +1335,59 @@ export function NoticePreviewRoute() {
  * - 메뉴 항목 클릭: replace: true — 뒤로가기 시 메뉴가 히스토리에 남지 않도록 한다.
  */
 export function HanaCardMenuModal() {
-  const navigate    = useNavigate();
-  const { logout }  = useAuth();
+  const navigate = useNavigate();
+  const { logout } = useAuth();
 
   const menuItems: MenuItem[] = [
-    { id: 'usage-history',    category: 'history',    label: '이용내역',         icon: <Receipt    className="size-5" />, onClick: () => navigate(PATHS.CARD.USAGE_HISTORY,       { replace: true }) },
-    { id: 'statement',        category: 'history',    label: '이용대금명세서',   icon: <FileText   className="size-5" />, onClick: () => navigate(PATHS.CARD.PAYMENT_STATEMENT,   { replace: true }) },
-    { id: 'immediate-payment',category: 'payment',    label: '즉시결제',         icon: <Wallet     className="size-5" />, onClick: () => navigate(PATHS.CARD.IMMEDIATE_PAYMENT,   { replace: true }) },
-    { id: 'card-management',  category: 'management', label: '카드 관리',        icon: <Settings   className="size-5" />, onClick: () => navigate(PATHS.CARD.MY_CARD_MANAGEMENT, { replace: true }) },
-    { id: 'benefits',         category: 'benefit',    label: '혜택/포인트 조회', icon: <Gift       className="size-5" />, onClick: () => {} },
-    { id: 'card-apply',       category: 'service',    label: '카드 신청',        icon: <CreditCard className="size-5" />, onClick: () => {} },
-    { id: 'customer-service', category: 'service',    label: '고객센터',         icon: <Headphones className="size-5" />, onClick: () => {} },
+    {
+      id: "usage-history",
+      category: "history",
+      label: "이용내역",
+      icon: <Receipt className="size-5" />,
+      onClick: () => navigate(PATHS.CARD.USAGE_HISTORY, { replace: true }),
+    },
+    {
+      id: "statement",
+      category: "history",
+      label: "이용대금명세서",
+      icon: <FileText className="size-5" />,
+      onClick: () => navigate(PATHS.CARD.PAYMENT_STATEMENT, { replace: true }),
+    },
+    {
+      id: "immediate-payment",
+      category: "payment",
+      label: "즉시결제",
+      icon: <Wallet className="size-5" />,
+      onClick: () => navigate(PATHS.CARD.IMMEDIATE_PAYMENT, { replace: true }),
+    },
+    {
+      id: "card-management",
+      category: "management",
+      label: "카드 관리",
+      icon: <Settings className="size-5" />,
+      onClick: () => navigate(PATHS.CARD.MY_CARD_MANAGEMENT, { replace: true }),
+    },
+    {
+      id: "benefits",
+      category: "benefit",
+      label: "혜택/포인트 조회",
+      icon: <Gift className="size-5" />,
+      onClick: () => {},
+    },
+    {
+      id: "card-apply",
+      category: "service",
+      label: "카드 신청",
+      icon: <CreditCard className="size-5" />,
+      onClick: () => {},
+    },
+    {
+      id: "customer-service",
+      category: "service",
+      label: "고객센터",
+      icon: <Headphones className="size-5" />,
+      onClick: () => {},
+    },
   ];
 
   return (
@@ -871,17 +1396,20 @@ export function HanaCardMenuModal() {
         userName="홍길동님"
         lastLogin="2026.04.09 10:00:00"
         categories={[
-          { id: 'all',        label: '전체'    },
-          { id: 'history',    label: '이용내역' },
-          { id: 'payment',    label: '결제'    },
-          { id: 'management', label: '카드관리' },
-          { id: 'benefit',    label: '혜택'    },
-          { id: 'service',    label: '서비스'  },
+          { id: "all", label: "전체" },
+          { id: "history", label: "이용내역" },
+          { id: "payment", label: "결제" },
+          { id: "management", label: "카드관리" },
+          { id: "benefit", label: "혜택" },
+          { id: "service", label: "서비스" },
         ]}
         menuItems={menuItems}
-        onBack={()          => navigate(-1)}
-        onProfileManage={()  => {}}
-        onLogout={() => { logout(); navigate(PATHS.LOGIN, { replace: true }); }}
+        onBack={() => navigate(-1)}
+        onProfileManage={() => {}}
+        onLogout={() => {
+          logout();
+          navigate(PATHS.LOGIN, { replace: true });
+        }}
       />
     </ModalSlideOver>
   );

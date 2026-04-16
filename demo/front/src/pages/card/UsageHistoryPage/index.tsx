@@ -35,6 +35,7 @@ import { CardPaymentActions } from "@cl/biz/card/CardPaymentActions";
 import { UsageTransactionItem } from "@cl/biz/card/UsageTransactionItem";
 import { UsageHistoryFilterSheet } from "@cl/biz/card/UsageHistoryFilterSheet";
 
+import { formatAmount } from "@/utils/format";
 import type { UsageHistoryPageProps, SearchFilter } from "./types";
 
 // ── 상수 ────────────────────────────────────────────────────
@@ -82,11 +83,6 @@ function computeBillingPeriod(filter: SearchFilter): {
   const fmt = (d: Date) =>
     `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, "0")}.${String(d.getDate()).padStart(2, "0")}`;
   return { startDate: fmt(start), endDate: fmt(end) };
-}
-
-/** 금액 포맷 */
-function formatAmount(n: number) {
-  return `${Math.abs(n).toLocaleString("ko-KR")}원`;
 }
 
 // ── 메인 페이지 ───────────────────────────────────────────
@@ -164,7 +160,7 @@ export function UsageHistoryPage({
                 color="heading"
                 numeric
               >
-                {formatAmount(paymentSummary.totalAmount)}
+                {formatAmount(Math.abs(paymentSummary.totalAmount))}
               </Typography>
             </div>
             <CardPaymentActions
