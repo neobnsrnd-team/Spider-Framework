@@ -53,5 +53,15 @@
     "name": "🙋‍♂️ Question",
     "color": "9ED447",
     "description": "Further information is requested"
+  },
+  {
+    "name": "CMS HTML",
+    "color": "69471b",
+    "description": "CMS HTML"
+  },
+  {
+    "name": "CMS REACT",
+    "color": "c6388b",
+    "description": "CMS REACT"
   }
 ]
