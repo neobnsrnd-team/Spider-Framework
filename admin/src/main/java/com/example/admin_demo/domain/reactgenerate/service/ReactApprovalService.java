@@ -69,7 +69,8 @@ public class ReactApprovalService {
         }
 
         String now = LocalDateTime.now().format(FORMATTER);
-        reactGenerateMapper.updateStatus(id, ReactGenerateStatus.APPROVED.name(), approverUserId, now);
+        // 승인 시 failReason은 null로 초기화
+        reactGenerateMapper.updateStatus(id, ReactGenerateStatus.APPROVED.name(), approverUserId, now, null);
         log.info("승인 완료 — codeId: {}, approver: {}", id, approverUserId);
 
         return ReactGenerateApprovalResponse.builder()
@@ -90,11 +91,12 @@ public class ReactApprovalService {
      * @param rejectorUserId 반려자 ID (로그인 사용자)
      * @throws NotFoundException 해당 codeId가 존재하지 않을 때
      */
-    public ReactGenerateApprovalResponse reject(String id, String rejectorUserId) {
+    public ReactGenerateApprovalResponse reject(String id, String rejectorUserId, String reason) {
         requireExists(id);
 
         String now = LocalDateTime.now().format(FORMATTER);
-        reactGenerateMapper.updateStatus(id, ReactGenerateStatus.REJECTED.name(), rejectorUserId, now);
+        // 반려 사유를 FAIL_REASON 컬럼에 저장
+        reactGenerateMapper.updateStatus(id, ReactGenerateStatus.REJECTED.name(), rejectorUserId, now, reason);
         log.info("반려 완료 — codeId: {}, rejector: {}", id, rejectorUserId);
 
         return ReactGenerateApprovalResponse.builder()

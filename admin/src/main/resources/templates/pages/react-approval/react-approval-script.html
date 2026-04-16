@@ -10,7 +10,7 @@ const CURRENT_USER_ID = /*[[${currentUserId}]]*/ '';
 
 // 상태 배지 정의
 const APPROVAL_STATUS_LABEL = {
-    GENERATED:        { text: '생성 완료',  cls: 'bg-secondary' },
+    GENERATED:        { text: '생성 완료',  cls: 'bg-primary' },
     FAILED:           { text: '실패',        cls: 'bg-danger' },
     PENDING_APPROVAL: { text: '승인 대기',   cls: 'bg-warning text-dark' },
     APPROVED:         { text: '승인 완료',   cls: 'bg-success' },
@@ -375,6 +375,14 @@ const ReactApprovalDetail = {
         $('#approvalDetailApprovalUserId').text(data.approvalUserId || '—');
         $('#approvalDetailApprovalDtime').text(approvalFormatDtime(data.approvalDtime) || '—');
 
+        // 반려 사유: REJECTED 상태일 때만 노출
+        if (data.status === 'REJECTED') {
+            $('#approvalDetailRejectReason').text(data.failReason || '—');
+            $('#approvalDetailRejectReasonRow').removeClass('d-none');
+        } else {
+            $('#approvalDetailRejectReasonRow').addClass('d-none');
+        }
+
         // 미리보기 섹션
         const hasCode = !!(data.reactCode && data.reactCode.trim());
         if (hasCode) {
@@ -461,9 +469,11 @@ $(document).ready(function () {
         document.getElementById('approvalDetailCodeDisplay').textContent = '';
         $('#approvalDetailContent').addClass('d-none');
         $('#approvalDetailLoading').removeClass('d-none');
-        // 버튼·안내 메시지 모두 초기화 (다음 열기 시 조건에 따라 재노출)
+        // 버튼·안내 메시지·반려 사유 모두 초기화 (다음 열기 시 조건에 따라 재노출)
         $('#approvalDetailBtnApprove, #approvalDetailBtnReject').addClass('d-none');
         $('#approvalDetailAuthorNotice').addClass('d-none');
+        $('#approvalDetailRejectReasonRow').addClass('d-none');
+        $('#approvalDetailRejectReason').text('');
         ReactApprovalDetail.currentCodeId = null;
         ReactApprovalDetail.currentStatus = null;
     });

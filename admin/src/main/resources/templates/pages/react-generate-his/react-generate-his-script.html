@@ -9,10 +9,11 @@
 
     // ─── 상태 배지 정의 ────────────────────────────────────────
     const STATUS_LABEL = {
-        GENERATED:        { text: '생성 완료',  cls: 'bg-secondary' },
-        PENDING_APPROVAL: { text: '승인 대기',  cls: 'bg-warning text-dark' },
-        APPROVED:         { text: '승인 완료',  cls: 'bg-success' },
-        FAILED:           { text: '실패',       cls: 'bg-danger' }
+        GENERATED:        { text: '생성 완료',  cls: 'bg-primary' },
+        FAILED:           { text: '실패',        cls: 'bg-danger' },
+        PENDING_APPROVAL: { text: '승인 대기',   cls: 'bg-warning text-dark' },
+        APPROVED:         { text: '승인 완료',   cls: 'bg-success' },
+        REJECTED:         { text: '반려',        cls: 'bg-secondary' },
     };
 
     /** yyyyMMddHHmmss → yyyy-MM-dd HH:mm 형식으로 변환한다. */
@@ -254,8 +255,9 @@
                 .removeClass()
                 .addClass('badge ' + statusInfo.cls);
 
-            // 실패 사유: FAILED 상태일 때만 노출
-            if (data.status === 'FAILED') {
+            // 실패/반려 사유: FAILED 또는 REJECTED 상태일 때 노출, 레이블도 상태에 맞게 변경
+            if (data.status === 'FAILED' || data.status === 'REJECTED') {
+                $('#detailFailReasonLabel').text(data.status === 'REJECTED' ? '반려 사유' : '실패 사유');
                 $('#detailFailReason').text(data.failReason || '—');
                 $('#detailFailReasonRow').removeClass('d-none');
             } else {

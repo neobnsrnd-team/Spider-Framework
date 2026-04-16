@@ -234,7 +234,9 @@
         SET
             STATUS           = #{status,jdbcType=VARCHAR},
             APPROVAL_USER_ID = #{approvalUserId,jdbcType=VARCHAR},
-            APPROVAL_DTIME   = #{approvalDtime,jdbcType=VARCHAR}
+            APPROVAL_DTIME   = #{approvalDtime,jdbcType=VARCHAR},
+            <!-- 반려 시 사유 저장, 승인 시 null 전달하여 기존 값 초기화 -->
+            FAIL_REASON      = #{failReason,jdbcType=CLOB}
         WHERE CODE_ID = #{codeId,jdbcType=VARCHAR}
     </update>
 

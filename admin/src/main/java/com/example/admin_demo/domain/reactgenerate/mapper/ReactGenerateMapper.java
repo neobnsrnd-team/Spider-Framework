@@ -32,12 +32,13 @@ public interface ReactGenerateMapper {
     /** CODE_ID로 생성 이력을 단건 조회한다. 존재하지 않으면 null 반환. */
     ReactGenerateResponse selectById(@Param("codeId") String codeId);
 
-    /** 승인 상태를 변경한다. 승인·반려 시 approvalUserId/approvalDtime 함께 기록. */
+    /** 승인 상태를 변경한다. 승인·반려 시 approvalUserId/approvalDtime 함께 기록. 반려 사유는 failReason에 저장. */
     void updateStatus(
             @Param("codeId") String codeId,
             @Param("status") String status,
             @Param("approvalUserId") String approvalUserId,
-            @Param("approvalDtime") String approvalDtime);
+            @Param("approvalDtime") String approvalDtime,
+            @Param("failReason") String failReason);
 
     /** 렌더링 실패 또는 코드 생성 실패 시 STATUS를 FAILED로, FAIL_REASON을 기록한다. */
     void updateToFailed(@Param("codeId") String codeId, @Param("failReason") String failReason);

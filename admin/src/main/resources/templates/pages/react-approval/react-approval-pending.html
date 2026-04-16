@@ -1,8 +1,16 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org">
 <body>
-<!-- React 코드 승인 대기 목록 Fragment -->
-<div th:fragment="pending" class="card">
+<!--
+    th:block 으로 카드와 반려 모달을 하나의 fragment로 묶는다.
+    th:replace 는 선택된 fragment 요소만 가져오므로, 카드(div)만 fragment로 지정하면
+    형제 요소인 rejectReasonModal 이 DOM에 포함되지 않는다.
+    th:block 은 실제 HTML 태그를 렌더링하지 않으므로 레이아웃에 영향이 없다.
+-->
+<th:block th:fragment="pending">
+
+<!-- React 코드 승인 대기 목록 -->
+<div class="card">
     <div class="card-header">
         <div class="d-flex align-items-center gap-2">
             <span class="fw-semibold">승인 대기 목록</span>
@@ -26,7 +34,7 @@
                 </thead>
                 <tbody id="pendingTableBody">
                     <tr>
-                        <td colspan="6" class="text-center py-4 text-body-secondary">
+                        <td colspan="5" class="text-center py-4 text-body-secondary">
                             조회 중...
                         </td>
                     </tr>
@@ -49,7 +57,7 @@
     </div>
 </div>
 
-<!-- 반려 사유 입력 모달 -->
+<!-- 반려 사유 입력 모달 — th:block 안에 포함되어야 fragment로 함께 렌더링됨 -->
 <div class="modal fade" id="rejectReasonModal" tabindex="-1"
      aria-labelledby="rejectReasonModalLabel" aria-hidden="true">
     <div class="modal-dialog">
@@ -77,5 +85,7 @@
         </div>
     </div>
 </div>
+
+</th:block>
 </body>
 </html>

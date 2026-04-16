@@ -312,7 +312,7 @@ public class ReactGenerateService {
             throw new InvalidInputException("코드 작성자만 승인 요청할 수 있습니다.");
         }
 
-        reactGenerateMapper.updateStatus(id, ReactGenerateStatus.PENDING_APPROVAL.name(), null, null);
+        reactGenerateMapper.updateStatus(id, ReactGenerateStatus.PENDING_APPROVAL.name(), null, null, null);
         log.info("승인 요청 — codeId: {}, requestUserId: {}", id, requestUserId);
 
         return ReactGenerateApprovalResponse.builder()

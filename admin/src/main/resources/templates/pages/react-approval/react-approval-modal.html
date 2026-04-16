@@ -57,6 +57,11 @@
                                         <th class="table-light text-nowrap">승인일시</th>
                                         <td id="approvalDetailApprovalDtime"></td>
                                     </tr>
+                                    <!-- 반려 사유: REJECTED 상태일 때만 노출 -->
+                                    <tr id="approvalDetailRejectReasonRow" class="d-none">
+                                        <th class="table-light text-nowrap text-danger">반려 사유</th>
+                                        <td colspan="3" class="text-danger" id="approvalDetailRejectReason"></td>
+                                    </tr>
                                 </tbody>
                             </table>
                         </div>

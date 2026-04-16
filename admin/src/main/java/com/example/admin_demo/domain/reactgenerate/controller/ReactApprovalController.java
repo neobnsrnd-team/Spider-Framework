@@ -7,6 +7,7 @@
 package com.example.admin_demo.domain.reactgenerate.controller;
 
 import com.example.admin_demo.domain.reactgenerate.dto.ReactGenerateApprovalResponse;
+import com.example.admin_demo.domain.reactgenerate.dto.ReactRejectRequest;
 import com.example.admin_demo.domain.reactgenerate.service.ReactApprovalService;
 import com.example.admin_demo.global.dto.ApiResponse;
 import com.example.admin_demo.global.util.SecurityUtil;
@@ -18,6 +19,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -94,8 +96,10 @@ public class ReactApprovalController {
      */
     @PostMapping("/{id}/reject")
     @PreAuthorize("hasAuthority('REACT_APPROVAL:W')")
-    public ResponseEntity<ApiResponse<ReactGenerateApprovalResponse>> reject(@PathVariable String id) {
+    public ResponseEntity<ApiResponse<ReactGenerateApprovalResponse>> reject(
+            @PathVariable String id, @RequestBody(required = false) ReactRejectRequest request) {
         String currentUserId = SecurityUtil.getCurrentUserId();
-        return ResponseEntity.ok(ApiResponse.success(reactApprovalService.reject(id, currentUserId)));
+        String reason = request != null ? request.getReason() : null;
+        return ResponseEntity.ok(ApiResponse.success(reactApprovalService.reject(id, currentUserId, reason)));
     }
 }
