@@ -3,11 +3,20 @@
  * @description Express 서버 진입점 + 카드 관련 API 엔드포인트
  *
  * API 목록
- *   GET  /api/cards                          카드 목록 (슬라이더·드롭다운용)
- *   GET  /api/cards/:cardId/transactions     카드별 이용내역
- *   GET  /api/notices/sse                    긴급공지 SSE 스트림 (Demo Frontend 구독)
- *   POST /api/notices/sync                   긴급공지 배포 동기화 (Admin 호출)
- *   POST /api/notices/end                    긴급공지 배포 종료 (Admin 호출)
+ *   GET    /api/auth/me                          로그인 사용자 프로필 + 최근 접속 일시
+ *   POST   /api/auth/login                       로그인
+ *   POST   /api/auth/refresh                     Access Token 재발급
+ *   POST   /api/auth/logout                      로그아웃
+ *   GET    /api/cards                            카드 목록 (슬라이더·드롭다운용)
+ *   GET    /api/transactions                     카드 이용내역
+ *   GET    /api/payment-statement                결제예정금액 / 이용대금명세서
+ *   GET    /api/cards/:cardId/payable-amount     즉시결제 가능금액
+ *   POST   /api/cards/:cardId/immediate-pay      즉시결제 처리
+ *   DELETE /api/cards/:cardId/pin-attempts       PIN 실패 횟수 초기화
+ *   GET    /api/notices/sse                      긴급공지 SSE 스트림 (Demo Frontend 구독)
+ *   POST   /api/notices/sync                     긴급공지 배포 동기화 (Admin 호출)
+ *   POST   /api/notices/end                      긴급공지 배포 종료 (Admin 호출)
+ *   GET    /api/notices/preview                  긴급공지 미리보기 (Admin 호출)
  *
  * DB ↔ 프론트 매핑 규칙 (이 파일 하단 mapper 함수 참고)
  *   Oracle 컬럼명(UPPER_SNAKE)  →  React 프롭(camelCase)
@@ -69,19 +78,6 @@ const pinAttemptStore = new Map();
 /** PIN 최대 허용 실패 횟수 */
 const PIN_MAX_ATTEMPTS = 3;
 
-/**
- * 로컬 환경 전용 미들웨어 — localhost 요청만 허용한다.
- * /api/dev/* 진단 엔드포인트에 적용. 개발 완료 후 해당 라우트와 함께 삭제 예정.
- */
-function localOnly(req, res, next) {
-  const ip = req.ip || req.connection.remoteAddress || "";
-  // ::1 = IPv6 루프백, 127.0.0.1 = IPv4 루프백
-  if (ip === "::1" || ip === "127.0.0.1" || ip.endsWith("127.0.0.1")) {
-    return next();
-  }
-  return res.status(403).json({ error: "로컬 환경에서만 접근할 수 있습니다." });
-}
-
 /** Admin 전용 엔드포인트 인증 미들웨어 — X-Admin-Secret 헤더 검증 */
 function verifyAdminSecret(req, res, next) {
   const secret = req.headers["x-admin-secret"];
@@ -129,145 +125,13 @@ app.use(express.json());
 app.use(cookieParser());
 app.use(apiLogger);
 
-// ── 개발용: D_SPIDERLINK의 POC_ 테이블 목록 및 컬럼 확인 ────────────────────
-// verifyToken 적용 — 인증된 사용자만 raw DB 데이터에 접근 가능
-app.get("/api/dev/raw", localOnly, async (_req, res) => {
-  try {
-    const result = await withConnection((conn) =>
-      conn.execute(
-        `SELECT "이용자", "이용일자", "승인시각", "결제예정일"
-           FROM D_SPIDERLINK.POC_카드사용내역
-          WHERE ROWNUM <= 5`,
-      ),
-    );
-    res.json({ rows: result.rows });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-app.get("/api/dev/tables", localOnly, async (_req, res) => {
-  try {
-    const result = await withConnection((conn) =>
-      conn.execute(
-        `SELECT TABLE_NAME FROM ALL_TABLES
-          WHERE OWNER = 'D_SPIDERLINK'
-            AND TABLE_NAME LIKE 'POC%'
-          ORDER BY TABLE_NAME`,
-      ),
-    );
-    res.json({ tables: (result.rows || []).map((r) => r.TABLE_NAME) });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-/**
- * GET /api/dev/usage-stat
- * POC_카드사용내역 "이용자" 컬럼 분포 진단용 엔드포인트.
- *
- * 반환:
- *   totalCount   — 테이블 전체 레코드 수
- *   distribution — { value, trimmedValue, count } 목록 (이용자 값별 건수)
- *
- * "이용자" 값의 선행/후행 공백이나 대소문자 차이가
- * WHERE "이용자" = :userId 필터에서 레코드가 누락되는 주 원인이므로
- * 원본 값(value)과 TRIM 값(trimmedValue)을 함께 반환한다.
- */
-app.get("/api/dev/usage-stat", localOnly, async (_req, res) => {
-  try {
-    const [countResult, distResult] = await Promise.all([
-      withConnection((conn) =>
-        conn.execute(
-          `SELECT COUNT(*) AS TOTAL_CNT FROM D_SPIDERLINK.POC_카드사용내역`,
-        ),
-      ),
-      withConnection((conn) =>
-        conn.execute(
-          `SELECT "이용자"        AS RAW_VAL,
-                  TRIM("이용자") AS TRIM_VAL,
-                  COUNT(*)       AS CNT
-             FROM D_SPIDERLINK.POC_카드사용내역
-            GROUP BY "이용자", TRIM("이용자")
-            ORDER BY CNT DESC`,
-        ),
-      ),
-    ]);
-
-    res.json({
-      totalCount: countResult.rows[0]?.TOTAL_CNT ?? 0,
-      distribution: (distResult.rows || []).map((r) => ({
-        value: r.RAW_VAL, // DB에 실제 저장된 값 (공백 포함 가능)
-        trimmedValue: r.TRIM_VAL, // 앞뒤 공백 제거 후 값
-        count: r.CNT,
-      })),
-    });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-app.get("/api/dev/columns/:tbl", localOnly, async (req, res) => {
-  try {
-    const tbl = req.params.tbl.toUpperCase();
-    const result = await withConnection((conn) =>
-      conn.execute(
-        `SELECT COLUMN_NAME, DATA_TYPE
-           FROM ALL_TAB_COLUMNS
-          WHERE OWNER = 'D_SPIDERLINK'
-            AND TABLE_NAME = :tbl
-          ORDER BY COLUMN_ID`,
-        { tbl }, // SQL 인젝션 방지: bind variable 사용
-      ),
-    );
-    res.json({ table: tbl, columns: result.rows });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-/**
- * GET /api/dev/user-logins
- * POC_USER 테이블의 전체 사용자 로그인 현황 진단용 엔드포인트.
- * 개발 완료 후 이 라우트와 함께 삭제 예정.
- */
-app.get("/api/dev/user-logins", localOnly, async (_req, res) => {
-  try {
-    const result = await withConnection((conn) =>
-      conn.execute(
-        `SELECT USER_ID, USER_NAME,
-                LAST_LOGIN_DTIME,
-                CASE
-                  WHEN LAST_LOGIN_DTIME IS NULL THEN '(없음)'
-                  ELSE TO_CHAR(
-                    TO_DATE(LAST_LOGIN_DTIME, 'YYYYMMDDHH24MISS'),
-                    'YYYY.MM.DD HH24:MI:SS'
-                  )
-                END AS LAST_LOGIN_FORMATTED
-           FROM D_SPIDERLINK.POC_USER
-          ORDER BY USER_ID`,
-      ),
-    );
-    res.json({
-      users: (result.rows || []).map((r) => ({
-        userId:             r.USER_ID,
-        userName:           r.USER_NAME,
-        lastLoginRaw:       r.LAST_LOGIN_DTIME,
-        lastLoginFormatted: r.LAST_LOGIN_FORMATTED,
-      })),
-    });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
 // ── 인증 ─────────────────────────────────────────────────────────────────────
 
 /**
  * GET /api/auth/me
  * Authorization: Bearer <accessToken>
  * 현재 로그인 사용자의 프로필과 최근 접속 일시를 반환한다.
- * 자동 로그인 후 Access Token이 아직 유효해 refresh가 발생하지 않은 경우에도
+ * Access Token이 아직 유효해 refresh가 발생하지 않은 경우에도
  * 프론트엔드가 lastLogin을 즉시 채울 수 있도록 제공한다.
  */
 app.get("/api/auth/me", verifyToken, async (req, res) => {
@@ -405,7 +269,7 @@ app.post("/api/auth/login", async (req, res) => {
  * POST /api/auth/refresh
  * Refresh Token(httpOnly 쿠키)으로 새 Access Token 발급.
  * 저장된 토큰과 불일치 시 탈취로 간주하고 해당 유저의 토큰을 무효화한다.
- * 자동 로그인 등 재진입 시점을 포함해 세션 활동이 감지되므로 LAST_LOGIN_DTIME을 갱신한다.
+ * 세션 활동이 감지되는 시점마다 LAST_LOGIN_DTIME을 갱신한다.
  */
 app.post("/api/auth/refresh", (req, res) => {
   const refreshToken = req.cookies?.refreshToken;
@@ -521,59 +385,6 @@ function mapCard(row) {
     limitAmount: limit,
     usedAmount: used,
   };
-}
-
-/**
- * TB_CARD_TX 로우 → 프론트 Transaction 객체
- *
- * DB 컬럼 예시:
- *   TX_ID         VARCHAR2(30)   PK
- *   CARD_ID       VARCHAR2(20)   FK → TB_CARD_INFO
- *   CARD_NM       VARCHAR2(100)  카드명 (조인 또는 중복 보관)
- *   MERCHANT_NM   VARCHAR2(200)  가맹점명
- *   TX_AMT        NUMBER(15,2)   거래금액 (취소는 음수)
- *   TX_DT         VARCHAR2(10)   거래일 (YYYY.MM.DD)
- *   PAY_TYPE_CD   VARCHAR2(20)   결제유형 코드
- *   APRVL_NO      VARCHAR2(30)   승인번호
- *   TX_STAT_CD    VARCHAR2(10)   거래상태 코드
- *
- * @param {object} row
- * @returns {object} 프론트 Transaction 타입
- */
-function mapTransaction(row) {
-  return {
-    id: row.TX_ID,
-    merchant: row.MERCHANT_NM,
-    amount: row.TX_AMT,
-    date: row.TX_DT,
-    // 코드값 → 화면 표시 레이블 변환
-    type: mapPayTypeCode(row.PAY_TYPE_CD),
-    approvalNumber: row.APRVL_NO,
-    status: mapTxStatCode(row.TX_STAT_CD),
-    cardName: row.CARD_NM,
-  };
-}
-
-/** 결제유형 코드 → 표시 문자열 */
-function mapPayTypeCode(code) {
-  const map = {
-    LUMP: "일시불",
-    INSTALL_03: "할부(3개월)",
-    INSTALL_06: "할부(6개월)",
-    INSTALL_12: "할부(12개월)",
-    CANCEL: "취소",
-  };
-  return map[code] ?? code;
-}
-
-/** 거래상태 코드 → 표시 문자열 */
-function mapTxStatCode(code) {
-  const map = {
-    APPROVED: "승인",
-    CONFIRMED: "결제확정",
-    CANCELLED: "취소",
-  };
-  return map[code] ?? code;
 }
 
 /**
@@ -996,104 +807,6 @@ app.get("/api/payment-statement", verifyToken, async (req, res) => {
     });
   } catch (err) {
     console.error("[GET /api/payment-statement]", err);
-    res.status(500).json({ error: "DB 조회 중 오류가 발생했습니다." });
-  }
-});
-
-/**
- * GET /api/cards/:cardId/transactions
- * 특정 카드의 이용내역을 페이징하여 반환합니다.
- *
- * Path Params:
- *   cardId — 카드 ID
- *
- * Query Params:
- *   page     (기본 1)   — 페이지 번호 (1-based)
- *   pageSize (기본 20)  — 페이지 당 건수
- *   fromDate (선택)     — 조회 시작일 YYYYMMDD
- *   toDate   (선택)     — 조회 종료일 YYYYMMDD
- *
- * Response 200:
- *   {
- *     transactions: Transaction[],
- *     totalCount: number,
- *     page: number,
- *     pageSize: number
- *   }
- */
-app.get("/api/cards/:cardId/transactions", verifyToken, async (req, res) => {
-  try {
-    const { cardId } = req.params;
-    const page = Math.max(1, Number(req.query.page) || 1);
-    const pageSize = Math.min(100, Number(req.query.pageSize) || 20);
-    const { fromDate, toDate } = req.query;
-
-    const offset = (page - 1) * pageSize;
-
-    const result = await withConnection(async (conn) => {
-      // ── 전체 건수 ──────────────────────────────────────────────────
-      let countSql = `
-        SELECT COUNT(*) AS TOTAL_CNT
-        FROM TB_CARD_TX
-        WHERE CARD_ID = :cardId
-      `;
-      const binds = { cardId };
-
-      if (fromDate) {
-        countSql += " AND TX_DT >= :fromDate";
-        binds.fromDate = fromDate;
-      }
-      if (toDate) {
-        countSql += " AND TX_DT <= :toDate";
-        binds.toDate = toDate;
-      }
-
-      const countRes = await conn.execute(countSql, binds);
-      const totalCount = countRes.rows[0]?.TOTAL_CNT ?? 0;
-
-      // ── 페이징 데이터 ──────────────────────────────────────────────
-      // Oracle 12c+ OFFSET/FETCH 문법 사용
-      let dataSql = `
-        SELECT
-          TX_ID,
-          CARD_NM,
-          MERCHANT_NM,
-          TX_AMT,
-          TX_DT,
-          PAY_TYPE_CD,
-          APRVL_NO,
-          TX_STAT_CD
-        FROM TB_CARD_TX
-        WHERE CARD_ID = :cardId
-      `;
-
-      if (fromDate) {
-        dataSql += " AND TX_DT >= :fromDate";
-      }
-      if (toDate) {
-        dataSql += " AND TX_DT <= :toDate";
-      }
-
-      dataSql += `
-        ORDER BY TX_DT DESC, TX_ID DESC
-        OFFSET :offset ROWS FETCH NEXT :pageSize ROWS ONLY
-      `;
-      binds.offset = offset;
-      binds.pageSize = pageSize;
-
-      const dataRes = await conn.execute(dataSql, binds);
-
-      return { rows: dataRes.rows, totalCount };
-    });
-
-    res.json({
-      transactions: (result.rows || []).map(mapTransaction),
-      totalCount: result.totalCount,
-      page,
-      pageSize,
-    });
-  } catch (err) {
-    console.error("[GET /api/cards/:cardId/transactions]", err);
     res.status(500).json({ error: "DB 조회 중 오류가 발생했습니다." });
   }
 });

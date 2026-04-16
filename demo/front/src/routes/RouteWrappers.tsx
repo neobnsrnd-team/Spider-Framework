@@ -74,18 +74,14 @@ import {
 
 /** localStorage 키 상수 */
 const LS_SAVED_ID = "hnc_saved_id";
-const LS_AUTO_LOGIN = "hnc_auto_login";
 
 export function LoginRoute() {
   const navigate = useNavigate();
-  const { login, isLoggedIn } = useAuth();
+  const { login } = useAuth();
 
   // 이전 방문에서 저장된 값으로 초기화
   const [saveId, setSaveId] = useState(
     () => !!localStorage.getItem(LS_SAVED_ID),
-  );
-  const [autoLogin, setAutoLogin] = useState(
-    () => !!localStorage.getItem(LS_AUTO_LOGIN),
   );
 
   // 아이디 저장이 켜져 있으면 저장된 아이디로 초기화, 아니면 빈 문자열
@@ -99,16 +95,6 @@ export function LoginRoute() {
   const [sessionMessage, setSessionMessage] = useState(
     () => sessionStorage.getItem("sessionExpiredMessage") ?? "",
   );
-
-  /**
-   * 자동 로그인 처리: 플래그가 있고 이미 로그인 상태이면 대시보드로 이동한다.
-   * isLoggedIn 또는 navigate가 바뀔 때마다 재평가한다.
-   */
-  useEffect(() => {
-    if (isLoggedIn && localStorage.getItem(LS_AUTO_LOGIN)) {
-      navigate(PATHS.CARD.DASHBOARD, { replace: true });
-    }
-  }, [isLoggedIn, navigate]);
 
   const handleLogin = async () => {
     setHasError(false);
@@ -124,12 +110,6 @@ export function LoginRoute() {
           localStorage.setItem(LS_SAVED_ID, userId);
         } else {
           localStorage.removeItem(LS_SAVED_ID);
-        }
-        // 자동 로그인: 체크 시 플래그를 저장해 다음 방문 시 대시보드로 자동 이동
-        if (autoLogin) {
-          localStorage.setItem(LS_AUTO_LOGIN, "1");
-        } else {
-          localStorage.removeItem(LS_AUTO_LOGIN);
         }
         login({
           userId: data.userId,
@@ -160,8 +140,6 @@ export function LoginRoute() {
         onLogin={handleLogin}
         saveId={saveId}
         onSaveIdChange={setSaveId}
-        autoLogin={autoLogin}
-        onAutoLoginChange={setAutoLogin}
       />
       <Modal
         open={!!sessionMessage}
@@ -218,7 +196,7 @@ export function CardDashboardRoute() {
   /** SummaryCard(spending): 당월 이용내역 합산 금액 */
   const [spendingAmount, setSpendingAmount] = useState(0);
 
-  // lastLogin이 없는 경우(변경 전 로그인 세션, 자동 로그인 등) /api/auth/me로 보완한다.
+  // lastLogin이 없는 경우(변경 전 로그인 세션 등) /api/auth/me로 보완한다.
   // Access Token이 유효한 동안은 refresh가 호출되지 않으므로 대시보드 진입 시점에 한 번 확인한다.
   useEffect(() => {
     if (!user?.userId || user.lastLogin) return;
