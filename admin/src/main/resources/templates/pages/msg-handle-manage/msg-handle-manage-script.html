@@ -819,7 +819,7 @@
     WasSelectReloadModal.init();
 
     // 캐시에서 복원 시(tab:activated) 전문처리핸들러 목록 최신화
-    $('[data-tab-page]').on('tab:activated', function () {
+    $('[data-tab-page]').off('tab:activated.msgHandle').on('tab:activated.msgHandle', function () {
         HandlerList.load(HandlerList.currentPage);
     });
 })();

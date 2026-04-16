@@ -394,7 +394,7 @@
         Monitors.load();
 
         // 캐시에서 복원 시(tab:activated) 현황판 목록 최신화
-        $('[data-tab-page]').on('tab:activated', function () {
+        $('[data-tab-page]').off('tab:activated.systemBizReg').on('tab:activated.systemBizReg', function () {
             Monitors.load();
         });
     });

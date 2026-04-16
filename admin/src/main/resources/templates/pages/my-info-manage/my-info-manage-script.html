@@ -301,7 +301,7 @@
         window.Profile.load();
 
         // 캐시에서 복원 시(tab:activated) 프로필 최신화
-        $('[data-tab-page]').on('tab:activated', function () {
+        $('[data-tab-page]').off('tab:activated.myInfo').on('tab:activated.myInfo', function () {
             window.Profile.load();
         });
     </script>

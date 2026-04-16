@@ -194,7 +194,7 @@
     });
 
     // 캐시에서 복원 시(tab:activated) React 코드 생성 페이지 상태 유지 (별도 load 불필요)
-    $('[data-tab-page]').on('tab:activated', function () {
+    $('[data-tab-page]').off('tab:activated.reactGenerate').on('tab:activated.reactGenerate', function () {
         // 폼 기반 페이지이므로 추가 데이터 로드 없음
     });
 

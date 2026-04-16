@@ -552,7 +552,7 @@
         }
 
         // 캐시에서 복원 시(tab:activated) WAS별 Gateway 정보 최신화
-        $('[data-tab-page]').on('tab:activated', function () {
+        $('[data-tab-page]').off('tab:activated.wasStatus').on('tab:activated.wasStatus', function () {
             window.WasGatewayStatus.load(window.WasGatewayStatus.currentPage);
         });
     })();

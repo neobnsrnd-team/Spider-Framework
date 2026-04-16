@@ -614,7 +614,7 @@
             window.ListenerConnectorMappingList.init();
 
             // 캐시에서 복원 시(tab:activated) 리스너 응답커넥터 맵핑 목록 최신화
-            $('[data-tab-page]').on('tab:activated', function () {
+            $('[data-tab-page]').off('tab:activated.listenerConnector').on('tab:activated.listenerConnector', function () {
                 window.ListenerConnectorMappingList.load(window.ListenerConnectorMappingList.currentPage);
             });
         })();

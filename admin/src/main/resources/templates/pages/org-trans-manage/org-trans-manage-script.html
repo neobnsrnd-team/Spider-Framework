@@ -579,7 +579,7 @@
             window.GatewayMappingList.init();
 
             // 캐시에서 복원 시(tab:activated) 기관통신 Gateway맵핑 목록 최신화
-            $('[data-tab-page]').on('tab:activated', function () {
+            $('[data-tab-page]').off('tab:activated.orgTrans').on('tab:activated.orgTrans', function () {
                 window.GatewayMappingList.load(window.GatewayMappingList.currentPage);
             });
         })();

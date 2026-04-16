@@ -3298,7 +3298,7 @@
             window.Messages.load();
 
             // 캐시에서 복원 시(tab:activated) 메시지 목록 최신화
-            $('[data-tab-page]').on('tab:activated', function () {
+            $('[data-tab-page]').off('tab:activated.messageManage').on('tab:activated.messageManage', function () {
                 window.Messages.load();
             });
         } else {
