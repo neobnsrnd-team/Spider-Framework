@@ -35,6 +35,11 @@
             } else {
                 init();
             }
+
+            // 캐시에서 복원 시(tab:activated) 전문테스트 초기화 최신화
+            $('[data-tab-page]').off('tab:activated.reqMessageTest').on('tab:activated.reqMessageTest', function () {
+                loadInstanceIds();
+            });
         })();
 
         // 초기화 함수

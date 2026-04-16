@@ -45,7 +45,7 @@
             this.loadDeployStatus(); // 배포 상태 뱃지 별도 조회
 
             // 캐시에서 복원 시(tab:activated) 배포 상태 최신화
-            $('[data-tab-page]').on('tab:activated', function () {
+            $('[data-tab-page]').off('tab:activated.emergencyNotice').on('tab:activated.emergencyNotice', function () {
                 self.loadDeployStatus();
             });
 

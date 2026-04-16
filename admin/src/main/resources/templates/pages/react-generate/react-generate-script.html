@@ -166,6 +166,11 @@
         }
     });
 
+    // 캐시에서 복원 시(tab:activated) React 코드 생성 페이지 상태 유지 (별도 load 불필요)
+    $('[data-tab-page]').off('tab:activated.reactGenerate').on('tab:activated.reactGenerate', function () {
+        // 폼 기반 페이지이므로 추가 데이터 로드 없음
+    });
+
     // ─── Preview App 렌더링 오류 수신 ───────────────────────
     // iframe(Preview App)이 postMessage로 전달한 RENDER_ERROR를 수신해 서버에 기록한다.
     // fire-and-forget: 오류 기록 실패가 UX에 영향을 주지 않도록 에러 핸들러 생략

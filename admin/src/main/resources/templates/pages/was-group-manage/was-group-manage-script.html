@@ -19,6 +19,11 @@
             $(document).ready(function() {
                 loadWasGroups();
 
+                // 캐시에서 복원 시(tab:activated) WAS 그룹 목록 최신화
+                $('[data-tab-page]').off('tab:activated.wasGroup').on('tab:activated.wasGroup', function () {
+                    loadWasGroups();
+                });
+
                 $('#limitRows').change(function() {
                     itemsPerPage = parseInt($(this).val()) || 20;
                     currentPage = 1;
