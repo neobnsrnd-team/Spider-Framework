@@ -770,7 +770,7 @@ export function ImmediatePayRequestRoute() {
   const storedCard = sessionStorage.getItem("immediatePaySelectedCard");
   const card: CardInfo = storedCard
     ? (JSON.parse(storedCard) as CardInfo)
-    : { id: "", name: "", maskedNumber: "" };
+    : { id: "", name: "", maskedNumber: "", paymentBank: "", paymentAccount: "" };
 
   // POC_카드사용내역에서 누적결제금액 < 이용금액인 건의 미결제 잔액 합산을 조회한다.
   const [payableAmount, setPayableAmount] = useState<number>(0);
@@ -871,9 +871,6 @@ export function ImmediatePayMethodRoute() {
   // PIN 횟수 초과 여부 — true일 때만 PinConfirmSheet에 초기화 버튼을 표시한다.
   const [pinExceeded, setPinExceeded] = useState(false);
   // (payErrorMessage 상태 제거 — 에러 시 완료 화면으로 이동해 세션에서 읽는 방식으로 변경)
-  // POC_카드리스트에서 조회한 결제은행·계좌 — 화면 진입 시 API로 가져온다.
-  const [paymentBank, setPaymentBank] = useState("");
-  const [paymentAccount, setPaymentAccount] = useState("");
 
   // STEP 1·2에서 세션에 저장된 카드 정보·결제 요청 데이터·금액 정보를 읽는다.
   const storedCard = sessionStorage.getItem("immediatePaySelectedCard");
@@ -892,40 +889,20 @@ export function ImmediatePayMethodRoute() {
       })
     : { payableAmount: 0, creditLimit: 0 };
 
-  // 화면 진입 시 /api/cards를 호출해 선택된 카드의 결제은행·계좌를 조회한다.
-  // 세션 데이터에 의존하지 않고 항상 최신 DB 값을 표시하기 위해 별도 API 호출한다.
-  useEffect(() => {
-    if (!card.id) return;
-    const controller = new AbortController();
-    axiosInstance
-      .get<{ cards: ApiCardFull[] }>("/cards", { signal: controller.signal })
-      .then((r) => {
-        const found = r.data.cards.find((c) => c.id === card.id);
-        if (found) {
-          setPaymentBank(found.paymentBank);
-          setPaymentAccount(found.paymentAccount);
-        }
-      })
-      .catch((err: { code?: string }) => {
-        if (err.code !== "ERR_CANCELED")
-          console.error("[ImmediatePayMethodRoute] 결제계좌 조회 실패", err);
-      });
-    return () => controller.abort();
-  }, [card.id]);
-
   // 이용구분 코드 → 표시 문자열
   const usageTypeLabel = usageType === "lump" ? "일시불" : "금액별";
 
   // 결제 후 이용가능한도 = 한도금액 - (미결제금액 - 결제금액)
   const availableLimit = creditLimit - (totalPayable - payAmount);
 
-  // POC_카드리스트에서 조회된 결제은행·계좌를 출금계좌 목록으로 구성한다.
+  // STEP 1에서 세션에 저장된 card 객체에 결제은행·계좌가 포함되어 있으므로
+  // 별도 API 호출 없이 세션 데이터를 직접 사용한다.
   // 계좌는 카드에 1:1로 연결되어 있으므로 단일 항목 배열로 제공한다.
   const ACCOUNTS = [
     {
       id: card.id,
-      bankName: paymentBank,
-      maskedAccount: maskAccountNumber(paymentAccount),
+      bankName: card.paymentBank,
+      maskedAccount: maskAccountNumber(card.paymentAccount),
     },
   ];
 
