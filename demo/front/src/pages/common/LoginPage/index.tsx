@@ -22,6 +22,7 @@ import { Inline } from "@cl/layout/Inline";
 import { Typography } from "@cl/core/Typography";
 import { Input } from "@cl/core/Input";
 import { Button } from "@cl/core/Button";
+import { Checkbox } from "@cl/modules/common/Checkbox";
 import { DividerWithLabel } from "@cl/modules/common/DividerWithLabel";
 import { QuickMenuGrid } from "@cl/biz/common/QuickMenuGrid";
 import type { LoginPageProps } from "./types";
@@ -37,6 +38,8 @@ export function LoginPage({
   showPassword = false,
   onTogglePassword,
   onLogin,
+  saveId = false,
+  onSaveIdChange,
 }: LoginPageProps) {
   const ALT_LOGIN_ITEMS = [
     {
@@ -93,6 +96,8 @@ export function LoginPage({
             placeholder="비밀번호를 입력하세요"
             value={password}
             onChange={(e) => onPasswordChange?.(e.target.value)}
+            // Enter 키 입력 시 로그인 버튼 클릭과 동일하게 처리
+            onKeyDown={(e) => e.key === "Enter" && onLogin?.()}
             fullWidth
             validationState={hasError ? "error" : "default"}
             helperText={
@@ -107,11 +112,22 @@ export function LoginPage({
                 aria-label={showPassword ? "비밀번호 숨김" : "비밀번호 표시"}
                 onClick={onTogglePassword}
                 className="text-text-muted"
-                leftIcon={showPassword ? <Eye size={20} /> : <EyeOff size={20} />}
+                leftIcon={
+                  showPassword ? <Eye size={20} /> : <EyeOff size={20} />
+                }
               />
             }
           />
         </Stack>
+
+        {/* 아이디 저장 */}
+        <Inline gap="lg" className="pt-xs">
+          <Checkbox
+            label="아이디 저장"
+            checked={saveId}
+            onChange={onSaveIdChange ?? (() => {})}
+          />
+        </Inline>
 
         <Inline justify="center" gap="sm" className="py-sm">
           <Button variant="ghost" size="sm" onClick={() => {}}>
@@ -133,7 +149,7 @@ export function LoginPage({
           </Button>
         </Inline>
 
-        <div className="pt-md">
+        <div className="pt-md pb-lg">
           <Button variant="primary" size="lg" fullWidth onClick={onLogin}>
             로그인
           </Button>

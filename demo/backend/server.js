@@ -3,11 +3,20 @@
  * @description Express 서버 진입점 + 카드 관련 API 엔드포인트
  *
  * API 목록
- *   GET  /api/cards                          카드 목록 (슬라이더·드롭다운용)
- *   GET  /api/cards/:cardId/transactions     카드별 이용내역
- *   GET  /api/notices/sse                    긴급공지 SSE 스트림 (Demo Frontend 구독)
- *   POST /api/notices/sync                   긴급공지 배포 동기화 (Admin 호출)
- *   POST /api/notices/end                    긴급공지 배포 종료 (Admin 호출)
+ *   GET    /api/auth/me                          로그인 사용자 프로필 + 최근 접속 일시
+ *   POST   /api/auth/login                       로그인
+ *   POST   /api/auth/refresh                     Access Token 재발급
+ *   POST   /api/auth/logout                      로그아웃
+ *   GET    /api/cards                            카드 목록 (슬라이더·드롭다운용)
+ *   GET    /api/transactions                     카드 이용내역
+ *   GET    /api/payment-statement                결제예정금액 / 이용대금명세서
+ *   GET    /api/cards/:cardId/payable-amount     즉시결제 가능금액
+ *   POST   /api/cards/:cardId/immediate-pay      즉시결제 처리
+ *   DELETE /api/cards/:cardId/pin-attempts       PIN 실패 횟수 초기화
+ *   GET    /api/notices/sse                      긴급공지 SSE 스트림 (Demo Frontend 구독)
+ *   POST   /api/notices/sync                     긴급공지 배포 동기화 (Admin 호출)
+ *   POST   /api/notices/end                      긴급공지 배포 종료 (Admin 호출)
+ *   GET    /api/notices/preview                  긴급공지 미리보기 (Admin 호출)
  *
  * DB ↔ 프론트 매핑 규칙 (이 파일 하단 mapper 함수 참고)
  *   Oracle 컬럼명(UPPER_SNAKE)  →  React 프롭(camelCase)
@@ -17,25 +26,30 @@
 
 require("dotenv").config();
 
-const express      = require("express");
-const cors         = require("cors");
+const express = require("express");
+const cors = require("cors");
 const cookieParser = require("cookie-parser");
 const { apiLogger } = require("./utils/logger");
 const jwt = require("jsonwebtoken");
 const { initPool, withConnection, closePool } = require("./db");
 const { detectBrand, maskCardNumber } = require("./utils/cardBrand");
-const { addClient, broadcastNotice, clientCount } = require("./utils/sseManager");
-const { getBillingPeriod }            = require("./utils/billingPeriod");
-const { getBillingSummaryByMonth }    = require("./utils/billingByMonth");
+const {
+  addClient,
+  broadcastNotice,
+  clientCount,
+} = require("./utils/sseManager");
+const { getBillingPeriod } = require("./utils/billingPeriod");
+const { getBillingSummaryByMonth } = require("./utils/billingByMonth");
 
-const JWT_SECRET          = process.env.JWT_SECRET          || "dev-secret";
+const JWT_SECRET = process.env.JWT_SECRET || "dev-secret";
 // Access Token: 짧은 TTL — 만료 시 Refresh Token으로 재발급
-const JWT_ACCESS_EXPIRES_IN  = process.env.JWT_ACCESS_EXPIRES_IN  || "30m";
+const JWT_ACCESS_EXPIRES_IN = process.env.JWT_ACCESS_EXPIRES_IN || "30m";
 // Refresh Token: 긴 TTL — httpOnly 쿠키로 관리 (JS 접근 불가)
-const JWT_REFRESH_SECRET     = process.env.JWT_REFRESH_SECRET     || "dev-refresh-secret";
+const JWT_REFRESH_SECRET =
+  process.env.JWT_REFRESH_SECRET || "dev-refresh-secret";
 const JWT_REFRESH_EXPIRES_IN = process.env.JWT_REFRESH_EXPIRES_IN || "7d";
 /** Admin → Demo Backend 호출 시 사용하는 공유 비밀 키 */
-const ADMIN_SECRET  = process.env.ADMIN_SECRET  || "admin-secret";
+const ADMIN_SECRET = process.env.ADMIN_SECRET || "admin-secret";
 
 /**
  * 현재 배포 중인 긴급공지 인메모리 상태.
@@ -55,17 +69,14 @@ let currentNotice = null;
 const refreshTokenStore = new Map();
 
 /**
- * 로컬 환경 전용 미들웨어 — localhost 요청만 허용한다.
- * /api/dev/* 진단 엔드포인트에 적용. 개발 완료 후 해당 라우트와 함께 삭제 예정.
+ * POC용 인메모리 PIN 시도 횟수 저장소.
+ * 프로덕션에서는 Redis 또는 DB 테이블로 교체해야 한다.
+ * Map<`${userId}:${cardId}`, number>  — 실패 횟수 카운트
  */
-function localOnly(req, res, next) {
-  const ip = req.ip || req.connection.remoteAddress || "";
-  // ::1 = IPv6 루프백, 127.0.0.1 = IPv4 루프백
-  if (ip === "::1" || ip === "127.0.0.1" || ip.endsWith("127.0.0.1")) {
-    return next();
-  }
-  return res.status(403).json({ error: "로컬 환경에서만 접근할 수 있습니다." });
-}
+const pinAttemptStore = new Map();
+
+/** PIN 최대 허용 실패 횟수 */
+const PIN_MAX_ATTEMPTS = 3;
 
 /** Admin 전용 엔드포인트 인증 미들웨어 — X-Admin-Secret 헤더 검증 */
 function verifyAdminSecret(req, res, next) {
@@ -114,104 +125,45 @@ app.use(express.json());
 app.use(cookieParser());
 app.use(apiLogger);
 
-// ── 개발용: D_SPIDERLINK의 POC_ 테이블 목록 및 컬럼 확인 ────────────────────
-// verifyToken 적용 — 인증된 사용자만 raw DB 데이터에 접근 가능
-app.get("/api/dev/raw", localOnly, async (_req, res) => {
-  try {
-    const result = await withConnection((conn) =>
-      conn.execute(
-        `SELECT "이용자", "이용일자", "승인시각", "결제예정일"
-           FROM D_SPIDERLINK.POC_카드사용내역
-          WHERE ROWNUM <= 5`,
-      ),
-    );
-    res.json({ rows: result.rows });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-app.get("/api/dev/tables", localOnly, async (_req, res) => {
-  try {
-    const result = await withConnection((conn) =>
-      conn.execute(
-        `SELECT TABLE_NAME FROM ALL_TABLES
-          WHERE OWNER = 'D_SPIDERLINK'
-            AND TABLE_NAME LIKE 'POC%'
-          ORDER BY TABLE_NAME`,
-      ),
-    );
-    res.json({ tables: (result.rows || []).map((r) => r.TABLE_NAME) });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
+// ── 인증 ─────────────────────────────────────────────────────────────────────
 
 /**
- * GET /api/dev/usage-stat
- * POC_카드사용내역 "이용자" 컬럼 분포 진단용 엔드포인트.
- *
- * 반환:
- *   totalCount   — 테이블 전체 레코드 수
- *   distribution — { value, trimmedValue, count } 목록 (이용자 값별 건수)
- *
- * "이용자" 값의 선행/후행 공백이나 대소문자 차이가
- * WHERE "이용자" = :userId 필터에서 레코드가 누락되는 주 원인이므로
- * 원본 값(value)과 TRIM 값(trimmedValue)을 함께 반환한다.
+ * GET /api/auth/me
+ * Authorization: Bearer <accessToken>
+ * 현재 로그인 사용자의 프로필과 최근 접속 일시를 반환한다.
+ * Access Token이 아직 유효해 refresh가 발생하지 않은 경우에도
+ * 프론트엔드가 lastLogin을 즉시 채울 수 있도록 제공한다.
  */
-app.get("/api/dev/usage-stat", localOnly, async (_req, res) => {
+app.get("/api/auth/me", verifyToken, async (req, res) => {
   try {
-    const [countResult, distResult] = await Promise.all([
-      withConnection((conn) =>
-        conn.execute(
-          `SELECT COUNT(*) AS TOTAL_CNT FROM D_SPIDERLINK.POC_카드사용내역`,
-        ),
-      ),
-      withConnection((conn) =>
-        conn.execute(
-          `SELECT "이용자"        AS RAW_VAL,
-                  TRIM("이용자") AS TRIM_VAL,
-                  COUNT(*)       AS CNT
-             FROM D_SPIDERLINK.POC_카드사용내역
-            GROUP BY "이용자", TRIM("이용자")
-            ORDER BY CNT DESC`,
-        ),
-      ),
-    ]);
+    const { userId } = req.user;
 
-    res.json({
-      totalCount:   countResult.rows[0]?.TOTAL_CNT ?? 0,
-      distribution: (distResult.rows || []).map((r) => ({
-        value:        r.RAW_VAL,       // DB에 실제 저장된 값 (공백 포함 가능)
-        trimmedValue: r.TRIM_VAL,      // 앞뒤 공백 제거 후 값
-        count:        r.CNT,
-      })),
-    });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-app.get("/api/dev/columns/:tbl", localOnly, async (req, res) => {
-  try {
-    const tbl = req.params.tbl.toUpperCase();
     const result = await withConnection((conn) =>
       conn.execute(
-        `SELECT COLUMN_NAME, DATA_TYPE
-           FROM ALL_TAB_COLUMNS
-          WHERE OWNER = 'D_SPIDERLINK'
-            AND TABLE_NAME = :tbl
-          ORDER BY COLUMN_ID`,
-        { tbl }, // SQL 인젝션 방지: bind variable 사용
+        `SELECT USER_NAME, USER_GRADE,
+                TO_CHAR(SYSDATE, 'YYYYMMDDHH24MISS') AS LAST_LOGIN_DTIME
+           FROM D_SPIDERLINK.POC_USER
+          WHERE USER_ID = :userId`,
+        { userId },
       ),
     );
-    res.json({ table: tbl, columns: result.rows });
+
+    const row = result.rows?.[0];
+    if (!row) {
+      return res.status(404).json({ error: "사용자를 찾을 수 없습니다." });
+    }
+
+    return res.json({
+      userId,
+      userName:  row.USER_NAME,
+      userGrade: row.USER_GRADE,
+      lastLogin: formatLoginDtime(row.LAST_LOGIN_DTIME),
+    });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.error("[GET /api/auth/me]", err);
+    return res.status(500).json({ error: "서버 오류가 발생했습니다." });
   }
 });
-
-// ── 인증 ─────────────────────────────────────────────────────────────────────
 
 /**
  * POST /api/auth/login
@@ -231,7 +183,8 @@ app.post("/api/auth/login", async (req, res) => {
   try {
     const result = await withConnection(async (conn) => {
       return conn.execute(
-        `SELECT USER_ID, USER_NAME, USER_GRADE, LOG_YN
+        `SELECT USER_ID, USER_NAME, USER_GRADE, LOG_YN,
+                TO_CHAR(SYSDATE, 'YYYYMMDDHH24MISS') AS LAST_LOGIN_DTIME
            FROM D_SPIDERLINK.POC_USER
           WHERE USER_ID = :userId AND PASSWORD = :password`,
         { userId, password },
@@ -268,8 +221,8 @@ app.post("/api/auth/login", async (req, res) => {
     );
 
     const payload = {
-      userId:    row.USER_ID,
-      userName:  row.USER_NAME,
+      userId: row.USER_ID,
+      userName: row.USER_NAME,
       userGrade: row.USER_GRADE,
     };
 
@@ -289,18 +242,20 @@ app.post("/api/auth/login", async (req, res) => {
     // SameSite=lax: CSRF 방지 / path=/api/auth: 인증 경로에만 쿠키 전송
     res.cookie("refreshToken", refreshToken, {
       httpOnly: true,
-      secure:   false, // POC: HTTP 허용 (프로덕션에서는 true + HTTPS 필수)
+      secure: false, // POC: HTTP 허용 (프로덕션에서는 true + HTTPS 필수)
       sameSite: "lax",
-      maxAge:   7 * 24 * 60 * 60 * 1000, // 7일 (ms)
-      path:     "/api/auth",
+      maxAge: 7 * 24 * 60 * 60 * 1000, // 7일 (ms)
+      path: "/api/auth",
     });
 
     return res.json({
-      success:   true,
-      token:     accessToken, // 기존 키 유지 (프론트 AuthUser.token 호환)
-      userId:    row.USER_ID,
-      userName:  row.USER_NAME,
+      success: true,
+      token: accessToken, // 기존 키 유지 (프론트 AuthUser.token 호환)
+      userId: row.USER_ID,
+      userName: row.USER_NAME,
       userGrade: row.USER_GRADE,
+      // LAST_LOGIN_DTIME 업데이트 전 값 — 이전 접속 시각을 메뉴 화면에 표시하기 위해 반환
+      lastLogin: formatLoginDtime(row.LAST_LOGIN_DTIME),
     });
   } catch (err) {
     console.error("[POST /api/auth/login]", err);
@@ -314,6 +269,7 @@ app.post("/api/auth/login", async (req, res) => {
  * POST /api/auth/refresh
  * Refresh Token(httpOnly 쿠키)으로 새 Access Token 발급.
  * 저장된 토큰과 불일치 시 탈취로 간주하고 해당 유저의 토큰을 무효화한다.
+ * 세션 활동이 감지되는 시점마다 LAST_LOGIN_DTIME을 갱신한다.
  */
 app.post("/api/auth/refresh", (req, res) => {
   const refreshToken = req.cookies?.refreshToken;
@@ -324,23 +280,51 @@ app.post("/api/auth/refresh", (req, res) => {
 
   try {
     const decoded = jwt.verify(refreshToken, JWT_REFRESH_SECRET);
-    const stored  = refreshTokenStore.get(decoded.userId);
+    const stored = refreshTokenStore.get(decoded.userId);
 
     // 저장된 토큰과 불일치 → 탈취된 토큰으로 간주, 즉시 무효화
     if (stored !== refreshToken) {
       refreshTokenStore.delete(decoded.userId);
-      return res.status(401).json({ error: "유효하지 않은 Refresh Token입니다." });
+      return res
+        .status(401)
+        .json({ error: "유효하지 않은 Refresh Token입니다." });
     }
 
     const newAccessToken = jwt.sign(
-      { userId: decoded.userId, userName: decoded.userName, userGrade: decoded.userGrade },
+      {
+        userId: decoded.userId,
+        userName: decoded.userName,
+        userGrade: decoded.userGrade,
+      },
       JWT_SECRET,
       { expiresIn: JWT_ACCESS_EXPIRES_IN },
     );
 
-    return res.json({ accessToken: newAccessToken });
+    // LAST_LOGIN_DTIME 갱신 — 실패해도 토큰 발급은 허용
+    withConnection((conn) =>
+      conn.execute(
+        `UPDATE D_SPIDERLINK.POC_USER
+            SET LAST_LOGIN_DTIME = TO_CHAR(SYSDATE, 'YYYYMMDDHH24MISS')
+          WHERE USER_ID = :userId`,
+        { userId: decoded.userId },
+        { autoCommit: true },
+      ),
+    ).catch((e) =>
+      console.warn("[refresh] LAST_LOGIN_DTIME 업데이트 실패:", e.message),
+    );
+
+    // 갱신 시각을 프론트에 전달해 '최근 접속 일시' 표시를 즉시 반영한다.
+    // DB 업데이트는 비동기이므로 SYSDATE 대신 JS 현재 시각을 동일 포맷으로 생성한다.
+    const n = new Date();
+    const refreshedAt = formatLoginDtime(
+      `${n.getFullYear()}${String(n.getMonth() + 1).padStart(2, "0")}${String(n.getDate()).padStart(2, "0")}${String(n.getHours()).padStart(2, "0")}${String(n.getMinutes()).padStart(2, "0")}${String(n.getSeconds()).padStart(2, "0")}`,
+    );
+
+    return res.json({ accessToken: newAccessToken, lastLogin: refreshedAt });
   } catch {
-    return res.status(401).json({ error: "Refresh Token이 만료되었거나 유효하지 않습니다." });
+    return res
+      .status(401)
+      .json({ error: "Refresh Token이 만료되었거나 유효하지 않습니다." });
   }
 });
 
@@ -404,56 +388,13 @@ function mapCard(row) {
 }
 
 /**
- * TB_CARD_TX 로우 → 프론트 Transaction 객체
- *
- * DB 컬럼 예시:
- *   TX_ID         VARCHAR2(30)   PK
- *   CARD_ID       VARCHAR2(20)   FK → TB_CARD_INFO
- *   CARD_NM       VARCHAR2(100)  카드명 (조인 또는 중복 보관)
- *   MERCHANT_NM   VARCHAR2(200)  가맹점명
- *   TX_AMT        NUMBER(15,2)   거래금액 (취소는 음수)
- *   TX_DT         VARCHAR2(10)   거래일 (YYYY.MM.DD)
- *   PAY_TYPE_CD   VARCHAR2(20)   결제유형 코드
- *   APRVL_NO      VARCHAR2(30)   승인번호
- *   TX_STAT_CD    VARCHAR2(10)   거래상태 코드
- *
- * @param {object} row
- * @returns {object} 프론트 Transaction 타입
+ * LAST_LOGIN_DTIME(YYYYMMDDHH24MISS 14자리) → 'YYYY.MM.DD HH:MM:SS'
+ * @param {string|null} raw
  */
-function mapTransaction(row) {
-  return {
-    id: row.TX_ID,
-    merchant: row.MERCHANT_NM,
-    amount: row.TX_AMT,
-    date: row.TX_DT,
-    // 코드값 → 화면 표시 레이블 변환
-    type: mapPayTypeCode(row.PAY_TYPE_CD),
-    approvalNumber: row.APRVL_NO,
-    status: mapTxStatCode(row.TX_STAT_CD),
-    cardName: row.CARD_NM,
-  };
-}
-
-/** 결제유형 코드 → 표시 문자열 */
-function mapPayTypeCode(code) {
-  const map = {
-    LUMP: "일시불",
-    INSTALL_03: "할부(3개월)",
-    INSTALL_06: "할부(6개월)",
-    INSTALL_12: "할부(12개월)",
-    CANCEL: "취소",
-  };
-  return map[code] ?? code;
-}
-
-/** 거래상태 코드 → 표시 문자열 */
-function mapTxStatCode(code) {
-  const map = {
-    APPROVED: "승인",
-    CONFIRMED: "결제확정",
-    CANCELLED: "취소",
-  };
-  return map[code] ?? code;
+function formatLoginDtime(raw) {
+  const s = String(raw ?? "").replace(/\D/g, "");
+  if (s.length !== 14) return raw ?? "";
+  return `${s.slice(0, 4)}.${s.slice(4, 6)}.${s.slice(6, 8)} ${s.slice(8, 10)}:${s.slice(10, 12)}:${s.slice(12, 14)}`;
 }
 
 /**
@@ -466,9 +407,11 @@ function formatDateTime(date, time) {
   const t = String(time ?? "").replace(/\D/g, "");
   // YYYYMMDD(8자리) 또는 YYMMDD(6자리) 모두 처리
   let datePart = d;
-  if (d.length === 8)       // YYYYMMDD
+  if (d.length === 8)
+    // YYYYMMDD
     datePart = `${d.slice(0, 4)}.${d.slice(4, 6)}.${d.slice(6, 8)}`;
-  else if (d.length === 6)  // YYMMDD
+  else if (d.length === 6)
+    // YYMMDD
     datePart = `20${d.slice(0, 2)}.${d.slice(2, 4)}.${d.slice(4, 6)}`;
   const timePart = t.length >= 4 ? `${t.slice(0, 2)}:${t.slice(2, 4)}` : "";
   return timePart ? `${datePart} ${timePart}` : datePart;
@@ -481,9 +424,11 @@ function formatDateTime(date, time) {
 function formatDateKo(raw) {
   if (!raw) return "";
   const s = String(raw).replace(/\D/g, "");
-  if (s.length === 8)  // YYYYMMDD
+  if (s.length === 8)
+    // YYYYMMDD
     return `${Number(s.slice(4, 6))}월 ${Number(s.slice(6, 8))}일`;
-  if (s.length === 6)  // YYMMDD
+  if (s.length === 6)
+    // YYMMDD
     return `${Number(s.slice(2, 4))}월 ${Number(s.slice(4, 6))}일`;
   return String(raw);
 }
@@ -618,13 +563,23 @@ function getDateRange(period, customMonth) {
 app.get("/api/transactions", verifyToken, async (req, res) => {
   try {
     const userId = req.user.userId;
-    const { cardId, period, customMonth, usageType, fromDate: qFromDate, toDate: qToDate } = req.query;
+    const {
+      cardId,
+      period,
+      customMonth,
+      usageType,
+      fromDate: qFromDate,
+      toDate: qToDate,
+    } = req.query;
 
     // ── 날짜 범위 계산 ─────────────────────────────────────────────
     // fromDate/toDate 직접 전달 시 우선 사용, 없으면 period/customMonth로 계산
-    const { fromDate: rangeFrom, toDate: rangeTo } = getDateRange(period, customMonth);
+    const { fromDate: rangeFrom, toDate: rangeTo } = getDateRange(
+      period,
+      customMonth,
+    );
     const fromDate = qFromDate || rangeFrom;
-    const toDate   = qToDate   || rangeTo;
+    const toDate = qToDate || rangeTo;
 
     // ── 동적 WHERE 절 구성 ───────────────────────────────────────
     let sql = `
@@ -725,9 +680,9 @@ app.get("/api/payment-statement", verifyToken, async (req, res) => {
     const ci = cardRows[0] ?? null;
     const cardInfo = ci
       ? {
-          paymentBank:    ci["결제은행명"] ?? "",
+          paymentBank: ci["결제은행명"] ?? "",
           paymentAccount: String(ci["결제계좌"] ?? ""),
-          paymentDay:     String(ci["결제일"] ?? ""),
+          paymentDay: String(ci["결제일"] ?? ""),
         }
       : null;
 
@@ -745,11 +700,15 @@ app.get("/api/payment-statement", verifyToken, async (req, res) => {
        * 보수적 범위(targetMonth-2 ~ targetMonth 말일)로 DB를 조회하고,
        * 정밀 필터링은 getBillingSummaryByMonth가 카드별로 수행한다. */
       const [y, m] = yearMonth.split("-").map(Number);
-      let fromYear = y, fromMonth = m - 2;
-      if (fromMonth <= 0) { fromYear--; fromMonth += 12; }
+      let fromYear = y,
+        fromMonth = m - 2;
+      if (fromMonth <= 0) {
+        fromYear--;
+        fromMonth += 12;
+      }
       const toDay = new Date(y, m, 0).getDate(); // targetMonth 말일
       txBinds.fromDate = `${fromYear}${String(fromMonth).padStart(2, "0")}01`;
-      txBinds.toDate   = `${y}${String(m).padStart(2, "0")}${String(toDay).padStart(2, "0")}`;
+      txBinds.toDate = `${y}${String(m).padStart(2, "0")}${String(toDay).padStart(2, "0")}`;
       txSql += ` AND "이용일자" >= :fromDate AND "이용일자" <= :toDate`;
     } else {
       /* 공여기간 필터: 전달받은 paymentDay 또는 DB 결제일 기준으로 이용일자 범위 산정 */
@@ -759,7 +718,7 @@ app.get("/api/payment-statement", verifyToken, async (req, res) => {
           const bp = getBillingPeriod(new Date(), D);
           txSql += ` AND "이용일자" >= :fromDate AND "이용일자" <= :toDate`;
           txBinds.fromDate = bp.fromDate; // YYYYMMDD
-          txBinds.toDate   = bp.toDate;   // YYYYMMDD
+          txBinds.toDate = bp.toDate; // YYYYMMDD
           billingPeriodFormatted = bp.formatted; // { usageStart, usageEnd, dueDate }
         } catch (e) {
           console.warn("[payment-statement] 공여기간 계산 실패:", e.message);
@@ -768,7 +727,9 @@ app.get("/api/payment-statement", verifyToken, async (req, res) => {
     }
 
     // ── 3. 이용내역 조회 ─────────────────────────────────────────────
-    const txResult = await withConnection((conn) => conn.execute(txSql, txBinds));
+    const txResult = await withConnection((conn) =>
+      conn.execute(txSql, txBinds),
+    );
     const txRows = txResult.rows || [];
 
     // ── 4. 집계 (yearMonth 유무에 따라 분기) ──────────────────────────
@@ -777,42 +738,62 @@ app.get("/api/payment-statement", verifyToken, async (req, res) => {
     if (yearMonth) {
       /* 카드별 결제일 공여기간을 개별 적용해 청구월을 정확히 판단 */
       const rawItems = txRows.map((r) => ({
-        cardNo:   String(r["카드번호"] ?? ""),
+        cardNo: String(r["카드번호"] ?? ""),
         cardName: r["카드명"] ?? "",
-        useDate:  String(r["이용일자"] ?? ""),
-        amount:   Number(r["이용금액"] ?? 0),
-        dueDate:  r["결제예정일"] ?? "",
+        useDate: String(r["이용일자"] ?? ""),
+        amount: Number(r["이용금액"] ?? 0),
+        dueDate: r["결제예정일"] ?? "",
       }));
-      const summary = getBillingSummaryByMonth(rawItems, yearMonth, cardSettings);
+      const summary = getBillingSummaryByMonth(
+        rawItems,
+        yearMonth,
+        cardSettings,
+      );
 
       /* 카드+결제예정일 조합별 재집계 (응답 포맷을 기존과 동일하게 유지) */
       const cardMap = {};
       summary.items.forEach((item) => {
         const key = `${item.cardNo}_${item.dueDate}`;
-        if (!cardMap[key]) cardMap[key] = { cardNo: item.cardNo, cardName: item.cardName, amount: 0, dueDate: item.dueDate };
+        if (!cardMap[key])
+          cardMap[key] = {
+            cardNo: item.cardNo,
+            cardName: item.cardName,
+            amount: 0,
+            dueDate: item.dueDate,
+          };
         cardMap[key].amount += item.amount;
       });
-      items       = Object.values(cardMap);
+      items = Object.values(cardMap);
       totalAmount = summary.totalAmount;
 
       /* 대표 결제예정일 — 가장 많이 등장하는 값 */
       const cnt = {};
-      summary.items.forEach((i) => { if (i.dueDate) cnt[i.dueDate] = (cnt[i.dueDate] || 0) + 1; });
+      summary.items.forEach((i) => {
+        if (i.dueDate) cnt[i.dueDate] = (cnt[i.dueDate] || 0) + 1;
+      });
       dueDate = Object.entries(cnt).sort((a, b) => b[1] - a[1])[0]?.[0] ?? "";
-
     } else {
       /* 공여기간 기반 조회 — 기존 집계 로직 유지 */
       const cardMap = {};
       txRows.forEach((r) => {
         const key = `${r["카드번호"]}_${r["결제예정일"] ?? ""}`;
-        if (!cardMap[key]) cardMap[key] = { cardNo: r["카드번호"], cardName: r["카드명"] ?? "", amount: 0, dueDate: r["결제예정일"] ?? "" };
+        if (!cardMap[key])
+          cardMap[key] = {
+            cardNo: r["카드번호"],
+            cardName: r["카드명"] ?? "",
+            amount: 0,
+            dueDate: r["결제예정일"] ?? "",
+          };
         cardMap[key].amount += Number(r["이용금액"] ?? 0);
       });
-      items       = Object.values(cardMap);
+      items = Object.values(cardMap);
       totalAmount = items.reduce((sum, i) => sum + i.amount, 0);
 
       const cnt = {};
-      txRows.forEach((r) => { const d = r["결제예정일"]; if (d) cnt[d] = (cnt[d] || 0) + 1; });
+      txRows.forEach((r) => {
+        const d = r["결제예정일"];
+        if (d) cnt[d] = (cnt[d] || 0) + 1;
+      });
       dueDate = Object.entries(cnt).sort((a, b) => b[1] - a[1])[0]?.[0] ?? "";
     }
 
@@ -831,101 +812,240 @@ app.get("/api/payment-statement", verifyToken, async (req, res) => {
 });
 
 /**
- * GET /api/cards/:cardId/transactions
- * 특정 카드의 이용내역을 페이징하여 반환합니다.
+ * GET /api/cards/:cardId/payable-amount
+ * 즉시결제 가능금액 및 한도금액 조회.
  *
- * Path Params:
- *   cardId — 카드 ID
+ * - payableAmount : POC_카드사용내역에서 누적결제금액 < 이용금액(취소 제외) 건의 미결제 잔액 합산
+ * - creditLimit   : POC_카드리스트의 한도금액 (결제 후 이용가능한도 계산에 사용)
  *
- * Query Params:
- *   page     (기본 1)   — 페이지 번호 (1-based)
- *   pageSize (기본 20)  — 페이지 당 건수
- *   fromDate (선택)     — 조회 시작일 YYYYMMDD
- *   toDate   (선택)     — 조회 종료일 YYYYMMDD
- *
- * Response 200:
- *   {
- *     transactions: Transaction[],
- *     totalCount: number,
- *     page: number,
- *     pageSize: number
- *   }
+ * Response 200: { payableAmount: number, creditLimit: number }
  */
-app.get("/api/cards/:cardId/transactions", verifyToken, async (req, res) => {
+app.get("/api/cards/:cardId/payable-amount", verifyToken, async (req, res) => {
   try {
+    const userId = req.user.userId;
     const { cardId } = req.params;
-    const page = Math.max(1, Number(req.query.page) || 1);
-    const pageSize = Math.min(100, Number(req.query.pageSize) || 20);
-    const { fromDate, toDate } = req.query;
 
-    const offset = (page - 1) * pageSize;
+    const [usageResult, cardResult] = await withConnection((conn) =>
+      Promise.all([
+        /* 미결제 잔액 합산 */
+        conn.execute(
+          `SELECT NVL(SUM("이용금액" - "누적결제금액"), 0) AS PAYABLE_AMOUNT
+             FROM D_SPIDERLINK.POC_카드사용내역
+            WHERE "이용자"       = :userId
+              AND "카드번호"     = :cardId
+              AND "누적결제금액" < "이용금액"
+              AND "결제상태코드" <> '9'`,
+          /* 결제상태코드 9(취소건)는 즉시결제 대상에서 제외.
+           * 0:미결제, 1:완납, 2:부분결제, 9:취소 */
+          { userId, cardId },
+        ),
+        /* 카드 한도금액 조회 */
+        conn.execute(
+          `SELECT NVL("한도금액", 0) AS CREDIT_LIMIT
+             FROM D_SPIDERLINK.POC_카드리스트
+            WHERE "사용자아이디" = :userId
+              AND "카드번호"     = :cardId`,
+          { userId, cardId },
+        ),
+      ]),
+    );
 
-    const result = await withConnection(async (conn) => {
-      // ── 전체 건수 ──────────────────────────────────────────────────
-      let countSql = `
-        SELECT COUNT(*) AS TOTAL_CNT
-        FROM TB_CARD_TX
-        WHERE CARD_ID = :cardId
-      `;
-      const binds = { cardId };
-
-      if (fromDate) {
-        countSql += " AND TX_DT >= :fromDate";
-        binds.fromDate = fromDate;
-      }
-      if (toDate) {
-        countSql += " AND TX_DT <= :toDate";
-        binds.toDate = toDate;
-      }
-
-      const countRes = await conn.execute(countSql, binds);
-      const totalCount = countRes.rows[0]?.TOTAL_CNT ?? 0;
-
-      // ── 페이징 데이터 ──────────────────────────────────────────────
-      // Oracle 12c+ OFFSET/FETCH 문법 사용
-      let dataSql = `
-        SELECT
-          TX_ID,
-          CARD_NM,
-          MERCHANT_NM,
-          TX_AMT,
-          TX_DT,
-          PAY_TYPE_CD,
-          APRVL_NO,
-          TX_STAT_CD
-        FROM TB_CARD_TX
-        WHERE CARD_ID = :cardId
-      `;
-
-      if (fromDate) {
-        dataSql += " AND TX_DT >= :fromDate";
-      }
-      if (toDate) {
-        dataSql += " AND TX_DT <= :toDate";
-      }
-
-      dataSql += `
-        ORDER BY TX_DT DESC, TX_ID DESC
-        OFFSET :offset ROWS FETCH NEXT :pageSize ROWS ONLY
-      `;
-      binds.offset = offset;
-      binds.pageSize = pageSize;
-
-      const dataRes = await conn.execute(dataSql, binds);
-
-      return { rows: dataRes.rows, totalCount };
-    });
-
-    res.json({
-      transactions: (result.rows || []).map(mapTransaction),
-      totalCount: result.totalCount,
-      page,
-      pageSize,
-    });
+    const payableAmount = Number(usageResult.rows?.[0]?.PAYABLE_AMOUNT ?? 0);
+    const creditLimit = Number(cardResult.rows?.[0]?.CREDIT_LIMIT ?? 0);
+    res.json({ payableAmount, creditLimit });
   } catch (err) {
-    console.error("[GET /api/cards/:cardId/transactions]", err);
+    console.error("[GET /api/cards/:cardId/payable-amount]", err);
     res.status(500).json({ error: "DB 조회 중 오류가 발생했습니다." });
   }
+});
+
+/**
+ * POST /api/cards/:cardId/immediate-pay
+ * 즉시결제 DB 처리 — PIN 인증 성공 직후 호출된다.
+ *
+ * 처리 흐름:
+ *   1) 미결제 내역 조회 (이용일자 오름차순, FOR UPDATE 행 잠금)
+ *   2) 오래된 건부터 순차 차감
+ *      - 결제요청금액 >= 결제잔액 → 완납(1), 남은 금액을 다음 건으로 이월
+ *      - 결제요청금액 <  결제잔액 → 부분결제(2), 잔액에서 차감 후 종료
+ *   3) 결제된 총합계만큼 카드 이용가능금액 복원
+ *   4) 전 과정 단일 트랜잭션 — 오류 발생 시 롤백
+ *
+ * 응답 코드 설계:
+ *   - 401: Access Token 만료·무효 (verifyToken 미들웨어가 선행 처리)
+ *          → 프론트 인터셉터가 토큰 갱신 후 재시도
+ *   - 403: PIN 오류 (틀린 PIN / 횟수 초과)
+ *          → 인터셉터는 재시도하지 않으며, 사용자에게 에러 메시지 표시
+ *          → 토큰 만료와 PIN 오류를 동일한 401로 처리하면 인터셉터 재시도 시
+ *            PIN 실패 카운트가 중복 증가하는 문제가 발생하므로 반드시 403 사용
+ *
+ * @param {string} req.params.cardId   - 결제 대상 카드번호
+ * @param {string} req.body.pin        - PIN 번호 (오늘 날짜 MMDD, 예: "0415")
+ * @param {number} req.body.amount     - 결제요청금액
+ * @returns {{ paidAmount: number, processedCount: number }}
+ */
+app.post("/api/cards/:cardId/immediate-pay", verifyToken, async (req, res) => {
+  try {
+    const userId = req.user.userId;
+    const { cardId } = req.params;
+    const { pin, amount } = req.body;
+    const requestAmount = Number(amount);
+
+    // PIN 검증 — 오늘 날짜의 MMDD (월·일 각 2자리, 예: 4월 15일 → "0415")
+    const now = new Date();
+    const mm = String(now.getMonth() + 1).padStart(2, "0");
+    const dd = String(now.getDate()).padStart(2, "0");
+    const validPin = `${mm}${dd}`;
+    const pinKey = `${userId}:${cardId}`; // 사용자·카드 조합 단위로 횟수 관리
+    const attempts = pinAttemptStore.get(pinKey) ?? 0;
+
+    if (attempts >= PIN_MAX_ATTEMPTS) {
+      // 이미 3회 초과 — 더 이상 시도 불가.
+      // 401이 아닌 403으로 응답해야 인터셉터가 토큰 갱신 재시도를 하지 않는다.
+      return res.status(403).json({
+        error: "PIN 입력 횟수를 초과하였습니다.",
+        attemptsLeft: 0,
+      });
+    }
+
+    if (String(pin) !== validPin) {
+      const next = attempts + 1;
+      pinAttemptStore.set(pinKey, next);
+      const attemptsLeft = PIN_MAX_ATTEMPTS - next;
+      // 401이 아닌 403으로 응답해야 인터셉터 재시도가 발생하지 않아
+      // PIN 실패 카운트가 한 번만 증가한다.
+      return res.status(403).json({
+        error: "PIN 번호가 올바르지 않습니다.",
+        attemptsLeft, // 남은 시도 횟수를 프론트에 전달
+      });
+    }
+
+    // PIN 인증 성공 — 실패 횟수 초기화
+    pinAttemptStore.delete(pinKey);
+
+    if (!requestAmount || requestAmount <= 0) {
+      return res
+        .status(400)
+        .json({ error: "결제요청금액이 유효하지 않습니다." });
+    }
+
+    const result = await withConnection(async (conn) => {
+      try {
+        // ── 1. 미결제 내역 조회 ─────────────────────────────────────
+        // FOR UPDATE로 해당 행을 잠가 동시 결제 요청으로 인한 이중 차감을 방지한다.
+        const { rows } = await conn.execute(
+          `SELECT ROWID,
+                  "결제잔액",
+                  "누적결제금액"
+             FROM D_SPIDERLINK.POC_카드사용내역
+            WHERE "이용자"       = :userId
+              AND "카드번호"     = :cardId
+              AND "결제잔액"     > 0
+              AND "결제상태코드" <> '9'
+            ORDER BY "이용일자" ASC
+            FOR UPDATE`,
+          { userId, cardId },
+        );
+
+        let remaining = requestAmount; // 아직 배분하지 못한 결제 잔여금
+        let totalPaid = 0; // 이번 결제에서 실제 차감된 총합계
+        let processedCount = 0; // 업데이트된 내역 건수
+
+        // ── 2. 이용일자 오래된 순으로 순차 차감 ────────────────────
+        for (const row of rows) {
+          if (remaining <= 0) break;
+
+          const 결제잔액 = Number(row["결제잔액"]);
+          const 누적결제금액 = Number(row["누적결제금액"]);
+
+          let deducted, newBalance, newStatusCode;
+
+          if (remaining >= 결제잔액) {
+            // 완납: 이 내역의 잔액을 전부 결제하고 남은 금액을 다음 건으로 이월
+            deducted = 결제잔액;
+            newBalance = 0;
+            newStatusCode = "1"; // 1: 완납
+          } else {
+            // 부분결제: 남은 요청금액만큼만 차감하고 루프 종료
+            deducted = remaining;
+            newBalance = 결제잔액 - remaining;
+            newStatusCode = "2"; // 2: 부분결제
+          }
+
+          await conn.execute(
+            // 최종결제일자는 DB 서버의 SYSDATE를 직접 사용 — JS new Date()는 UTC 기준이라
+            // KST 자정~오전 9시 사이에 날짜가 하루 밀리는 버그가 있음
+            `UPDATE D_SPIDERLINK.POC_카드사용내역
+                SET "결제잔액"     = :newBalance,
+                    "누적결제금액" = :newAccumulated,
+                    "결제상태코드" = :newStatusCode,
+                    "최종결제일자" = TO_CHAR(SYSDATE, 'YYYYMMDD')
+              WHERE ROWID = :rid`,
+            {
+              newBalance,
+              newAccumulated: 누적결제금액 + deducted,
+              newStatusCode,
+              rid: row.ROWID, // ROWID는 Oracle 예약 의사컬럼이라 바인드 변수명으로 사용 불가 → rid로 대체
+            },
+          );
+
+          remaining -= deducted;
+          totalPaid += deducted;
+          processedCount++;
+        }
+
+        // ── 3. 한도 복원 ────────────────────────────────────────────
+        // 결제된 총합계만큼 이용가능금액을 가산하고 사용금액을 차감한다.
+        if (totalPaid > 0) {
+          await conn.execute(
+            `UPDATE D_SPIDERLINK.POC_카드리스트
+                SET "사용금액" = "사용금액" - :totalPaid
+              WHERE "사용자아이디" = :userId
+                AND "카드번호"     = :cardId`,
+            // 이용가능금액 컬럼은 없음 — 한도금액 - 사용금액으로 계산되는 파생값
+            { totalPaid, userId, cardId },
+          );
+        }
+
+        // ── 4. 커밋 — 모든 UPDATE가 성공해야 반영된다 ──────────────
+        await conn.commit();
+
+        // 처리일시는 DB 서버 시각 기준으로 반환 — 클라이언트 시각과 불일치 방지
+        const [{ COMPLETED_AT }] = (
+          await conn.execute(
+            `SELECT TO_CHAR(SYSDATE, 'YYYY.MM.DD HH24:MI') AS COMPLETED_AT FROM DUAL`,
+          )
+        ).rows;
+
+        return {
+          paidAmount: totalPaid,
+          processedCount,
+          completedAt: COMPLETED_AT,
+        };
+      } catch (err) {
+        // 어느 한 단계라도 실패하면 전체 롤백하여 데이터 무결성 보장
+        await conn.rollback();
+        throw err;
+      }
+    });
+
+    res.json(result);
+  } catch (err) {
+    console.error("[POST /api/cards/:cardId/immediate-pay]", err);
+    res.status(500).json({ error: "즉시결제 처리 중 오류가 발생했습니다." });
+  }
+});
+
+/**
+ * DELETE /api/cards/:cardId/pin-attempts
+ * PIN 실패 횟수 초기화.
+ * 횟수 초과로 잠긴 사용자가 초기화 버튼을 클릭할 때 호출된다.
+ */
+app.delete("/api/cards/:cardId/pin-attempts", verifyToken, (req, res) => {
+  const userId = req.user.userId;
+  const { cardId } = req.params;
+  pinAttemptStore.delete(`${userId}:${cardId}`);
+  res.json({ ok: true });
 });
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -939,9 +1059,9 @@ app.get("/api/cards/:cardId/transactions", verifyToken, async (req, res) => {
  */
 app.get("/api/notices/sse", (req, res) => {
   // SSE 응답 헤더 설정
-  res.setHeader("Content-Type",  "text/event-stream");
+  res.setHeader("Content-Type", "text/event-stream");
   res.setHeader("Cache-Control", "no-cache");
-  res.setHeader("Connection",    "keep-alive");
+  res.setHeader("Connection", "keep-alive");
   res.flushHeaders();
 
   // 연결 즉시 현재 공지 상태 전송 (재접속 시 최신 상태 즉시 반영)
@@ -971,18 +1091,22 @@ app.post("/api/notices/sync", verifyAdminSecret, (req, res) => {
   const { notices, displayType, closeableYn, hideTodayYn } = req.body;
 
   if (!notices || !Array.isArray(notices) || !displayType) {
-    return res.status(400).json({ error: "notices 배열과 displayType이 필요합니다." });
+    return res
+      .status(400)
+      .json({ error: "notices 배열과 displayType이 필요합니다." });
   }
 
   currentNotice = {
     notices,
     displayType,
-    closeableYn:  closeableYn  ?? "Y",
-    hideTodayYn:  hideTodayYn  ?? "Y",
+    closeableYn: closeableYn ?? "Y",
+    hideTodayYn: hideTodayYn ?? "Y",
   };
   broadcastNotice(currentNotice);
 
-  console.log(`[SSE] 긴급공지 배포 동기화 완료: displayType=${displayType}, 클라이언트=${clientCount()}명`);
+  console.log(
+    `[SSE] 긴급공지 배포 동기화 완료: displayType=${displayType}, 클라이언트=${clientCount()}명`,
+  );
   res.json({ success: true });
 });
 
@@ -1013,7 +1137,7 @@ app.get("/api/notices/preview", async (req, res) => {
         `SELECT DEFAULT_VALUE AS DISPLAY_TYPE
            FROM FWK_PROPERTY
           WHERE PROPERTY_GROUP_ID = 'notice'
-            AND PROPERTY_ID = 'USE_YN'`
+            AND PROPERTY_ID = 'USE_YN'`,
       );
       const row = statusRes.rows?.[0];
 
@@ -1023,13 +1147,13 @@ app.get("/api/notices/preview", async (req, res) => {
            FROM FWK_PROPERTY
           WHERE PROPERTY_GROUP_ID = 'notice'
             AND PROPERTY_ID IN ('EMERGENCY_KO', 'EMERGENCY_EN')
-          ORDER BY PROPERTY_ID`
+          ORDER BY PROPERTY_ID`,
       );
 
       return {
         notices: (noticeRes.rows || []).map((r) => ({
-          lang:    r.LANG,
-          title:   r.TITLE   || "",
+          lang: r.LANG,
+          title: r.TITLE || "",
           content: r.CONTENT || "",
         })),
         displayType: row?.DISPLAY_TYPE || "N",
@@ -1061,7 +1185,7 @@ async function restoreNoticeState() {
         `SELECT DEFAULT_VALUE AS DISPLAY_TYPE, DEPLOY_STATUS
            FROM FWK_PROPERTY
           WHERE PROPERTY_GROUP_ID = 'notice'
-            AND PROPERTY_ID = 'USE_YN'`
+            AND PROPERTY_ID = 'USE_YN'`,
       );
       const row = statusRes.rows?.[0];
       if (!row || row.DEPLOY_STATUS !== "DEPLOYED") return null;
@@ -1072,33 +1196,37 @@ async function restoreNoticeState() {
            FROM FWK_PROPERTY
           WHERE PROPERTY_GROUP_ID = 'notice'
             AND PROPERTY_ID IN ('EMERGENCY_KO', 'EMERGENCY_EN')
-          ORDER BY PROPERTY_ID`
+          ORDER BY PROPERTY_ID`,
       );
       // 노출 설정(닫기 버튼, 오늘 하루 보지 않기) 조회
       const settingsRes = await conn.execute(
         `SELECT PROPERTY_ID, DEFAULT_VALUE
            FROM FWK_PROPERTY
           WHERE PROPERTY_GROUP_ID = 'notice'
-            AND PROPERTY_ID IN ('CLOSEABLE_YN', 'HIDE_TODAY_YN')`
+            AND PROPERTY_ID IN ('CLOSEABLE_YN', 'HIDE_TODAY_YN')`,
       );
       const settingsMap = {};
-      (settingsRes.rows || []).forEach((r) => { settingsMap[r.PROPERTY_ID] = r.DEFAULT_VALUE; });
+      (settingsRes.rows || []).forEach((r) => {
+        settingsMap[r.PROPERTY_ID] = r.DEFAULT_VALUE;
+      });
 
       return {
-        notices:     (noticeRes.rows || []).map((r) => ({
-          lang:    r.LANG,
-          title:   r.TITLE   || "",
+        notices: (noticeRes.rows || []).map((r) => ({
+          lang: r.LANG,
+          title: r.TITLE || "",
           content: r.CONTENT || "",
         })),
-        displayType:  row.DISPLAY_TYPE || "N",
-        closeableYn:  settingsMap["CLOSEABLE_YN"]  ?? "Y",
-        hideTodayYn:  settingsMap["HIDE_TODAY_YN"] ?? "Y",
+        displayType: row.DISPLAY_TYPE || "N",
+        closeableYn: settingsMap["CLOSEABLE_YN"] ?? "Y",
+        hideTodayYn: settingsMap["HIDE_TODAY_YN"] ?? "Y",
       };
     });
 
     if (result) {
       currentNotice = result;
-      console.log(`[Server] 긴급공지 상태 복구 완료: displayType=${result.displayType}`);
+      console.log(
+        `[Server] 긴급공지 상태 복구 완료: displayType=${result.displayType}`,
+      );
     } else {
       console.log("[Server] 배포 중인 긴급공지 없음 — 초기 상태로 기동");
     }
@@ -1109,7 +1237,7 @@ async function restoreNoticeState() {
 
 async function start() {
   try {
-    await initPool();           // ① 커넥션 풀 먼저 생성
+    await initPool(); // ① 커넥션 풀 먼저 생성
     await restoreNoticeState(); // ② 재기동 시 배포 상태 복구
 
     app.listen(PORT, () => {

@@ -34,9 +34,9 @@ export type { ModalProps, ModalSize, ModalTitleAlign } from './types';
  * - sm: 320px / md: 360px / lg: 390px (createModal.ts MODAL_SIZE_CONFIG 기준)
  */
 const PANEL_SIZE: Record<ModalSize, string> = {
-  sm:         'max-w-[320px]',
-  md:         'max-w-[360px]',
-  lg:         'max-w-[390px]',
+  sm: 'max-w-[320px]',
+  md: 'max-w-[360px]',
+  lg: 'max-w-[390px]',
   /* fullscreen: w-screen(=100vw) 대신 w-full 사용 — 스크롤바 너비 포함 가로 스크롤 방지 */
   fullscreen: 'max-w-none w-full max-h-none rounded-none',
 };
@@ -56,7 +56,9 @@ export function Modal({
 }: ModalProps) {
   /* ESC 키로 닫기 — closeable=false이면 비활성화 */
   const handleKeyDown = useCallback(
-    (e: KeyboardEvent) => { if (e.key === 'Escape' && closeable) onClose(); },
+    (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && closeable) onClose();
+    },
     [onClose, closeable],
   );
 
@@ -87,7 +89,7 @@ export function Modal({
         role="dialog"
         aria-modal="true"
         aria-labelledby={title ? 'modal-title' : undefined}
-        onClick={e => e.stopPropagation()}
+        onClick={(e) => e.stopPropagation()}
         className={cn(
           'flex flex-col',
           /* mx-4: 좌우 여백으로 뷰포트 엣지에 붙지 않도록 */
@@ -169,16 +171,10 @@ export function Modal({
          * flex-1 + min-h-0: 헤더·푸터를 제외한 공간을 차지하면서 내부 스크롤 허용
          * min-h-0 없으면 flex 컬럼에서 overflow-y-auto가 동작하지 않음
          */}
-        <div className="flex-1 min-h-0 overflow-y-auto px-xl pb-md">
-          {children}
-        </div>
+        <div className="flex-1 min-h-0 overflow-y-auto px-xl pb-md">{children}</div>
 
         {/* 푸터 (고정) */}
-        {footer && (
-          <div className="shrink-0 border-t border-border-subtle px-xl pt-md pb-xl">
-            {footer}
-          </div>
-        )}
+        {footer && <div className="shrink-0 px-xl pt-md pb-xl">{footer}</div>}
       </div>
     </div>,
     document.body,

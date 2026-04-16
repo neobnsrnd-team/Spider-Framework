@@ -33,6 +33,6 @@ export interface ImmediatePayPageProps {
   onBack?: () => void;
   /** 닫기(X) 핸들러 */
   onClose?: () => void;
-  /** 다음 버튼 클릭 핸들러 */
-  onNext?: () => void;
+  /** 다음 버튼 클릭 핸들러. 현재 선택된 카드 id를 전달한다. */
+  onNext?: (cardId: string) => void;
 }

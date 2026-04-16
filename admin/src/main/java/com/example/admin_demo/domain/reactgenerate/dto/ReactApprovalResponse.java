@@ -1,6 +1,12 @@
+/**
+ * @file ReactApprovalResponse.java
+ * @description 승인 관리 메뉴의 목록 조회용 경량 DTO.
+ *     PENDING_APPROVAL 상태 코드 목록을 반환할 때 사용하며,
+ *     CLOB 컬럼(REACT_CODE 등)은 포함하지 않는다.
+ * @returns codeId, figmaUrl, status, createUserId, createDtime
+ */
 package com.example.admin_demo.domain.reactgenerate.dto;
 
-import java.util.List;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -10,18 +16,11 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class ReactGenerateResponse {
+public class ReactApprovalResponse {
 
     private String codeId;
     private String figmaUrl;
-    private String reactCode;
-    private String failReason;
     private String status;
     private String createUserId;
     private String createDtime;
-    private String approvalUserId;
-    private String approvalDtime;
-
-    /** WARN 레벨 보안 패턴 탐지 목록 — 코드는 통과하되 프론트엔드에 경고로 표시 */
-    private List<String> validationWarnings;
 }

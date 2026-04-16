@@ -9,10 +9,11 @@
 
     // ─── 상태 배지 정의 ────────────────────────────────────────
     const STATUS_LABEL = {
-        GENERATED:        { text: '생성 완료',  cls: 'bg-secondary' },
-        PENDING_APPROVAL: { text: '승인 대기',  cls: 'bg-warning text-dark' },
-        APPROVED:         { text: '승인 완료',  cls: 'bg-success' },
-        FAILED:           { text: '실패',       cls: 'bg-danger' }
+        GENERATED:        { text: '생성 완료',  cls: 'bg-primary' },
+        FAILED:           { text: '실패',        cls: 'bg-danger' },
+        PENDING_APPROVAL: { text: '승인 대기',   cls: 'bg-warning text-dark' },
+        APPROVED:         { text: '승인 완료',   cls: 'bg-success' },
+        REJECTED:         { text: '반려',        cls: 'bg-secondary' },
     };
 
     /** yyyyMMddHHmmss → yyyy-MM-dd HH:mm 형식으로 변환한다. */
@@ -31,6 +32,25 @@
         return d.substring(0, 4) + '-' + d.substring(4, 6) + '-' + d.substring(6, 8);
     }
 
+    /**
+     * URL이 http/https 프로토콜을 사용하는지 검증한다.
+     * javascript: 등 위험 프로토콜을 가진 URL을 href에 바인딩하지 않기 위해 사용한다.
+     *
+     * @param {string} url - 검증할 URL 문자열
+     * @returns {boolean} http/https 프로토콜이면 true, 그 외 또는 파싱 불가이면 false
+     */
+    function isSafeUrl(url) {
+        if (!url) return false;
+        try {
+            const parsed = new URL(url);
+            // http/https 프로토콜만 허용 — javascript:, data: 등 위험 프로토콜 차단
+            return parsed.protocol === 'https:' || parsed.protocol === 'http:';
+        } catch {
+            // URL 파싱 실패 = 유효하지 않은 URL
+            return false;
+        }
+    }
+
     // ─── 이력 목록 모듈 ────────────────────────────────────────
     const ReactGenerateHis = {
         currentPage: 1,
@@ -41,10 +61,12 @@
 
         /** 검색 조건을 수집하고 1페이지부터 재조회한다. */
         search: function () {
+            // 내 것만 보기 체크 시 생성자 ID를 현재 로그인 사용자로 고정
+            const myOnly = $('#chkMyOnly').is(':checked');
             // date input은 yyyy-MM-dd로 오므로 하이픈 제거 후 yyyyMMdd로 전달
             this.appliedSearch = {
                 status:         $('#searchStatus').val(),
-                createUserId:   $('#searchCreateUserId').val().trim(),
+                createUserId:   myOnly ? CURRENT_USER_ID : $('#searchCreateUserId').val().trim(),
                 fromDate:       ($('#searchFromDate').val() || '').replace(/-/g, ''),
                 toDate:         ($('#searchToDate').val() || '').replace(/-/g, '')
             };
@@ -105,13 +127,18 @@
                 const safeUserId = HtmlUtils.escape(item.createUserId || '');
                 const safeCodeId = HtmlUtils.escape(item.codeId || '');
 
+                // 안전한 URL(http/https)만 href에 바인딩 — javascript: 등 위험 프로토콜 차단
+                const figmaLinkHtml = isSafeUrl(item.figmaUrl)
+                    ? `<a href="${safeUrl}" target="_blank" rel="noopener noreferrer"
+                           class="text-decoration-none text-reset"
+                           onclick="event.stopPropagation();">${safeUrl || '—'}</a>`
+                    : `<span>${safeUrl || '—'}</span>`;
+
                 const row = $(`
                     <tr>
                         <td class="text-center">${offset + idx + 1}</td>
                         <td class="text-truncate" style="max-width: 300px;" title="${safeUrl}">
-                            <a href="${safeUrl}" target="_blank" rel="noopener noreferrer"
-                               class="text-decoration-none text-reset"
-                               onclick="event.stopPropagation();">${safeUrl}</a>
+                            ${figmaLinkHtml}
                         </td>
                         <td class="text-center">
                             <span class="badge ${statusInfo.cls}">${statusInfo.text}</span>
@@ -239,7 +266,12 @@
 
             // ── 상세 정보 섹션 ──
             const safeUrl = HtmlUtils.escape(data.figmaUrl || '');
-            $('#detailFigmaUrl').attr('href', safeUrl).text(safeUrl || '—');
+            // 안전한 URL(http/https)만 href 속성을 설정하고, 그 외에는 링크 없이 텍스트만 표시 (XSS 방지)
+            if (isSafeUrl(data.figmaUrl)) {
+                $('#detailFigmaUrl').attr('href', safeUrl).text(safeUrl || '—');
+            } else {
+                $('#detailFigmaUrl').removeAttr('href').text(safeUrl || '—');
+            }
             $('#detailCreateUserId').text(data.createUserId || '—');
             $('#detailCreateDtime').text(formatDtime(data.createDtime) || '—');
             $('#detailApprovalUserId').text(data.approvalUserId || '—');
@@ -252,8 +284,9 @@
                 .removeClass()
                 .addClass('badge ' + statusInfo.cls);
 
-            // 실패 사유: FAILED 상태일 때만 노출
-            if (data.status === 'FAILED') {
+            // 실패/반려 사유: FAILED 또는 REJECTED 상태일 때 노출, 레이블도 상태에 맞게 변경
+            if (data.status === 'FAILED' || data.status === 'REJECTED') {
+                $('#detailFailReasonLabel').text(data.status === 'REJECTED' ? '반려 사유' : '실패 사유');
                 $('#detailFailReason').text(data.failReason || '—');
                 $('#detailFailReasonRow').removeClass('d-none');
             } else {
@@ -361,7 +394,8 @@
         if (frame.contentDocument?.readyState === 'complete') {
             frame.contentWindow.postMessage({ type: 'UPDATE_CODE', code: '' }, window.location.origin);
         }
-        document.getElementById('detailCodeDisplay').innerHTML = '';
+        // textContent로 초기화하여 innerHTML 사용에 따른 잠재적 XSS 위험 제거
+        document.getElementById('detailCodeDisplay').textContent = '';
         // 다음 열기 시 로딩 상태로 리셋
         $('#detailContent').addClass('d-none');
         $('#detailLoading').removeClass('d-none');
@@ -376,9 +410,16 @@
 
     $('#btnSearchReset').on('click', function () {
         $('#searchStatus').val('');
-        $('#searchCreateUserId').val('');
+        $('#searchCreateUserId').val('').prop('disabled', false);
         $('#searchFromDate').val('');
         $('#searchToDate').val('');
+        $('#chkMyOnly').prop('checked', false);
+        ReactGenerateHis.search();
+    });
+
+    // 내 것만 보기: 체크 시 생성자 입력 필드 비활성화, 즉시 재조회
+    $('#chkMyOnly').on('change', function () {
+        $('#searchCreateUserId').prop('disabled', this.checked).val('');
         ReactGenerateHis.search();
     });
 
@@ -440,7 +481,7 @@
 
     // 캐시에서 복원 시(tab:activated) React 코드 생성 이력 최신화
     $('[data-tab-page]').on('tab:activated', function () {
-        ReactGenerateHis.load();
+        ReactGenerateHis.search();
     });
 </script>
 </th:block>

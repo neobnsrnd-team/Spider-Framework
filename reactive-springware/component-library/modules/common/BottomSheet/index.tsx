@@ -149,7 +149,7 @@ export function BottomSheet({
 
         {/* 푸터 (고정) — 하단 안전 영역(Safe Area) 여백 pb-safe 포함 */}
         {footer && (
-          <div className="shrink-0 border-t border-border-subtle px-xl pt-md pb-[calc(env(safe-area-inset-bottom,0px)+theme(spacing.xl))]">
+          <div className="shrink-0 px-xl pt-md pb-[calc(env(safe-area-inset-bottom,0px)+theme(spacing.xl))]">
             {footer}
           </div>
         )}

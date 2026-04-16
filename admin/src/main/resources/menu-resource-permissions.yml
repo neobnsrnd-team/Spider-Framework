@@ -153,3 +153,9 @@ menu-resource:
     v3_react_generate:
       R: REACT_GENERATE:R
       W: REACT_GENERATE:W
+    v3_react_generate_his:
+      R: REACT_GENERATE:R
+      W: REACT_GENERATE:W
+    v3_react_approval:
+      R: REACT_APPROVAL:R
+      W: REACT_APPROVAL:W
