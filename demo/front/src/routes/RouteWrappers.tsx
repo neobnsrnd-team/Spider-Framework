@@ -126,8 +126,10 @@ export function LoginRoute() {
           sessionStorage.removeItem("sessionExpiredMessage");
           setSessionMessage("");
         }}
+        title="세션 만료"
         size="sm"
         titleAlign="center"
+        className="text-sm text-center"
       >
         {sessionMessage}
       </Modal>
@@ -988,6 +990,7 @@ export function ImmediatePayMethodRoute() {
         title="결제 오류"
         size="sm"
         titleAlign="center"
+        className="text-sm text-center"
       >
         {payErrorMessage}
       </Modal>
