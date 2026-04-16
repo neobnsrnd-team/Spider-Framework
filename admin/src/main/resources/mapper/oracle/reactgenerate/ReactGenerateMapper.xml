@@ -39,12 +39,36 @@
     <!-- ==================== SELECT ==================== -->
 
     <sql id="selectColumns">
-        CODE_ID        AS codeId,
-        FIGMA_URL      AS figmaUrl,
-        REACT_CODE     AS reactCode,
-        FAIL_REASON    AS failReason,
-        STATUS         AS status,
-        CREATE_DTIME   AS createDtime
+        CODE_ID          AS codeId,
+        FIGMA_URL        AS figmaUrl,
+        REACT_CODE       AS reactCode,
+        FAIL_REASON      AS failReason,
+        STATUS           AS status,
+        CREATE_USER_ID   AS createUserId,
+        CREATE_DTIME     AS createDtime,
+        APPROVAL_USER_ID AS approvalUserId,
+        APPROVAL_DTIME   AS approvalDtime
+    </sql>
+
+    <!-- 목록 조회에 사용하는 WHERE 조건 Fragment (selectList/selectCount 공유) -->
+    <sql id="historyWhereConditions">
+        <where>
+            <if test="req.status != null and req.status != ''">
+                AND STATUS = #{req.status}
+            </if>
+            <if test="req.createUserId != null and req.createUserId != ''">
+                <!-- 부분 일치 검색. ESCAPE '\' 절로 와일드카드(%, _) 문자를 리터럴로 처리 -->
+                AND CREATE_USER_ID LIKE '%' || #{req.createUserId} || '%' ESCAPE '\'
+            </if>
+            <if test="req.fromDtime != null">
+                <!-- Java에서 yyyyMMdd → yyyyMMddHHmmss 변환 후 전달 (fromDate + '000000') -->
+                AND CREATE_DTIME &gt;= #{req.fromDtime}
+            </if>
+            <if test="req.toDtime != null">
+                <!-- Java에서 yyyyMMdd → yyyyMMddHHmmss 변환 후 전달 (toDate + '235959') -->
+                AND CREATE_DTIME &lt;= #{req.toDtime}
+            </if>
+        </where>
     </sql>
 
     <select id="selectById" resultType="com.example.admin_demo.domain.reactgenerate.dto.ReactGenerateResponse">
@@ -52,6 +76,56 @@
             <include refid="selectColumns"/>
         FROM FWK_RPS_CODE_HIS
         WHERE CODE_ID = #{codeId,jdbcType=VARCHAR}
+    </select>
+
+    <!-- ==================== SELECT LIST ==================== -->
+
+    <!--
+        ROWNUM 이중 서브쿼리 페이지네이션 (프로젝트 전체 표준 방식).
+        - 내부 INNER_QRY: 정렬 후 endRow까지 ROWNUM 필터링
+        - 외부 쿼리: offset(0-based) 이후 행만 반환
+    -->
+    <select id="selectList" resultType="com.example.admin_demo.domain.reactgenerate.dto.ReactGenerateHistoryResponse">
+        SELECT *
+        FROM (
+            SELECT INNER_QRY.*, ROWNUM AS RNUM
+            FROM (
+                SELECT
+                    CODE_ID          AS codeId,
+                    FIGMA_URL        AS figmaUrl,
+                    STATUS           AS status,
+                    CREATE_USER_ID   AS createUserId,
+                    CREATE_DTIME     AS createDtime,
+                    APPROVAL_USER_ID AS approvalUserId,
+                    APPROVAL_DTIME   AS approvalDtime
+                FROM FWK_RPS_CODE_HIS
+                <include refid="historyWhereConditions"/>
+                ORDER BY CREATE_DTIME DESC
+            ) INNER_QRY
+            WHERE ROWNUM <![CDATA[<=]]> #{req.endRow}
+        )
+        WHERE RNUM <![CDATA[>]]> #{req.offset}
+    </select>
+
+    <select id="selectCount" resultType="int">
+        SELECT COUNT(*)
+        FROM FWK_RPS_CODE_HIS
+        <include refid="historyWhereConditions"/>
+    </select>
+
+    <!-- 엑셀 내보내기용 전체 조회 (페이지네이션 없음) -->
+    <select id="selectAllForExport" resultType="com.example.admin_demo.domain.reactgenerate.dto.ReactGenerateHistoryResponse">
+        SELECT
+            CODE_ID          AS codeId,
+            FIGMA_URL        AS figmaUrl,
+            STATUS           AS status,
+            CREATE_USER_ID   AS createUserId,
+            CREATE_DTIME     AS createDtime,
+            APPROVAL_USER_ID AS approvalUserId,
+            APPROVAL_DTIME   AS approvalDtime
+        FROM FWK_RPS_CODE_HIS
+        <include refid="historyWhereConditions"/>
+        ORDER BY CREATE_DTIME DESC
     </select>
 
     <!-- ==================== UPDATE ==================== -->

@@ -40,10 +40,16 @@
         isDirty: false,   // 저장 후 변경 여부 — true이면 미리보기 버튼 비활성화
 
         init: function () {
+            var self = this;
             this.load();
             this.loadDeployStatus(); // 배포 상태 뱃지 별도 조회
+
+            // 캐시에서 복원 시(tab:activated) 배포 상태 최신화
+            $('[data-tab-page]').on('tab:activated', function () {
+                self.loadDeployStatus();
+            });
+
             if (HAS_WRITE) {
-                var self = this;
                 document.getElementById('btnSave')
                         .addEventListener('click', function () { self.save(); });
             }

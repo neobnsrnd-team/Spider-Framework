@@ -29,6 +29,9 @@ public class FigmaDesignExtractor {
     /** 노드 트리 탐색 최대 깊이. 루트는 0, 직계 자식은 1 */
     private static final int MAX_DEPTH = 4;
 
+    /** 깊이 레벨당 처리할 최대 노드 수. 복잡한 Figma 파일의 메모리 폭발 방지 */
+    private static final int MAX_NODES_PER_LEVEL = 50;
+
     /**
      * Figma API 응답에서 디자인 컨텍스트를 추출한다.
      *
@@ -94,6 +97,9 @@ public class FigmaDesignExtractor {
     /**
      * 하위 노드 목록을 재귀적으로 탐색하여 {@link FigmaNodeSummary} 목록으로 변환한다.
      *
+     * <p>깊이 제한({@code MAX_DEPTH})과 레벨당 노드 수 제한({@code MAX_NODES_PER_LEVEL})을 모두 적용하여
+     * 복잡한 Figma 파일에서 메모리 과다 사용을 방지한다.
+     *
      * @param nodes 변환할 노드 목록
      * @param depth 현재 탐색 깊이 (MAX_DEPTH 초과 시 빈 목록 반환)
      */
@@ -101,7 +107,17 @@ public class FigmaDesignExtractor {
         if (nodes == null || nodes.isEmpty() || depth > MAX_DEPTH) {
             return Collections.emptyList();
         }
-        return nodes.stream().map(node -> toSummary(node, depth)).collect(Collectors.toList());
+        List<FigmaNode> targets = nodes;
+        if (nodes.size() > MAX_NODES_PER_LEVEL) {
+            log.warn(
+                    "depth={} 노드 수({})가 제한({})을 초과하여 앞 {}개만 처리합니다.",
+                    depth,
+                    nodes.size(),
+                    MAX_NODES_PER_LEVEL,
+                    MAX_NODES_PER_LEVEL);
+            targets = nodes.subList(0, MAX_NODES_PER_LEVEL);
+        }
+        return targets.stream().map(node -> toSummary(node, depth)).collect(Collectors.toList());
     }
 
     /** 단일 {@link FigmaNode}를 {@link FigmaNodeSummary}로 변환한다. */

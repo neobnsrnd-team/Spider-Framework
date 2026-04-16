@@ -23,6 +23,8 @@
 
     <!-- 공통 HTML 이스케이프 유틸리티 (XSS 방지) — AJAX 로드 페이지 스크립트보다 먼저 로드 -->
     <script th:src="@{/js/utils/html-utils.js}"></script>
+    <!-- 전역 이벤트 버스 — 탭 간 상태 동기화 (html-utils 다음, AJAX 페이지 스크립트보다 먼저) -->
+    <script th:src="@{/js/utils/event-bus.js}"></script>
 </head>
 <body>
 <div class="admin-container">
@@ -123,8 +125,10 @@
             $('link[data-page-css]').filter(function() { return this.getAttribute('data-page-css') === page; }).remove();
 
             if (this.activeTab === page) {
-                // 활성 탭은 DOM에 있으므로 제거
-                $('#dynamic-content').children('[data-tab-page]').remove();
+                // 활성 탭은 DOM에 있으므로 제거 전 정리 이벤트 발송 (EventBus.off() 호출 기회 제공)
+                const activeContent = $('#dynamic-content').children('[data-tab-page]');
+                activeContent.trigger('tab:removed');
+                activeContent.remove();
                 if (this.tabs.length > 0) {
                     const newActive = this.tabs[this.tabs.length - 1];
                     this.activateTab(newActive.page);
@@ -132,8 +136,11 @@
                     this.showWelcome();
                 }
             } else {
-                // 비활성 탭은 캐시에서 삭제
-                delete this.contentCache[page];
+                // 비활성 탭은 캐시에서 삭제 전 정리 이벤트 발송 (EventBus.off() 호출 기회 제공)
+                if (this.contentCache[page]) {
+                    this.contentCache[page].trigger('tab:removed');
+                    delete this.contentCache[page];
+                }
                 this._cacheOrder = this._cacheOrder.filter(p => p !== page);
             }
 
