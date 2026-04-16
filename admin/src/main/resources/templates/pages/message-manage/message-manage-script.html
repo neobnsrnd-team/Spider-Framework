@@ -1504,6 +1504,31 @@
                     return;
                 }
 
+                // 헤더 저장 전 신규 필드 사전 검증 (저장 후 불완전 레코드 방지)
+                const startIdx  = this._originalModalFieldCount;
+                const newFields = (this.modalFields || []).slice(startIdx).filter(f => f !== null);
+
+                if (newFields.length > 0) {
+                    let isFieldValid = true;
+                    newFields.forEach((f) => {
+                        const rowIdx = this.modalFields.indexOf(f);
+                        ['messageFieldId', 'messageFieldName'].forEach(function(key) {
+                            if (!f[key] || !String(f[key]).trim()) {
+                                const $cell = $('#modalMessageFieldsBody tr[data-row-index="' + rowIdx + '"] td[data-field="' + key + '"]');
+                                $cell.addClass('field-cell-error');
+                                $cell.off('mousedown.fieldErr click.fieldErr').on('mousedown.fieldErr click.fieldErr', function() {
+                                    $(this).removeClass('field-cell-error');
+                                });
+                                isFieldValid = false;
+                            }
+                        });
+                    });
+                    if (!isFieldValid) {
+                        Toast.warning('전문필드ID와 전문필드명을 입력해주세요.');
+                        return;
+                    }
+                }
+
                 const messageData = {
                     orgId: $('#modalOrgId').val().trim(),
                     messageId: $('#modalMessageId').val().trim(),
@@ -1536,10 +1561,8 @@
                     data: JSON.stringify(messageData),
                     success: (response) => {
                         if (response.success) {
-                            const savedOrgId      = messageData.orgId;
-                            const savedMessageId  = messageData.messageId;
-                            const startIdx        = this._originalModalFieldCount;
-                            const newFields       = (this.modalFields || []).slice(startIdx).filter(f => f !== null);
+                            const savedOrgId     = messageData.orgId;
+                            const savedMessageId = messageData.messageId;
 
                             if (newFields.length === 0) {
                                 Toast.success(this.mode === 'create' ? '전문이 등록되었습니다.' : '전문이 수정되었습니다.');
@@ -1548,22 +1571,7 @@
                                 return;
                             }
 
-                            // 필수값 검증 (전문필드ID, 전문필드명)
-                            let isFieldValid = true;
-                            newFields.forEach((f) => {
-                                const rowIdx = this.modalFields.indexOf(f);
-                                ['messageFieldId', 'messageFieldName'].forEach(function(key) {
-                                    if (!f[key] || !String(f[key]).trim()) {
-                                        const $cell = $('#modalMessageFieldsBody tr[data-row-index="' + rowIdx + '"] td[data-field="' + key + '"]');
-                                        $cell.addClass('field-cell-error');
-                                        $cell.off('mousedown.fieldErr click.fieldErr').on('mousedown.fieldErr click.fieldErr', function() {
-                                            $(this).removeClass('field-cell-error');
-                                        });
-                                        isFieldValid = false;
-                                    }
-                                });
-                            });
-                            if (!isFieldValid) return;
+                            // 필수값 검증은 저장 요청 전 완료됨
 
                             const toInt = (v) => { const n = parseInt(v); return isNaN(n) ? null : n; };
                             const fieldBodies = newFields.map(f => ({
