@@ -25,6 +25,12 @@
 
         <div class="flex-grow-1"></div>
 
+        <!-- 내 것만 보기: 생성자(createUserId)를 현재 로그인 사용자로 고정 -->
+        <div class="form-check form-check-inline ms-2 mb-0">
+            <input class="form-check-input" type="checkbox" id="chkMyOnly">
+            <label class="form-check-label small fw-medium" for="chkMyOnly">나의 생성 이력</label>
+        </div>
+
         <select id="limitRows" class="form-select form-select-sm sp-limit-select">
             <option value="10" selected>10</option>
             <option value="20">20</option>

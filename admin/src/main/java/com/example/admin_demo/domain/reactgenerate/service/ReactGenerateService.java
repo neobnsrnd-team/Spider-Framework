@@ -312,30 +312,12 @@ public class ReactGenerateService {
             throw new InvalidInputException("코드 작성자만 승인 요청할 수 있습니다.");
         }
 
-        reactGenerateMapper.updateStatus(id, ReactGenerateStatus.PENDING_APPROVAL.name(), null, null);
+        reactGenerateMapper.updateStatus(id, ReactGenerateStatus.PENDING_APPROVAL.name(), null, null, null);
         log.info("승인 요청 — codeId: {}, requestUserId: {}", id, requestUserId);
 
         return ReactGenerateApprovalResponse.builder()
                 .codeId(id)
                 .status(ReactGenerateStatus.PENDING_APPROVAL.name())
-                .build();
-    }
-
-    /**
-     * 관리자가 생성 코드를 승인한다.
-     */
-    public ReactGenerateApprovalResponse approve(String id, String approvedBy) {
-        requireExists(id); // 존재 여부 검증
-
-        String now = LocalDateTime.now().format(FORMATTER);
-        reactGenerateMapper.updateStatus(id, ReactGenerateStatus.APPROVED.name(), approvedBy, now);
-        log.info("승인 완료 — codeId: {}, approvalUserId: {}", id, approvedBy);
-
-        return ReactGenerateApprovalResponse.builder()
-                .codeId(id)
-                .status(ReactGenerateStatus.APPROVED.name())
-                .approvalUserId(approvedBy)
-                .approvalDtime(now)
                 .build();
     }
 

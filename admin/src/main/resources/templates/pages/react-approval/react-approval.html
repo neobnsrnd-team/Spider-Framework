@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<div th:fragment="content">
+
+    <!-- ===== 승인 대기 섹션 ===== -->
+    <div class="page-header">
+        <h4 class="page-title">
+            <i class="bi bi-shield-check text-primary"></i>
+            React 코드 승인 관리
+        </h4>
+    </div>
+
+    <!-- 승인 대기 목록 -->
+    <div th:replace="~{pages/react-approval/react-approval-pending :: pending}"></div>
+
+    <!-- ===== 승인 이력 섹션 ===== -->
+    <div class="page-header mt-4">
+        <h4 class="page-title">
+            <i class="bi bi-clock-history text-primary"></i>
+            승인 이력
+        </h4>
+    </div>
+
+    <!-- 검색 영역 -->
+    <div th:replace="~{pages/react-approval/react-approval-his-search :: search}"></div>
+
+    <!-- 이력 테이블 -->
+    <div th:replace="~{pages/react-approval/react-approval-his-table :: table}"></div>
+
+    <!-- 페이지네이션 -->
+    <div th:replace="~{fragments/page-content-layout :: pagination}"></div>
+
+    <!-- 코드 상세 모달 (대기 목록 + 이력 공용) -->
+    <div th:replace="~{pages/react-approval/react-approval-modal :: modal}"></div>
+
+    <!-- 권한 정보 (JS 참조용) -->
+    <input type="hidden" id="hasWriteAuth"
+           th:value="${userAuthorities != null and userAuthorities.contains('REACT_APPROVAL:W')}">
+
+    <!-- Scripts -->
+    <th:block th:replace="~{pages/react-approval/react-approval-script :: script}" />
+</div>
+</body>
+</html>

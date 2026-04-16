@@ -349,6 +349,11 @@ public class PageController {
         return resolveView(request, "pages/react-generate-his/react-generate-his :: content", model);
     }
 
+    @GetMapping("/react-approval")
+    public String reactApproval(HttpServletRequest request, Model model) {
+        return resolveView(request, "pages/react-approval/react-approval :: content", model);
+    }
+
     // ── 서비스 관리 ── v3_neb_service_base_info, v3_neb_biz_component, v3_validator_component,
     //                    v3_biz_app, v3_sql_query_manage, v3_sql_dataSource_manage
 
