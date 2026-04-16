@@ -18,6 +18,7 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.regex.Pattern;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -34,6 +35,9 @@ public class ReactApprovalService {
 
     /** yyyyMMdd 형식 검증 패턴 — 날짜 파라미터를 SQL에 전달하기 전 형식을 검증한다. */
     private static final Pattern YYYYMMDD = Pattern.compile("^\\d{8}$");
+
+    /** 승인 이력 조회에서 허용되는 상태 값 — APPROVED 또는 REJECTED 외의 값은 거부한다. */
+    private static final Set<String> ALLOWED_HISTORY_STATUSES = Set.of("APPROVED", "REJECTED");
 
     /**
      * 승인 대기(PENDING_APPROVAL) 목록과 전체 건수를 조회한다.
@@ -153,11 +157,18 @@ public class ReactApprovalService {
         int offset = (page - 1) * size;
         int endRow = offset + size;
         // 빈 문자열은 null로 통일하여 mapper의 전체 조회 분기를 타도록 한다
-        String s = nullIfBlank(status);
-        String au = nullIfBlank(approvalUserId);
-        String cu = nullIfBlank(createUserId);
+        // status: APPROVED/REJECTED 외의 값이 들어오면 거부 (이력 API 범위 제한)
+        String s = validateAndNormalizeStatus(nullIfBlank(status));
+        // LIKE 검색 파라미터: %, _, \ 를 이스케이프하여 의도치 않은 와일드카드 동작 방지
+        String au = escapeLike(nullIfBlank(approvalUserId));
+        String cu = escapeLike(nullIfBlank(createUserId));
         String fd = nullIfBlank(fromDate);
         String td = nullIfBlank(toDate);
+
+        // 날짜 범위 역전 검증 — fromDate가 toDate보다 이후이면 빈 결과 대신 오류 반환
+        if (fd != null && td != null && fd.compareTo(td) > 0) {
+            throw new InvalidInputException("시작 날짜는 종료 날짜보다 이전이어야 합니다.");
+        }
         List<ReactGenerateHistoryResponse> list =
                 reactGenerateMapper.selectApprovalHistory(offset, endRow, s, au, cu, fd, td);
         int totalCount = reactGenerateMapper.selectApprovalHistoryCount(s, au, cu, fd, td);
@@ -180,6 +191,35 @@ public class ReactApprovalService {
         if (date != null && !date.isBlank() && !YYYYMMDD.matcher(date).matches()) {
             throw new InvalidInputException(fieldName + " 날짜 형식이 올바르지 않습니다. (yyyyMMdd 형식으로 입력하세요)");
         }
+    }
+
+    /**
+     * 승인 이력 status 파라미터를 검증하고 정규화한다.
+     * null이면 null 반환 (전체 조회), APPROVED/REJECTED 외의 값이면 예외를 던진다.
+     *
+     * @param status 검증할 상태 값 (nullIfBlank 처리 후 전달)
+     * @return 유효한 상태 값 또는 null
+     */
+    private static String validateAndNormalizeStatus(String status) {
+        if (status == null) return null;
+        if (!ALLOWED_HISTORY_STATUSES.contains(status)) {
+            throw new InvalidInputException("상태 값이 올바르지 않습니다. APPROVED 또는 REJECTED만 허용됩니다.");
+        }
+        return status;
+    }
+
+    /**
+     * Oracle LIKE 검색의 와일드카드 문자를 이스케이프한다.
+     * SQL에 {@code ESCAPE '\'} 절이 선언된 경우, Java에서 %, _, \ 를 미리 이스케이프해야
+     * 사용자 입력이 의도치 않은 와일드카드로 동작하는 것을 방지할 수 있다.
+     *
+     * @param value 이스케이프할 문자열 (null이면 null 반환)
+     * @return 이스케이프 처리된 문자열
+     */
+    private static String escapeLike(String value) {
+        if (value == null) return null;
+        // 순서 중요: \ 먼저 이스케이프 후 %, _ 순으로 처리
+        return value.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_");
     }
 
     /** CODE_ID로 이력을 조회하고, PENDING_APPROVAL 상태가 아니면 예외를 던진다. */
