@@ -23,7 +23,8 @@
  */
 "use strict";
 
-const Admin_EventBus = (() => {
+// window에 직접 할당하여 전역 접근 보장 및 ESLint no-unused-vars 오탐 방지
+window.Admin_EventBus = (() => {
     /** @type {Map<string, Set<Function>>} 이벤트명 → 핸들러 집합 */
     const _handlers = new Map();
 

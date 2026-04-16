@@ -1094,12 +1094,24 @@
             filterAvailableMenus: function() {
                 var searchField = $('#umSearchField').val();
                 var keyword = ($('#umSearchValue').val() || '').toLowerCase().trim();
+                var visibleCount = 0;
                 $('#umAvailableBody tr[data-menu-id]').each(function() {
                     var menuId = ($(this).data('menu-id') || '').toString().toLowerCase();
                     var menuName = $(this).find('td').eq(2).text().toLowerCase();
                     var target = searchField === 'menuId' ? menuId : menuName;
-                    $(this).toggle(!keyword || target.includes(keyword));
+                    var visible = !keyword || target.includes(keyword);
+                    $(this).toggle(visible);
+                    if (visible) visibleCount++;
                 });
+
+                // 필터 결과가 없을 때 빈 상태 메시지 표시
+                $('#umAvailableBody tr.filter-empty-row').remove();
+                if (keyword && visibleCount === 0) {
+                    $('#umAvailableBody').append(
+                        '<tr class="filter-empty-row"><td colspan="3" class="text-center py-4 text-muted">추가 가능한 메뉴가 없습니다.</td></tr>'
+                    );
+                }
+
                 $('#umAvailableSelectAll').prop('checked', false);
             },
 
