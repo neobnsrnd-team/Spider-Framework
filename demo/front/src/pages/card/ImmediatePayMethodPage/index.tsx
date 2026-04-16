@@ -17,7 +17,7 @@
  * @param onClose           - 닫기(X)
  */
 import React, { useState } from "react";
-import { X } from "lucide-react";
+import { X, RotateCcw } from "lucide-react";
 
 import { PageLayout } from "@cl/layout/PageLayout";
 import { Button } from "@cl/core/Button";
@@ -43,6 +43,8 @@ export function ImmediatePayMethodPage({
   onApply,
   onBack,
   onClose,
+  pinExceeded = false,
+  onResetPinAttempts,
 }: ImmediatePayMethodPageProps) {
   const [paymentType, setPaymentType] =
     useState<PaymentType>(initialPaymentType);
@@ -55,14 +57,27 @@ export function ImmediatePayMethodPage({
       title="즉시결제"
       onBack={onBack}
       bottomBar={
-        <Button
-          variant="primary"
-          size="lg"
-          fullWidth
-          onClick={() => onApply?.(selectedId)}
-        >
-          신청
-        </Button>
+        pinExceeded ? (
+          /* PIN 횟수 초과 시 신청 버튼 대신 초기화 버튼을 표시한다 */
+          <Button
+            variant="outline"
+            size="lg"
+            fullWidth
+            leftIcon={<RotateCcw className="size-4" />}
+            onClick={onResetPinAttempts}
+          >
+            PIN 입력 횟수 초기화
+          </Button>
+        ) : (
+          <Button
+            variant="primary"
+            size="lg"
+            fullWidth
+            onClick={() => onApply?.(selectedId)}
+          >
+            신청
+          </Button>
+        )
       }
       rightAction={
         <Button

@@ -55,6 +55,16 @@ let currentNotice = null;
 const refreshTokenStore = new Map();
 
 /**
+ * POC용 인메모리 PIN 시도 횟수 저장소.
+ * 프로덕션에서는 Redis 또는 DB 테이블로 교체해야 한다.
+ * Map<`${userId}:${cardId}`, number>  — 실패 횟수 카운트
+ */
+const pinAttemptStore = new Map();
+
+/** PIN 최대 허용 실패 횟수 */
+const PIN_MAX_ATTEMPTS = 3;
+
+/**
  * 로컬 환경 전용 미들웨어 — localhost 요청만 허용한다.
  * /api/dev/* 진단 엔드포인트에 적용. 개발 완료 후 해당 라우트와 함께 삭제 예정.
  */
@@ -974,6 +984,183 @@ app.get("/api/cards/:cardId/payable-amount", verifyToken, async (req, res) => {
     console.error("[GET /api/cards/:cardId/payable-amount]", err);
     res.status(500).json({ error: "DB 조회 중 오류가 발생했습니다." });
   }
+});
+
+/**
+ * POST /api/cards/:cardId/immediate-pay
+ * 즉시결제 DB 처리 — PIN 인증 성공 직후 호출된다.
+ *
+ * 처리 흐름:
+ *   1) 미결제 내역 조회 (이용일자 오름차순, FOR UPDATE 행 잠금)
+ *   2) 오래된 건부터 순차 차감
+ *      - 결제요청금액 >= 결제잔액 → 완납(1), 남은 금액을 다음 건으로 이월
+ *      - 결제요청금액 <  결제잔액 → 부분결제(2), 잔액에서 차감 후 종료
+ *   3) 결제된 총합계만큼 카드 이용가능금액 복원
+ *   4) 전 과정 단일 트랜잭션 — 오류 발생 시 롤백
+ *
+ * 응답 코드 설계:
+ *   - 401: Access Token 만료·무효 (verifyToken 미들웨어가 선행 처리)
+ *          → 프론트 인터셉터가 토큰 갱신 후 재시도
+ *   - 403: PIN 오류 (틀린 PIN / 횟수 초과)
+ *          → 인터셉터는 재시도하지 않으며, 사용자에게 에러 메시지 표시
+ *          → 토큰 만료와 PIN 오류를 동일한 401로 처리하면 인터셉터 재시도 시
+ *            PIN 실패 카운트가 중복 증가하는 문제가 발생하므로 반드시 403 사용
+ *
+ * @param {string} req.params.cardId   - 결제 대상 카드번호
+ * @param {string} req.body.pin        - PIN 번호 (오늘 날짜 MMDD, 예: "0415")
+ * @param {number} req.body.amount     - 결제요청금액
+ * @returns {{ paidAmount: number, processedCount: number }}
+ */
+app.post("/api/cards/:cardId/immediate-pay", verifyToken, async (req, res) => {
+  try {
+    const userId        = req.user.userId;
+    const { cardId }    = req.params;
+    const { pin, amount } = req.body;
+    const requestAmount = Number(amount);
+
+    // PIN 검증 — 오늘 날짜의 MMDD (월·일 각 2자리, 예: 4월 15일 → "0415")
+    const now      = new Date();
+    const mm       = String(now.getMonth() + 1).padStart(2, "0");
+    const dd       = String(now.getDate()).padStart(2, "0");
+    const validPin = `${mm}${dd}`;
+    const pinKey   = `${userId}:${cardId}`; // 사용자·카드 조합 단위로 횟수 관리
+    const attempts = pinAttemptStore.get(pinKey) ?? 0;
+
+    if (attempts >= PIN_MAX_ATTEMPTS) {
+      // 이미 3회 초과 — 더 이상 시도 불가.
+      // 401이 아닌 403으로 응답해야 인터셉터가 토큰 갱신 재시도를 하지 않는다.
+      return res.status(403).json({
+        error: "PIN 입력 횟수를 초과하였습니다.",
+        attemptsLeft: 0,
+      });
+    }
+
+    if (String(pin) !== validPin) {
+      const next = attempts + 1;
+      pinAttemptStore.set(pinKey, next);
+      const attemptsLeft = PIN_MAX_ATTEMPTS - next;
+      // 401이 아닌 403으로 응답해야 인터셉터 재시도가 발생하지 않아
+      // PIN 실패 카운트가 한 번만 증가한다.
+      return res.status(403).json({
+        error: "PIN 번호가 올바르지 않습니다.",
+        attemptsLeft, // 남은 시도 횟수를 프론트에 전달
+      });
+    }
+
+    // PIN 인증 성공 — 실패 횟수 초기화
+    pinAttemptStore.delete(pinKey);
+
+    if (!requestAmount || requestAmount <= 0) {
+      return res.status(400).json({ error: "결제요청금액이 유효하지 않습니다." });
+    }
+
+    const result = await withConnection(async (conn) => {
+      try {
+        // ── 1. 미결제 내역 조회 ─────────────────────────────────────
+        // FOR UPDATE로 해당 행을 잠가 동시 결제 요청으로 인한 이중 차감을 방지한다.
+        const { rows } = await conn.execute(
+          `SELECT ROWID,
+                  "결제잔액",
+                  "누적결제금액"
+             FROM D_SPIDERLINK.POC_카드사용내역
+            WHERE "이용자"       = :userId
+              AND "카드번호"     = :cardId
+              AND "결제잔액"     > 0
+              AND "결제상태코드" <> '9'
+            ORDER BY "이용일자" ASC
+            FOR UPDATE`,
+          { userId, cardId },
+        );
+
+        // 오늘 날짜를 YYYYMMDD 형식으로 생성
+        const today = new Date().toISOString().slice(0, 10).replace(/-/g, "");
+
+        let remaining      = requestAmount; // 아직 배분하지 못한 결제 잔여금
+        let totalPaid      = 0;             // 이번 결제에서 실제 차감된 총합계
+        let processedCount = 0;             // 업데이트된 내역 건수
+
+        // ── 2. 이용일자 오래된 순으로 순차 차감 ────────────────────
+        for (const row of rows) {
+          if (remaining <= 0) break;
+
+          const 결제잔액    = Number(row["결제잔액"]);
+          const 누적결제금액 = Number(row["누적결제금액"]);
+
+          let deducted, newBalance, newStatusCode;
+
+          if (remaining >= 결제잔액) {
+            // 완납: 이 내역의 잔액을 전부 결제하고 남은 금액을 다음 건으로 이월
+            deducted      = 결제잔액;
+            newBalance    = 0;
+            newStatusCode = "1"; // 1: 완납
+          } else {
+            // 부분결제: 남은 요청금액만큼만 차감하고 루프 종료
+            deducted      = remaining;
+            newBalance    = 결제잔액 - remaining;
+            newStatusCode = "2"; // 2: 부분결제
+          }
+
+          await conn.execute(
+            `UPDATE D_SPIDERLINK.POC_카드사용내역
+                SET "결제잔액"     = :newBalance,
+                    "누적결제금액" = :newAccumulated,
+                    "결제상태코드" = :newStatusCode,
+                    "최종결제일자" = :today
+              WHERE ROWID = :rid`,
+            {
+              newBalance,
+              newAccumulated: 누적결제금액 + deducted,
+              newStatusCode,
+              today,
+              rid: row.ROWID, // ROWID는 Oracle 예약 의사컬럼이라 바인드 변수명으로 사용 불가 → rid로 대체
+            },
+          );
+
+          remaining -= deducted;
+          totalPaid += deducted;
+          processedCount++;
+        }
+
+        // ── 3. 한도 복원 ────────────────────────────────────────────
+        // 결제된 총합계만큼 이용가능금액을 가산하고 사용금액을 차감한다.
+        if (totalPaid > 0) {
+          await conn.execute(
+            `UPDATE D_SPIDERLINK.POC_카드리스트
+                SET "사용금액" = "사용금액" - :totalPaid
+              WHERE "사용자아이디" = :userId
+                AND "카드번호"     = :cardId`,
+            // 이용가능금액 컬럼은 없음 — 한도금액 - 사용금액으로 계산되는 파생값
+            { totalPaid, userId, cardId },
+          );
+        }
+
+        // ── 4. 커밋 — 모든 UPDATE가 성공해야 반영된다 ──────────────
+        await conn.commit();
+        return { paidAmount: totalPaid, processedCount };
+      } catch (err) {
+        // 어느 한 단계라도 실패하면 전체 롤백하여 데이터 무결성 보장
+        await conn.rollback();
+        throw err;
+      }
+    });
+
+    res.json(result);
+  } catch (err) {
+    console.error("[POST /api/cards/:cardId/immediate-pay]", err);
+    res.status(500).json({ error: "즉시결제 처리 중 오류가 발생했습니다." });
+  }
+});
+
+/**
+ * DELETE /api/cards/:cardId/pin-attempts
+ * PIN 실패 횟수 초기화.
+ * 횟수 초과로 잠긴 사용자가 초기화 버튼을 클릭할 때 호출된다.
+ */
+app.delete("/api/cards/:cardId/pin-attempts", verifyToken, (req, res) => {
+  const userId = req.user.userId;
+  const { cardId } = req.params;
+  pinAttemptStore.delete(`${userId}:${cardId}`);
+  res.json({ ok: true });
 });
 
 // ════════════════════════════════════════════════════════════════════════════

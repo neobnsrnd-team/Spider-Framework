@@ -37,4 +37,11 @@ export interface ImmediatePayMethodPageProps {
   onApply?: (accountId: string) => void;
   onBack?: () => void;
   onClose?: () => void;
+  /**
+   * PIN 입력 횟수 초과 여부.
+   * true일 때 페이지 하단에 초기화 버튼을 표시한다.
+   */
+  pinExceeded?: boolean;
+  /** PIN 입력 횟수 초기화 핸들러 */
+  onResetPinAttempts?: () => void;
 }

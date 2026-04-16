@@ -787,6 +787,10 @@ export function ImmediatePayMethodRoute() {
     bankName: "",
     maskedAccount: "",
   });
+  // PIN 오류 메시지 — PinConfirmSheet에 전달해 도트 아래에 표시한다.
+  const [pinError, setPinError] = useState<string | undefined>();
+  // PIN 횟수 초과 여부 — true일 때만 PinConfirmSheet에 초기화 버튼을 표시한다.
+  const [pinExceeded, setPinExceeded] = useState(false);
 
   // STEP 1·2에서 세션에 저장된 카드 정보·결제 요청 데이터·금액 정보를 읽는다.
   const storedCard = sessionStorage.getItem("immediatePaySelectedCard");
@@ -853,6 +857,11 @@ export function ImmediatePayMethodRoute() {
         }}
         onBack={() => navigate(-1)}
         onClose={() => navigate(PATHS.CARD.DASHBOARD, { replace: true })}
+        pinExceeded={pinExceeded}
+        onResetPinAttempts={async () => {
+          await axiosInstance.delete(`/cards/${card.id}/pin-attempts`);
+          setPinExceeded(false);
+        }}
       />
       {/* 즉시결제 확인 시트 — PIN 입력 전 최종 결제 내용 확인 */}
       <ImmediatePayConfirmSheet
@@ -870,10 +879,45 @@ export function ImmediatePayMethodRoute() {
       />
       <PinConfirmSheet
         open={pinOpen}
-        onClose={() => setPinOpen(false)}
-        onConfirm={() =>
-          navigate(PATHS.CARD.IMMEDIATE_PAY_COMPLETE, { replace: true })
-        }
+        errorMessage={pinError}
+        onClose={() => {
+          setPinOpen(false);
+          setPinError(undefined);
+          // pinExceeded는 여기서 초기화하지 않는다 —
+          // 시트를 닫아도 초과 상태는 유지되어야 페이지의 초기화 버튼이 표시된다
+        }}
+        onConfirm={async (pin) => {
+          try {
+            await axiosInstance.post(`/cards/${card.id}/immediate-pay`, {
+              pin,
+              amount: payAmount,
+            });
+            setPinOpen(false);
+            navigate(PATHS.CARD.IMMEDIATE_PAY_COMPLETE, { replace: true });
+          } catch (err: unknown) {
+            const data = (
+              err as {
+                response?: { data?: { error?: string; attemptsLeft?: number } };
+              }
+            )?.response?.data;
+            if (data?.attemptsLeft === 0) {
+              // 횟수 소진 — 시트에 초과 메시지를 표시한 채로 유지하고,
+              // 페이지에 초기화 버튼을 준비한다 (시트를 닫으면 버튼이 보임)
+              setPinError(
+                "PIN 입력 횟수를 초과하였습니다. 초기화 후 다시 시도해 주세요.",
+              );
+              setPinExceeded(true);
+            } else if (data?.attemptsLeft !== undefined) {
+              setPinError(
+                `PIN이 올바르지 않습니다. (${data.attemptsLeft}회 남음)`,
+              );
+            } else {
+              alert(data?.error ?? "결제 처리 중 오류가 발생했습니다.");
+              setPinOpen(false);
+              navigate(PATHS.CARD.DASHBOARD, { replace: true });
+            }
+          }
+        }}
       />
     </>
   );
@@ -1114,15 +1158,15 @@ export function UserManagementRoute() {
  * displayType이 'N'(사용안함)인 경우에도 내용 확인을 위해 배너를 강제 표시하고 안내 문구를 노출한다.
  */
 export function NoticePreviewRoute() {
-  const [searchParams]        = useSearchParams();
+  const [searchParams] = useSearchParams();
   // lang 파라미터: Admin 미리보기 버튼에서 언어 코드(EMERGENCY_KO / EMERGENCY_EN)를 전달한다.
-  const lang                  = searchParams.get('lang') ?? 'EMERGENCY_KO';
-  const [data,    setData]    = useState<NoticePayload | null>(null);
+  const lang = searchParams.get("lang") ?? "EMERGENCY_KO";
+  const [data, setData] = useState<NoticePayload | null>(null);
   const [loading, setLoading] = useState(true);
-  const [error,   setError]   = useState(false);
+  const [error, setError] = useState(false);
 
   useEffect(() => {
-    fetch('/api/notices/preview')
+    fetch("/api/notices/preview")
       .then((r) => {
         if (!r.ok) throw new Error(`HTTP ${r.status}`);
         return r.json() as Promise<NoticePayload>;
@@ -1149,9 +1193,9 @@ export function NoticePreviewRoute() {
   }
 
   // 미리보기 모드: displayType이 N이어도 배너를 강제 표시 (내용 확인 목적)
-  const isUnused   = data.displayType === 'N';
+  const isUnused = data.displayType === "N";
   const previewData: NoticePayload = isUnused
-    ? { ...data, displayType: 'A' }
+    ? { ...data, displayType: "A" }
     : data;
 
   return (
@@ -1160,7 +1204,11 @@ export function NoticePreviewRoute() {
       <div className="flex items-center justify-center py-1 bg-blue-50 border-b border-blue-200">
         <span className="text-xs text-blue-600 font-medium">
           미리보기 모드
-          {isUnused && <span className="ml-1 text-orange-500">(노출 타입: 사용안함 — 실제 배포 시 미표시)</span>}
+          {isUnused && (
+            <span className="ml-1 text-orange-500">
+              (노출 타입: 사용안함 — 실제 배포 시 미표시)
+            </span>
+          )}
         </span>
       </div>
       <EmergencyNoticeBanner data={previewData} forceOpen lang={lang} />
