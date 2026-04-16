@@ -322,24 +322,6 @@ public class ReactGenerateService {
     }
 
     /**
-     * 관리자가 생성 코드를 승인한다.
-     */
-    public ReactGenerateApprovalResponse approve(String id, String approvedBy) {
-        requireExists(id); // 존재 여부 검증
-
-        String now = LocalDateTime.now().format(FORMATTER);
-        reactGenerateMapper.updateStatus(id, ReactGenerateStatus.APPROVED.name(), approvedBy, now);
-        log.info("승인 완료 — codeId: {}, approvalUserId: {}", id, approvedBy);
-
-        return ReactGenerateApprovalResponse.builder()
-                .codeId(id)
-                .status(ReactGenerateStatus.APPROVED.name())
-                .approvalUserId(approvedBy)
-                .approvalDtime(now)
-                .build();
-    }
-
-    /**
      * Preview App에서 발생한 렌더링 오류를 기록한다.
      *
      * <p>브라우저 side에서 catch된 오류는 서버까지 전달되지 않으므로,

@@ -8,10 +8,13 @@
     let currentId = null;
     let currentStatus = null;
 
+    // 승인·반려 상태는 승인 관리 메뉴에서 처리하므로 GENERATED/FAILED/PENDING_APPROVAL만 표시
     const STATUS_LABEL = {
         GENERATED:        { text: '생성 완료',  cls: 'bg-secondary' },
-        PENDING_APPROVAL: { text: '승인 대기',  cls: 'bg-warning text-dark' },
-        APPROVED:         { text: '승인 완료',  cls: 'bg-success' }
+        FAILED:           { text: '실패',        cls: 'bg-danger' },
+        PENDING_APPROVAL: { text: '승인 대기',   cls: 'bg-warning text-dark' },
+        APPROVED:         { text: '승인 완료',   cls: 'bg-success' },
+        REJECTED:         { text: '반려',        cls: 'bg-danger' },
     };
 
     function updateStatusBadge(status) {
@@ -20,11 +23,8 @@
         const badge = $('#statusBadge');
         badge.text(info.text).removeClass().addClass('badge ' + info.cls);
 
-        // 버튼 상태 업데이트
+        // 승인 요청은 GENERATED 상태에서만 가능
         $('#btnRequestApproval').prop('disabled', status !== 'GENERATED');
-        if ($('#btnApprove').length) {
-            $('#btnApprove').prop('disabled', status !== 'PENDING_APPROVAL');
-        }
     }
 
     // ─── 생성 ───────────────────────────────────────────────
@@ -133,31 +133,6 @@
             },
             error: function (xhr) {
                 Toast.error(xhr.responseJSON?.message || '승인 요청 중 오류가 발생했습니다.');
-            }
-        });
-    });
-
-    // ─── 승인 ────────────────────────────────────────────────
-    $('#btnApprove').on('click', function () {
-        alert('구현 예정입니다.');
-        return;
-
-        if (!currentId) return;
-        if (!confirm('해당 코드를 승인하시겠습니까?')) return;
-
-        $.ajax({
-            url: API_BASE_URL + '/react-generate/' + currentId + '/approve',
-            method: 'POST',
-            success: function (res) {
-                if (res.success && res.data) {
-                    updateStatusBadge(res.data.status);
-                    Toast.success('승인이 완료되었습니다. (승인자: ' + (res.data.approvedBy || '') + ')');
-                } else {
-                    Toast.error(res.message || '승인에 실패했습니다.');
-                }
-            },
-            error: function (xhr) {
-                Toast.error(xhr.responseJSON?.message || '승인 처리 중 오류가 발생했습니다.');
             }
         });
     });

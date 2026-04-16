@@ -46,13 +46,6 @@ public class ReactGenerateController {
         return ResponseEntity.ok(ApiResponse.success(reactGenerateService.requestApproval(id, currentUserId)));
     }
 
-    @PostMapping("/{id}/approve")
-    @PreAuthorize("hasAuthority('REACT_GENERATE:W')")
-    public ResponseEntity<ApiResponse<ReactGenerateApprovalResponse>> approve(@PathVariable String id) {
-        String currentUserId = SecurityUtil.getCurrentUserId();
-        return ResponseEntity.ok(ApiResponse.success(reactGenerateService.approve(id, currentUserId)));
-    }
-
     /**
      * 검색 조건에 맞는 React 코드 생성 이력 목록을 페이지네이션 형태로 조회한다.
      *

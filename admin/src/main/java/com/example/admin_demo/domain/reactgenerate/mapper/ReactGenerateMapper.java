@@ -1,5 +1,6 @@
 package com.example.admin_demo.domain.reactgenerate.mapper;
 
+import com.example.admin_demo.domain.reactgenerate.dto.ReactApprovalResponse;
 import com.example.admin_demo.domain.reactgenerate.dto.ReactGenerateHistoryResponse;
 import com.example.admin_demo.domain.reactgenerate.dto.ReactGenerateResponse;
 import com.example.admin_demo.domain.reactgenerate.dto.ReactGenerateSearchRequest;
@@ -52,4 +53,45 @@ public interface ReactGenerateMapper {
 
     /** 검색 조건에 맞는 전체 목록을 페이지네이션 없이 조회한다 (엑셀 내보내기용). */
     List<ReactGenerateHistoryResponse> selectAllForExport(@Param("req") ReactGenerateSearchRequest req);
+
+    /**
+     * 승인 대기(PENDING_APPROVAL) 목록을 생성일시 오름차순으로 조회한다 (승인 관리 메뉴 전용).
+     *
+     * @param offset 시작 오프셋 (0-based)
+     * @param endRow 마지막 행 번호 (inclusive)
+     * @return 승인 대기 목록
+     */
+    List<ReactApprovalResponse> selectPendingList(@Param("offset") int offset, @Param("endRow") int endRow);
+
+    /** 승인 대기(PENDING_APPROVAL) 전체 건수를 반환한다 (페이지네이션용). */
+    int selectPendingCount();
+
+    /**
+     * 승인 이력(APPROVED / REJECTED) 목록을 처리일시 내림차순으로 조회한다.
+     *
+     * @param offset         시작 오프셋 (0-based)
+     * @param endRow         마지막 행 번호 (inclusive)
+     * @param status         상태 필터 (null/빈 문자열이면 APPROVED/REJECTED 전체)
+     * @param approvalUserId 처리자 ID 부분 일치 (null/빈 문자열이면 미적용)
+     * @param createUserId   요청자 ID 부분 일치 (null/빈 문자열이면 미적용)
+     * @param fromDate       처리일시 시작 (yyyyMMdd, null/빈 문자열이면 미적용)
+     * @param toDate         처리일시 종료 (yyyyMMdd, null/빈 문자열이면 미적용)
+     * @return 승인 이력 목록
+     */
+    List<ReactGenerateHistoryResponse> selectApprovalHistory(
+            @Param("offset") int offset,
+            @Param("endRow") int endRow,
+            @Param("status") String status,
+            @Param("approvalUserId") String approvalUserId,
+            @Param("createUserId") String createUserId,
+            @Param("fromDate") String fromDate,
+            @Param("toDate") String toDate);
+
+    /** 승인 이력 전체 건수를 반환한다 (페이지네이션용). */
+    int selectApprovalHistoryCount(
+            @Param("status") String status,
+            @Param("approvalUserId") String approvalUserId,
+            @Param("createUserId") String createUserId,
+            @Param("fromDate") String fromDate,
+            @Param("toDate") String toDate);
 }

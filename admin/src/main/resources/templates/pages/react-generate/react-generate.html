@@ -106,15 +106,10 @@
         </div>
 
         <!-- Action Buttons -->
+        <!-- 승인 프로세스는 React 코드 승인 관리 메뉴에서 진행한다 -->
         <div class="d-flex gap-2 mt-3">
             <button type="button" class="btn btn-outline-warning" id="btnRequestApproval">
                 <i class="bi bi-send me-1"></i>승인 요청
-            </button>
-            <button type="button"
-                    class="btn btn-success"
-                    id="btnApprove"
-                    th:if="${userAuthorities != null and userAuthorities.contains('REACT_GENERATE:W')}">
-                <i class="bi bi-check-circle me-1"></i>승인
             </button>
         </div>
     </div>

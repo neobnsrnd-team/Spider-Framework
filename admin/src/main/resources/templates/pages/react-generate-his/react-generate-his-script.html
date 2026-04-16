@@ -41,10 +41,12 @@
 
         /** 검색 조건을 수집하고 1페이지부터 재조회한다. */
         search: function () {
+            // 내 것만 보기 체크 시 생성자 ID를 현재 로그인 사용자로 고정
+            const myOnly = $('#chkMyOnly').is(':checked');
             // date input은 yyyy-MM-dd로 오므로 하이픈 제거 후 yyyyMMdd로 전달
             this.appliedSearch = {
                 status:         $('#searchStatus').val(),
-                createUserId:   $('#searchCreateUserId').val().trim(),
+                createUserId:   myOnly ? CURRENT_USER_ID : $('#searchCreateUserId').val().trim(),
                 fromDate:       ($('#searchFromDate').val() || '').replace(/-/g, ''),
                 toDate:         ($('#searchToDate').val() || '').replace(/-/g, '')
             };
@@ -376,9 +378,16 @@
 
     $('#btnSearchReset').on('click', function () {
         $('#searchStatus').val('');
-        $('#searchCreateUserId').val('');
+        $('#searchCreateUserId').val('').prop('disabled', false);
         $('#searchFromDate').val('');
         $('#searchToDate').val('');
+        $('#chkMyOnly').prop('checked', false);
+        ReactGenerateHis.search();
+    });
+
+    // 내 것만 보기: 체크 시 생성자 입력 필드 비활성화, 즉시 재조회
+    $('#chkMyOnly').on('change', function () {
+        $('#searchCreateUserId').prop('disabled', this.checked).val('');
         ReactGenerateHis.search();
     });
 
