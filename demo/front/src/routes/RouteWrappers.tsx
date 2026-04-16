@@ -981,8 +981,8 @@ export function ImmediatePayMethodRoute() {
             }>(`/cards/${card.id}/immediate-pay`, {
               pin,
               amount: payAmount,
-              // paymentAccount는 API 조회 시 세팅된 원본(비마스킹) 계좌번호
-              accountNumber: paymentAccount,
+              // card 객체의 원본(비마스킹) 계좌번호를 그대로 전달한다
+              accountNumber: card.paymentAccount,
             });
             // 서버 처리일시를 세션에 저장 → STEP 4 완료 화면에서 사용
             sessionStorage.setItem("immediatePayCompletedAt", data.completedAt);
