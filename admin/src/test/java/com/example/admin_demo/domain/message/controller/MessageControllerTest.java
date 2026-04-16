@@ -284,9 +284,11 @@ class MessageControllerTest {
     @WithMockUser(authorities = "MESSAGE:R")
     @DisplayName("[생성] READ 권한으로 생성 요청 시 HTTP 403을 반환한다")
     void createMessage_readOnly_returns403() throws Exception {
+        // messageName(@NotBlank)을 포함한 유효한 요청 — validation을 통과시키고 권한 검사에서만 403이 발생해야 함
         MessageCreateRequest request = MessageCreateRequest.builder()
                 .orgId(ORG_ID)
                 .messageId(MESSAGE_ID)
+                .messageName("테스트전문")
                 .build();
 
         mockMvc.perform(post(BASE_URL)
