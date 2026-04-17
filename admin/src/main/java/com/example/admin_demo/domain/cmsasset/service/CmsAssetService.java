@@ -10,6 +10,7 @@ import com.example.admin_demo.global.dto.PageResponse;
 import com.example.admin_demo.global.exception.InvalidInputException;
 import com.example.admin_demo.global.exception.InvalidStateException;
 import com.example.admin_demo.global.exception.NotFoundException;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -36,6 +37,15 @@ public class CmsAssetService {
     private static final String STATE_PENDING = "PENDING";
     private static final String STATE_APPROVED = "APPROVED";
     private static final String STATE_REJECTED = "REJECTED";
+
+    /** REJECTED_REASON 컬럼의 최대 문자 수. 운영 DDL 변경 시 동기화 필요. */
+    private static final int REJECTED_REASON_MAX_CHARS = 1000;
+
+    /**
+     * REJECTED_REASON 컬럼의 최대 바이트 수 (UTF-8 기준).
+     * DB가 {@code VARCHAR2(1000 BYTE)} 로 생성된 환경에서도 ORA-12899 방지를 위해 바이트 상한을 함께 검증.
+     */
+    private static final int REJECTED_REASON_MAX_BYTES = 1000;
 
     private final CmsAssetMapper cmsAssetMapper;
 
@@ -128,7 +138,12 @@ public class CmsAssetService {
         }
     }
 
-    /** 반려 사유 정규화 — 공백만 있는 문자열은 null로 취급, 최대 길이 초과 방지 */
+    /**
+     * 반려 사유 정규화.
+     *
+     * <p>공백만 있는 문자열은 {@code null}로 취급하고, 문자 수·바이트 수 두 축으로 상한을 검증한다.
+     * 바이트 검증은 DB 컬럼이 {@code VARCHAR2(1000 BYTE)} 로 생성된 환경에서도 ORA-12899 를 사전 차단하기 위함.
+     */
     private String normalizeReason(String rejectedReason) {
         if (rejectedReason == null) {
             return null;
@@ -137,8 +152,11 @@ public class CmsAssetService {
         if (trimmed.isEmpty()) {
             return null;
         }
-        if (trimmed.length() > 1000) {
-            throw new InvalidInputException("반려 사유는 1000자 이하로 입력하세요.");
+        if (trimmed.length() > REJECTED_REASON_MAX_CHARS) {
+            throw new InvalidInputException("반려 사유는 " + REJECTED_REASON_MAX_CHARS + "자 이하로 입력하세요.");
+        }
+        if (trimmed.getBytes(StandardCharsets.UTF_8).length > REJECTED_REASON_MAX_BYTES) {
+            throw new InvalidInputException("반려 사유는 UTF-8 기준 " + REJECTED_REASON_MAX_BYTES + "바이트 이하로 입력하세요.");
         }
         return trimmed;
     }

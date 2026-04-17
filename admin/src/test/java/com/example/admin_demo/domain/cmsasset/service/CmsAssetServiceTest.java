@@ -214,6 +214,17 @@ class CmsAssetServiceTest {
                 .isInstanceOf(InvalidInputException.class);
     }
 
+    @Test
+    @DisplayName("[반려] UTF-8 1000바이트 초과(한글 334자 = 1002바이트) 반려 사유는 InvalidInputException")
+    void reject_reasonTooManyBytes_throwsInvalidInput() {
+        given(cmsAssetMapper.findAssetStateById(ASSET_ID)).willReturn("PENDING");
+        // '가' = UTF-8 3바이트, 334자 → 1002바이트. 문자 수 상한(1000자)은 통과하지만 바이트 상한은 초과한다.
+        String koreanOverflow = "가".repeat(334);
+
+        assertThatThrownBy(() -> cmsAssetService.reject(ASSET_ID, koreanOverflow, USER_ID, USER_NAME))
+                .isInstanceOf(InvalidInputException.class);
+    }
+
     // ─── helpers ───────────────────────────────────────────────────────
 
     private CmsAssetListResponse buildListResponse(String state) {
