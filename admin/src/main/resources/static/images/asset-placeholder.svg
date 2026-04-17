@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" preserveAspectRatio="xMidYMid meet">
+  <rect width="200" height="200" fill="#f1f3f5"/>
+  <rect x="0.5" y="0.5" width="199" height="199" fill="none" stroke="#dee2e6" stroke-width="1"/>
+  <g transform="translate(60, 60)" fill="#adb5bd">
+    <rect x="0" y="0" width="80" height="60" rx="4" fill="none" stroke="#adb5bd" stroke-width="3"/>
+    <circle cx="22" cy="22" r="8"/>
+    <path d="M6 54 L30 30 L50 42 L64 28 L74 54 Z"/>
+  </g>
+  <text x="100" y="160" font-family="system-ui, -apple-system, Segoe UI, sans-serif"
+        font-size="12" fill="#6c757d" text-anchor="middle">이미지 미리보기</text>
+</svg>

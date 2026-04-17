@@ -406,6 +406,16 @@ public class PageController {
         return "redirect:/cms-admin/approvals";
     }
 
+    @GetMapping("/cms-admin/asset-requests")
+    public String cmsAdminAssetRequests(HttpServletRequest request, Model model) {
+        return resolveView(request, "pages/asset/request :: content", model);
+    }
+
+    @GetMapping("/cms-admin/asset-approvals")
+    public String cmsAdminAssetApprovals(HttpServletRequest request, Model model) {
+        return resolveView(request, "pages/asset/approval :: content", model);
+    }
+
     @GetMapping("/cms-admin/ab-tests")
     public String cmsAdminAbTests(HttpServletRequest request, Model model) {
         return resolveView(request, "pages/cms-ab-test/cms-ab-test :: content", model);
