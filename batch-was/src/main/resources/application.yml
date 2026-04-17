@@ -1,0 +1,18 @@
+spring:
+  profiles:
+    active: oracle
+  batch:
+    jdbc:
+      # Admin DB에 Spring Batch 메타 테이블 자동 생성
+      initialize-schema: always
+    job:
+      # 애플리케이션 시작 시 Job 자동 실행 방지 (API 호출로만 실행)
+      enabled: false
+
+server:
+  port: 8081
+
+# Batch WAS 인스턴스 식별 ID (FWK_WAS_INSTANCE.INSTANCE_ID 와 일치해야 함)
+batch:
+  was:
+    instance-id: BWAS

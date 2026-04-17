@@ -12,7 +12,6 @@ import com.example.admin_demo.domain.wasinstance.mapper.WasInstanceMapper;
 import com.example.admin_demo.global.exception.InvalidInputException;
 import com.example.admin_demo.global.exception.NotFoundException;
 import com.example.admin_demo.global.util.AuditUtil;
-import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -26,12 +25,10 @@ import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
 
 /**
- * 배치 수동 실행 Service
+ * 배치 수동 실행 Service.
  *
- * <p>WAS 인스턴스에 HTTP 요청으로 배치 실행을 전달합니다.</p>
- *
- * <p>TODO: WAS 측 배치 실행 API 구현 후, DB INSERT/UPDATE 로직을 WAS로 이관.
- * 현재는 WAS가 미구현이므로 Admin 서버에서 임시로 FWK_BATCH_HIS INSERT/UPDATE를 수행합니다.</p>
+ * <p>WAS 인스턴스에 HTTP 요청으로 배치 실행을 위임한다.
+ * FWK_BATCH_HIS의 INSERT/UPDATE는 WAS에서 직접 처리한다.</p>
  */
 @Slf4j
 @Service
@@ -58,79 +55,46 @@ public class BatchExecService {
         // 선행 배치 의존성 검증
         validatePreBatchDependency(requestDTO.getBatchAppId());
 
-        String logDtime = LocalDateTime.now().format(BatchConstants.LOG_DATE_TIME_FORMATTER);
         String userId = AuditUtil.currentUserId();
-
-        List<Map<String, Object>> batchHisList = new ArrayList<>();
         List<BatchHisResponse> results = new ArrayList<>();
 
-        // 각 인스턴스별 실행 순번 맵 (WAS 요청 후 UPDATE에 사용)
-        Map<String, Integer> instanceSeqMap = new HashMap<>();
-
+        // 각 WAS 인스턴스에 배치 실행 요청 (FWK_BATCH_HIS INSERT/UPDATE는 WAS가 직접 수행)
         for (String instanceId : requestDTO.getInstanceIds()) {
-            int nextSeq = batchHisMapper.selectNextExecuteSeq(
-                    requestDTO.getBatchAppId(), instanceId, requestDTO.getBatchDate());
+            boolean sent = sendBatchExecRequest(instanceId, requestDTO, userId);
 
-            instanceSeqMap.put(instanceId, nextSeq);
-
-            // TODO: WAS 구현 후 DB INSERT는 WAS에서 처리하도록 이관
-            Map<String, Object> map = new HashMap<>();
-            map.put("batchAppId", requestDTO.getBatchAppId());
-            map.put("instanceId", instanceId);
-            map.put("batchDate", requestDTO.getBatchDate());
-            map.put("batchExecuteSeq", nextSeq);
-            map.put("logDtime", logDtime);
-            map.put("resRtCode", BatchResRtCode.STARTED.getCode());
-            map.put("lastUpdateUserId", userId);
-            batchHisList.add(map);
-
+            // WAS에 요청 전송 결과를 응답에 포함 (실제 이력은 WAS가 기록)
             results.add(BatchHisResponse.builder()
                     .batchAppId(requestDTO.getBatchAppId())
                     .instanceId(instanceId)
                     .batchDate(requestDTO.getBatchDate())
-                    .batchExecuteSeq(nextSeq)
-                    .logDtime(logDtime)
-                    .resRtCode(BatchResRtCode.STARTED.getCode())
                     .lastUpdateUserId(userId)
+                    .resRtCode(sent ? BatchResRtCode.STARTED.getCode() : BatchResRtCode.ABNORMAL_TERMINATION.getCode())
                     .build());
-        }
-
-        // 1. 배치 이력 INSERT (TODO: WAS 구현 후 WAS에서 처리하도록 이관)
-        if (!batchHisList.isEmpty()) {
-            batchHisMapper.insertBatchHisBatch(batchHisList);
-        }
-
-        // 2. 각 WAS 인스턴스에 배치 실행 요청 + 결과 UPDATE
-        for (String instanceId : requestDTO.getInstanceIds()) {
-            int seq = instanceSeqMap.get(instanceId);
-            sendBatchExecAndUpdateResult(instanceId, seq, requestDTO, userId);
         }
 
         return results;
     }
 
     /**
-     * WAS 인스턴스에 배치 실행 HTTP 요청을 전송하고, 응답에 따라 이력을 업데이트합니다.
+     * WAS 인스턴스에 배치 실행 HTTP 요청을 전송한다.
+     * FWK_BATCH_HIS INSERT(STARTED) → Job 실행 → UPDATE(결과)는 WAS가 전담한다.
      *
-     * <p>TODO: WAS 측 배치 실행 API 구현 후, 이 UPDATE 로직은 WAS에서 직접 수행하도록 이관.
-     * WAS가 배치 실행 완료 시 직접 FWK_BATCH_HIS를 UPDATE하는 구조로 변경 예정.</p>
+     * @return true: 요청 전송 성공 (2xx), false: 전송 실패
      */
-    private void sendBatchExecAndUpdateResult(
-            String instanceId, int batchExecuteSeq, BatchExecRequest requestDTO, String userId) {
+    private boolean sendBatchExecRequest(
+            String instanceId, BatchExecRequest requestDTO, String userId) {
 
         WasInstanceResponse instance = wasInstanceMapper.selectResponseById(instanceId);
         if (instance == null) {
             log.warn("배치 실행 요청 실패: 인스턴스를 찾을 수 없습니다. instanceId={}", instanceId);
-            updateBatchHisAsError(requestDTO, instanceId, batchExecuteSeq, userId, "인스턴스를 찾을 수 없습니다: " + instanceId);
-            return;
+            return false;
         }
 
         String ip = instance.getIp();
         String port = instance.getPort();
         if (ip == null || ip.isBlank() || port == null || port.isBlank()) {
             log.warn("배치 실행 요청 실패: IP/PORT 정보 없음. instanceId={}", instanceId);
-            updateBatchHisAsError(requestDTO, instanceId, batchExecuteSeq, userId, "IP/PORT 정보가 없습니다: " + instanceId);
-            return;
+            return false;
         }
 
         String url = String.format("http://%s:%s%s", ip, port, BATCH_EXEC_ENDPOINT);
@@ -143,8 +107,7 @@ public class BatchExecService {
             body.put("batchAppId", requestDTO.getBatchAppId());
             body.put("batchDate", requestDTO.getBatchDate());
             body.put("userId", userId);
-            if (requestDTO.getParameters() != null
-                    && !requestDTO.getParameters().isBlank()) {
+            if (requestDTO.getParameters() != null && !requestDTO.getParameters().isBlank()) {
                 body.put("parameters", requestDTO.getParameters());
             }
 
@@ -155,59 +118,21 @@ public class BatchExecService {
             ResponseEntity<String> response = restTemplate.exchange(url, HttpMethod.POST, httpEntity, String.class);
 
             if (response.getStatusCode().is2xxSuccessful()) {
-                log.info("배치 실행 요청 성공: instanceId={}", instanceId);
-                // TODO: WAS 구현 후 이 UPDATE는 WAS에서 직접 수행
-                updateBatchHisAsSuccess(requestDTO, instanceId, batchExecuteSeq, userId);
+                log.info("배치 실행 완료: instanceId={}", instanceId);
+                return true;
             } else {
-                log.warn("배치 실행 요청 실패 응답: instanceId={}, status={}", instanceId, response.getStatusCode());
-                updateBatchHisAsError(
-                        requestDTO, instanceId, batchExecuteSeq, userId, "WAS 응답 오류: " + response.getStatusCode());
+                log.warn("배치 실행 실패 응답: instanceId={}, status={}", instanceId, response.getStatusCode());
+                return false;
             }
         } catch (RestClientException e) {
-            log.warn("배치 실행 요청 통신 오류: instanceId={}, url={}, error={}", instanceId, url, e.getMessage());
-            // TODO: WAS 구현 후 이 UPDATE는 WAS에서 직접 수행
-            updateBatchHisAsError(requestDTO, instanceId, batchExecuteSeq, userId, "WAS 통신 오류: " + e.getMessage());
+            log.warn("배치 실행 통신 오류: instanceId={}, url={}, error={}", instanceId, url, e.getMessage());
+            return false;
         }
     }
 
     /**
-     * 배치 이력을 정상 종료로 업데이트
-     * <p>TODO: WAS 구현 후 WAS에서 직접 수행하도록 이관</p>
-     */
-    private void updateBatchHisAsSuccess(
-            BatchExecRequest requestDTO, String instanceId, int batchExecuteSeq, String userId) {
-        String endDtime = LocalDateTime.now().format(BatchConstants.LOG_DATE_TIME_FORMATTER);
-        batchHisMapper.updateBatchHisResult(
-                requestDTO.getBatchAppId(),
-                instanceId,
-                requestDTO.getBatchDate(),
-                batchExecuteSeq,
-                BatchResRtCode.SUCCESS.getCode(),
-                endDtime,
-                null,
-                userId);
-    }
-
-    /**
-     * 배치 이력을 오류로 업데이트
-     * <p>TODO: WAS 구현 후 WAS에서 직접 수행하도록 이관</p>
-     */
-    private void updateBatchHisAsError(
-            BatchExecRequest requestDTO, String instanceId, int batchExecuteSeq, String userId, String errorReason) {
-        String endDtime = LocalDateTime.now().format(BatchConstants.LOG_DATE_TIME_FORMATTER);
-        batchHisMapper.updateBatchHisResult(
-                requestDTO.getBatchAppId(),
-                instanceId,
-                requestDTO.getBatchDate(),
-                batchExecuteSeq,
-                BatchResRtCode.ABNORMAL_TERMINATION.getCode(),
-                endDtime,
-                errorReason,
-                userId);
-    }
-
-    /**
-     * 선행 배치 의존성 검증
+     * 선행 배치 의존성 검증.
+     * 선행 배치가 설정되어 있으면 최근 실행 상태가 SUCCESS인지 확인한다.
      */
     private void validatePreBatchDependency(String batchAppId) {
         BatchAppResponse batchApp = batchAppMapper.selectResponseById(batchAppId);
