@@ -77,7 +77,17 @@ logging:
 menu:
   hidden-menu-ids:
     - acl_manage           # Framework 관리메뉴 (asis spider메뉴)
-    - v3_acl_manage        # 전체메뉴
+    - v3_msg_manage        # 거래전문 관리
+    - v3_interface_manage  # Interface 관리
+    - v3_cd_manage         # Code 관리
+    - v3_opt_manage        # 운영 정보 관리
+    - v3_batch_manage      # 배치 관리
+    - v3_error_manage      # 오류 관리
+    - v3_was_manage        # WAS
+    - v3_admin_monitor     # 관리자 모니터링
+    - v3_BOARD             # 게시판
+    - v3_service_manage    # 서비스관리
+    - v3_emergency_notice  # 긴급공지
 
 # React 코드 승인 시 .tsx 파일을 저장할 디렉토리
 approval:
