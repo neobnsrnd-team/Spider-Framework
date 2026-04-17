@@ -327,7 +327,9 @@
                         const badge = this.APPROVE_STATE_BADGE[h.approveState] || HtmlUtils.escape(h.approveState);
                         // index === 0 은 최신 버전 — 이미 현재 상태이므로 롤백 불필요
                         const isLatest = index === 0;
-                        const rollbackBtn = (canRollback && !isLatest)
+                        // PENDING(승인대기) / REJECTED(반려)는 확정된 버전이 아니므로 복원 대상에서 제외
+                        const isRollbackableState = h.approveState === 'APPROVED' || h.approveState === 'WORK';
+                        const rollbackBtn = (canRollback && !isLatest && isRollbackableState)
                             ? `<button class="btn btn-outline-warning btn-sm"
                                    onclick="CmsApprovalPage.submitRollback('${pageId}', ${h.version})">롤백</button>`
                             : '';
