@@ -119,6 +119,13 @@ claude:
     connect-timeout-seconds: 10
     read-timeout-seconds: 120
 
+# CMS Deploy Configuration
+cms:
+  deploy:
+    receive-url: ${CMS_DEPLOY_RECEIVE_URL:http://133.186.135.23:3001/api/deploy/receive}
+    secret: ${CMS_DEPLOY_SECRET:}
+    tracker-js-url: ${CMS_DEPLOY_TRACKER_JS_URL:http://133.186.135.23:3001/cms-tracker.js}
+
 # Scheduling Configuration (배치 이력 정리 스케줄러)
 scheduling:
   batch-his-cleanup:

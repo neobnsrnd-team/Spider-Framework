@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<div th:fragment="content">
+
+    <!-- 검색조건 헤더 -->
+    <div class="page-header">
+        <h4 class="page-title">
+            <i class="bi bi-exclamation-circle-fill text-danger"></i>
+            검색조건
+        </h4>
+    </div>
+
+    <!-- 검색 영역 -->
+    <div th:replace="~{pages/cms-statistics/cms-statistics-search :: search}"></div>
+
+    <!-- 리스트 헤더 + 툴바 -->
+    <div class="page-header mt-3">
+        <h4 class="page-title">
+            <i class="bi bi-exclamation-circle-fill text-danger"></i>
+            리스트
+        </h4>
+        <div class="page-header-actions">
+            <button class="btn btn-outline-secondary btn-sm" id="btnRefresh">
+                <i class="bi bi-arrow-clockwise"></i> 새로고침
+            </button>
+        </div>
+    </div>
+
+    <!-- 테이블 -->
+    <div th:replace="~{pages/cms-statistics/cms-statistics-table :: table}"></div>
+
+    <!-- 페이지네이션 -->
+    <div th:replace="~{fragments/page-content-layout :: pagination}"></div>
+
+    <!-- ==================== 컴포넌트 클릭 상세 모달 ==================== -->
+    <div class="modal fade" id="detailModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">컴포넌트 클릭 상세</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p id="detailPageName" class="mb-2 fw-medium text-body-secondary"></p>
+                    <div class="table-responsive">
+                        <table class="table table-sm table-hover sp-data-grid">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>컴포넌트 ID</th>
+                                    <th class="col-w-100 text-end">클릭 수</th>
+                                </tr>
+                            </thead>
+                            <tbody id="detailTableBody">
+                                <tr>
+                                    <td colspan="2" class="text-center text-body-secondary">불러오는 중...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">닫기</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 스크립트 -->
+    <th:block th:replace="~{pages/cms-statistics/cms-statistics-script :: script}"/>
+
+</div>
+</body>
+</html>

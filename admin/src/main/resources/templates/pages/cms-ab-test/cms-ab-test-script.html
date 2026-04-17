@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<th:block th:fragment="script">
+<script th:inline="javascript">
+    window.CMS_AB_CAN_WRITE = /*[[${userAuthorities != null && userAuthorities.contains('CMS:W')}]]*/ false;
+</script>
+<script>
+    window.CmsAbTestPage = {
+        pages: [],
+        availablePages: [],
+        groups: [],
+        editingGroupId: null,
+        currentPage: 1,
+        totalItems: 0,
+        itemsPerPage: 10,
+        sortBy: null,
+        sortDirection: null,
+
+        load: function(page) {
+            if (page !== undefined) this.currentPage = page;
+            const params = new URLSearchParams({
+                page: this.currentPage,
+                size: this.itemsPerPage,
+                search: $('#filterSearch').val().trim(),
+            });
+            if (this.sortBy) {
+                params.append('sortBy', this.sortBy);
+                params.append('sortDirection', this.sortDirection);
+            }
+
+            fetch('/api/cms-admin/ab-tests?' + params)
+                .then(r => r.json())
+                .then(res => {
+                    if (!res.success) { Toast.error(res.message); return; }
+                    const pageData = res.data.pages || {};
+                    this.pages = pageData.content || [];
+                    this.availablePages = res.data.availablePages || this.pages;
+                    this.groups = res.data.groups || [];
+                    this.totalItems = pageData.totalElements || 0;
+                    this.renderGroups();
+                    this.renderPages();
+                    this.renderPagination();
+                    this.updateSortIndicators();
+                    this.applyWriteVisibility();
+                })
+                .catch(() => Toast.error('A/B 테스트 목록 조회 중 오류가 발생했습니다.'));
+        },
+
+        reset: function() {
+            $('#filterSearch').val('');
+            this.sortBy = null;
+            this.sortDirection = null;
+            this.itemsPerPage = parseInt($('#limitRows').val()) || 10;
+            this.load(1);
+        },
+
+        attachSortHandlers: function() {
+            $('#abPageTable thead th[data-sort]').addClass('sortable cursor-pointer');
+            $(document)
+                .off('click.cmsAbPageSort', '#abPageTable thead th[data-sort]')
+                .on('click.cmsAbPageSort', '#abPageTable thead th[data-sort]', function() {
+                    const sortKey = $(this).data('sort');
+                    if (!sortKey) return;
+
+                    if (CmsAbTestPage.sortBy === sortKey) {
+                        if (CmsAbTestPage.sortDirection === 'ASC') {
+                            CmsAbTestPage.sortDirection = 'DESC';
+                        } else {
+                            CmsAbTestPage.sortBy = null;
+                            CmsAbTestPage.sortDirection = null;
+                        }
+                    } else {
+                        CmsAbTestPage.sortBy = sortKey;
+                        CmsAbTestPage.sortDirection = 'ASC';
+                    }
+
+                    CmsAbTestPage.updateSortIndicators();
+                    CmsAbTestPage.load(1);
+                });
+        },
+
+        updateSortIndicators: function() {
+            const headers = $('#abPageTable thead th.sortable');
+            headers.removeClass('sort-asc sort-desc');
+            if (!this.sortBy || !this.sortDirection) return;
+            headers.filter(`[data-sort="${this.sortBy}"]`)
+                .addClass(this.sortDirection === 'ASC' ? 'sort-asc' : 'sort-desc');
+        },
+
+        renderGroups: function() {
+            const $list = $('#abGroupList');
+            if (!this.groups.length) {
+                $list.html('<div class="text-center py-4 text-body-secondary">생성된 A/B 그룹이 없습니다.</div>');
+                return;
+            }
+
+            const html = this.groups.map(group => {
+                const activePages = group.pages.filter(p => Number(p.abWeight || 0) > 0);
+                const totalWeight = activePages.reduce((sum, p) => sum + Number(p.abWeight || 0), 0);
+                const promoted = group.pages.some(p => Number(p.abWeight) === 0);
+                const bars = group.pages.map((p, idx) => {
+                    const ratio = totalWeight > 0 ? Number(p.abWeight || 0) / totalWeight * 100 : 0;
+                    return `<div class="ab-weight-segment ab-color-${idx % 5}" style="width:${ratio}%"
+                                 title="${HtmlUtils.escape(p.pageName || '')}: ${ratio.toFixed(1)}%"></div>`;
+                }).join('');
+                const rows = group.pages.map((p, idx) => {
+                    const ratio = totalWeight > 0 ? Number(p.abWeight || 0) / totalWeight * 100 : 0;
+                    const isWinner = promoted && Number(p.abWeight) === 1;
+                    const isLoser = promoted && Number(p.abWeight) === 0;
+                    const weightText = isWinner ? '100% 단독 노출' : isLoser ? '노출 종료' : `가중치 ${p.abWeight} (${ratio.toFixed(1)}%)`;
+                    return `<div class="ab-group-page ${isLoser ? 'is-loser' : ''}">
+                        <span class="ab-page-dot ab-color-${idx % 5}"></span>
+                        <span class="ab-page-name">${HtmlUtils.escape(p.pageName || '')}</span>
+                        ${isWinner ? '<span class="badge bg-success">Winner</span>' : ''}
+                        <span class="badge bg-light text-dark">${HtmlUtils.escape(p.viewMode || '-')}</span>
+                        <span class="ab-page-weight">${weightText}</span>
+                        <span class="ab-page-stat">노출 ${Number(p.viewCount || 0).toLocaleString()} / 클릭 ${Number(p.clickCount || 0).toLocaleString()}</span>
+                    </div>`;
+                }).join('');
+
+                const actions = CMS_AB_CAN_WRITE ? `<div class="ab-group-actions">
+                    <button class="btn btn-outline-primary btn-xs" onclick="CmsAbTestPage.openEditModal('${HtmlUtils.escape(group.groupId)}')">수정</button>
+                    <button class="btn btn-outline-success btn-xs" onclick="CmsAbTestPage.openPromoteModal('${HtmlUtils.escape(group.groupId)}')" ${promoted ? 'disabled' : ''}>승격</button>
+                    <button class="btn btn-outline-danger btn-xs" onclick="CmsAbTestPage.clearGroup('${HtmlUtils.escape(group.groupId)}')">삭제</button>
+                </div>` : '';
+
+                return `<div class="ab-group-card">
+                    <div class="ab-group-header">
+                        <div>
+                            <span class="badge bg-primary">${HtmlUtils.escape(group.groupId)}</span>
+                            ${promoted ? '<span class="badge bg-success ms-1">Winner 확정</span>' : ''}
+                            <div class="small text-body-secondary mt-1">페이지 ${group.pages.length}개${promoted ? '' : `, 총 가중치 ${totalWeight}`}</div>
+                        </div>
+                        ${actions}
+                    </div>
+                    <div class="ab-weight-bar">${bars}</div>
+                    <div class="ab-group-pages">${rows}</div>
+                </div>`;
+            }).join('');
+
+            $list.html(html);
+        },
+
+        renderPages: function() {
+            const $tbody = $('#abPageTableBody');
+            if (!this.pages.length) {
+                $tbody.html('<tr><td colspan="8" class="text-center py-4 text-body-secondary">조회된 페이지가 없습니다.</td></tr>');
+                return;
+            }
+            const html = this.pages.map(page => `<tr>
+                <td>${HtmlUtils.escape(page.pageName || '')}</td>
+                <td class="text-center">${HtmlUtils.escape(page.viewMode || '')}</td>
+                <td>${HtmlUtils.escape(page.createUserName || '')}</td>
+                <td class="text-center">${page.abGroupId ? `<span class="badge bg-primary">${HtmlUtils.escape(page.abGroupId)}</span>` : '-'}</td>
+                <td class="text-end">${page.abWeight ?? '-'}</td>
+                <td class="text-end">${Number(page.viewCount || 0).toLocaleString()}</td>
+                <td class="text-end">${Number(page.clickCount || 0).toLocaleString()}</td>
+                <td class="text-center small">${HtmlUtils.escape(page.lastModifiedDtime || '-')}</td>
+            </tr>`).join('');
+            $tbody.html(html);
+        },
+
+        renderPagination: function() {
+            const totalPages = Math.ceil(this.totalItems / this.itemsPerPage);
+            const pagination = $('#pagination');
+            pagination.empty();
+
+            pagination.append(`
+                <li class="page-item ${this.currentPage === 1 ? 'disabled' : ''}">
+                    <a class="page-link" href="#" onclick="CmsAbTestPage.changePage(1); return false;"><i class="bi bi-chevron-double-left"></i></a>
+                </li>
+                <li class="page-item ${this.currentPage === 1 ? 'disabled' : ''}">
+                    <a class="page-link" href="#" onclick="CmsAbTestPage.changePage(${this.currentPage - 1}); return false;"><i class="bi bi-chevron-left"></i></a>
+                </li>
+            `);
+
+            const maxButtons = 5;
+            let startPage = Math.max(1, this.currentPage - Math.floor(maxButtons / 2));
+            let endPage = Math.min(totalPages, startPage + maxButtons - 1);
+            if (endPage - startPage + 1 < maxButtons) {
+                startPage = Math.max(1, endPage - maxButtons + 1);
+            }
+
+            for (let i = startPage; i <= endPage; i++) {
+                pagination.append(`
+                    <li class="page-item ${i === this.currentPage ? 'active' : ''}">
+                        <a class="page-link" href="#" onclick="CmsAbTestPage.changePage(${i}); return false;">${i}</a>
+                    </li>
+                `);
+            }
+
+            pagination.append(`
+                <li class="page-item ${this.currentPage === totalPages || totalPages === 0 ? 'disabled' : ''}">
+                    <a class="page-link" href="#" onclick="CmsAbTestPage.changePage(${this.currentPage + 1}); return false;"><i class="bi bi-chevron-right"></i></a>
+                </li>
+                <li class="page-item ${this.currentPage === totalPages || totalPages === 0 ? 'disabled' : ''}">
+                    <a class="page-link" href="#" onclick="CmsAbTestPage.changePage(${totalPages}); return false;"><i class="bi bi-chevron-double-right"></i></a>
+                </li>
+            `);
+
+            const start = this.totalItems === 0 ? 0 : (this.currentPage - 1) * this.itemsPerPage + 1;
+            const end = Math.min(this.currentPage * this.itemsPerPage, this.totalItems);
+            $('#pageInfo').text(`${start} - ${end} of ${this.totalItems} items`);
+        },
+
+        changePage: function(page) {
+            const totalPages = Math.ceil(this.totalItems / this.itemsPerPage);
+            if (page < 1 || page > totalPages) return;
+            this.currentPage = page;
+            this.load();
+        },
+
+        openCreateModal: function() {
+            this.editingGroupId = null;
+            $('#abGroupModalTitle').text('A/B 그룹 생성');
+            $('#abGroupId').prop('disabled', false).val('');
+            $('#abPageRows').empty();
+            this.addPageRow('', 5);
+            this.addPageRow('', 5);
+            new bootstrap.Modal('#abGroupModal').show();
+        },
+
+        openEditModal: function(groupId) {
+            const group = this.groups.find(g => g.groupId === groupId);
+            if (!group) return;
+            this.editingGroupId = groupId;
+            $('#abGroupModalTitle').text('A/B 그룹 수정');
+            $('#abGroupId').prop('disabled', true).val(groupId);
+            $('#abPageRows').empty();
+            group.pages.forEach(p => this.addPageRow(p.pageId, p.abWeight ?? 1));
+            new bootstrap.Modal('#abGroupModal').show();
+        },
+
+        addPageRow: function(pageId, weight) {
+            const index = Date.now() + Math.floor(Math.random() * 1000);
+            const source = this.availablePages.slice();
+            const exists = source.some(p => p.pageId === pageId);
+            if (pageId && !exists) {
+                const group = this.groups.find(g => g.groupId === this.editingGroupId);
+                const groupPage = group?.pages?.find(p => p.pageId === pageId);
+                if (groupPage) source.push(groupPage);
+            }
+            const options = source
+                .filter(p => !p.abGroupId || p.abGroupId === this.editingGroupId || p.pageId === pageId)
+                .map(p => `<option value="${HtmlUtils.escape(p.pageId)}" ${p.pageId === pageId ? 'selected' : ''}>${HtmlUtils.escape(p.pageName || p.pageId)}</option>`)
+                .join('');
+            $('#abPageRows').append(`<div class="ab-page-edit-row" data-row="${index}">
+                <select class="form-select form-select-sm ab-page-select">
+                    <option value="">페이지 선택</option>
+                    ${options}
+                </select>
+                <input type="number" min="0.01" max="999.99" step="0.01" class="form-control form-control-sm ab-weight-input" value="${weight}">
+                <button type="button" class="btn btn-outline-danger btn-sm" onclick="$(this).closest('.ab-page-edit-row').remove()">삭제</button>
+            </div>`);
+        },
+
+        saveGroup: function() {
+            const groupId = $('#abGroupId').val().trim();
+            const pages = [];
+            $('#abPageRows .ab-page-edit-row').each(function() {
+                const pageId = $(this).find('.ab-page-select').val();
+                const weight = parseFloat($(this).find('.ab-weight-input').val());
+                pages.push({ pageId, weight });
+            });
+
+            fetch('/api/cms-admin/ab-tests', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ groupId, pages }),
+            })
+                .then(r => r.json())
+                .then(res => {
+                    if (!res.success) { Toast.error(res.message); return; }
+                    bootstrap.Modal.getInstance('#abGroupModal').hide();
+                    Toast.success(res.message);
+                    this.load();
+                })
+                .catch(() => Toast.error('A/B 그룹 저장 중 오류가 발생했습니다.'));
+        },
+
+        openPromoteModal: function(groupId) {
+            const group = this.groups.find(g => g.groupId === groupId);
+            if (!group) return;
+            $('#promoteGroupId').val(groupId);
+            const html = group.pages
+                .filter(p => Number(p.abWeight || 0) > 0)
+                .map(p => `<button type="button" class="btn btn-outline-success w-100 text-start mb-2"
+                               onclick="CmsAbTestPage.promote('${HtmlUtils.escape(groupId)}', '${HtmlUtils.escape(p.pageId)}')">
+                    <span class="fw-semibold">${HtmlUtils.escape(p.pageName || '')}</span>
+                    <span class="small text-body-secondary float-end">가중치 ${p.abWeight}</span>
+                </button>`)
+                .join('');
+            $('#promotePageList').html(html || '<div class="text-body-secondary small">승격 가능한 페이지가 없습니다.</div>');
+            new bootstrap.Modal('#abPromoteModal').show();
+        },
+
+        promote: function(groupId, winnerPageId) {
+            if (!confirm('선택한 페이지를 Winner로 승격하시겠습니까?')) return;
+            fetch(`/api/cms-admin/ab-tests/${encodeURIComponent(groupId)}/promote`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ winnerPageId }),
+            })
+                .then(r => r.json())
+                .then(res => {
+                    if (!res.success) { Toast.error(res.message); return; }
+                    bootstrap.Modal.getInstance('#abPromoteModal').hide();
+                    Toast.success(res.message);
+                    this.load();
+                })
+                .catch(() => Toast.error('Winner 승격 중 오류가 발생했습니다.'));
+        },
+
+        clearGroup: function(groupId) {
+            if (!confirm(`'${groupId}' 그룹을 삭제하시겠습니까?`)) return;
+            fetch('/api/cms-admin/ab-tests?groupId=' + encodeURIComponent(groupId), { method: 'DELETE' })
+                .then(r => r.json())
+                .then(res => {
+                    if (!res.success) { Toast.error(res.message); return; }
+                    Toast.success(res.message);
+                    this.load();
+                })
+                .catch(() => Toast.error('A/B 그룹 삭제 중 오류가 발생했습니다.'));
+        },
+
+        applyWriteVisibility: function() {
+            if (CMS_AB_CAN_WRITE) return;
+            $('[data-write-only]').hide();
+        },
+    };
+
+    $(document).ready(function() {
+        CmsAbTestPage.itemsPerPage = parseInt($('#limitRows').val()) || 10;
+        CmsAbTestPage.attachSortHandlers();
+        CmsAbTestPage.load(1);
+
+        $('#limitRows').on('change', function() {
+            CmsAbTestPage.itemsPerPage = parseInt($(this).val()) || 10;
+            CmsAbTestPage.load(1);
+        });
+        $('#btnRefresh').on('click', function() { CmsAbTestPage.load(); });
+        $('#btnOpenCreate').on('click', function() { CmsAbTestPage.openCreateModal(); });
+        $('#btnAddAbPage').on('click', function() { CmsAbTestPage.addPageRow('', 5); });
+        $('#btnSaveAbGroup').on('click', function() { CmsAbTestPage.saveGroup(); });
+    });
+</script>
+</th:block>
+</body>
+</html>

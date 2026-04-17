@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<div th:fragment="content">
+
+    <!-- 검색조건 헤더 -->
+    <div class="page-header">
+        <h4 class="page-title">
+            <i class="bi bi-exclamation-circle-fill text-danger"></i>
+            검색조건
+        </h4>
+    </div>
+
+    <!-- 검색 영역 -->
+    <div th:replace="~{pages/cms-approval/cms-approval-search :: search}"></div>
+
+    <!-- 리스트 헤더 + 툴바 -->
+    <div class="page-header mt-3">
+        <h4 class="page-title">
+            <i class="bi bi-exclamation-circle-fill text-danger"></i>
+            리스트
+        </h4>
+        <div class="page-header-actions">
+            <button class="btn btn-outline-secondary btn-sm" id="btnExcel">
+                <i class="bi bi-file-earmark-excel"></i> 엑셀
+            </button>
+            <button class="btn btn-outline-secondary btn-sm" id="btnPrint">
+                <i class="bi bi-file-earmark-text"></i> 출력
+            </button>
+        </div>
+    </div>
+
+    <!-- 테이블 -->
+    <div th:replace="~{pages/cms-approval/cms-approval-table :: table}"></div>
+
+    <!-- 페이지네이션 -->
+    <div th:replace="~{fragments/page-content-layout :: pagination}"></div>
+
+    <!-- ==================== 승인 모달 ==================== -->
+    <div class="modal fade" id="approveModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">승인 확정</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" id="approvePageId"/>
+                    <div class="table-responsive">
+                        <table class="table table-sm mb-3">
+                            <tbody>
+                                <tr>
+                                    <th class="col-w-120">페이지명</th>
+                                    <td id="approvePageName">-</td>
+                                </tr>
+                                <tr>
+                                    <th>요청자</th>
+                                    <td id="approveRequesterName">-</td>
+                                </tr>
+                                <tr>
+                                    <th>요청일시</th>
+                                    <td id="approveRequestedDtime">-</td>
+                                </tr>
+                                <tr>
+                                    <th>노출 시작일</th>
+                                    <td>
+                                        <input type="date" id="approveBeginningDate" class="form-control form-control-sm"/>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <th>노출 종료일</th>
+                                    <td>
+                                        <input type="date" id="approveExpiredDate" class="form-control form-control-sm"/>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <p class="mb-0 text-body-secondary">입력한 노출 기간으로 승인 처리합니다.</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">취소</button>
+                    <button type="button" id="btnApproveConfirm" class="btn btn-primary">승인</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================== 반려 모달 ==================== -->
+    <div class="modal fade" id="rejectModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">반려</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" id="rejectPageId"/>
+                    <div class="mb-3">
+                        <label class="form-label">반려 사유 <span class="text-danger">*</span></label>
+                        <textarea id="rejectReason" class="form-control" rows="3"
+                                  placeholder="반려 사유를 입력하세요."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">취소</button>
+                    <button type="button" id="btnRejectConfirm" class="btn btn-danger">반려</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================== 이력 / 롤백 모달 ==================== -->
+    <div class="modal fade" id="historyModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">처리 이력</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" id="historyPageId"/>
+                    <div class="table-responsive">
+                        <table class="table table-sm table-hover sp-data-grid">
+                            <thead class="table-light">
+                                <tr>
+                                    <th class="col-w-70">버전</th>
+                                    <th class="col-w-100">처리상태</th>
+                                    <th>승인 요청자</th>
+                                    <th class="col-w-160">처리일시</th>
+                                </tr>
+                            </thead>
+                            <tbody id="historyTableBody">
+                                <tr>
+                                    <td colspan="4" class="text-center text-body-secondary">이력을 불러오는 중...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">닫기</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 스크립트 -->
+    <th:block th:replace="~{pages/cms-approval/cms-approval-script :: script}"/>
+
+</div>
+</body>
+</html>
