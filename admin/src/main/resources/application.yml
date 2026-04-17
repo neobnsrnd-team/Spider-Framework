@@ -128,6 +128,7 @@ claude:
 
 # CMS Deploy Configuration
 cms:
+  app-base-url: ${CMS_APP_BASE_URL:/cms}
   deploy:
     receive-url: ${CMS_DEPLOY_RECEIVE_URL:http://133.186.135.23:3001/api/deploy/receive}
     secret: ${CMS_DEPLOY_SECRET:}
