@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<!-- Role Table Fragment -->
+<div th:fragment="table" class="table-responsive">
+    <table class="table table-sm table-hover sp-data-grid" id="roleTable">
+        <thead class="table-light">
+            <!-- W 권한: 체크박스 + CRUD 컬럼 포함 (8열) -->
+            <tr th:if="${userAuthorities != null and userAuthorities.contains('ROLE:W')}">
+                <th class="col-w-60">
+                    <input type="checkbox" id="selectAll" onclick="Roles.toggleSelectAll(this)">
+                </th>
+                <th class="col-w-80">CRUD</th>
+                <th class="col-w-150 sortable" data-sort="roleId">권한ID</th>
+                <th class="col-w-200 sortable" data-sort="roleName">권한명</th>
+                <th class="col-w-120 sortable" data-sort="useYn">사용여부</th>
+                <th class="col-w-300 sortable" data-sort="roleDesc">권한 설명</th>
+                <th class="col-w-100 sortable" data-sort="ranking">Ranking</th>
+                <th class="col-w-120">메뉴 권한</th>
+            </tr>
+            <!-- R 권한: 체크박스 + CRUD 컬럼 제외 (6열) -->
+            <tr th:unless="${userAuthorities != null and userAuthorities.contains('ROLE:W')}">
+                <th class="col-w-150 sortable" data-sort="roleId">권한ID</th>
+                <th class="col-w-200 sortable" data-sort="roleName">권한명</th>
+                <th class="col-w-120 sortable" data-sort="useYn">사용여부</th>
+                <th class="col-w-300 sortable" data-sort="roleDesc">권한 설명</th>
+                <th class="col-w-100 sortable" data-sort="ranking">Ranking</th>
+                <th class="col-w-120">메뉴 권한</th>
+            </tr>
+        </thead>
+        <tbody id="roleTableBody">
+            <tr>
+                <td th:colspan="${userAuthorities != null and userAuthorities.contains('ROLE:W') ? 8 : 6}"
+                    class="text-center py-4 text-body-secondary">
+                    조회 버튼을 클릭하여 데이터를 불러오세요.
+                </td>
+            </tr>
+        </tbody>
+    </table>
+</div>
+</body>
+</html>

@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<div th:fragment="content">
+    <!-- Include Page Content Layout Styles -->
+
+    <!-- Include Modal Styles -->
+    <th:block th:replace="~{pages/menu-manage/menu-manage-modal :: styles}" />
+
+    <!-- Search Section Header -->
+    <div class="page-header">
+        <h4 class="page-title">
+            <i class="bi bi-exclamation-circle-fill text-danger"></i>
+            검색조건
+        </h4>
+    </div>
+
+    <!-- Search Box -->
+    <div th:replace="~{pages/menu-manage/menu-manage-search :: search}"></div>
+
+    <!-- List Section Header + Toolbar -->
+    <div class="d-flex align-items-center justify-content-between mt-3">
+        <div class="page-header mb-0">
+            <h4 class="page-title">
+                <i class="bi bi-exclamation-circle-fill text-danger"></i>
+                리스트
+            </h4>
+        </div>
+        <div th:replace="~{fragments/page-content-layout :: toolbar}"></div>
+    </div>
+
+    <!-- Table -->
+    <div th:replace="~{pages/menu-manage/menu-manage-table :: table}"></div>
+
+    <!-- Pagination -->
+    <div th:replace="~{fragments/page-content-layout :: pagination}"></div>
+
+    <!-- Bottom Action Buttons -->
+    <div th:replace="~{pages/menu-manage/menu-manage-buttons :: buttons}"></div>
+
+    <!-- Menu Modal -->
+    <div th:replace="~{pages/menu-manage/menu-manage-modal :: modal}"></div>
+
+    <!-- Parent Menu Search Modal (for modal) -->
+    <div th:replace="~{pages/menu-manage/menu-manage-modal :: parentSearchModal}"></div>
+
+    <!-- Parent Menu Search Modal (for search) -->
+    <div th:replace="~{pages/menu-manage/menu-manage-search :: parentMenuSearchPopup}"></div>
+
+    <!-- Child Menu Modal -->
+    <div th:replace="~{pages/menu-manage/menu-manage-table :: childMenuModal}"></div>
+
+    <!-- Scripts -->
+    <th:block th:replace="~{pages/menu-manage/menu-manage-script :: script}" />
+</div>
+</body>
+</html>
