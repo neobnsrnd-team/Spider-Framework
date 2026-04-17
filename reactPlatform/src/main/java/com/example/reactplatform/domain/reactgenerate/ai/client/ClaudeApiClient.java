@@ -9,8 +9,10 @@ import java.util.regex.Pattern;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.boot.web.client.RestTemplateBuilder;
+import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
@@ -72,8 +74,11 @@ public class ClaudeApiClient {
                 userPrompt.length());
 
         try {
-            ResponseEntity<Map> response =
-                    restTemplate.postForEntity(props.getUrl(), new HttpEntity<>(body, headers), Map.class);
+            ResponseEntity<Map<String, Object>> response = restTemplate.exchange(
+                    props.getUrl(),
+                    HttpMethod.POST,
+                    new HttpEntity<>(body, headers),
+                    new ParameterizedTypeReference<Map<String, Object>>() {});
 
             String rawText = extractText(response.getBody());
             log.info("Claude API 응답 수신 — {}자", rawText.length());
@@ -99,12 +104,12 @@ public class ClaudeApiClient {
      * Claude API 응답 body에서 텍스트를 추출한다.
      * 응답 구조: { "content": [ { "type": "text", "text": "..." } ] }
      */
-    @SuppressWarnings("unchecked")
-    private String extractText(Map<?, ?> body) {
+    private String extractText(Map<String, Object> body) {
         if (body == null) {
             throw new InternalException("Claude API 응답이 비어있습니다.");
         }
         try {
+            @SuppressWarnings("unchecked")
             List<Map<String, Object>> content = (List<Map<String, Object>>) body.get("content");
             // content 리스트가 null이거나 비어있으면 응답 구조 이상으로 판단
             if (content == null || content.isEmpty()) {

@@ -24,6 +24,16 @@
         VALUES (#{userId}, #{menuId}, #{authCode}, #{favorMenuOrder}, #{now}, #{currentUserId})
     </insert>
 
+    <!-- 배치 인서트 (Oracle INSERT ALL) -->
+    <insert id="insertBatch">
+        INSERT ALL
+        <foreach collection="entries" item="entry">
+            INTO FWK_USER_MENU (USER_ID, MENU_ID, AUTH_CODE, FAVOR_MENU_ORDER, LAST_UPDATE_DTIME, LAST_UPDATE_USER_ID)
+            VALUES (#{userId}, #{entry.menuId}, #{entry.authCode}, 0, #{now}, #{currentUserId})
+        </foreach>
+        SELECT 1 FROM DUAL
+    </insert>
+
     <!-- ==================== 수정 ==================== -->
 
     <update id="update">

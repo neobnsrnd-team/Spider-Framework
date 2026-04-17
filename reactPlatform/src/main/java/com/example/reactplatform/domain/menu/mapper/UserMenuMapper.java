@@ -2,9 +2,19 @@ package com.example.reactplatform.domain.menu.mapper;
 
 import com.example.reactplatform.domain.menu.dto.UserMenuResponse;
 import java.util.List;
+import lombok.AllArgsConstructor;
+import lombok.Data;
 import org.apache.ibatis.annotations.Param;
 
 public interface UserMenuMapper {
+
+    /** 배치 인서트용 최소 파라미터 홀더 */
+    @Data
+    @AllArgsConstructor
+    class UserMenuEntry {
+        private String menuId;
+        private String authCode;
+    }
 
     // ==================== 단건 조회 / 존재 확인 ====================
 
@@ -23,6 +33,15 @@ public interface UserMenuMapper {
             @Param("menuId") String menuId,
             @Param("authCode") String authCode,
             @Param("favorMenuOrder") int favorMenuOrder,
+            @Param("now") String now,
+            @Param("currentUserId") String currentUserId);
+
+    /**
+     * 사용자-메뉴 매핑 일괄 생성 (Oracle INSERT ALL)
+     */
+    void insertBatch(
+            @Param("userId") String userId,
+            @Param("entries") List<UserMenuEntry> entries,
             @Param("now") String now,
             @Param("currentUserId") String currentUserId);
 

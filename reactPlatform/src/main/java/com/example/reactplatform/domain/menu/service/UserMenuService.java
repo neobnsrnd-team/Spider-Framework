@@ -19,6 +19,7 @@ import com.example.reactplatform.global.security.CustomUserDetails;
 import com.example.reactplatform.global.util.AuditUtil;
 import com.example.reactplatform.global.util.SecurityUtil;
 import java.util.List;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -30,6 +31,9 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
 public class UserMenuService {
+
+    /** superadmin 역할 ID — 모든 사용자 메뉴 초기화 권한 보유 */
+    private static final String SUPERADMIN_ROLE_ID = "superadmin";
 
     private final UserMenuMapper userMenuMapper;
     private final UserMapper userMapper;
@@ -94,7 +98,7 @@ public class UserMenuService {
         String currentUserId = currentUser != null ? currentUser.getUserId() : null;
         String currentUserRoleId = currentUser != null ? currentUser.getRoleId() : null;
 
-        if (!userId.equals(currentUserId) && !"superadmin".equals(currentUserRoleId)) {
+        if (!userId.equals(currentUserId) && !SUPERADMIN_ROLE_ID.equals(currentUserRoleId)) {
             throw new BaseException(ErrorType.FORBIDDEN, "본인의 메뉴만 초기화할 수 있습니다.");
         }
 
@@ -106,8 +110,11 @@ public class UserMenuService {
         String now = AuditUtil.now();
         String auditUserId = AuditUtil.currentUserId();
 
-        for (RoleMenuResponse roleMenu : roleMenus) {
-            userMenuMapper.insert(userId, roleMenu.getMenuId(), roleMenu.getAuthCode(), 0, now, auditUserId);
+        if (!roleMenus.isEmpty()) {
+            List<UserMenuMapper.UserMenuEntry> entries = roleMenus.stream()
+                    .map(rm -> new UserMenuMapper.UserMenuEntry(rm.getMenuId(), rm.getAuthCode()))
+                    .collect(Collectors.toList());
+            userMenuMapper.insertBatch(userId, entries, now, auditUserId);
         }
     }
 
@@ -122,11 +129,13 @@ public class UserMenuService {
         String now = AuditUtil.now();
         String currentUserId = AuditUtil.currentUserId();
 
-        for (UserMenuBatchSaveRequest.MenuItem item : menus) {
-            AuthCode authCode = AuthCode.fromCode(item.getAuthCode());
-            if (authCode == null) continue;
+        List<UserMenuMapper.UserMenuEntry> entries = menus.stream()
+                .filter(item -> AuthCode.fromCode(item.getAuthCode()) != null)
+                .map(item -> new UserMenuMapper.UserMenuEntry(item.getMenuId(), item.getAuthCode()))
+                .collect(Collectors.toList());
 
-            userMenuMapper.insert(userId, item.getMenuId(), authCode.getCode(), 0, now, currentUserId);
+        if (!entries.isEmpty()) {
+            userMenuMapper.insertBatch(userId, entries, now, currentUserId);
         }
     }
 }

@@ -340,18 +340,22 @@ public class ReactGenerateService {
     public void logRenderError(String codeId, String errorMessage, String userId, String requestUri) {
         String now = LocalDateTime.now().format(FORMATTER);
 
-        // FWK_ERROR_HIS: 시스템 공통 오류 이력 (기존 유지)
-        eventPublisher.publishEvent(new ErrorLogEvent(
-                TraceIdUtil.get(),
-                "RENDER_ERROR",
-                errorMessage,
-                null, // 클라이언트 오류이므로 서버 스택 트레이스 없음
-                userId,
-                requestUri,
-                "POST",
-                null,
-                now,
-                LogLevel.WARN)); // 렌더링 실패는 서버 장애가 아니므로 WARN
+        // FWK_ERROR_HIS: 시스템 공통 오류 이력 — 이벤트 발행 실패가 비즈니스 로직(updateToFailed)을 막으면 안 됨
+        try {
+            eventPublisher.publishEvent(new ErrorLogEvent(
+                    TraceIdUtil.get(),
+                    "RENDER_ERROR",
+                    errorMessage,
+                    null, // 클라이언트 오류이므로 서버 스택 트레이스 없음
+                    userId,
+                    requestUri,
+                    "POST",
+                    null,
+                    now,
+                    LogLevel.WARN)); // 렌더링 실패는 서버 장애가 아니므로 WARN
+        } catch (Exception e) {
+            log.warn("렌더링 오류 이벤트 발행 실패 — 상태 업데이트는 계속 진행됩니다", e);
+        }
 
         // FWK_RPS_CODE_HIS: 해당 코드 레코드를 FAILED로 업데이트
         if (codeId != null && !codeId.isBlank()) {

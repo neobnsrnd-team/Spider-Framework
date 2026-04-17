@@ -159,7 +159,7 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiResponse<Void>> handleException(Exception ex, HttpServletRequest request)
-            throws AccessDeniedException, AuthenticationException {
+            throws Exception {
         // Spring Security 예외는 시큐리티 필터 체인(AccessDeniedHandler, AuthenticationEntryPoint)에 위임
         if (ex instanceof AccessDeniedException ade) throw ade;
         if (ex instanceof AuthenticationException ae) throw ae;
@@ -167,7 +167,8 @@ public class GlobalExceptionHandler {
         publishErrorEvent(ex, request);
 
         if (!request.getRequestURI().startsWith("/api/")) {
-            throw new RuntimeException(ex);
+            // API가 아닌 경로는 원본 예외를 그대로 전파하여 Spring Boot 기본 에러 처리에 위임
+            throw ex;
         }
 
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)

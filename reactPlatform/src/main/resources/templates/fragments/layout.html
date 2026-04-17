@@ -4,6 +4,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- CSRF 토큰 — jQuery AJAX beforeSend에서 자동 포함 -->
+    <meta name="_csrf" th:content="${_csrf.token}"/>
+    <meta name="_csrf_header" th:content="${_csrf.headerName}"/>
     <title th:text="${pageTitle} ?: 'Admin System'">Admin System</title>
 
     <!-- 1. Bootstrap 5.3.3 -->
@@ -173,5 +176,20 @@
     </script>
 
     <th:block layout:fragment="scripts"></th:block>
+
+    <!-- 모든 jQuery AJAX 요청에 CSRF 토큰 자동 포함 (SessionHandler.js 이후에 실행되어야 함) -->
+    <script>
+        (function () {
+            var csrfToken = $('meta[name="_csrf"]').attr('content');
+            var csrfHeader = $('meta[name="_csrf_header"]').attr('content');
+            if (csrfToken && csrfHeader) {
+                $.ajaxSetup({
+                    beforeSend: function (xhr) {
+                        xhr.setRequestHeader(csrfHeader, csrfToken);
+                    }
+                });
+            }
+        })();
+    </script>
 </body>
 </html>

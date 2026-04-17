@@ -130,8 +130,8 @@ public final class SqlValidator {
 
         String trimmedQuery = query.trim().toUpperCase();
 
-        // 1. SELECT 쿼리만 허용
-        if (!trimmedQuery.startsWith("SELECT")) {
+        // 1. SELECT 또는 CTE(WITH) 쿼리만 허용
+        if (!trimmedQuery.startsWith("SELECT") && !trimmedQuery.startsWith("WITH")) {
             throw new IllegalArgumentException("SELECT 쿼리만 허용됩니다");
         }
 

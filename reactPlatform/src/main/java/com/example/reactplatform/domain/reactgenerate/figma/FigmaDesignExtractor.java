@@ -80,11 +80,15 @@ public class FigmaDesignExtractor {
 
         FigmaNodeResponse.NodeWrapper wrapper = response.getNodes().get(nodeId);
         if (wrapper == null) {
-            // 키 형식 불일치 대비 폴백: 단일 nodeId 요청이므로 첫 번째 값이 대상 노드
-            wrapper = response.getNodes().values().stream()
-                    .findFirst()
-                    .orElseThrow(() -> new NotFoundException("Figma API 응답에서 노드를 찾을 수 없습니다: nodeId=" + nodeId));
-            log.warn("nodeId 직접 조회 실패({}), 첫 번째 노드로 폴백합니다.", nodeId);
+            // Figma API는 nodeId를 ':' (웹 URL) 또는 '-' (내부 포맷) 형식으로 혼용하므로 대안 키 시도
+            String alternateKey = nodeId.contains(":") ? nodeId.replace(":", "-") : nodeId.replace("-", ":");
+            wrapper = response.getNodes().get(alternateKey);
+            if (wrapper != null) {
+                log.debug("nodeId 키 형식 변환으로 조회 성공: {} → {}", nodeId, alternateKey);
+            }
+        }
+        if (wrapper == null) {
+            throw new NotFoundException("Figma API 응답에서 노드를 찾을 수 없습니다: nodeId=" + nodeId);
         }
 
         if (wrapper.getDocument() == null) {

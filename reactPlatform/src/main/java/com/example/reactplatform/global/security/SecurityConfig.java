@@ -55,11 +55,8 @@ public class SecurityConfig {
                 // ContentCachingFilter를 Security Filter 앞에 추가
                 .addFilterBefore(new ContentCachingFilter(), SecurityContextHolderFilter.class)
 
-                // CSRF 설정
-                .csrf(
-                        csrf -> csrf.ignoringRequestMatchers("/api/**") // REST API는 CSRF 비활성화
-                                .ignoringRequestMatchers("/h2-console/**") // H2 Console CSRF 비활성화
-                        )
+                // CSRF 설정 — /api/** 포함 전 경로에 CSRF 활성화 (layout.html CSRF 메타태그 + jQuery beforeSend로 토큰 전송)
+                .csrf(csrf -> csrf.ignoringRequestMatchers("/h2-console/**"))
 
                 // Headers 설정 (H2 Console iframe 허용)
                 .headers(headers -> headers.frameOptions(frame -> frame.sameOrigin()))
