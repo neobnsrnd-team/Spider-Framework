@@ -14,9 +14,11 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
 
 @WebMvcTest(CmsRedirectController.class)
+@TestPropertySource(properties = "cms.user-url=http://133.186.135.23:3001/")
 @DisplayName("CMS root redirect")
 class CmsRedirectControllerTest {
 
@@ -40,11 +42,11 @@ class CmsRedirectControllerTest {
     }
 
     @Test
-    @DisplayName("cms_user role redirects /cms to /cms/dashboard")
-    void cmsRoot_cmsUserRole_redirectsDashboard() throws Exception {
+    @DisplayName("cms_user role redirects /cms to external CMS server")
+    void cmsRoot_cmsUserRole_redirectsExternalCmsServer() throws Exception {
         mockMvc.perform(get("/cms").with(user(userDetails("worker", "cms_user", "CMS:R"))))
                 .andExpect(status().is3xxRedirection())
-                .andExpect(redirectedUrl("/cms/dashboard"));
+                .andExpect(redirectedUrl("http://133.186.135.23:3001/"));
     }
 
     @Test
