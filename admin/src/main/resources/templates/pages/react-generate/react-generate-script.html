@@ -3,6 +3,7 @@
 <body>
 <th:block th:fragment="script">
 <script th:inline="javascript">
+(function () {
     const HAS_REACT_WRITE = /*[[${userAuthorities != null && userAuthorities.contains('REACT_GENERATE:W')}]]*/ false;
 
     let currentId = null;
@@ -183,6 +184,7 @@
             data: JSON.stringify({ codeId: currentId, errorMessage: e.data.error })
         });
     });
+})();
 </script>
 </th:block>
 </body>

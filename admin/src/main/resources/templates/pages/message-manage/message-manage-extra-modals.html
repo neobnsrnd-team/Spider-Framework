@@ -355,6 +355,72 @@
             </div>
         </div>
     </div>
+
+    <!-- ======================== 소스 코드 자동 생성 Modal ======================== -->
+    <div class="modal fade" id="codeGenModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-xl modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header py-2">
+                    <h6 class="modal-title"><i class="bi bi-code-slash me-1"></i> 소스 코드 자동 생성</h6>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <!-- 전문 정보 표시 -->
+                    <div class="d-flex align-items-center gap-2 mb-3 p-2 bg-light border rounded">
+                        <span class="text-body-secondary small">전문 ID</span>
+                        <strong id="codeGenMessageId" class="text-primary"></strong>
+                        <span class="text-body-secondary small ms-2">전문명</span>
+                        <span id="codeGenMessageName"></span>
+                    </div>
+                    <!-- DTO / Mapper XML 탭 -->
+                    <ul class="nav nav-tabs mb-2" id="codeGenTab">
+                        <li class="nav-item">
+                            <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#codeGenDtoPane">
+                                Java DTO
+                            </button>
+                        </li>
+                        <li class="nav-item">
+                            <button class="nav-link" data-bs-toggle="tab" data-bs-target="#codeGenMapperPane">
+                                Mapper XML
+                            </button>
+                        </li>
+                    </ul>
+                    <div class="tab-content">
+                        <!-- DTO 탭 -->
+                        <div class="tab-pane fade show active" id="codeGenDtoPane">
+                            <div class="d-flex justify-content-end mb-1">
+                                <button class="btn btn-sm btn-outline-secondary" onclick="window.CodeGenModal.copy('dto')">
+                                    <i class="bi bi-clipboard"></i> 복사
+                                </button>
+                            </div>
+                            <pre id="codeGenDtoCode" class="p-3 bg-dark text-light rounded small"
+                                 style="max-height:450px; overflow-y:auto; white-space:pre; font-family:monospace;"></pre>
+                        </div>
+                        <!-- Mapper XML 탭 -->
+                        <div class="tab-pane fade" id="codeGenMapperPane">
+                            <div class="d-flex justify-content-end mb-1">
+                                <button class="btn btn-sm btn-outline-secondary" onclick="window.CodeGenModal.copy('mapper')">
+                                    <i class="bi bi-clipboard"></i> 복사
+                                </button>
+                            </div>
+                            <pre id="codeGenMapperCode" class="p-3 bg-dark text-light rounded small"
+                                 style="max-height:450px; overflow-y:auto; white-space:pre; font-family:monospace;"></pre>
+                        </div>
+                    </div>
+                    <!-- 로딩 스피너 (API 호출 중 표시) -->
+                    <div id="codeGenLoading" class="text-center py-5" style="display:none;">
+                        <div class="spinner-border text-primary"></div>
+                        <p class="mt-2 text-body-secondary small">소스 코드를 생성 중입니다...</p>
+                    </div>
+                </div>
+                <div class="modal-footer py-2">
+                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">닫기</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- ======================== /소스 코드 자동 생성 Modal ======================== -->
+
 </div>
 </body>
 </html>

@@ -409,4 +409,25 @@ INSERT INTO FWK_USER_MENU (USER_ID, MENU_ID, AUTH_CODE, LAST_UPDATE_DTIME, LAST_
 INSERT INTO FWK_USER_MENU (USER_ID, MENU_ID, AUTH_CODE, LAST_UPDATE_DTIME, LAST_UPDATE_USER_ID) VALUES ('cmsUser01', 'v3_cms_dashboard', 'W', DATE_FORMAT(NOW(), '%Y%m%d%H%i%s'), 'system');
 INSERT INTO FWK_USER_MENU (USER_ID, MENU_ID, AUTH_CODE, LAST_UPDATE_DTIME, LAST_UPDATE_USER_ID) VALUES ('cmsUser01', 'v3_cms_edit', 'W', DATE_FORMAT(NOW(), '%Y%m%d%H%i%s'), 'system');
 
+-- ============================================================
+-- React 플랫폼 메뉴
+-- ============================================================
+
+INSERT INTO FWK_MENU (MENU_ID, PRIOR_MENU_ID, SORT_ORDER, MENU_NAME, MENU_URL, DISPLAY_YN, USE_YN, LAST_UPDATE_DTIME, LAST_UPDATE_USER_ID)
+VALUES ('v3_react', 'v3_acl_manage', 13, 'React 플랫폼', NULL, 'Y', 'Y', DATE_FORMAT(NOW(), '%Y%m%d%H%i%s'), 'system');
+
+INSERT INTO FWK_MENU (MENU_ID, PRIOR_MENU_ID, SORT_ORDER, MENU_NAME, MENU_URL, DISPLAY_YN, USE_YN, LAST_UPDATE_DTIME, LAST_UPDATE_USER_ID)
+VALUES ('v3_react_generate', 'v3_react', 1, 'React 코드 생성', '/react-generate', 'Y', 'Y', DATE_FORMAT(NOW(), '%Y%m%d%H%i%s'), 'system');
+
+INSERT INTO FWK_MENU (MENU_ID, PRIOR_MENU_ID, SORT_ORDER, MENU_NAME, MENU_URL, DISPLAY_YN, USE_YN, LAST_UPDATE_DTIME, LAST_UPDATE_USER_ID)
+VALUES ('v3_react_generate_his', 'v3_react', 2, 'React 코드 생성 이력', '/react-generate-his', 'Y', 'Y', DATE_FORMAT(NOW(), '%Y%m%d%H%i%s'), 'system');
+
+INSERT INTO FWK_MENU (MENU_ID, PRIOR_MENU_ID, SORT_ORDER, MENU_NAME, MENU_URL, DISPLAY_YN, USE_YN, LAST_UPDATE_DTIME, LAST_UPDATE_USER_ID)
+VALUES ('v3_react_approval', 'v3_react', 3, 'React 코드 승인 관리', '/react-approval', 'Y', 'Y', DATE_FORMAT(NOW(), '%Y%m%d%H%i%s'), 'system');
+
+INSERT INTO FWK_ROLE_MENU (ROLE_ID, MENU_ID, AUTH_CODE) VALUES ('ADMIN', 'v3_react', 'W');
+INSERT INTO FWK_ROLE_MENU (ROLE_ID, MENU_ID, AUTH_CODE) VALUES ('ADMIN', 'v3_react_generate', 'W');
+INSERT INTO FWK_ROLE_MENU (ROLE_ID, MENU_ID, AUTH_CODE) VALUES ('ADMIN', 'v3_react_generate_his', 'W');
+INSERT INTO FWK_ROLE_MENU (ROLE_ID, MENU_ID, AUTH_CODE) VALUES ('ADMIN', 'v3_react_approval', 'W');
+
 COMMIT;

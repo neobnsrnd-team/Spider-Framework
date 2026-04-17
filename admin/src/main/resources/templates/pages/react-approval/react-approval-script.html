@@ -4,6 +4,7 @@
 <th:block th:fragment="script">
 <script th:inline="javascript">
 /*<![CDATA[*/
+(function () {
 const HAS_WRITE = document.getElementById('hasWriteAuth')?.value === 'true';
 // 내 것만 보기 체크박스 — createUserId 필터에 현재 로그인 사용자 ID를 주입할 때 사용
 const CURRENT_USER_ID = /*[[${currentUserId}]]*/ '';
@@ -46,7 +47,7 @@ function isSafeUrl(url) {
 // ═══════════════════════════════════════════════════════
 //  승인 대기 목록 모듈
 // ═══════════════════════════════════════════════════════
-const ReactApprovalPending = {
+const ReactApprovalPending = window.ReactApprovalPending = {
     currentPage: 1,
     totalItems:  0,
     pageSize:    10,
@@ -213,7 +214,7 @@ const ReactApprovalPending = {
 // ═══════════════════════════════════════════════════════
 //  승인 이력 모듈
 // ═══════════════════════════════════════════════════════
-const ReactApprovalHis = {
+const ReactApprovalHis = window.ReactApprovalHis = {
     currentPage:   1,
     totalItems:    0,
     itemsPerPage:  10,
@@ -347,7 +348,7 @@ const ReactApprovalHis = {
 // ═══════════════════════════════════════════════════════
 //  공용 상세 모달 모듈
 // ═══════════════════════════════════════════════════════
-const ReactApprovalDetail = {
+const ReactApprovalDetail = window.ReactApprovalDetail = {
     currentCodeId: null,
     currentStatus: null,
 
@@ -549,7 +550,14 @@ $(document).ready(function () {
     document.addEventListener('tab:deactivated:v3_react_approval', function () {
         EventBus.off('admin:reactApproval:statusChanged');
     });
+
+    // ── tab:activated — 탭으로 돌아올 때마다 최신 데이터 재조회 (이슈 #20 패턴)
+    $('[data-tab-page]').on('tab:activated', function () {
+        ReactApprovalPending.load(ReactApprovalPending.currentPage);
+        ReactApprovalHis.load();
+    });
 });
+})();
 /*]]>*/
 </script>
 </th:block>
