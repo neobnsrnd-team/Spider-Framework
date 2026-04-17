@@ -277,15 +277,22 @@ public class ReactApprovalService {
             log.warn("React 파일 생성 건너뜀 — REACT_CODE가 비어 있음. codeId={}", codeId);
             return;
         }
+        // REACT_APPROVAL_OUTPUT_DIR이 빈 문자열로 설정된 경우 Path.of("")가
+        // 현재 작업 디렉토리로 해석되어 파일이 의도치 않은 위치에 생성될 수 있으므로 먼저 검증한다.
+        String outputDir = approvalProperties.getOutputDir();
+        if (outputDir == null || outputDir.isBlank()) {
+            log.error("React 컴포넌트 저장 경로가 설정되지 않았습니다. codeId={}", codeId);
+            return;
+        }
         try {
-            Path dir = Path.of(approvalProperties.getOutputDir());
+            Path dir = Path.of(outputDir);
             Files.createDirectories(dir); // 디렉토리가 없으면 생성
             Path target = dir.resolve(codeId + ".tsx");
             Files.writeString(target, reactCode, StandardCharsets.UTF_8);
             log.info("React 컴포넌트 파일 생성 완료 — path={}, codeId={}", target.toAbsolutePath(), codeId);
         } catch (IOException e) {
             // 파일 쓰기 실패는 비치명적 — DB 승인은 이미 커밋됨
-            log.error("React 컴포넌트 파일 생성 실패 — outputDir={}, codeId={}", approvalProperties.getOutputDir(), codeId, e);
+            log.error("React 컴포넌트 파일 생성 실패 — outputDir={}, codeId={}", outputDir, codeId, e);
         }
     }
 }
