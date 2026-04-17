@@ -35,7 +35,7 @@ interface AuthContextValue {
   isLoggedIn:       boolean;
   login:            (user: AuthUser) => void;
   logout:           () => void;
-  /** lastLogin만 갱신한다. 자동 로그인 후 /api/auth/me로 보완할 때 사용. */
+  /** lastLogin만 갱신한다. /api/auth/me로 보완할 때 사용. */
   setLastLogin:     (lastLogin: string) => void;
 }
 
@@ -60,8 +60,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const logout = () => {
     localStorage.removeItem(STORAGE_KEY);
-    // 로그아웃 시 자동 로그인 해제 — 다음 방문에서 로그인 화면을 다시 거치도록 한다
-    localStorage.removeItem('hnc_auto_login');
     setUser(null);
   };
 
@@ -83,7 +81,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     registerAuthCallbacks(
       // Access Token 갱신 성공: token·lastLogin 교체 (나머지 사용자 정보 유지)
-      // lastLogin이 전달된 경우(자동 로그인 등) '최근 접속 일시'를 즉시 갱신한다.
+      // lastLogin이 전달된 경우 '최근 접속 일시'를 즉시 갱신한다.
       (newToken: string, lastLogin?: string) => {
         setUser(prev =>
           prev

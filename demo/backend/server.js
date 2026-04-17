@@ -3,11 +3,20 @@
  * @description Express 서버 진입점 + 카드 관련 API 엔드포인트
  *
  * API 목록
- *   GET  /api/cards                          카드 목록 (슬라이더·드롭다운용)
- *   GET  /api/cards/:cardId/transactions     카드별 이용내역
- *   GET  /api/notices/sse                    긴급공지 SSE 스트림 (Demo Frontend 구독)
- *   POST /api/notices/sync                   긴급공지 배포 동기화 (Admin 호출)
- *   POST /api/notices/end                    긴급공지 배포 종료 (Admin 호출)
+ *   GET    /api/auth/me                          로그인 사용자 프로필 + 최근 접속 일시
+ *   POST   /api/auth/login                       로그인
+ *   POST   /api/auth/refresh                     Access Token 재발급
+ *   POST   /api/auth/logout                      로그아웃
+ *   GET    /api/cards                            카드 목록 (슬라이더·드롭다운용)
+ *   GET    /api/transactions                     카드 이용내역
+ *   GET    /api/payment-statement                결제예정금액 / 이용대금명세서
+ *   GET    /api/cards/:cardId/payable-amount     즉시결제 가능금액
+ *   POST   /api/cards/:cardId/immediate-pay      즉시결제 처리
+ *   DELETE /api/cards/:cardId/pin-attempts       PIN 실패 횟수 초기화
+ *   GET    /api/notices/sse                      긴급공지 SSE 스트림 (Demo Frontend 구독)
+ *   POST   /api/notices/sync                     긴급공지 배포 동기화 (Admin 호출)
+ *   POST   /api/notices/end                      긴급공지 배포 종료 (Admin 호출)
+ *   GET    /api/notices/preview                  긴급공지 미리보기 (Admin 호출)
  *
  * DB ↔ 프론트 매핑 규칙 (이 파일 하단 mapper 함수 참고)
  *   Oracle 컬럼명(UPPER_SNAKE)  →  React 프롭(camelCase)
@@ -69,19 +78,6 @@ const pinAttemptStore = new Map();
 /** PIN 최대 허용 실패 횟수 */
 const PIN_MAX_ATTEMPTS = 3;
 
-/**
- * 로컬 환경 전용 미들웨어 — localhost 요청만 허용한다.
- * /api/dev/* 진단 엔드포인트에 적용. 개발 완료 후 해당 라우트와 함께 삭제 예정.
- */
-function localOnly(req, res, next) {
-  const ip = req.ip || req.connection.remoteAddress || "";
-  // ::1 = IPv6 루프백, 127.0.0.1 = IPv4 루프백
-  if (ip === "::1" || ip === "127.0.0.1" || ip.endsWith("127.0.0.1")) {
-    return next();
-  }
-  return res.status(403).json({ error: "로컬 환경에서만 접근할 수 있습니다." });
-}
-
 /** Admin 전용 엔드포인트 인증 미들웨어 — X-Admin-Secret 헤더 검증 */
 function verifyAdminSecret(req, res, next) {
   const secret = req.headers["x-admin-secret"];
@@ -129,145 +125,13 @@ app.use(express.json());
 app.use(cookieParser());
 app.use(apiLogger);
 
-// ── 개발용: D_SPIDERLINK의 POC_ 테이블 목록 및 컬럼 확인 ────────────────────
-// verifyToken 적용 — 인증된 사용자만 raw DB 데이터에 접근 가능
-app.get("/api/dev/raw", localOnly, async (_req, res) => {
-  try {
-    const result = await withConnection((conn) =>
-      conn.execute(
-        `SELECT "이용자", "이용일자", "승인시각", "결제예정일"
-           FROM D_SPIDERLINK.POC_카드사용내역
-          WHERE ROWNUM <= 5`,
-      ),
-    );
-    res.json({ rows: result.rows });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-app.get("/api/dev/tables", localOnly, async (_req, res) => {
-  try {
-    const result = await withConnection((conn) =>
-      conn.execute(
-        `SELECT TABLE_NAME FROM ALL_TABLES
-          WHERE OWNER = 'D_SPIDERLINK'
-            AND TABLE_NAME LIKE 'POC%'
-          ORDER BY TABLE_NAME`,
-      ),
-    );
-    res.json({ tables: (result.rows || []).map((r) => r.TABLE_NAME) });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-/**
- * GET /api/dev/usage-stat
- * POC_카드사용내역 "이용자" 컬럼 분포 진단용 엔드포인트.
- *
- * 반환:
- *   totalCount   — 테이블 전체 레코드 수
- *   distribution — { value, trimmedValue, count } 목록 (이용자 값별 건수)
- *
- * "이용자" 값의 선행/후행 공백이나 대소문자 차이가
- * WHERE "이용자" = :userId 필터에서 레코드가 누락되는 주 원인이므로
- * 원본 값(value)과 TRIM 값(trimmedValue)을 함께 반환한다.
- */
-app.get("/api/dev/usage-stat", localOnly, async (_req, res) => {
-  try {
-    const [countResult, distResult] = await Promise.all([
-      withConnection((conn) =>
-        conn.execute(
-          `SELECT COUNT(*) AS TOTAL_CNT FROM D_SPIDERLINK.POC_카드사용내역`,
-        ),
-      ),
-      withConnection((conn) =>
-        conn.execute(
-          `SELECT "이용자"        AS RAW_VAL,
-                  TRIM("이용자") AS TRIM_VAL,
-                  COUNT(*)       AS CNT
-             FROM D_SPIDERLINK.POC_카드사용내역
-            GROUP BY "이용자", TRIM("이용자")
-            ORDER BY CNT DESC`,
-        ),
-      ),
-    ]);
-
-    res.json({
-      totalCount: countResult.rows[0]?.TOTAL_CNT ?? 0,
-      distribution: (distResult.rows || []).map((r) => ({
-        value: r.RAW_VAL, // DB에 실제 저장된 값 (공백 포함 가능)
-        trimmedValue: r.TRIM_VAL, // 앞뒤 공백 제거 후 값
-        count: r.CNT,
-      })),
-    });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-app.get("/api/dev/columns/:tbl", localOnly, async (req, res) => {
-  try {
-    const tbl = req.params.tbl.toUpperCase();
-    const result = await withConnection((conn) =>
-      conn.execute(
-        `SELECT COLUMN_NAME, DATA_TYPE
-           FROM ALL_TAB_COLUMNS
-          WHERE OWNER = 'D_SPIDERLINK'
-            AND TABLE_NAME = :tbl
-          ORDER BY COLUMN_ID`,
-        { tbl }, // SQL 인젝션 방지: bind variable 사용
-      ),
-    );
-    res.json({ table: tbl, columns: result.rows });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-/**
- * GET /api/dev/user-logins
- * POC_USER 테이블의 전체 사용자 로그인 현황 진단용 엔드포인트.
- * 개발 완료 후 이 라우트와 함께 삭제 예정.
- */
-app.get("/api/dev/user-logins", localOnly, async (_req, res) => {
-  try {
-    const result = await withConnection((conn) =>
-      conn.execute(
-        `SELECT USER_ID, USER_NAME,
-                LAST_LOGIN_DTIME,
-                CASE
-                  WHEN LAST_LOGIN_DTIME IS NULL THEN '(없음)'
-                  ELSE TO_CHAR(
-                    TO_DATE(LAST_LOGIN_DTIME, 'YYYYMMDDHH24MISS'),
-                    'YYYY.MM.DD HH24:MI:SS'
-                  )
-                END AS LAST_LOGIN_FORMATTED
-           FROM D_SPIDERLINK.POC_USER
-          ORDER BY USER_ID`,
-      ),
-    );
-    res.json({
-      users: (result.rows || []).map((r) => ({
-        userId:             r.USER_ID,
-        userName:           r.USER_NAME,
-        lastLoginRaw:       r.LAST_LOGIN_DTIME,
-        lastLoginFormatted: r.LAST_LOGIN_FORMATTED,
-      })),
-    });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
 // ── 인증 ─────────────────────────────────────────────────────────────────────
 
 /**
  * GET /api/auth/me
  * Authorization: Bearer <accessToken>
  * 현재 로그인 사용자의 프로필과 최근 접속 일시를 반환한다.
- * 자동 로그인 후 Access Token이 아직 유효해 refresh가 발생하지 않은 경우에도
+ * Access Token이 아직 유효해 refresh가 발생하지 않은 경우에도
  * 프론트엔드가 lastLogin을 즉시 채울 수 있도록 제공한다.
  */
 app.get("/api/auth/me", verifyToken, async (req, res) => {
@@ -405,7 +269,7 @@ app.post("/api/auth/login", async (req, res) => {
  * POST /api/auth/refresh
  * Refresh Token(httpOnly 쿠키)으로 새 Access Token 발급.
  * 저장된 토큰과 불일치 시 탈취로 간주하고 해당 유저의 토큰을 무효화한다.
- * 자동 로그인 등 재진입 시점을 포함해 세션 활동이 감지되므로 LAST_LOGIN_DTIME을 갱신한다.
+ * 세션 활동이 감지되는 시점마다 LAST_LOGIN_DTIME을 갱신한다.
  */
 app.post("/api/auth/refresh", (req, res) => {
   const refreshToken = req.cookies?.refreshToken;
@@ -521,59 +385,6 @@ function mapCard(row) {
     limitAmount: limit,
     usedAmount: used,
   };
-}
-
-/**
- * TB_CARD_TX 로우 → 프론트 Transaction 객체
- *
- * DB 컬럼 예시:
- *   TX_ID         VARCHAR2(30)   PK
- *   CARD_ID       VARCHAR2(20)   FK → TB_CARD_INFO
- *   CARD_NM       VARCHAR2(100)  카드명 (조인 또는 중복 보관)
- *   MERCHANT_NM   VARCHAR2(200)  가맹점명
- *   TX_AMT        NUMBER(15,2)   거래금액 (취소는 음수)
- *   TX_DT         VARCHAR2(10)   거래일 (YYYY.MM.DD)
- *   PAY_TYPE_CD   VARCHAR2(20)   결제유형 코드
- *   APRVL_NO      VARCHAR2(30)   승인번호
- *   TX_STAT_CD    VARCHAR2(10)   거래상태 코드
- *
- * @param {object} row
- * @returns {object} 프론트 Transaction 타입
- */
-function mapTransaction(row) {
-  return {
-    id: row.TX_ID,
-    merchant: row.MERCHANT_NM,
-    amount: row.TX_AMT,
-    date: row.TX_DT,
-    // 코드값 → 화면 표시 레이블 변환
-    type: mapPayTypeCode(row.PAY_TYPE_CD),
-    approvalNumber: row.APRVL_NO,
-    status: mapTxStatCode(row.TX_STAT_CD),
-    cardName: row.CARD_NM,
-  };
-}
-
-/** 결제유형 코드 → 표시 문자열 */
-function mapPayTypeCode(code) {
-  const map = {
-    LUMP: "일시불",
-    INSTALL_03: "할부(3개월)",
-    INSTALL_06: "할부(6개월)",
-    INSTALL_12: "할부(12개월)",
-    CANCEL: "취소",
-  };
-  return map[code] ?? code;
-}
-
-/** 거래상태 코드 → 표시 문자열 */
-function mapTxStatCode(code) {
-  const map = {
-    APPROVED: "승인",
-    CONFIRMED: "결제확정",
-    CANCELLED: "취소",
-  };
-  return map[code] ?? code;
 }
 
 /**
@@ -910,7 +721,10 @@ app.get("/api/payment-statement", verifyToken, async (req, res) => {
           txBinds.toDate = bp.toDate; // YYYYMMDD
           billingPeriodFormatted = bp.formatted; // { usageStart, usageEnd, dueDate }
         } catch (e) {
-          console.warn("[payment-statement] 공여기간 계산 실패:", e.message);
+          // 공여기간 계산 실패 시 날짜 조건 없이 쿼리가 실행되면 전체 데이터가 조회되므로
+          // 조용히 무시하지 않고 에러를 상위로 전파해 500 응답을 반환한다
+          console.error("[payment-statement] 공여기간 계산 실패:", e.message);
+          throw new Error(`공여기간 계산 실패 (결제일: ${D}): ${e.message}`);
         }
       }
     }
@@ -1001,104 +815,6 @@ app.get("/api/payment-statement", verifyToken, async (req, res) => {
 });
 
 /**
- * GET /api/cards/:cardId/transactions
- * 특정 카드의 이용내역을 페이징하여 반환합니다.
- *
- * Path Params:
- *   cardId — 카드 ID
- *
- * Query Params:
- *   page     (기본 1)   — 페이지 번호 (1-based)
- *   pageSize (기본 20)  — 페이지 당 건수
- *   fromDate (선택)     — 조회 시작일 YYYYMMDD
- *   toDate   (선택)     — 조회 종료일 YYYYMMDD
- *
- * Response 200:
- *   {
- *     transactions: Transaction[],
- *     totalCount: number,
- *     page: number,
- *     pageSize: number
- *   }
- */
-app.get("/api/cards/:cardId/transactions", verifyToken, async (req, res) => {
-  try {
-    const { cardId } = req.params;
-    const page = Math.max(1, Number(req.query.page) || 1);
-    const pageSize = Math.min(100, Number(req.query.pageSize) || 20);
-    const { fromDate, toDate } = req.query;
-
-    const offset = (page - 1) * pageSize;
-
-    const result = await withConnection(async (conn) => {
-      // ── 전체 건수 ──────────────────────────────────────────────────
-      let countSql = `
-        SELECT COUNT(*) AS TOTAL_CNT
-        FROM TB_CARD_TX
-        WHERE CARD_ID = :cardId
-      `;
-      const binds = { cardId };
-
-      if (fromDate) {
-        countSql += " AND TX_DT >= :fromDate";
-        binds.fromDate = fromDate;
-      }
-      if (toDate) {
-        countSql += " AND TX_DT <= :toDate";
-        binds.toDate = toDate;
-      }
-
-      const countRes = await conn.execute(countSql, binds);
-      const totalCount = countRes.rows[0]?.TOTAL_CNT ?? 0;
-
-      // ── 페이징 데이터 ──────────────────────────────────────────────
-      // Oracle 12c+ OFFSET/FETCH 문법 사용
-      let dataSql = `
-        SELECT
-          TX_ID,
-          CARD_NM,
-          MERCHANT_NM,
-          TX_AMT,
-          TX_DT,
-          PAY_TYPE_CD,
-          APRVL_NO,
-          TX_STAT_CD
-        FROM TB_CARD_TX
-        WHERE CARD_ID = :cardId
-      `;
-
-      if (fromDate) {
-        dataSql += " AND TX_DT >= :fromDate";
-      }
-      if (toDate) {
-        dataSql += " AND TX_DT <= :toDate";
-      }
-
-      dataSql += `
-        ORDER BY TX_DT DESC, TX_ID DESC
-        OFFSET :offset ROWS FETCH NEXT :pageSize ROWS ONLY
-      `;
-      binds.offset = offset;
-      binds.pageSize = pageSize;
-
-      const dataRes = await conn.execute(dataSql, binds);
-
-      return { rows: dataRes.rows, totalCount };
-    });
-
-    res.json({
-      transactions: (result.rows || []).map(mapTransaction),
-      totalCount: result.totalCount,
-      page,
-      pageSize,
-    });
-  } catch (err) {
-    console.error("[GET /api/cards/:cardId/transactions]", err);
-    res.status(500).json({ error: "DB 조회 중 오류가 발생했습니다." });
-  }
-});
-
-/**
  * GET /api/cards/:cardId/payable-amount
  * 즉시결제 가능금액 및 한도금액 조회.
  *
@@ -1175,7 +891,7 @@ app.post("/api/cards/:cardId/immediate-pay", verifyToken, async (req, res) => {
   try {
     const userId = req.user.userId;
     const { cardId } = req.params;
-    const { pin, amount } = req.body;
+    const { pin, amount, accountNumber } = req.body;
     const requestAmount = Number(amount);
 
     // PIN 검증 — 오늘 날짜의 MMDD (월·일 각 2자리, 예: 4월 15일 → "0415")
@@ -1218,8 +934,24 @@ app.post("/api/cards/:cardId/immediate-pay", verifyToken, async (req, res) => {
 
     const result = await withConnection(async (conn) => {
       try {
-        // ── 1. 미결제 내역 조회 ─────────────────────────────────────
-        // FOR UPDATE로 해당 행을 잠가 동시 결제 요청으로 인한 이중 차감을 방지한다.
+        // ── 0. 트랜잭션 기준 시각 조회 ────────────────────────────────
+        // SYSDATE를 트랜잭션 시작 시 한 번만 조회해 뱅킹 거래내역·카드 사용내역
+        // 업데이트·응답 completedAt에 모두 동일한 시각을 사용한다.
+        // 여러 번 호출하면 트랜잭션 도중 초·분이 바뀔 때 시각 불일치가 생긴다.
+        const { rows: [txRow] } = await conn.execute(
+          `SELECT TO_CHAR(SYSDATE, 'YYYYMMDDHH24MISS')   AS TX_DATETIME,
+                  TO_CHAR(SYSDATE, 'YYYYMMDD')            AS TX_DATE,
+                  TO_CHAR(SYSDATE, 'YYYY.MM.DD HH24:MI') AS COMPLETED_AT
+             FROM DUAL`,
+        );
+        const txDateTime  = txRow.TX_DATETIME;  // 뱅킹 거래내역 INSERT용
+        const txDate      = txRow.TX_DATE;       // 카드 사용내역 최종결제일자용
+        const completedAt = txRow.COMPLETED_AT;  // 응답 처리일시용 — commit 전에 확보해야
+                                                 // 커밋 후 조회 실패 시 500 반환을 막을 수 있다
+
+        // ── 1. 미결제 내역 조회 ─────────────────────────────────────────
+        // 미결제 잔액 총합을 먼저 구해야 뱅킹 계좌에서 차감할 실제 금액을 산정할 수 있다.
+        // FOR UPDATE로 행을 잠가 동시 결제 요청에 의한 이중 차감을 방지한다.
         const { rows } = await conn.execute(
           `SELECT ROWID,
                   "결제잔액",
@@ -1234,11 +966,43 @@ app.post("/api/cards/:cardId/immediate-pay", verifyToken, async (req, res) => {
           { userId, cardId },
         );
 
-        let remaining = requestAmount; // 아직 배분하지 못한 결제 잔여금
-        let totalPaid = 0; // 이번 결제에서 실제 차감된 총합계
-        let processedCount = 0; // 업데이트된 내역 건수
+        // requestAmount가 미결제 잔액 총합보다 크면 초과분은 차감하지 않는다.
+        // 초과 차감 시 뱅킹 계좌에서 돈이 빠져나갔지만 카드 내역에 반영되지 않아 차액이 소실된다.
+        const totalDebt = rows.reduce((sum, r) => sum + Number(r["결제잔액"]), 0);
+        const actualDeductAmount = Math.min(requestAmount, totalDebt);
 
-        // ── 2. 이용일자 오래된 순으로 순차 차감 ────────────────────
+        // ── 2. 뱅킹 계좌 잔액 확인 ──────────────────────────────────────
+        // FOR UPDATE로 동시 출금 요청에 의한 중복 차감을 방지한다.
+        // 잔액 비교는 실제 차감할 금액(actualDeductAmount) 기준으로 수행한다.
+        const { rows: acctRows } = await conn.execute(
+          `SELECT "계좌잔액"
+             FROM D_SPIDERLINK.POC_뱅킹계좌정보
+            WHERE "계좌번호"    = :accountNumber
+              AND "사용자아이디" = :userId
+            FOR UPDATE`,
+          { accountNumber, userId },
+        );
+
+        if (!acctRows || acctRows.length === 0) {
+          // 계좌 미존재는 비즈니스 오류 — 시스템 오류 메시지로 감추지 않고 사용자에게 전달
+          const err = new Error("출금 계좌를 찾을 수 없습니다.");
+          err.code = "ACCOUNT_NOT_FOUND";
+          throw err;
+        }
+
+        const currentBalance = Number(acctRows[0]["계좌잔액"]);
+        if (currentBalance < actualDeductAmount) {
+          // 잔액 부족은 서버 오류가 아니라 비즈니스 오류이므로 별도 에러 코드로 처리
+          const err = new Error("잔액이 부족합니다.");
+          err.code = "INSUFFICIENT_BALANCE";
+          throw err;
+        }
+
+        // ── 3. POC_카드사용내역 UPDATE — 이용일자 오래된 순으로 순차 차감 ──
+        let remaining = actualDeductAmount; // 아직 배분하지 못한 결제 잔여금
+        let totalPaid = 0;                  // 이번 결제에서 실제 차감된 총합계
+        let processedCount = 0;             // 업데이트된 내역 건수
+
         for (const row of rows) {
           if (remaining <= 0) break;
 
@@ -1260,18 +1024,17 @@ app.post("/api/cards/:cardId/immediate-pay", verifyToken, async (req, res) => {
           }
 
           await conn.execute(
-            // 최종결제일자는 DB 서버의 SYSDATE를 직접 사용 — JS new Date()는 UTC 기준이라
-            // KST 자정~오전 9시 사이에 날짜가 하루 밀리는 버그가 있음
             `UPDATE D_SPIDERLINK.POC_카드사용내역
                 SET "결제잔액"     = :newBalance,
                     "누적결제금액" = :newAccumulated,
                     "결제상태코드" = :newStatusCode,
-                    "최종결제일자" = TO_CHAR(SYSDATE, 'YYYYMMDD')
+                    "최종결제일자" = :txDate
               WHERE ROWID = :rid`,
             {
               newBalance,
               newAccumulated: 누적결제금액 + deducted,
               newStatusCode,
+              txDate,       // 미리 조회한 날짜 변수 사용 — SYSDATE 재호출 불필요
               rid: row.ROWID, // ROWID는 Oracle 예약 의사컬럼이라 바인드 변수명으로 사용 불가 → rid로 대체
             },
           );
@@ -1281,43 +1044,68 @@ app.post("/api/cards/:cardId/immediate-pay", verifyToken, async (req, res) => {
           processedCount++;
         }
 
-        // ── 3. 한도 복원 ────────────────────────────────────────────
-        // 결제된 총합계만큼 이용가능금액을 가산하고 사용금액을 차감한다.
+        // 실제 차감된 금액을 반영한 최종 계좌 잔액
+        const finalBalance = currentBalance - totalPaid;
+
+        // ── 4. 뱅킹 계좌 잔액 차감 ──────────────────────────────────────
+        // requestAmount가 아닌 totalPaid(실제 차감된 금액)로 잔액을 갱신해
+        // 미결제 잔액이 요청 금액보다 적을 때 초과 차감되지 않도록 한다.
+        await conn.execute(
+          `UPDATE D_SPIDERLINK.POC_뱅킹계좌정보
+              SET "계좌잔액" = :finalBalance
+            WHERE "계좌번호"    = :accountNumber
+              AND "사용자아이디" = :userId`,
+          { finalBalance, accountNumber, userId },
+        );
+
+        // ── 5. 뱅킹 거래내역 INSERT ──────────────────────────────────────
+        // 미리 조회한 txDateTime 변수를 사용해 계좌 차감과 동일한 시각을 기록한다.
+        await conn.execute(
+          `INSERT INTO D_SPIDERLINK.POC_뱅킹거래내역
+             ("계좌번호", "거래일시", "거래점", "출금액", "입금액", "잔액",
+              "보낸분받는분", "적요", "송금메모", "입금계좌번호", "사용자아이디")
+           VALUES
+             (:accountNumber, :txDateTime, '하나카드',
+              :totalPaid, 0, :finalBalance,
+              '하나카드사', '카드즉시결제', NULL, :cardId, :userId)`,
+          { accountNumber, txDateTime, totalPaid, finalBalance, cardId, userId },
+        );
+
+        // ── 6. POC_카드리스트 UPDATE — 한도 복원 ─────────────────────────
+        // 결제된 총합계만큼 사용금액을 차감한다.
+        // 이용가능금액 컬럼은 없음 — 한도금액 - 사용금액으로 계산되는 파생값
         if (totalPaid > 0) {
           await conn.execute(
             `UPDATE D_SPIDERLINK.POC_카드리스트
                 SET "사용금액" = "사용금액" - :totalPaid
               WHERE "사용자아이디" = :userId
                 AND "카드번호"     = :cardId`,
-            // 이용가능금액 컬럼은 없음 — 한도금액 - 사용금액으로 계산되는 파생값
             { totalPaid, userId, cardId },
           );
         }
 
-        // ── 4. 커밋 — 모든 UPDATE가 성공해야 반영된다 ──────────────
+        // ── 7. 커밋 — 모든 UPDATE/INSERT가 성공해야 반영된다 ─────────────
+        // completedAt은 커밋 전에 이미 확보했으므로 커밋 후 조회 실패로
+        // 결제가 완료되었는데 500 응답이 반환되는 문제가 발생하지 않는다.
         await conn.commit();
 
-        // 처리일시는 DB 서버 시각 기준으로 반환 — 클라이언트 시각과 불일치 방지
-        const [{ COMPLETED_AT }] = (
-          await conn.execute(
-            `SELECT TO_CHAR(SYSDATE, 'YYYY.MM.DD HH24:MI') AS COMPLETED_AT FROM DUAL`,
-          )
-        ).rows;
-
-        return {
-          paidAmount: totalPaid,
-          processedCount,
-          completedAt: COMPLETED_AT,
-        };
+        return { paidAmount: totalPaid, processedCount, completedAt };
       } catch (err) {
         // 어느 한 단계라도 실패하면 전체 롤백하여 데이터 무결성 보장
         await conn.rollback();
+        // 잔액 부족은 비즈니스 오류이므로 code를 유지한 채 상위로 전파
         throw err;
       }
     });
 
     res.json(result);
   } catch (err) {
+    // 비즈니스 오류는 사용자에게 구체적인 사유를 전달하기 위해 422로 응답한다.
+    // 시스템 오류(DB 장애 등)는 내부 상세를 노출하지 않고 일반 메시지만 반환한다.
+    const BUSINESS_ERROR_CODES = ["INSUFFICIENT_BALANCE", "ACCOUNT_NOT_FOUND"];
+    if (BUSINESS_ERROR_CODES.includes(err.code)) {
+      return res.status(422).json({ error: err.message });
+    }
     console.error("[POST /api/cards/:cardId/immediate-pay]", err);
     res.status(500).json({ error: "즉시결제 처리 중 오류가 발생했습니다." });
   }

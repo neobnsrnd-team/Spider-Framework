@@ -40,8 +40,6 @@ export function LoginPage({
   onLogin,
   saveId = false,
   onSaveIdChange,
-  autoLogin = false,
-  onAutoLoginChange,
 }: LoginPageProps) {
   const ALT_LOGIN_ITEMS = [
     {
@@ -122,17 +120,12 @@ export function LoginPage({
           />
         </Stack>
 
-        {/* 아이디 저장 / 자동 로그인 — 각각 독립적으로 체크 가능 */}
+        {/* 아이디 저장 */}
         <Inline gap="lg" className="pt-xs">
           <Checkbox
             label="아이디 저장"
             checked={saveId}
             onChange={onSaveIdChange ?? (() => {})}
-          />
-          <Checkbox
-            label="자동 로그인"
-            checked={autoLogin}
-            onChange={onAutoLoginChange ?? (() => {})}
           />
         </Inline>
 

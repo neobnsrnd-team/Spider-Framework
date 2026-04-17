@@ -1504,6 +1504,31 @@
                     return;
                 }
 
+                // 헤더 저장 전 신규 필드 사전 검증 (저장 후 불완전 레코드 방지)
+                const startIdx  = this._originalModalFieldCount;
+                const newFields = (this.modalFields || []).slice(startIdx).filter(f => f !== null);
+
+                if (newFields.length > 0) {
+                    let isFieldValid = true;
+                    newFields.forEach((f) => {
+                        const rowIdx = this.modalFields.indexOf(f);
+                        ['messageFieldId', 'messageFieldName'].forEach(function(key) {
+                            if (!f[key] || !String(f[key]).trim()) {
+                                const $cell = $('#modalMessageFieldsBody tr[data-row-index="' + rowIdx + '"] td[data-field="' + key + '"]');
+                                $cell.addClass('field-cell-error');
+                                $cell.off('mousedown.fieldErr click.fieldErr').on('mousedown.fieldErr click.fieldErr', function() {
+                                    $(this).removeClass('field-cell-error');
+                                });
+                                isFieldValid = false;
+                            }
+                        });
+                    });
+                    if (!isFieldValid) {
+                        Toast.warning('전문필드ID와 전문필드명을 입력해주세요.');
+                        return;
+                    }
+                }
+
                 const messageData = {
                     orgId: $('#modalOrgId').val().trim(),
                     messageId: $('#modalMessageId').val().trim(),
@@ -1536,10 +1561,8 @@
                     data: JSON.stringify(messageData),
                     success: (response) => {
                         if (response.success) {
-                            const savedOrgId      = messageData.orgId;
-                            const savedMessageId  = messageData.messageId;
-                            const startIdx        = this._originalModalFieldCount;
-                            const newFields       = (this.modalFields || []).slice(startIdx).filter(f => f !== null);
+                            const savedOrgId     = messageData.orgId;
+                            const savedMessageId = messageData.messageId;
 
                             if (newFields.length === 0) {
                                 Toast.success(this.mode === 'create' ? '전문이 등록되었습니다.' : '전문이 수정되었습니다.');
@@ -1548,22 +1571,7 @@
                                 return;
                             }
 
-                            // 필수값 검증 (전문필드ID, 전문필드명)
-                            let isFieldValid = true;
-                            newFields.forEach((f) => {
-                                const rowIdx = this.modalFields.indexOf(f);
-                                ['messageFieldId', 'messageFieldName'].forEach(function(key) {
-                                    if (!f[key] || !String(f[key]).trim()) {
-                                        const $cell = $('#modalMessageFieldsBody tr[data-row-index="' + rowIdx + '"] td[data-field="' + key + '"]');
-                                        $cell.addClass('field-cell-error');
-                                        $cell.off('mousedown.fieldErr click.fieldErr').on('mousedown.fieldErr click.fieldErr', function() {
-                                            $(this).removeClass('field-cell-error');
-                                        });
-                                        isFieldValid = false;
-                                    }
-                                });
-                            });
-                            if (!isFieldValid) return;
+                            // 필수값 검증은 저장 요청 전 완료됨
 
                             const toInt = (v) => { const n = parseInt(v); return isNaN(n) ? null : n; };
                             const fieldBodies = newFields.map(f => ({
@@ -3187,6 +3195,47 @@
                 });
             },
 
+            openCodeGenModal: function() {
+                if (!this.currentOrgId || !this.currentMessageId) return;
+                var orgId = this.currentOrgId;
+                var messageId = this.currentMessageId;
+
+                // 모달 오픈 전 탭 초기화 및 로딩 상태 설정
+                $('#codeGenDtoCode').text('');
+                $('#codeGenMapperCode').text('');
+                $('#codeGenMessageId').text(messageId);
+                $('#codeGenMessageName').text('');
+                $('#codeGenLoading').show();
+                $('#codeGenTab').closest('.modal-body').find('.tab-content').hide();
+
+                // getOrCreateInstance: 중복 열기 시 기존 인스턴스 재사용
+                var modal = bootstrap.Modal.getOrCreateInstance(document.getElementById('codeGenModal'));
+                modal.show();
+
+                $.ajax({
+                    url: API_BASE_URL + '/code-gen/message/' + encodeURIComponent(messageId) + '?orgId=' + encodeURIComponent(orgId),
+                    method: 'GET',
+                    success: function(response) {
+                        if (response.success && response.data) {
+                            var data = response.data;
+                            $('#codeGenMessageId').text(data.messageId);
+                            $('#codeGenMessageName').text(data.messageName || '');
+                            $('#codeGenDtoCode').text(data.dtoCode || '');
+                            $('#codeGenMapperCode').text(data.mapperXmlCode || '');
+                        } else {
+                            Toast.error(response.message || '소스 코드 생성에 실패했습니다.');
+                        }
+                    },
+                    error: function(xhr) {
+                        Toast.error(xhr.responseJSON?.message || '소스 코드 생성 중 오류가 발생했습니다.');
+                    },
+                    complete: function() {
+                        $('#codeGenLoading').hide();
+                        $('#codeGenTab').closest('.modal-body').find('.tab-content').show();
+                    }
+                });
+            },
+
             openReloadModal: function() {
                 if (!this.currentOrgId || !this.currentMessageId) return;
                 var orgId = this.currentOrgId;
@@ -3296,6 +3345,11 @@
             $('#messageTable thead th[data-sort]').addClass('sortable');
             window.Messages.updateSortIndicators();
             window.Messages.load();
+
+            // 캐시에서 복원 시(tab:activated) 메시지 목록 최신화
+            $('[data-tab-page]').off('tab:activated.messageManage').on('tab:activated.messageManage', function () {
+                window.Messages.load();
+            });
         } else {
             // 다른 페이지에서 MessageDetailModal만 사용하는 경우 CodeGroupPickerModal만 초기화
             window.CodeGroupPickerModal.init();
@@ -3455,6 +3509,46 @@
                         $('#btnExcelUploadSubmit').prop('disabled', false);
                     }
                 });
+            }
+        };
+
+        // ==================== CodeGenModal ====================
+        // 소스 코드 생성 모달: 탭(DTO/Mapper XML) 내 코드 클립보드 복사 기능
+        window.CodeGenModal = {
+            /**
+             * 지정된 탭의 코드를 클립보드에 복사한다.
+             * @param {'dto'|'mapper'} type - 복사할 코드 종류
+             */
+            copy: function(type) {
+                var codeEl = type === 'dto'
+                    ? document.getElementById('codeGenDtoCode')
+                    : document.getElementById('codeGenMapperCode');
+
+                if (!codeEl || !codeEl.textContent.trim()) {
+                    Toast.warning('복사할 코드가 없습니다.');
+                    return;
+                }
+
+                navigator.clipboard.writeText(codeEl.textContent)
+                    .then(function() {
+                        Toast.success('코드가 클립보드에 복사되었습니다.');
+                    })
+                    .catch(function() {
+                        // HTTPS가 아닌 환경에서 clipboard API 미지원 시 fallback
+                        var textarea = document.createElement('textarea');
+                        textarea.value = codeEl.textContent;
+                        textarea.style.position = 'fixed';
+                        textarea.style.opacity = '0';
+                        document.body.appendChild(textarea);
+                        textarea.select();
+                        try {
+                            document.execCommand('copy');
+                            Toast.success('코드가 클립보드에 복사되었습니다.');
+                        } catch (e) {
+                            Toast.error('클립보드 복사에 실패했습니다.');
+                        }
+                        document.body.removeChild(textarea);
+                    });
             }
         };
 

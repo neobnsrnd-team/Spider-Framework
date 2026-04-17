@@ -375,6 +375,11 @@
 
     $(document).ready(function () {
         EmergencyNoticeDeployPage.init();
+
+        // 캐시에서 복원 시(tab:activated) 긴급공지 배포 관리 최신화
+        $('[data-tab-page]').off('tab:activated.emergencyNoticeDeploy').on('tab:activated.emergencyNoticeDeploy', function () {
+            EmergencyNoticeDeployPage.load(1);
+        });
     });
     /*]]>*/
 </script>

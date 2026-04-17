@@ -350,6 +350,11 @@ if (document.readyState === 'loading') {
 } else {
     XmlPropertyPage.init();
 }
+
+// 캐시에서 복원 시(tab:activated) XML Property 파일 목록 최신화
+$('[data-tab-page]').off('tab:activated.xmlProperty').on('tab:activated.xmlProperty', function () {
+    XmlPropertyPage.loadFileList();
+});
 </script>
 </th:block>
 </body>

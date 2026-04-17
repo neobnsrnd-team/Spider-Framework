@@ -125,7 +125,7 @@
             $('link[data-page-css]').filter(function() { return this.getAttribute('data-page-css') === page; }).remove();
 
             if (this.activeTab === page) {
-                // 활성 탭은 DOM에 있으므로 제거 전 정리 이벤트 발송 (EventBus.off() 호출 기회 제공)
+                // 활성 탭은 DOM에 있으므로 제거 전 정리 이벤트 발송 (Admin_EventBus.off() 호출 기회 제공)
                 const activeContent = $('#dynamic-content').children('[data-tab-page]');
                 activeContent.trigger('tab:removed');
                 activeContent.remove();
@@ -136,7 +136,7 @@
                     this.showWelcome();
                 }
             } else {
-                // 비활성 탭은 캐시에서 삭제 전 정리 이벤트 발송 (EventBus.off() 호출 기회 제공)
+                // 비활성 탭은 캐시에서 삭제 전 정리 이벤트 발송 (Admin_EventBus.off() 호출 기회 제공)
                 if (this.contentCache[page]) {
                     this.contentCache[page].trigger('tab:removed');
                     delete this.contentCache[page];

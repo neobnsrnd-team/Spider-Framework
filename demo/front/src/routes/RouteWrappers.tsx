@@ -16,6 +16,7 @@ import { useNavigate, useLocation, useSearchParams, useParams } from "react-rout
 import type { NoticePayload } from "@/hooks/useEmergencyNotice";
 import { useAuth } from "@/contexts/AuthContext";
 import { axiosInstance } from "@/api/axiosInstance";
+import { maskAccountNumber } from "@/utils/format";
 import {
   Landmark,
   Building,
@@ -74,18 +75,14 @@ import {
 
 /** localStorage 키 상수 */
 const LS_SAVED_ID = "hnc_saved_id";
-const LS_AUTO_LOGIN = "hnc_auto_login";
 
 export function LoginRoute() {
   const navigate = useNavigate();
-  const { login, isLoggedIn } = useAuth();
+  const { login } = useAuth();
 
   // 이전 방문에서 저장된 값으로 초기화
   const [saveId, setSaveId] = useState(
     () => !!localStorage.getItem(LS_SAVED_ID),
-  );
-  const [autoLogin, setAutoLogin] = useState(
-    () => !!localStorage.getItem(LS_AUTO_LOGIN),
   );
 
   // 아이디 저장이 켜져 있으면 저장된 아이디로 초기화, 아니면 빈 문자열
@@ -99,16 +96,6 @@ export function LoginRoute() {
   const [sessionMessage, setSessionMessage] = useState(
     () => sessionStorage.getItem("sessionExpiredMessage") ?? "",
   );
-
-  /**
-   * 자동 로그인 처리: 플래그가 있고 이미 로그인 상태이면 대시보드로 이동한다.
-   * isLoggedIn 또는 navigate가 바뀔 때마다 재평가한다.
-   */
-  useEffect(() => {
-    if (isLoggedIn && localStorage.getItem(LS_AUTO_LOGIN)) {
-      navigate(PATHS.CARD.DASHBOARD, { replace: true });
-    }
-  }, [isLoggedIn, navigate]);
 
   const handleLogin = async () => {
     setHasError(false);
@@ -124,12 +111,6 @@ export function LoginRoute() {
           localStorage.setItem(LS_SAVED_ID, userId);
         } else {
           localStorage.removeItem(LS_SAVED_ID);
-        }
-        // 자동 로그인: 체크 시 플래그를 저장해 다음 방문 시 대시보드로 자동 이동
-        if (autoLogin) {
-          localStorage.setItem(LS_AUTO_LOGIN, "1");
-        } else {
-          localStorage.removeItem(LS_AUTO_LOGIN);
         }
         login({
           userId: data.userId,
@@ -160,8 +141,6 @@ export function LoginRoute() {
         onLogin={handleLogin}
         saveId={saveId}
         onSaveIdChange={setSaveId}
-        autoLogin={autoLogin}
-        onAutoLoginChange={setAutoLogin}
       />
       <Modal
         open={!!sessionMessage}
@@ -218,7 +197,7 @@ export function CardDashboardRoute() {
   /** SummaryCard(spending): 당월 이용내역 합산 금액 */
   const [spendingAmount, setSpendingAmount] = useState(0);
 
-  // lastLogin이 없는 경우(변경 전 로그인 세션, 자동 로그인 등) /api/auth/me로 보완한다.
+  // lastLogin이 없는 경우(변경 전 로그인 세션 등) /api/auth/me로 보완한다.
   // Access Token이 유효한 동안은 refresh가 호출되지 않으므로 대시보드 진입 시점에 한 번 확인한다.
   useEffect(() => {
     if (!user?.userId || user.lastLogin) return;
@@ -238,6 +217,7 @@ export function CardDashboardRoute() {
       "immediatePayRequestData",
       "immediatePaySelectedAccount",
       "immediatePayCompletedAt",
+      "immediatePayError",
     ].forEach((key) => sessionStorage.removeItem(key));
   }, []); // 대시보드 마운트 시 한 번만 실행
 
@@ -469,27 +449,6 @@ function isPaymentUpcoming(
   return new Date(y, m - 1, day) >= today;
 }
 
-/**
- * 계좌번호 마스킹 — 하이픈 구조는 유지하고 중간 구간을 * 로 치환한다.
- *
- *   하이픈 있는 경우: 첫·마지막 세그먼트 유지, 중간 세그먼트 전부 마스킹
- *     e.g. "123-456789-01234" → "123-******-01234"
- *   하이픈 없는 경우: 앞 3자리·뒤 4자리 유지, 나머지 마스킹
- *     e.g. "1234567890" → "123***7890"
- */
-function maskAccountNumber(account: string): string {
-  if (!account) return "";
-  const parts = account.split("-");
-  if (parts.length >= 3) {
-    /* 중간 세그먼트(들)를 같은 길이의 * 로 교체 */
-    const masked = parts.slice(1, -1).map((p) => "*".repeat(p.length));
-    return [parts[0], ...masked, parts[parts.length - 1]].join("-");
-  }
-  /* 하이픈 없는 숫자열: 앞 3 + * + 뒤 4 */
-  const digits = account.replace(/\D/g, "");
-  if (digits.length <= 7) return account; // 너무 짧으면 마스킹 생략
-  return digits.slice(0, 3) + "*".repeat(digits.length - 7) + digits.slice(-4);
-}
 
 /** YYMMDD or YYYYMMDD → { dateFull, dateYM, dateMD } */
 function parseDueDate(raw: string) {
@@ -755,12 +714,14 @@ export function ImmediatePayRoute() {
     axiosInstance
       .get<{ cards: ApiCardFull[] }>("/cards", { signal: controller.signal })
       .then((r) => {
-        // ApiCardFull → CardInfo (id, name, maskedNumber만 사용)
+        // ApiCardFull → CardInfo (결제은행·계좌는 STEP 3 출금계좌 표시에 사용)
         setCards(
           r.data.cards.map((c) => ({
             id: c.id,
             name: c.name,
             maskedNumber: c.maskedNumber,
+            paymentBank: c.paymentBank,
+            paymentAccount: c.paymentAccount,
           })),
         );
         setLoading(false);
@@ -809,7 +770,7 @@ export function ImmediatePayRequestRoute() {
   const storedCard = sessionStorage.getItem("immediatePaySelectedCard");
   const card: CardInfo = storedCard
     ? (JSON.parse(storedCard) as CardInfo)
-    : { id: "", name: "", maskedNumber: "" };
+    : { id: "", name: "", maskedNumber: "", paymentBank: "", paymentAccount: "" };
 
   // POC_카드사용내역에서 누적결제금액 < 이용금액인 건의 미결제 잔액 합산을 조회한다.
   const [payableAmount, setPayableAmount] = useState<number>(0);
@@ -909,8 +870,7 @@ export function ImmediatePayMethodRoute() {
   const [pinError, setPinError] = useState<string | undefined>();
   // PIN 횟수 초과 여부 — true일 때만 PinConfirmSheet에 초기화 버튼을 표시한다.
   const [pinExceeded, setPinExceeded] = useState(false);
-  // 결제 API 에러 메시지 — 비어 있으면 Modal을 닫은 상태로 간주한다.
-  const [payErrorMessage, setPayErrorMessage] = useState("");
+  // (payErrorMessage 상태 제거 — 에러 시 완료 화면으로 이동해 세션에서 읽는 방식으로 변경)
 
   // STEP 1·2에서 세션에 저장된 카드 정보·결제 요청 데이터·금액 정보를 읽는다.
   const storedCard = sessionStorage.getItem("immediatePaySelectedCard");
@@ -918,7 +878,7 @@ export function ImmediatePayMethodRoute() {
   const storedAmountInfo = sessionStorage.getItem("immediatePayAmountInfo");
   const card: CardInfo = storedCard
     ? (JSON.parse(storedCard) as CardInfo)
-    : { id: "", name: "", maskedNumber: "" };
+    : { id: "", name: "", maskedNumber: "", paymentBank: "", paymentAccount: "" };
   const { usageType, payAmount } = storedRequest
     ? (JSON.parse(storedRequest) as { usageType: string; payAmount: number })
     : { usageType: "lump", payAmount: 0 };
@@ -935,9 +895,15 @@ export function ImmediatePayMethodRoute() {
   // 결제 후 이용가능한도 = 한도금액 - (미결제금액 - 결제금액)
   const availableLimit = creditLimit - (totalPayable - payAmount);
 
+  // STEP 1에서 세션에 저장된 card 객체에 결제은행·계좌가 포함되어 있으므로
+  // 별도 API 호출 없이 세션 데이터를 직접 사용한다.
+  // 계좌는 카드에 1:1로 연결되어 있으므로 단일 항목 배열로 제공한다.
   const ACCOUNTS = [
-    { id: "acc-1", bankName: "하나은행", maskedAccount: "123-456789-01***" },
-    { id: "acc-2", bankName: "국민은행", maskedAccount: "987-654321-99***" },
+    {
+      id: card.id,
+      bankName: card.paymentBank,
+      maskedAccount: maskAccountNumber(card.paymentAccount),
+    },
   ];
 
   return (
@@ -961,7 +927,7 @@ export function ImmediatePayMethodRoute() {
           },
         ]}
         accounts={ACCOUNTS}
-        initialAccountId="acc-1"
+        initialAccountId={card.id}
         onApply={(accountId) => {
           // 선택된 계좌를 state와 세션에 저장 후 확인 시트를 표시한다.
           // 세션 저장: STEP 4 완료 화면에서 출금계좌를 표시하는 데 사용된다.
@@ -1015,17 +981,25 @@ export function ImmediatePayMethodRoute() {
             }>(`/cards/${card.id}/immediate-pay`, {
               pin,
               amount: payAmount,
+              // card 객체의 원본(비마스킹) 계좌번호를 그대로 전달한다
+              accountNumber: card.paymentAccount,
             });
             // 서버 처리일시를 세션에 저장 → STEP 4 완료 화면에서 사용
             sessionStorage.setItem("immediatePayCompletedAt", data.completedAt);
             setPinOpen(false);
             navigate(PATHS.CARD.IMMEDIATE_PAY_COMPLETE, { replace: true });
           } catch (err: unknown) {
-            const data = (
+            const response = (
               err as {
-                response?: { data?: { error?: string; attemptsLeft?: number } };
+                response?: {
+                  status?: number;
+                  data?: { error?: string; attemptsLeft?: number };
+                };
               }
-            )?.response?.data;
+            )?.response;
+            const status = response?.status;
+            const data = response?.data;
+
             if (data?.attemptsLeft === 0) {
               // 횟수 소진 — 시트에 초과 메시지를 표시한 채로 유지하고,
               // 페이지에 초기화 버튼을 준비한다 (시트를 닫으면 버튼이 보임)
@@ -1038,28 +1012,20 @@ export function ImmediatePayMethodRoute() {
                 `PIN이 올바르지 않습니다. (${data.attemptsLeft}회 남음)`,
               );
             } else {
-              // PIN 실패·횟수 초과 외의 예외 → Modal로 안내 후 대시보드로 이동
-              setPayErrorMessage(
-                data?.error ?? "결제 처리 중 오류가 발생했습니다.",
-              );
+              // PIN 오류 외의 예외는 완료 화면으로 이동해 오류 내용을 표시한다.
+              // 4xx(비즈니스 오류): 서버가 보낸 구체적인 사유를 그대로 노출한다.
+              // 5xx(시스템 오류): 내부 오류를 사용자에게 노출하지 않고 일반 메시지를 사용한다.
+              const isBusinessError = status !== undefined && status >= 400 && status < 500;
+              const errorMessage = isBusinessError
+                ? (data?.error ?? "결제 처리 중 오류가 발생했습니다.")
+                : "일시적인 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.";
+              sessionStorage.setItem("immediatePayError", errorMessage);
               setPinOpen(false);
+              navigate(PATHS.CARD.IMMEDIATE_PAY_COMPLETE, { replace: true });
             }
           }
         }}
       />
-      <Modal
-        open={!!payErrorMessage}
-        onClose={() => {
-          setPayErrorMessage("");
-          navigate(PATHS.CARD.DASHBOARD, { replace: true });
-        }}
-        title="결제 오류"
-        size="sm"
-        titleAlign="center"
-        className="text-sm text-center"
-      >
-        {payErrorMessage}
-      </Modal>
     </>
   );
 }
@@ -1068,8 +1034,9 @@ export function ImmediatePayMethodRoute() {
 export function ImmediatePayCompleteRoute() {
   const navigate = useNavigate();
 
-  // 이전 단계에서 세션에 저장된 카드·결제·계좌·금액·처리일시 정보를 읽는다.
+  // 이전 단계에서 세션에 저장된 카드·결제·계좌·금액·처리일시·에러 정보를 읽는다.
   // 세션 삭제는 대시보드 진입 시 수행한다 (CardDashboardRoute useEffect 참고).
+  const payError = sessionStorage.getItem("immediatePayError") ?? undefined;
   const storedCard = sessionStorage.getItem("immediatePaySelectedCard");
   const storedRequest = sessionStorage.getItem("immediatePayRequestData");
   const storedAccount = sessionStorage.getItem("immediatePaySelectedAccount");
@@ -1122,6 +1089,7 @@ export function ImmediatePayCompleteRoute() {
       account={`${account.bankName} ${account.maskedAccount}`.trim()}
       availableLimit={availableLimit}
       completedAt={completedAt}
+      error={payError}
       onConfirm={() => navigate(PATHS.CARD.DASHBOARD, { replace: true })}
     />
   );

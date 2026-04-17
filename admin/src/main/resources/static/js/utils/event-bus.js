@@ -12,18 +12,19 @@
  *
  * @example
  *   // 발행 (emit)
- *   EventBus.emit('admin:emergencyNotice:statusChanged', { status: 'DEPLOYED' });
+ *   Admin_EventBus.emit('admin:emergencyNotice:statusChanged', { status: 'DEPLOYED' });
  *
  *   // 구독 (subscribe) — 함수 참조를 보관해야 off()로 제거 가능
  *   function handler(payload) { self.loadDeployStatus(); }
- *   EventBus.on('admin:emergencyNotice:statusChanged', handler);
+ *   Admin_EventBus.on('admin:emergencyNotice:statusChanged', handler);
  *
  *   // 구독 해제 (unsubscribe) — tab:removed 이벤트 수신 시 호출
- *   EventBus.off('admin:emergencyNotice:statusChanged', handler);
+ *   Admin_EventBus.off('admin:emergencyNotice:statusChanged', handler);
  */
 "use strict";
 
-const EventBus = (() => {
+// window에 직접 할당하여 전역 접근 보장 및 ESLint no-unused-vars 오탐 방지
+window.Admin_EventBus = (() => {
     /** @type {Map<string, Set<Function>>} 이벤트명 → 핸들러 집합 */
     const _handlers = new Map();
 
@@ -63,7 +64,7 @@ const EventBus = (() => {
                 handler(payload);
             } catch (err) {
                 // 핸들러 오류는 격리 — 콘솔에만 출력하고 다른 핸들러는 계속 실행
-                console.error(`[EventBus] 핸들러 오류 (${event}):`, err);
+                console.error(`[Admin_EventBus] 핸들러 오류 (${event}):`, err);
             }
         });
     }
