@@ -95,7 +95,8 @@ function blockToJSXLine(block: CMSPage["blocks"][number], indent: string, overla
   else jsx = `${openTag} />`;
 
   if (pdCls) return `${indent}<div className="${pdCls}">${jsx}</div>`;
-  return `${indent}<div>${jsx}</div>`;
+  // 패딩 없는 경우 불필요한 div 래핑 없이 컴포넌트를 직접 렌더링
+  return `${indent}${jsx}`;
 }
 
 // ─── Overlay 코드 생성 ────────────────────────────────────────────────────────
@@ -209,7 +210,8 @@ export function generateJSX(
 
     if (layoutImportFrom === blockImportFrom) {
       // 같은 패키지: 하나의 import로 합침
-      const allNames = [...new Set([layoutComponentName, ...blockNames])];
+      // layoutComponentName이 undefined인 경우 배열에 포함되지 않도록 필터링
+      const allNames = [...new Set([layoutComponentName, ...blockNames])].filter((n): n is string => !!n);
       importLine = `import { ${allNames.join(", ")} } from "${blockImportFrom}";`;
     } else {
       // 다른 패키지: 레이아웃 import 별도

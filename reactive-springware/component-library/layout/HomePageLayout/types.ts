@@ -11,12 +11,11 @@ export interface HomePageLayoutProps extends React.HTMLAttributes<HTMLDivElement
   /** 헤더 타이틀 (앱 이름 또는 서비스명, 예: '하나은행') */
   title: string;
   /**
-   * 타이틀 좌측에 표시할 로고 슬롯.
-   * - ReactNode: 그대로 렌더링
-   * - string: lucide-react 아이콘 kebab-case 이름으로 조회해 렌더링 (CMS 브리지 전용)
-   * - 미전달 시 로고 영역 렌더링 안 함
+   * 타이틀 좌측에 표시할 로고 슬롯 (ReactNode).
+   * 아이콘 문자열에서 컴포넌트로의 변환은 호출자(CMS layouts.tsx 등)가 담당한다.
+   * 미전달 시 로고 영역 렌더링 안 함.
    */
-  logo?: string | React.ReactNode;
+  logo?: React.ReactNode;
   /**
    * 헤더 우측 슬롯.
    * 미전달 시 기본 프로필·벨·메뉴 3개 아이콘 버튼 표시

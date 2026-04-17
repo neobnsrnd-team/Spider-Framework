@@ -21,7 +21,6 @@
  */
 import React from 'react';
 import { Bell, User, Menu, Home, Wallet, ShoppingBag, CreditCard, MessageSquare } from 'lucide-react';
-import * as LucideIcons from 'lucide-react';
 import { cn } from '@lib/cn';
 import { BottomNav } from '../BottomNav';
 import type { HomePageLayoutProps } from './types';
@@ -44,14 +43,6 @@ const DEFAULT_TABS = [
   { id: 'chat',    icon: <MessageSquare className="size-5" />,  label: '챗봇',  onClick: () => {} },
 ];
 
-/** CMS 브리지: kebab-case 문자열을 lucide-react 아이콘 컴포넌트로 변환 */
-function resolveLogoIcon(name: string): React.ReactNode {
-  const pascal = name.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join('');
-  const IconComp = (LucideIcons as Record<string, React.ComponentType<{ className?: string }>>)[pascal];
-  if (!IconComp) return null;
-  return <IconComp className="size-4" aria-hidden="true" />;
-}
-
 export function HomePageLayout({
   title,
   logo,
@@ -64,8 +55,6 @@ export function HomePageLayout({
   children,
   ...props
 }: HomePageLayoutProps) {
-  /* logo가 string이면 lucide-react 아이콘으로 변환, ReactNode이면 그대로 사용 */
-  const resolvedLogo = typeof logo === 'string' ? resolveLogoIcon(logo) : logo;
   /* 커스텀 탭이 없으면 기본 탭 사용 */
   const navItems = bottomNavItems ?? DEFAULT_TABS;
 
@@ -81,7 +70,7 @@ export function HomePageLayout({
           <div className="flex-1 flex flex-col justify-center">
             <div className="flex items-center gap-xs">
               {/* 로고 아이콘 — logo 전달 시만 노출 */}
-              {resolvedLogo && <span aria-hidden="true">{resolvedLogo}</span>}
+              {logo && <span aria-hidden="true">{logo}</span>}
               {/* 타이틀: 브랜드 컬러(teal) + 볼드 — Figma node 1:226 */}
               <h1 className="text-xl font-bold text-brand leading-none">{title}</h1>
             </div>
