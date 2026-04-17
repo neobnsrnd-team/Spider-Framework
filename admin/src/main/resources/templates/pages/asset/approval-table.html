@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<!-- CMS 이미지 승인 관리 테이블 프래그먼트 -->
+<div th:fragment="table" class="table-responsive">
+    <table class="table table-sm table-hover sp-data-grid" id="assetApprovalTable">
+        <thead class="table-light">
+            <tr>
+                <th class="col-w-80">미리보기</th>
+                <th class="sortable" data-sort="assetName">이미지명</th>
+                <th class="col-w-130 sortable" data-sort="createUserName">업로더</th>
+                <th class="col-w-130 sortable" data-sort="businessCategory">업무 카테고리</th>
+                <th class="col-w-110">MIME / 크기</th>
+                <th class="col-w-100 sortable" data-sort="assetState">승인상태</th>
+                <th class="col-w-160 sortable" data-sort="createDate">요청일</th>
+                <th class="col-w-130">결재</th>
+            </tr>
+        </thead>
+        <tbody id="assetApprovalTableBody">
+            <tr>
+                <td colspan="8" class="text-center py-4 text-body-secondary">
+                    조회 버튼을 클릭하여 데이터를 불러오세요.
+                </td>
+            </tr>
+        </tbody>
+    </table>
+</div>
+</body>
+</html>

@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<div th:fragment="content">
+
+    <!-- 검색조건 헤더 -->
+    <div class="page-header">
+        <h4 class="page-title">
+            <i class="bi bi-exclamation-circle-fill text-danger"></i>
+            검색조건
+        </h4>
+    </div>
+
+    <!-- 검색 영역 -->
+    <div th:replace="~{pages/asset/approval-search :: search}"></div>
+
+    <!-- 리스트 헤더 + 툴바 -->
+    <div class="page-header mt-3">
+        <h4 class="page-title">
+            <i class="bi bi-exclamation-circle-fill text-danger"></i>
+            승인 대기 이미지
+        </h4>
+    </div>
+
+    <!-- 테이블 -->
+    <div th:replace="~{pages/asset/approval-table :: table}"></div>
+
+    <!-- 페이지네이션 -->
+    <div th:replace="~{fragments/page-content-layout :: pagination}"></div>
+
+    <!-- ==================== 미리보기 모달 ==================== -->
+    <div class="modal fade" id="assetPreviewModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">이미지 상세</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row g-3">
+                        <div class="col-md-5 text-center">
+                            <img id="previewImg" src="/images/asset-placeholder.svg" alt="preview"
+                                 class="img-fluid border rounded"
+                                 style="max-height:320px;object-fit:contain;background:#f8f9fa;"/>
+                        </div>
+                        <div class="col-md-7">
+                            <table class="table table-sm mb-0">
+                                <tbody>
+                                    <tr><th class="col-w-120">이미지명</th><td id="previewAssetName">-</td></tr>
+                                    <tr><th>업무 카테고리</th><td id="previewBusinessCategory">-</td></tr>
+                                    <tr><th>MIME</th><td id="previewMimeType">-</td></tr>
+                                    <tr><th>크기</th><td id="previewFileSize">-</td></tr>
+                                    <tr><th>설명</th><td id="previewAssetDesc">-</td></tr>
+                                    <tr><th>승인상태</th><td id="previewAssetState">-</td></tr>
+                                    <tr><th>업로더</th><td id="previewCreateUser">-</td></tr>
+                                    <tr><th>생성일</th><td id="previewCreateDate">-</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">닫기</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================== 반려 모달 ==================== -->
+    <div class="modal fade" id="assetRejectModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">반려</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" id="rejectAssetId"/>
+                    <div class="mb-3">
+                        <label class="form-label">반려 사유 (선택)</label>
+                        <textarea id="rejectReason" class="form-control" rows="3"
+                                  placeholder="반려 사유를 입력하세요. (선택)"></textarea>
+                        <div class="form-text">최대 1000자까지 입력 가능합니다.</div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">취소</button>
+                    <button type="button" id="btnRejectConfirm" class="btn btn-danger">반려</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 스크립트 -->
+    <th:block th:replace="~{pages/asset/approval-script :: script}"/>
+
+</div>
+</body>
+</html>
