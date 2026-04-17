@@ -133,6 +133,12 @@ cms:
     receive-url: ${CMS_DEPLOY_RECEIVE_URL:http://133.186.135.23:3001/api/deploy/receive}
     secret: ${CMS_DEPLOY_SECRET:}
     tracker-js-url: ${CMS_DEPLOY_TRACKER_JS_URL:http://133.186.135.23:3001/cms-tracker.js}
+  # CMS Builder (미승인 이미지 업로드) — 내부망 서버-투-서버 호출 (Issue #65)
+  builder:
+    base-url: ${CMS_BUILDER_BASE_URL:http://133.186.135.23:3000}
+    upload-path: ${CMS_BUILDER_UPLOAD_PATH:/cms/api/builder/upload}
+    connect-timeout-seconds: ${CMS_BUILDER_CONNECT_TIMEOUT:5}
+    read-timeout-seconds: ${CMS_BUILDER_READ_TIMEOUT:60}
 
 # Scheduling Configuration (배치 이력 정리 스케줄러)
 scheduling:

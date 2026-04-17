@@ -1,10 +1,14 @@
 package com.example.admin_demo.domain.cmsasset.service;
 
+import com.example.admin_demo.domain.cmsasset.client.CmsBuilderClient;
+import com.example.admin_demo.domain.cmsasset.client.dto.CmsBuilderUploadApiResponse;
 import com.example.admin_demo.domain.cmsasset.dto.CmsAssetApprovalListRequest;
 import com.example.admin_demo.domain.cmsasset.dto.CmsAssetDetailResponse;
 import com.example.admin_demo.domain.cmsasset.dto.CmsAssetListResponse;
 import com.example.admin_demo.domain.cmsasset.dto.CmsAssetRequestListRequest;
+import com.example.admin_demo.domain.cmsasset.dto.CmsAssetUploadResponse;
 import com.example.admin_demo.domain.cmsasset.mapper.CmsAssetMapper;
+import com.example.admin_demo.domain.cmsasset.validator.AssetUploadValidator;
 import com.example.admin_demo.global.dto.PageRequest;
 import com.example.admin_demo.global.dto.PageResponse;
 import com.example.admin_demo.global.exception.InvalidInputException;
@@ -16,6 +20,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
 /**
  * CMS 이미지(에셋) 승인 관리 서비스.
@@ -48,6 +53,8 @@ public class CmsAssetService {
     private static final int REJECTED_REASON_MAX_BYTES = 1000;
 
     private final CmsAssetMapper cmsAssetMapper;
+    private final CmsBuilderClient cmsBuilderClient;
+    private final AssetUploadValidator assetUploadValidator;
 
     /**
      * 현업 본인 업로드 이미지 목록 조회.
@@ -108,6 +115,28 @@ public class CmsAssetService {
             throw new InvalidStateException("이미 처리된 이미지입니다. assetId=" + assetId);
         }
         log.info("CMS 이미지 승인 완료: assetId={}, modifierId={}", assetId, modifierId);
+    }
+
+    /**
+     * 이미지 업로드 — Issue #65.
+     *
+     * <p>Admin 은 파일을 저장하지 않고 CMS Builder 로 포워딩한다.
+     * CMS 가 파일 저장 + {@code SPW_CMS_ASSET} INSERT (ASSET_STATE='WORK') 까지 수행하며,
+     * Admin 은 응답만 그대로 전달한다.
+     *
+     * <p>업로더 정보({@code uploaderId/Name})는 {@code @AuthenticationPrincipal} 에서 추출된 값이어야 하며,
+     * 클라이언트가 보낸 값은 신뢰하지 않는다 (컨트롤러에서 강제).
+     */
+    public CmsAssetUploadResponse uploadAsset(
+            MultipartFile file, String businessCategory, String assetDesc, String uploaderId, String uploaderName) {
+
+        assetUploadValidator.validate(file);
+        CmsBuilderUploadApiResponse cmsResponse =
+                cmsBuilderClient.upload(file, uploaderId, uploaderName, businessCategory, assetDesc);
+        return CmsAssetUploadResponse.builder()
+                .assetId(cmsResponse.getAssetId())
+                .url(cmsResponse.getUrl())
+                .build();
     }
 
     /** 반려 — PENDING → REJECTED (결재자). 반려 사유는 선택 */

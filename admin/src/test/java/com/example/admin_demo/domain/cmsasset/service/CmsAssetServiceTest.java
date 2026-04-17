@@ -35,6 +35,12 @@ class CmsAssetServiceTest {
     @Mock
     private CmsAssetMapper cmsAssetMapper;
 
+    @Mock
+    private com.example.admin_demo.domain.cmsasset.client.CmsBuilderClient cmsBuilderClient;
+
+    @Mock
+    private com.example.admin_demo.domain.cmsasset.validator.AssetUploadValidator assetUploadValidator;
+
     @InjectMocks
     private CmsAssetService cmsAssetService;
 

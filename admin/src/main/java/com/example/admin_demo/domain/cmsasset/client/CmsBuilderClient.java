@@ -1,0 +1,135 @@
+package com.example.admin_demo.domain.cmsasset.client;
+
+import com.example.admin_demo.domain.cmsasset.client.dto.CmsBuilderUploadApiResponse;
+import com.example.admin_demo.domain.cmsasset.config.CmsBuilderProperties;
+import com.example.admin_demo.global.exception.ErrorType;
+import com.example.admin_demo.global.exception.base.BaseException;
+import java.io.IOException;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.core.io.ByteArrayResource;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.stereotype.Component;
+import org.springframework.util.LinkedMultiValueMap;
+import org.springframework.util.MultiValueMap;
+import org.springframework.web.client.RestClient;
+import org.springframework.web.client.RestClientException;
+import org.springframework.web.multipart.MultipartFile;
+
+/**
+ * CMS Builder /cms/api/builder/upload 호출 클라이언트 — Issue #65.
+ *
+ * <p>Spider Admin 은 파일을 저장하지 않고 CMS 로 포워딩한다.
+ * CMS 가 파일 저장 + SPW_CMS_ASSET INSERT 를 모두 수행하며, Admin 은 응답만 전달받는다.
+ *
+ * <p>CMS 가 실패 시에도 HTTP 200 을 반환하므로 응답 body 의 {@code ok} 필드로 판단한다.
+ * 네트워크 오류 / 비정상 응답은 {@link BaseException} (HTTP 502) 로 래핑해 상위에 전파.
+ */
+@Slf4j
+@Component
+public class CmsBuilderClient {
+
+    private final RestClient cmsBuilderRestClient;
+    private final CmsBuilderProperties properties;
+
+    public CmsBuilderClient(RestClient cmsBuilderRestClient, CmsBuilderProperties properties) {
+        this.cmsBuilderRestClient = cmsBuilderRestClient;
+        this.properties = properties;
+    }
+
+    /**
+     * CMS Builder 로 이미지 파일을 업로드한다.
+     *
+     * @param file             원본 이미지
+     * @param userId           업로더 ID
+     * @param userName         업로더 이름
+     * @param businessCategory 업무 카테고리 (선택)
+     * @param assetDesc        이미지 설명 (선택)
+     * @return CMS 응답 (assetId, url 포함)
+     * @throws BaseException 업로드 실패 또는 CMS 응답 오류 시 (HTTP 502)
+     */
+    public CmsBuilderUploadApiResponse upload(
+            MultipartFile file, String userId, String userName, String businessCategory, String assetDesc) {
+
+        MultiValueMap<String, Object> form = buildFormData(file, userId, userName, businessCategory, assetDesc);
+
+        try {
+            CmsBuilderUploadApiResponse response = cmsBuilderRestClient
+                    .post()
+                    .uri(properties.getUploadPath())
+                    .contentType(MediaType.MULTIPART_FORM_DATA)
+                    .body(form)
+                    .retrieve()
+                    .body(CmsBuilderUploadApiResponse.class);
+
+            if (response == null) {
+                log.error("CMS Builder 응답 body 가 null. path={}", properties.getUploadPath());
+                throw new BaseException(ErrorType.EXTERNAL_SERVICE_ERROR, "CMS 응답이 비어 있습니다.");
+            }
+            if (!response.isSuccess()) {
+                String errMsg = response.getError() != null ? response.getError() : "CMS 업로드 실패";
+                log.warn("CMS Builder 업로드 실패 응답: ok={}, error={}, userId={}", response.getOk(), errMsg, userId);
+                throw new BaseException(ErrorType.EXTERNAL_SERVICE_ERROR, errMsg);
+            }
+
+            log.info(
+                    "CMS Builder 업로드 성공: assetId={}, url={}, userId={}",
+                    response.getAssetId(),
+                    response.getUrl(),
+                    userId);
+            return response;
+
+        } catch (RestClientException e) {
+            log.error("CMS Builder 호출 중 오류 발생: userId={}", userId, e);
+            throw new BaseException(ErrorType.EXTERNAL_SERVICE_ERROR, "CMS 서버와 통신할 수 없습니다. 잠시 후 다시 시도하세요.", e);
+        }
+    }
+
+    /** 멀티파트 form-data 구성. file 은 파일명·Content-Type 을 보존하여 전송한다. */
+    private MultiValueMap<String, Object> buildFormData(
+            MultipartFile file, String userId, String userName, String businessCategory, String assetDesc) {
+
+        MultiValueMap<String, Object> form = new LinkedMultiValueMap<>();
+        form.add("file", toFilePart(file));
+        if (userId != null) {
+            form.add("userId", userId);
+        }
+        if (userName != null) {
+            form.add("userName", userName);
+        }
+        if (businessCategory != null && !businessCategory.isBlank()) {
+            form.add("businessCategory", businessCategory);
+        }
+        if (assetDesc != null && !assetDesc.isBlank()) {
+            form.add("assetDesc", assetDesc);
+        }
+        return form;
+    }
+
+    /**
+     * MultipartFile 을 RestClient 전송 가능한 HttpEntity(Resource) 로 변환.
+     *
+     * <p>파일명을 보존하려면 {@link ByteArrayResource#getFilename()} 를 오버라이드해야 한다.
+     */
+    private org.springframework.http.HttpEntity<ByteArrayResource> toFilePart(MultipartFile file) {
+        byte[] bytes;
+        try {
+            bytes = file.getBytes();
+        } catch (IOException e) {
+            throw new BaseException(ErrorType.INTERNAL_ERROR, "파일을 읽는 중 오류가 발생했습니다.", e);
+        }
+        ByteArrayResource resource = new ByteArrayResource(bytes) {
+            @Override
+            public String getFilename() {
+                return file.getOriginalFilename();
+            }
+        };
+        HttpHeaders partHeaders = new HttpHeaders();
+        if (file.getContentType() != null) {
+            partHeaders.setContentType(MediaType.parseMediaType(file.getContentType()));
+        } else {
+            partHeaders.setContentType(MediaType.APPLICATION_OCTET_STREAM);
+        }
+        return new org.springframework.http.HttpEntity<>(resource, partHeaders);
+    }
+}
