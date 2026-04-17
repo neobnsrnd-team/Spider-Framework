@@ -165,6 +165,9 @@ menu-resource:
     v3_cms_dashboard:
       R: CMS:R
       W: CMS:W
+    v3_cms_user_dashboard:
+      R: CMS:R
+      W: CMS:W
     v3_cms_edit:
       R: CMS:R
       W: CMS:W
