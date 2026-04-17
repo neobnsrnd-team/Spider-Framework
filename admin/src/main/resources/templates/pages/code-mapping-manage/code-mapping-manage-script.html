@@ -640,6 +640,11 @@ if (document.readyState === 'loading') {
 } else {
     OrgCodePage.init();
 }
+
+// 캐시에서 복원 시(tab:activated) 기관코드맵핑 목록 최신화
+$('[data-tab-page]').off('tab:activated.codeMapping').on('tab:activated.codeMapping', function () {
+    OrgCodePage.search();
+});
 </script>
 </th:block>
 </body>

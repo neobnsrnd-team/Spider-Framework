@@ -337,11 +337,21 @@ public class PageController {
         return resolveView(request, "pages/message-parsing-json/message-parsing-json :: content", model);
     }
 
-    // ── React 플랫폼 ── react_generate
+    // ── React 플랫폼 ── react_generate, react_generate_his
 
     @GetMapping("/react-generate")
     public String reactGenerate(HttpServletRequest request, Model model) {
         return resolveView(request, "pages/react-generate/react-generate :: content", model);
+    }
+
+    @GetMapping("/react-generate-his")
+    public String reactGenerateHis(HttpServletRequest request, Model model) {
+        return resolveView(request, "pages/react-generate-his/react-generate-his :: content", model);
+    }
+
+    @GetMapping("/react-approval")
+    public String reactApproval(HttpServletRequest request, Model model) {
+        return resolveView(request, "pages/react-approval/react-approval :: content", model);
     }
 
     // ── 서비스 관리 ── v3_neb_service_base_info, v3_neb_biz_component, v3_validator_component,

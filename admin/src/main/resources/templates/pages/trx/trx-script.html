@@ -1073,6 +1073,11 @@
         $('#trxStopTable thead th[data-sort]').addClass('sortable');
         window.TrxStopPage.updateSortIndicators();
         window.TrxStopPage.search();
+
+        // 캐시에서 복원 시(tab:activated) 거래중지 목록 최신화
+        $('[data-tab-page]').off('tab:activated.trx').on('tab:activated.trx', function () {
+            window.TrxStopPage.load();
+        });
     </script>
 </th:block>
 </body>

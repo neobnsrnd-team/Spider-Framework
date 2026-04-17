@@ -17,7 +17,7 @@ import lombok.NoArgsConstructor;
 @Builder
 public class MessageUpdateRequest {
 
-    @Size(max = 200, message = "전문명은 200자 이내여야 합니다")
+    @Size(max = 100, message = "전문명은 100자 이내여야 합니다")
     private String messageName;
 
     @Size(max = 1000, message = "전문 설명은 1000자 이내여야 합니다")

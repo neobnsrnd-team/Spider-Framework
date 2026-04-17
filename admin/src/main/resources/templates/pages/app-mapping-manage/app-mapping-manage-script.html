@@ -712,6 +712,11 @@
 
             window.AppMappingList.init();
             WasSelectReloadModal.init();
+
+            // 캐시에서 복원 시(tab:activated) 요청처리 App맵핑 목록 최신화
+            $('[data-tab-page]').off('tab:activated.appMapping').on('tab:activated.appMapping', function () {
+                window.AppMappingList.load(window.AppMappingList.currentPage);
+            });
         })();
     </script>
 </th:block>

@@ -8,10 +8,13 @@
     let currentId = null;
     let currentStatus = null;
 
+    // 승인·반려 상태는 승인 관리 메뉴에서 처리하므로 GENERATED/FAILED/PENDING_APPROVAL만 표시
     const STATUS_LABEL = {
         GENERATED:        { text: '생성 완료',  cls: 'bg-secondary' },
-        PENDING_APPROVAL: { text: '승인 대기',  cls: 'bg-warning text-dark' },
-        APPROVED:         { text: '승인 완료',  cls: 'bg-success' }
+        FAILED:           { text: '실패',        cls: 'bg-danger' },
+        PENDING_APPROVAL: { text: '승인 대기',   cls: 'bg-warning text-dark' },
+        APPROVED:         { text: '승인 완료',   cls: 'bg-success' },
+        REJECTED:         { text: '반려',        cls: 'bg-danger' },
     };
 
     function updateStatusBadge(status) {
@@ -20,11 +23,8 @@
         const badge = $('#statusBadge');
         badge.text(info.text).removeClass().addClass('badge ' + info.cls);
 
-        // 버튼 상태 업데이트
+        // 승인 요청은 GENERATED 상태에서만 가능
         $('#btnRequestApproval').prop('disabled', status !== 'GENERATED');
-        if ($('#btnApprove').length) {
-            $('#btnApprove').prop('disabled', status !== 'PENDING_APPROVAL');
-        }
     }
 
     // ─── 생성 ───────────────────────────────────────────────
@@ -82,9 +82,10 @@
         // iframe이 이미 로드되어 있으면 즉시 전달, 아직 로딩 중이면 onload 후 전달
         const frame = document.getElementById('previewFrame');
         const sendCode = () => {
+            // 같은 출처(origin)로만 메시지 전송하여 외부 수신 차단
             frame.contentWindow.postMessage(
                 { type: 'UPDATE_CODE', code: data.reactCode || '', codeId: data.codeId },
-                '*'
+                window.location.origin
             );
         };
         if (frame.contentDocument?.readyState === 'complete') {
@@ -93,11 +94,8 @@
             frame.onload = sendCode;
         }
 
-        // 코드 미리보기 (escape XSS)
-        const escaped = (data.reactCode || '').replace(/&/g, '&amp;')
-                                               .replace(/</g, '&lt;')
-                                               .replace(/>/g, '&gt;');
-        document.getElementById('codeDisplay').innerHTML = escaped;
+        // 코드 미리보기: textContent 할당으로 HTML 파싱을 우회해 XSS를 원천 차단
+        document.getElementById('codeDisplay').textContent = data.reactCode || '';
 
         updateStatusBadge(data.status);
         $('#resultSection').removeClass('d-none');
@@ -139,31 +137,6 @@
         });
     });
 
-    // ─── 승인 ────────────────────────────────────────────────
-    $('#btnApprove').on('click', function () {
-        alert('구현 예정입니다.');
-        return;
-
-        if (!currentId) return;
-        if (!confirm('해당 코드를 승인하시겠습니까?')) return;
-
-        $.ajax({
-            url: API_BASE_URL + '/react-generate/' + currentId + '/approve',
-            method: 'POST',
-            success: function (res) {
-                if (res.success && res.data) {
-                    updateStatusBadge(res.data.status);
-                    Toast.success('승인이 완료되었습니다. (승인자: ' + (res.data.approvedBy || '') + ')');
-                } else {
-                    Toast.error(res.message || '승인에 실패했습니다.');
-                }
-            },
-            error: function (xhr) {
-                Toast.error(xhr.responseJSON?.message || '승인 처리 중 오류가 발생했습니다.');
-            }
-        });
-    });
-
     // ─── 초기화 ─────────────────────────────────────────────
     $('#btnReset').on('click', function () {
         // 입력 폼 초기화
@@ -173,14 +146,14 @@
         // 결과 영역 숨김 및 내부 상태 초기화
         $('#resultSection').addClass('d-none');
         $('#resultMeta').text('');
-        document.getElementById('codeDisplay').innerHTML = '';
+        document.getElementById('codeDisplay').textContent = '';
         currentId = null;
         currentStatus = null;
 
         // Preview App에 빈 코드를 전달하여 미리보기 화면 초기화
         const frame = document.getElementById('previewFrame');
         if (frame.contentDocument?.readyState === 'complete') {
-            frame.contentWindow.postMessage({ type: 'UPDATE_CODE', code: '' }, '*');
+            frame.contentWindow.postMessage({ type: 'UPDATE_CODE', code: '' }, window.location.origin);
         }
 
         $('#figmaUrlInput').focus();
@@ -191,6 +164,11 @@
         if (e.key === 'Enter') {
             $('#btnGenerate').trigger('click');
         }
+    });
+
+    // 캐시에서 복원 시(tab:activated) React 코드 생성 페이지 상태 유지 (별도 load 불필요)
+    $('[data-tab-page]').off('tab:activated.reactGenerate').on('tab:activated.reactGenerate', function () {
+        // 폼 기반 페이지이므로 추가 데이터 로드 없음
     });
 
     // ─── Preview App 렌더링 오류 수신 ───────────────────────

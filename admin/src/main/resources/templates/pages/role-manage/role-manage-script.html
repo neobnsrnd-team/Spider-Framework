@@ -517,7 +517,6 @@
                         Toast.success('변경사항이 저장되었습니다.');
                         this.load();
                         $('#selectAll').prop('checked', false);
-                        EventBus.emit('admin:userManage:roleChanged');
                     },
                     error: (xhr) => {
                         console.error('Failed to save changes:', xhr);
@@ -585,6 +584,11 @@
 
     // 화면 진입 시 자동 조회
     Roles.load();
+
+    // 캐시에서 복원 시(tab:activated) 권한 목록 최신화
+    $('[data-tab-page]').off('tab:activated.roleManage').on('tab:activated.roleManage', function () {
+        Roles.load();
+    });
 
     // Toolbar buttons
     $(document).ready(function() {

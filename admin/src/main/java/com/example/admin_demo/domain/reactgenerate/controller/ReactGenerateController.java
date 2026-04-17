@@ -3,14 +3,21 @@ package com.example.admin_demo.domain.reactgenerate.controller;
 import com.example.admin_demo.domain.reactgenerate.dto.ReactGenerateApprovalResponse;
 import com.example.admin_demo.domain.reactgenerate.dto.ReactGenerateRequest;
 import com.example.admin_demo.domain.reactgenerate.dto.ReactGenerateResponse;
+import com.example.admin_demo.domain.reactgenerate.dto.ReactGenerateSearchRequest;
 import com.example.admin_demo.domain.reactgenerate.dto.RenderErrorRequest;
 import com.example.admin_demo.domain.reactgenerate.service.ReactGenerateService;
 import com.example.admin_demo.global.dto.ApiResponse;
+import com.example.admin_demo.global.util.ExcelExportUtil;
 import com.example.admin_demo.global.util.SecurityUtil;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
+import java.time.LocalDate;
+import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.ContentDisposition;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
@@ -35,14 +42,48 @@ public class ReactGenerateController {
     @PostMapping("/{id}/request-approval")
     @PreAuthorize("hasAuthority('REACT_GENERATE:W')")
     public ResponseEntity<ApiResponse<ReactGenerateApprovalResponse>> requestApproval(@PathVariable String id) {
-        return ResponseEntity.ok(ApiResponse.success(reactGenerateService.requestApproval(id)));
+        String currentUserId = SecurityUtil.getCurrentUserId();
+        return ResponseEntity.ok(ApiResponse.success(reactGenerateService.requestApproval(id, currentUserId)));
     }
 
-    @PostMapping("/{id}/approve")
-    @PreAuthorize("hasAuthority('REACT_GENERATE:W')")
-    public ResponseEntity<ApiResponse<ReactGenerateApprovalResponse>> approve(@PathVariable String id) {
-        String currentUserId = SecurityUtil.getCurrentUserId();
-        return ResponseEntity.ok(ApiResponse.success(reactGenerateService.approve(id, currentUserId)));
+    /**
+     * 검색 조건에 맞는 React 코드 생성 이력 목록을 페이지네이션 형태로 조회한다.
+     *
+     * @param req 검색 조건 (status, createUserId, fromDate, toDate, page, size)
+     * @return list, totalCount, page, size
+     */
+    @GetMapping("/history")
+    public ResponseEntity<ApiResponse<Map<String, Object>>> getHistory(ReactGenerateSearchRequest req) {
+        return ResponseEntity.ok(ApiResponse.success(reactGenerateService.getHistory(req)));
+    }
+
+    /**
+     * 검색 조건에 맞는 이력 전체를 엑셀 파일로 내보낸다.
+     *
+     * @param req 검색 조건 (status, createUserId, fromDate, toDate)
+     * @return xlsx 파일
+     */
+    @GetMapping("/history/export")
+    public ResponseEntity<byte[]> exportHistory(ReactGenerateSearchRequest req) {
+        byte[] excelBytes = reactGenerateService.exportHistory(req);
+        String fileName = ExcelExportUtil.generateFileName("ReactGenerateHistory", LocalDate.now());
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentDisposition(
+                ContentDisposition.attachment().filename(fileName).build());
+        headers.setContentType(
+                MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"));
+        return ResponseEntity.ok().headers(headers).body(excelBytes);
+    }
+
+    /**
+     * CODE_ID로 React 코드 생성 이력 상세를 조회한다.
+     *
+     * @param id 조회할 CODE_ID
+     * @return 코드·미리보기 등 상세 정보
+     */
+    @GetMapping("/{id}")
+    public ResponseEntity<ApiResponse<ReactGenerateResponse>> getById(@PathVariable String id) {
+        return ResponseEntity.ok(ApiResponse.success(reactGenerateService.getById(id)));
     }
 
     /**

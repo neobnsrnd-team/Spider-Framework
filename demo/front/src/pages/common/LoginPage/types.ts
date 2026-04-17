@@ -20,4 +20,8 @@ export interface LoginPageProps {
   onTogglePassword?: () => void;
   /** 로그인 버튼 클릭 핸들러 */
   onLogin?: () => void;
+  /** 아이디 저장 체크 여부 — true 시 로그인 성공 후 userId를 localStorage에 보관 */
+  saveId?: boolean;
+  /** 아이디 저장 체크 변경 핸들러 */
+  onSaveIdChange?: (checked: boolean) => void;
 }

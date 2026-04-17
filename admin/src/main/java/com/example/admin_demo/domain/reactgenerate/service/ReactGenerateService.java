@@ -3,8 +3,10 @@ package com.example.admin_demo.domain.reactgenerate.service;
 import com.example.admin_demo.domain.reactgenerate.ai.client.ClaudeApiClient;
 import com.example.admin_demo.domain.reactgenerate.ai.prompt.PromptBuilder;
 import com.example.admin_demo.domain.reactgenerate.dto.ReactGenerateApprovalResponse;
+import com.example.admin_demo.domain.reactgenerate.dto.ReactGenerateHistoryResponse;
 import com.example.admin_demo.domain.reactgenerate.dto.ReactGenerateRequest;
 import com.example.admin_demo.domain.reactgenerate.dto.ReactGenerateResponse;
+import com.example.admin_demo.domain.reactgenerate.dto.ReactGenerateSearchRequest;
 import com.example.admin_demo.domain.reactgenerate.enums.ReactGenerateStatus;
 import com.example.admin_demo.domain.reactgenerate.figma.FigmaDesignContext;
 import com.example.admin_demo.domain.reactgenerate.figma.FigmaDesignExtractor;
@@ -14,13 +16,21 @@ import com.example.admin_demo.domain.reactgenerate.figma.client.FigmaNodeRespons
 import com.example.admin_demo.domain.reactgenerate.mapper.ReactGenerateMapper;
 import com.example.admin_demo.domain.reactgenerate.validator.CodeValidationResult;
 import com.example.admin_demo.domain.reactgenerate.validator.CodeValidator;
+import com.example.admin_demo.global.exception.InternalException;
 import com.example.admin_demo.global.exception.InvalidInputException;
 import com.example.admin_demo.global.exception.NotFoundException;
 import com.example.admin_demo.global.exception.base.BaseException;
 import com.example.admin_demo.global.log.event.ErrorLogEvent;
+import com.example.admin_demo.global.util.ExcelColumnDefinition;
+import com.example.admin_demo.global.util.ExcelExportUtil;
 import com.example.admin_demo.global.util.TraceIdUtil;
+import java.io.IOException;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -283,35 +293,31 @@ public class ReactGenerateService {
     }
 
     /**
-     * 생성된 코드를 관리자 승인 요청 상태로 변경한다.
+     * 생성된 코드를 승인 요청 상태로 변경한다.
+     *
+     * <p>클라이언트 측 버튼 노출 조건(작성자 여부)과 별개로,
+     * 서버에서도 요청자가 코드 작성자인지 검증하여 API 직접 호출 우회를 방지한다.
+     *
+     * @param id            승인 요청할 코드 ID
+     * @param requestUserId 요청자 ID (로그인 사용자)
+     * @throws InvalidInputException 요청자가 코드 작성자가 아닐 때
      */
-    public ReactGenerateApprovalResponse requestApproval(String id) {
-        requireExists(id);
+    public ReactGenerateApprovalResponse requestApproval(String id, String requestUserId) {
+        ReactGenerateResponse existing = reactGenerateMapper.selectById(id);
+        if (existing == null) {
+            throw new NotFoundException("생성 결과를 찾을 수 없습니다. codeId=" + id);
+        }
+        // 작성자 본인만 승인 요청 가능 — 클라이언트 우회 방지
+        if (!requestUserId.equals(existing.getCreateUserId())) {
+            throw new InvalidInputException("코드 작성자만 승인 요청할 수 있습니다.");
+        }
 
-        reactGenerateMapper.updateStatus(id, ReactGenerateStatus.PENDING_APPROVAL.name(), null, null);
-        log.info("승인 요청 — codeId: {}", id);
+        reactGenerateMapper.updateStatus(id, ReactGenerateStatus.PENDING_APPROVAL.name(), null, null, null);
+        log.info("승인 요청 — codeId: {}, requestUserId: {}", id, requestUserId);
 
         return ReactGenerateApprovalResponse.builder()
                 .codeId(id)
                 .status(ReactGenerateStatus.PENDING_APPROVAL.name())
-                .build();
-    }
-
-    /**
-     * 관리자가 생성 코드를 승인한다.
-     */
-    public ReactGenerateApprovalResponse approve(String id, String approvedBy) {
-        requireExists(id);
-
-        String now = LocalDateTime.now().format(FORMATTER);
-        reactGenerateMapper.updateStatus(id, ReactGenerateStatus.APPROVED.name(), approvedBy, now);
-        log.info("승인 완료 — codeId: {}, approvalUserId: {}", id, approvedBy);
-
-        return ReactGenerateApprovalResponse.builder()
-                .codeId(id)
-                .status(ReactGenerateStatus.APPROVED.name())
-                .approvalUserId(approvedBy)
-                .approvalDtime(now)
                 .build();
     }
 
@@ -354,10 +360,105 @@ public class ReactGenerateService {
         }
     }
 
+    /**
+     * 검색 조건에 맞는 이력 목록과 전체 건수를 조회한다.
+     *
+     * @param req 검색 조건 (상태·생성자·날짜 범위·페이지)
+     * @return list(목록), totalCount(전체 건수), page, size
+     */
+    public Map<String, Object> getHistory(ReactGenerateSearchRequest req) {
+        List<ReactGenerateHistoryResponse> list = reactGenerateMapper.selectList(req);
+        int totalCount = reactGenerateMapper.selectCount(req);
+        return Map.of("list", list, "totalCount", totalCount, "page", req.getPage(), "size", req.getSize());
+    }
+
+    /**
+     * CODE_ID로 생성 이력 상세를 조회한다.
+     *
+     * @param codeId 조회할 코드 ID
+     * @return 코드·메타 정보 (reactCode, approvalUserId 등 포함)
+     * @throws NotFoundException 해당 codeId 레코드가 없을 때
+     */
+    public ReactGenerateResponse getById(String codeId) {
+        ReactGenerateResponse response = reactGenerateMapper.selectById(codeId);
+        if (response == null) {
+            throw new NotFoundException("이력을 찾을 수 없습니다. codeId=" + codeId);
+        }
+        return response;
+    }
+
+    /**
+     * 검색 조건에 맞는 전체 이력을 엑셀 파일로 변환하여 반환한다.
+     *
+     * @param req 검색 조건 (페이지네이션 무시, 전체 조회)
+     * @return xlsx 파일의 byte 배열
+     * @throws InvalidInputException 결과 건수가 최대 행 수를 초과할 때
+     */
+    public byte[] exportHistory(ReactGenerateSearchRequest req) {
+        // 전체 데이터 로드 전 건수 먼저 확인 → 초과 시 즉시 예외로 OOM 방지
+        int totalCount = reactGenerateMapper.selectCount(req);
+        if (!ExcelExportUtil.isWithinLimit(totalCount)) {
+            throw new InvalidInputException(
+                    "엑셀 다운로드 최대 행 수(" + ExcelExportUtil.MAX_ROW_LIMIT + ")를 초과했습니다: " + totalCount);
+        }
+        List<ReactGenerateHistoryResponse> data = reactGenerateMapper.selectAllForExport(req);
+
+        List<ExcelColumnDefinition> columns = List.of(
+                new ExcelColumnDefinition("Figma URL", 50, "figmaUrl"),
+                new ExcelColumnDefinition("상태", 15, "status"),
+                new ExcelColumnDefinition("생성자", 15, "createUserId"),
+                new ExcelColumnDefinition("생성일시", 20, "createDtime"),
+                new ExcelColumnDefinition("승인자", 15, "approvalUserId"),
+                new ExcelColumnDefinition("승인일시", 20, "approvalDtime"));
+
+        List<Map<String, Object>> rows = new ArrayList<>();
+        for (ReactGenerateHistoryResponse item : data) {
+            Map<String, Object> row = new HashMap<>();
+            row.put("figmaUrl", item.getFigmaUrl());
+            row.put("status", translateStatus(item.getStatus()));
+            row.put("createUserId", item.getCreateUserId());
+            row.put("createDtime", formatDtimeForExcel(item.getCreateDtime()));
+            row.put("approvalUserId", item.getApprovalUserId());
+            row.put("approvalDtime", formatDtimeForExcel(item.getApprovalDtime()));
+            rows.add(row);
+        }
+
+        try {
+            return ExcelExportUtil.createWorkbook("React 코드 생성 이력", columns, rows);
+        } catch (IOException e) {
+            throw new InternalException("엑셀 파일 생성 중 오류가 발생했습니다", e);
+        }
+    }
+
+    /** DB 저장 형식(yyyyMMddHHmmss)을 사람이 읽기 쉬운 형식(yyyy-MM-dd HH:mm)으로 변환한다. */
+    private String formatDtimeForExcel(String dtime) {
+        if (dtime == null || dtime.length() != 14) return dtime != null ? dtime : "";
+        try {
+            return LocalDateTime.parse(dtime, FORMATTER).format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm"));
+        } catch (Exception e) {
+            log.warn("날짜 형식 변환 실패 — dtime: {}", dtime);
+            return dtime;
+        }
+    }
+
+    /** 영문 상태 코드를 한글 레이블로 변환한다. */
+    private String translateStatus(String status) {
+        if (status == null) return "";
+        return switch (status) {
+            case "GENERATED" -> "생성 완료";
+            case "PENDING_APPROVAL" -> "승인 대기";
+            case "APPROVED" -> "승인 완료";
+            case "FAILED" -> "실패";
+            default -> status;
+        };
+    }
+
     /** CODE_ID로 이력을 조회하고, 없으면 NotFoundException을 던진다. */
-    private void requireExists(String id) {
-        if (reactGenerateMapper.selectById(id) == null) {
+    private ReactGenerateResponse requireExists(String id) {
+        ReactGenerateResponse response = reactGenerateMapper.selectById(id);
+        if (response == null) {
             throw new NotFoundException("생성 결과를 찾을 수 없습니다. codeId=" + id);
         }
+        return response;
     }
 }

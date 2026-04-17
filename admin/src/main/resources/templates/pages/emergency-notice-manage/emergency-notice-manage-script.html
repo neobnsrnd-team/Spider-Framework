@@ -44,27 +44,10 @@
             this.load();
             this.loadDeployStatus(); // 배포 상태 뱃지 별도 조회
 
-            // ── EventBus 구독 ────────────────────────────────────────────────
-            // 배포 관리 탭에서 배포/배포종료/설정 변경 시 배포 상태 뱃지 자동 갱신.
-            // off()에서 동일 참조가 필요하므로 핸들러를 인스턴스에 보관한다.
-            this._onStatusChanged = function () { self.loadDeployStatus(); };
-            EventBus.on('admin:emergencyNotice:statusChanged', this._onStatusChanged);
-
-            // $page: init() 시점에 DOM에 유일하게 존재하는 [data-tab-page] 요소.
-            // detach 후에도 jQuery 이벤트는 DOM 노드에 저장되므로
-            // 직접 바인딩으로 tab:removed(캐시 탭 포함) 정리를 보장한다.
-            var $page = $('[data-tab-page]');
-
             // 캐시에서 복원 시(tab:activated) 배포 상태 최신화
-            $page.on('tab:activated', function () {
+            $('[data-tab-page]').off('tab:activated.emergencyNotice').on('tab:activated.emergencyNotice', function () {
                 self.loadDeployStatus();
             });
-
-            // 탭 닫힐 때(tab:removed) EventBus 핸들러 정리 — 메모리 누수 방지
-            $page.on('tab:removed', function () {
-                EventBus.off('admin:emergencyNotice:statusChanged', self._onStatusChanged);
-            });
-            // ────────────────────────────────────────────────────────────────
 
             if (HAS_WRITE) {
                 document.getElementById('btnSave')
