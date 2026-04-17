@@ -92,6 +92,13 @@ menu:
     - test1        # test 메뉴
     - 테스트메뉴     # test 메뉴
 
+# React 코드 승인 Configuration
+# 승인(approval) 시 생성된 .tsx 파일을 저장할 디렉토리.
+# Vite HMR이 파일 추가를 감지해 demo/front에 즉시 반영된다 (개발 모드).
+approval:
+  react:
+    output-dir: ${REACT_APPROVAL_OUTPUT_DIR:../demo/front/src/generated}
+
 # Demo 연동 Configuration (긴급공지 SSE Push, 미리보기)
 demo:
   backend:
@@ -118,6 +125,13 @@ claude:
     # Claude 응답은 수십 초 소요될 수 있으므로 기본 RestTemplate 타임아웃과 별도 설정
     connect-timeout-seconds: 10
     read-timeout-seconds: 120
+
+# CMS Deploy Configuration
+cms:
+  deploy:
+    receive-url: ${CMS_DEPLOY_RECEIVE_URL:http://133.186.135.23:3001/api/deploy/receive}
+    secret: ${CMS_DEPLOY_SECRET:}
+    tracker-js-url: ${CMS_DEPLOY_TRACKER_JS_URL:http://133.186.135.23:3001/cms-tracker.js}
 
 # Scheduling Configuration (배치 이력 정리 스케줄러)
 scheduling:

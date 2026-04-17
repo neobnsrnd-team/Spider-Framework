@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<th:block th:fragment="script">
+<script>
+    // ==================== CmsStatisticsPage ====================
+
+    window.CmsStatisticsPage = {
+        currentPage: 1,
+        totalItems: 0,
+        itemsPerPage: 10,
+
+        load: function(page) {
+            if (page !== undefined) this.currentPage = page;
+            const params = new URLSearchParams({
+                page:      this.currentPage,
+                size:      this.itemsPerPage,
+                pageId:    $('#filterPageId').val().trim(),
+                startDate: $('#filterStartDate').val(),
+                endDate:   $('#filterEndDate').val(),
+            });
+
+            fetch('/api/cms-admin/statistics?' + params)
+                .then(r => r.json())
+                .then(res => {
+                    if (!res.success) { Toast.error(res.message); return; }
+                    const pageData = res.data;
+                    this.totalItems = pageData.totalElements;
+                    this.renderTable(pageData.content);
+                    this.renderPagination();
+                })
+                .catch(() => Toast.error('통계 조회 중 오류가 발생했습니다.'));
+        },
+
+        renderTable: function(rows) {
+            const $tbody = $('#statisticsTableBody');
+            if (!rows || rows.length === 0) {
+                $tbody.html('<tr><td colspan="5" class="text-center py-4 text-body-secondary">아직 수집된 데이터가 없습니다.</td></tr>');
+                return;
+            }
+
+            const startDate = $('#filterStartDate').val();
+            const endDate   = $('#filterEndDate').val();
+
+            const html = rows.map(row => {
+                const pid = HtmlUtils.escape(row.pageId || '');
+                const escapedName = HtmlUtils.escape(row.pageName || '').replace(/'/g, '&#39;');
+                const detailBtn = row.clickCount > 0
+                    ? `<button class="btn btn-outline-primary btn-xs"
+                           onclick="CmsStatisticsPage.openDetailModal('${pid}', '${escapedName}', '${HtmlUtils.escape(startDate)}', '${HtmlUtils.escape(endDate)}')">상세</button>`
+                    : '-';
+
+                return `<tr>
+                    <td>${HtmlUtils.escape(row.pageName || '')}</td>
+                    <td class="text-monospace small">${pid}</td>
+                    <td class="text-end">${(row.viewCount || 0).toLocaleString()}</td>
+                    <td class="text-end">${(row.clickCount || 0).toLocaleString()}</td>
+                    <td class="text-center">${detailBtn}</td>
+                </tr>`;
+            }).join('');
+
+            $tbody.html(html);
+        },
+
+        renderPagination: function() {
+            const totalPages = Math.ceil(this.totalItems / this.itemsPerPage);
+            const pagination = $('#pagination');
+            pagination.empty();
+
+            pagination.append(`
+                <li class="page-item ${this.currentPage === 1 ? 'disabled' : ''}">
+                    <a class="page-link" href="#" onclick="CmsStatisticsPage.changePage(1); return false;"><i class="bi bi-chevron-double-left"></i></a>
+                </li>
+                <li class="page-item ${this.currentPage === 1 ? 'disabled' : ''}">
+                    <a class="page-link" href="#" onclick="CmsStatisticsPage.changePage(${this.currentPage - 1}); return false;"><i class="bi bi-chevron-left"></i></a>
+                </li>
+            `);
+
+            const maxButtons = 5;
+            let startPage = Math.max(1, this.currentPage - Math.floor(maxButtons / 2));
+            let endPage   = Math.min(totalPages, startPage + maxButtons - 1);
+            if (endPage - startPage + 1 < maxButtons) {
+                startPage = Math.max(1, endPage - maxButtons + 1);
+            }
+
+            for (let i = startPage; i <= endPage; i++) {
+                pagination.append(`
+                    <li class="page-item ${i === this.currentPage ? 'active' : ''}">
+                        <a class="page-link" href="#" onclick="CmsStatisticsPage.changePage(${i}); return false;">${i}</a>
+                    </li>
+                `);
+            }
+
+            pagination.append(`
+                <li class="page-item ${this.currentPage === totalPages || totalPages === 0 ? 'disabled' : ''}">
+                    <a class="page-link" href="#" onclick="CmsStatisticsPage.changePage(${this.currentPage + 1}); return false;"><i class="bi bi-chevron-right"></i></a>
+                </li>
+                <li class="page-item ${this.currentPage === totalPages || totalPages === 0 ? 'disabled' : ''}">
+                    <a class="page-link" href="#" onclick="CmsStatisticsPage.changePage(${totalPages}); return false;"><i class="bi bi-chevron-double-right"></i></a>
+                </li>
+            `);
+
+            const start = this.totalItems === 0 ? 0 : (this.currentPage - 1) * this.itemsPerPage + 1;
+            const end   = Math.min(this.currentPage * this.itemsPerPage, this.totalItems);
+            $('#pageInfo').text(`${start} - ${end} of ${this.totalItems} items`);
+        },
+
+        changePage: function(page) {
+            const totalPages = Math.ceil(this.totalItems / this.itemsPerPage);
+            if (page < 1 || page > totalPages) return;
+            this.currentPage = page;
+            this.load();
+        },
+
+        reset: function() {
+            const today = this._today();
+            const thirtyDaysAgo = this._daysAgo(30);
+            $('#filterStartDate').val(thirtyDaysAgo);
+            $('#filterEndDate').val(today);
+            $('#filterPageId').val('');
+            this.itemsPerPage = parseInt($('#limitRows').val()) || 10;
+            this.load(1);
+        },
+
+        openDetailModal: function(pageId, pageName, startDate, endDate) {
+            $('#detailPageName').text(pageName);
+            $('#detailTableBody').html('<tr><td colspan="2" class="text-center text-body-secondary">불러오는 중...</td></tr>');
+            new bootstrap.Modal('#detailModal').show();
+
+            const params = new URLSearchParams({ pageId, startDate, endDate });
+            fetch('/api/cms-admin/statistics/detail?' + params)
+                .then(r => r.json())
+                .then(res => {
+                    if (!res.success || !res.data || res.data.length === 0) {
+                        $('#detailTableBody').html('<tr><td colspan="2" class="text-center text-body-secondary">클릭 데이터가 없습니다.</td></tr>');
+                        return;
+                    }
+                    const html = res.data.map(d => `<tr>
+                        <td class="text-monospace small">${HtmlUtils.escape(d.componentId || '')}</td>
+                        <td class="text-end">${(d.clickCount || 0).toLocaleString()}</td>
+                    </tr>`).join('');
+                    $('#detailTableBody').html(html);
+                })
+                .catch(() => {
+                    $('#detailTableBody').html('<tr><td colspan="2" class="text-center text-danger">상세 조회 실패</td></tr>');
+                });
+        },
+
+        _today: function() {
+            return new Date().toLocaleDateString('en-CA');
+        },
+
+        _daysAgo: function(days) {
+            const d = new Date();
+            d.setDate(d.getDate() - days);
+            return d.toLocaleDateString('en-CA');
+        },
+    };
+
+    // ==================== 이벤트 바인딩 ====================
+
+    $(document).ready(function() {
+        const today = CmsStatisticsPage._today();
+        const thirtyDaysAgo = CmsStatisticsPage._daysAgo(30);
+        $('#filterStartDate').val(thirtyDaysAgo);
+        $('#filterEndDate').val(today);
+
+        CmsStatisticsPage.itemsPerPage = parseInt($('#limitRows').val()) || 10;
+        CmsStatisticsPage.load(1);
+
+        $('#limitRows').on('change', function() {
+            CmsStatisticsPage.itemsPerPage = parseInt($(this).val()) || 10;
+            CmsStatisticsPage.load(1);
+        });
+
+        $('#btnRefresh').off('click').on('click', function() { CmsStatisticsPage.load(); });
+    });
+</script>
+</th:block>
+</body>
+</html>

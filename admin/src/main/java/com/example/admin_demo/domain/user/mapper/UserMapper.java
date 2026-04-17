@@ -5,6 +5,7 @@ import com.example.admin_demo.domain.user.dto.UserCreateRequest;
 import com.example.admin_demo.domain.user.dto.UserResponse;
 import com.example.admin_demo.domain.user.dto.UserUpdateRequest;
 import com.example.admin_demo.domain.user.dto.UserWithRoleResponse;
+import com.example.admin_demo.global.auth.dto.CmsApproverResponse;
 import com.example.admin_demo.global.security.dto.UserAuthInfo;
 import java.util.List;
 import org.apache.ibatis.annotations.Param;
@@ -189,6 +190,13 @@ public interface UserMapper {
             @Param("userId") String userId,
             @Param("lastUpdateDtime") String lastUpdateDtime,
             @Param("lastUpdateUserId") String lastUpdateUserId);
+
+    /**
+     * CMS 결재자 목록 조회 (v3_cms_admin_approvals 쓰기 권한 보유 활성 사용자)
+     *
+     * @return {@link List} {@link CmsApproverResponse} 결재자 목록
+     */
+    List<CmsApproverResponse> findCmsApprovers();
 
     /**
      * 엑셀 내보내기용 전체 목록 조회 (페이징 없음)
