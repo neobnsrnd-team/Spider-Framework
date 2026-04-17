@@ -5,13 +5,15 @@
  * 인사말 + 브랜드 타이틀 구조를 가진다.
  */
 import React from 'react';
+import type { BottomNavItem } from '../BottomNav/types';
 
 export interface HomePageLayoutProps extends React.HTMLAttributes<HTMLDivElement> {
   /** 헤더 타이틀 (앱 이름 또는 서비스명, 예: '하나은행') */
   title: string;
   /**
-   * 타이틀 좌측에 표시할 로고 아이콘 슬롯.
-   * 미전달 시 로고 영역 렌더링 안 함
+   * 타이틀 좌측에 표시할 로고 슬롯 (ReactNode).
+   * 아이콘 문자열에서 컴포넌트로의 변환은 호출자(CMS layouts.tsx 등)가 담당한다.
+   * 미전달 시 로고 영역 렌더링 안 함.
    */
   logo?: React.ReactNode;
   /**
@@ -27,5 +29,16 @@ export interface HomePageLayoutProps extends React.HTMLAttributes<HTMLDivElement
   hasNotification?: boolean;
   /** 하단 글로벌 탭바 영역 여백 자동 추가 여부. 기본: true */
   withBottomNav?: boolean;
+  /**
+   * CMS 브리지 전용: 하단 탭바에서 활성화할 탭 ID.
+   * withBottomNav=true일 때만 사용된다.
+   * @default "home"
+   */
+  activeId?: string;
+  /**
+   * 하단 탭바 항목 커스터마이징.
+   * 미전달 시 기본 탭(자산·상품·홈·카드·챗봇)을 사용한다.
+   */
+  bottomNavItems?: BottomNavItem[];
   className?: string;
 }

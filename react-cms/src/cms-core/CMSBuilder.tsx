@@ -1,0 +1,364 @@
+// <CMSBuilder /> — 외부 프로젝트에 임베드 가능한 CMS 빌더 컴포넌트
+// CMSPage.tsx의 하드코딩된 의존성을 props로 교체합니다.
+
+import { useState, useRef, useMemo } from "react";
+import {
+  DndContext,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+  type DragStartEvent,
+} from "@dnd-kit/core";
+
+import type { CMSPage, CMSOverlay } from "./types";
+import { useBuilderState } from "./state/builderStore";
+import { BlockMetaContext, BlockRegistryContext, LayoutTemplatesContext, OverlayTemplatesContext, CodegenConfigContext } from "./context";
+import { useContext } from "react";
+import LeftSidebar from "./palette/LeftSidebar";
+import RightSidebar from "./inspector/RightSidebar";
+import { Canvas, PaletteDragOverlay } from "./canvas/LayoutCanvas";
+import { downloadPageJson, parsePageJson } from "./codegen/exportJson";
+import { generateJSX } from "./codegen/exportCode";
+import SavePageModal from "./SavePageModal";
+import type { SavePageParams } from "./SavePageModal";
+
+// ── Props ──────────────────────────────────────────────────────────────────────
+
+export interface CMSBuilderProps {
+  /** 페이지 저장 핸들러 */
+  onSave?: (page: CMSPage, params: SavePageParams) => void | Promise<void>;
+  /** 초기 페이지 데이터 (불러오기용) */
+  initialPage?: CMSPage;
+}
+
+// ── CMSBuilder ─────────────────────────────────────────────────────────────────
+
+export function CMSBuilder({ onSave, initialPage }: CMSBuilderProps) {
+  const blockMeta = useContext(BlockMetaContext);
+  const blockRegistry = useContext(BlockRegistryContext);
+  const overlayTemplates = useContext(OverlayTemplatesContext);
+  const layouts = useContext(LayoutTemplatesContext);
+  const codegenConfig = useContext(CodegenConfigContext);
+
+  const builder = useBuilderState(blockMeta, initialPage);
+  const [rightTab, setRightTab] = useState<"props" | "layout" | "json">("layout");
+  const [codeOpen, setCodeOpen] = useState(false);
+  const [saveOpen, setSaveOpen] = useState(false);
+  const [activeDragId, setActiveDragId] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+  );
+
+  const selectedBlock = builder.activeBlocks.find((b) => b.id === builder.selectedBlockId) ?? null;
+  const editingOverlay: CMSOverlay | undefined = builder.editingOverlayId
+    ? builder.overlays.find((o) => o.id === builder.editingOverlayId)
+    : undefined;
+
+  const activePaletteType = activeDragId?.startsWith("palette::")
+    ? activeDragId.replace("palette::", "")
+    : null;
+
+  function handleDragStart(event: DragStartEvent) {
+    setActiveDragId(event.active.id as string);
+  }
+
+  function handleDragEnd(event: DragEndEvent) {
+    setActiveDragId(null);
+    const { active, over } = event;
+    if (!over) return;
+
+    const activeData = active.data.current;
+    const blockIds = builder.activeBlocks.map((b) => b.id);
+
+    if (activeData?.type === "palette-item") {
+      if (over.id === "canvas-drop-zone") {
+        builder.addBlock(activeData.blockType as string);
+      } else {
+        const overIdx = blockIds.indexOf(over.id as string);
+        if (overIdx !== -1) {
+          builder.addBlock(activeData.blockType as string, overIdx);
+        } else {
+          builder.addBlock(activeData.blockType as string);
+        }
+      }
+      return;
+    }
+
+    if (active.id !== over.id) {
+      const oldIdx = blockIds.indexOf(active.id as string);
+      const newIdx = blockIds.indexOf(over.id as string);
+      if (oldIdx !== -1 && newIdx !== -1) builder.reorderBlocks(oldIdx, newIdx);
+    }
+  }
+
+  function handleImport() {
+    fileInputRef.current?.click();
+  }
+
+  function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      try {
+        builder.loadPage(parsePageJson(ev.target?.result as string));
+      } catch {
+        alert("유효하지 않은 JSON 파일입니다.");
+      }
+    };
+    reader.readAsText(file);
+    e.target.value = "";
+  }
+
+  const page = builder.getPage();
+
+  // Context 정보(layouts, codegenConfig, overlayTemplates)를 포함해 코드를 생성한 뒤
+  // SavePageParams.code에 주입하여 저장 함수가 올바른 코드를 받도록 래핑
+  const wrappedOnSave = useMemo(() => {
+    if (!onSave) return undefined;
+    return (savePage: CMSPage, params: SavePageParams) =>
+      onSave(savePage, {
+        ...params,
+        code: generateJSX(savePage, layouts, codegenConfig, overlayTemplates),
+      });
+  }, [onSave, layouts, codegenConfig, overlayTemplates]);
+
+  return (
+    <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
+      <div className="flex flex-col h-screen bg-gray-50 overflow-hidden">
+        {/* ── 툴바 ── */}
+        <Toolbar
+          blockCount={builder.blocks.length}
+          layoutType={builder.layoutType}
+          editingOverlay={editingOverlay}
+          onExitOverlay={builder.exitOverlay}
+          onImport={handleImport}
+          onExport={() => downloadPageJson(page)}
+          onViewCode={() => setCodeOpen(true)}
+          onSavePage={() => setSaveOpen(true)}
+          onPreview={() => {
+            localStorage.setItem("cms_preview", JSON.stringify(page));
+            window.open("/preview", "_blank");
+          }}
+          onClear={builder.clearBlocks}
+        />
+
+        <div className="flex flex-1 overflow-hidden">
+          {/* ── 좌측: 블록 팔레트 + Overlays ── */}
+          <LeftSidebar
+            onAdd={builder.addBlock}
+            blockMeta={blockMeta}
+            blockRegistry={blockRegistry}
+            overlayTemplates={overlayTemplates}
+            overlays={builder.overlays}
+            editingOverlayId={builder.editingOverlayId}
+            onAddOverlayFromTemplate={builder.addOverlayFromTemplate}
+            onRemoveOverlay={builder.removeOverlay}
+            onRenameOverlay={builder.renameOverlay}
+            onEnterOverlay={(id) => { builder.enterOverlay(id); setRightTab("layout"); }}
+            onExitOverlay={builder.exitOverlay}
+          />
+
+          {/* ── 중앙: 캔버스 ── */}
+          <Canvas
+            blocks={builder.activeBlocks}
+            page={page}
+            selectedBlockId={builder.selectedBlockId}
+            activePaletteType={activePaletteType}
+            editingOverlay={editingOverlay}
+            blockMeta={blockMeta}
+            blockRegistry={blockRegistry}
+            onSelectBlock={(id) => { builder.selectBlock(id); setRightTab("props"); }}
+            onRemoveBlock={builder.removeBlock}
+            onDeselect={() => builder.selectBlock(null)}
+          />
+
+          {/* ── 우측: 속성 / 레이아웃 / JSON ── */}
+          <RightSidebar
+            selectedBlock={selectedBlock}
+            layoutType={builder.layoutType}
+            layoutProps={builder.layoutProps}
+            page={page}
+            overlays={builder.overlays}
+            overlayTemplates={overlayTemplates}
+            editingOverlay={editingOverlay}
+            activeTab={rightTab}
+            isEditingOverlay={!!editingOverlay}
+            blockMeta={blockMeta}
+            onTabChange={setRightTab}
+            onPropsChange={(newProps) => selectedBlock && builder.updateBlockProps(selectedBlock.id, newProps)}
+            onPaddingChange={(padding) => selectedBlock && builder.updateBlockPadding(selectedBlock.id, padding)}
+            onInteractionChange={(interaction) => selectedBlock && builder.updateBlockInteraction(selectedBlock.id, interaction)}
+            onOverlayPropsChange={(props) => editingOverlay && builder.updateOverlayProps(editingOverlay.id, props)}
+            onLayoutTypeChange={builder.updateLayoutType}
+            onLayoutPropsChange={builder.updateLayoutProps}
+          />
+        </div>
+
+        <input ref={fileInputRef} type="file" accept=".json" className="hidden" onChange={handleFileChange} />
+
+        {codeOpen && <CodeModal code={generateJSX(page, layouts, codegenConfig, overlayTemplates)} onClose={() => setCodeOpen(false)} />}
+
+        {saveOpen && (
+          <SavePageModal
+            page={page}
+            onSave={wrappedOnSave}
+            onClose={() => setSaveOpen(false)}
+          />
+        )}
+      </div>
+
+      <PaletteDragOverlay activePaletteType={activePaletteType} blockMeta={blockMeta} />
+    </DndContext>
+  );
+}
+
+// ── 툴바 ──────────────────────────────────────────────────────────────────────
+
+function Toolbar({
+  blockCount,
+  layoutType,
+  editingOverlay,
+  onExitOverlay,
+  onImport,
+  onExport,
+  onViewCode,
+  onSavePage,
+  onPreview,
+  onClear,
+}: {
+  blockCount: number;
+  layoutType: string | undefined;
+  editingOverlay?: CMSOverlay;
+  onExitOverlay: () => void;
+  onImport: () => void;
+  onExport: () => void;
+  onViewCode: () => void;
+  onSavePage: () => void;
+  onPreview: () => void;
+  onClear: () => void;
+}) {
+  return (
+    <header className="flex items-center justify-between px-4 h-12 border-b border-gray-200 bg-white flex-shrink-0">
+      <div className="flex items-center gap-2">
+        <span className="font-bold text-primary text-sm tracking-tight">CMS Builder</span>
+        {editingOverlay ? (
+          <>
+            <button
+              onClick={onExitOverlay}
+              className="px-2 py-0.5 bg-gray-100 hover:bg-gray-200 text-gray-500 text-xs rounded-full"
+            >
+              ← 페이지
+            </button>
+            <span className="px-2 py-0.5 bg-amber-100 text-amber-700 text-xs rounded-full font-medium">
+              {editingOverlay.type}: {editingOverlay.id}
+            </span>
+          </>
+        ) : (
+          <>
+            {layoutType && <LayoutBadge layoutType={layoutType} />}
+            {blockCount > 0 && (
+              <span className="px-2 py-0.5 bg-gray-100 text-gray-600 text-xs rounded-full">
+                {blockCount}개
+              </span>
+            )}
+          </>
+        )}
+      </div>
+      <div className="flex items-center gap-1.5">
+        <ToolbarButton onClick={onImport}>가져오기</ToolbarButton>
+        <ToolbarButton onClick={onExport} disabled={blockCount === 0 && !layoutType}>
+          내보내기
+        </ToolbarButton>
+        <ToolbarButton onClick={onViewCode} disabled={blockCount === 0 && !layoutType}>
+          코드 보기
+        </ToolbarButton>
+        <ToolbarButton onClick={onSavePage} variant="success" disabled={blockCount === 0 && !layoutType}>
+          페이지 저장
+        </ToolbarButton>
+        <ToolbarButton onClick={onPreview} variant="primary" disabled={blockCount === 0}>
+          미리보기
+        </ToolbarButton>
+        {(blockCount > 0 || layoutType) && (
+          <ToolbarButton onClick={onClear} variant="danger">초기화</ToolbarButton>
+        )}
+      </div>
+    </header>
+  );
+}
+
+function LayoutBadge({ layoutType }: { layoutType: string }) {
+  const layouts = useContext(LayoutTemplatesContext);
+  const label = layouts.find((t) => t.id === layoutType)?.label ?? layoutType;
+  return (
+    <span className="px-2 py-0.5 bg-primary/10 text-primary text-xs rounded-full font-medium">
+      {label}
+    </span>
+  );
+}
+
+function ToolbarButton({
+  children,
+  onClick,
+  variant = "default",
+  disabled = false,
+}: {
+  children: React.ReactNode;
+  onClick: () => void;
+  variant?: "default" | "primary" | "success" | "danger";
+  disabled?: boolean;
+}) {
+  const styles = {
+    default: "bg-gray-100 hover:bg-gray-200 text-gray-700",
+    primary: "bg-primary hover:bg-primary-dark text-white",
+    success: "bg-green-600 hover:bg-green-700 text-white",
+    danger: "bg-red-50 hover:bg-red-100 text-red-600",
+  };
+
+  return (
+    <button
+      className={`px-3 py-1.5 text-xs rounded-lg font-medium transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${styles[variant]}`}
+      onClick={onClick}
+      disabled={disabled}
+    >
+      {children}
+    </button>
+  );
+}
+
+// ── 코드 모달 ─────────────────────────────────────────────────────────────────
+
+function CodeModal({ code, onClose }: { code: string; onClose: () => void }) {
+  return (
+    <div
+      className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-6"
+      onClick={onClose}
+    >
+      <div
+        className="relative bg-gray-900 rounded-2xl shadow-2xl w-full max-w-2xl max-h-[80vh] flex flex-col overflow-hidden"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between px-4 py-2.5 border-b border-gray-700 flex-shrink-0">
+          <span className="text-xs font-medium text-gray-400">생성된 JSX 코드</span>
+          <div className="flex items-center gap-2">
+            <button
+              className="px-3 py-1 text-xs bg-gray-700 hover:bg-gray-600 text-gray-300 rounded"
+              onClick={() => navigator.clipboard.writeText(code)}
+            >
+              복사
+            </button>
+            <button className="text-gray-400 hover:text-gray-200 text-lg leading-none" onClick={onClose}>
+              ✕
+            </button>
+          </div>
+        </div>
+        <pre className="flex-1 overflow-auto p-4 text-xs text-green-300 font-mono whitespace-pre">
+          {code}
+        </pre>
+      </div>
+    </div>
+  );
+}
