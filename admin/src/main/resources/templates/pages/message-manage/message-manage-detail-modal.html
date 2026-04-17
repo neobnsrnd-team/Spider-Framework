@@ -246,6 +246,10 @@
                         th:if="${userAuthorities != null and userAuthorities.contains('MESSAGE:W')}">
                     <i class="bi bi-arrow-repeat"></i> Reload
                 </button>
+                <button type="button" class="btn btn-secondary btn-sm" onclick="window.MessageDetailModal.openCodeGenModal()"
+                        th:if="${userAuthorities != null and userAuthorities.contains('MESSAGE:R')}">
+                    <i class="bi bi-code-slash"></i> 소스 생성
+                </button>
                 <button type="button" class="btn btn-primary btn-sm" onclick="window.MessageDetailModal.save()"
                         th:if="${userAuthorities != null and userAuthorities.contains('MESSAGE:W')}">
                     <i class="bi bi-arrow-right"></i> 저장
