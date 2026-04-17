@@ -28,6 +28,7 @@ import React, { useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
 import { cn } from '@lib/cn';
+import { Button } from '../../../core/Button';
 import type { BottomSheetProps, BottomSheetSnap } from './types';
 
 export type { BottomSheetProps, BottomSheetSnap } from './types';
@@ -42,6 +43,24 @@ const SNAP_CLASS: Record<BottomSheetSnap, string> = {
   full: 'max-h-[90dvh]',
 };
 
+/** footer가 없을 때 bottomBtnCnt 기반으로 footer ReactNode를 빌드한다. */
+function buildFooter(
+  onClose: () => void,
+  cnt: '0' | '1' | '2',
+  label1: string,
+  label2: string,
+): React.ReactNode | undefined {
+  if (cnt === '0') return undefined;
+  return (
+    <div className="flex gap-sm">
+      {cnt === '2' && (
+        <Button variant="outline" size="lg" fullWidth onClick={onClose}>{label2}</Button>
+      )}
+      <Button variant="primary" size="lg" fullWidth onClick={onClose}>{label1}</Button>
+    </div>
+  );
+}
+
 export function BottomSheet({
   open,
   onClose,
@@ -51,8 +70,14 @@ export function BottomSheet({
   snap = 'auto',
   disableBackdropClose = false,
   hideCloseButton = false,
+  container,
+  bottomBtnCnt = '0',
+  bottomBtn1Label = '확인',
+  bottomBtn2Label = '취소',
   className,
 }: BottomSheetProps) {
+  /* footer가 없으면 CMS 브리지 props로 자동 생성 */
+  const resolvedFooter = footer ?? buildFooter(onClose, bottomBtnCnt, bottomBtn1Label, bottomBtn2Label);
   /* ESC 키로 닫기 */
   const handleKeyDown = useCallback(
     (e: KeyboardEvent) => {
@@ -74,15 +99,18 @@ export function BottomSheet({
 
   if (!open) return null;
 
+  // container 제공 시 absolute(캔버스 기준), 미제공 시 fixed(뷰포트 기준)
+  const positionClass = container ? 'absolute' : 'fixed';
+
   return createPortal(
     /*
-     * 백드롭: fixed inset-0으로 뷰포트 전체 덮기
+     * 백드롭: container 있으면 absolute inset-0(캔버스 기준), 없으면 fixed inset-0(뷰포트 기준)
      * items-end justify-center: 항상 하단 고정 (Modal처럼 md:items-center 반응형 없음)
      */
     <div
       role="presentation"
       onClick={disableBackdropClose ? undefined : onClose}
-      className="fixed inset-0 z-modal flex items-end justify-center bg-black/50 backdrop-blur-sm"
+      className={`${positionClass} inset-0 z-modal flex items-end justify-center bg-black/50 backdrop-blur-sm`}
     >
       <div
         role="dialog"
@@ -148,13 +176,13 @@ export function BottomSheet({
         </div>
 
         {/* 푸터 (고정) — 하단 안전 영역(Safe Area) 여백 pb-safe 포함 */}
-        {footer && (
+        {resolvedFooter && (
           <div className="shrink-0 px-xl pt-md pb-[calc(env(safe-area-inset-bottom,0px)+theme(spacing.xl))]">
-            {footer}
+            {resolvedFooter}
           </div>
         )}
       </div>
     </div>,
-    document.body,
+    container ?? document.body,
   );
 }
