@@ -76,7 +76,8 @@ function OverlayShell({
   container: HTMLDivElement | null;
 }) {
   const overlayTemplates = useContext(OverlayTemplatesContext);
-  const template = overlayTemplates.find((t) => t.defaultId === overlay.id);
+  // overlay.id는 사용자가 rename 가능하므로, 불변값인 type으로 템플릿을 매칭한다
+  const template = overlayTemplates.find((t) => t.type === overlay.type);
   const Renderer = template?.renderer;
 
   if (!Renderer) return null;

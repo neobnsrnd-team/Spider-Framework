@@ -72,7 +72,7 @@ function actionToHandler(action: Action, overlayId?: string): string {
     if (overlayId) return `() => set${capitalize(overlayId)}Open(false)`;
     return `() => {}`;
   }
-  if (action.type === "navigate") return `() => navigate("${action.path}")`;
+  if (action.type === "navigate") return `() => navigate(${JSON.stringify(action.path)})`;
   return "() => {}";
 }
 

@@ -3,6 +3,7 @@ import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite';
 import { resolve, dirname } from 'path';
 import { fileURLToPath } from 'url';
+import { cmsBankPlugin } from './src/vite-plugin/cmsBankPlugin';
 
 // ESM 환경에서 __dirname 미정의 — import.meta.url로 직접 파생
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -11,7 +12,12 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 export default defineConfig({
   plugins: [
     react(),
-    tailwindcss()
+    tailwindcss(),
+    // CMS 빌더에서 저장 시 demo/front 앱에 페이지 파일과 라우트를 자동 생성한다.
+    cmsBankPlugin({
+      routerPath: '../demo/front/src/routes/index.tsx',
+      pagesDir:   '../demo/front/src/pages/cms',
+    }),
   ],
   resolve: {
     alias: {

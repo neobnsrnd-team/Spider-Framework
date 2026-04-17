@@ -13,7 +13,7 @@
  * </CMSRuntimeProvider>
  */
 import { useMemo } from "react";
-import type { BlockDefinition, LayoutRenderer, LayoutTemplate, OverlayTemplate } from "./types";
+import type { BlockDefinition, LayoutTemplate, OverlayTemplate } from "./types";
 import {
   BlockRegistryContext,
   BlockMetaContext,
@@ -22,6 +22,7 @@ import {
   OverlayTemplatesContext,
   StylesheetContext,
 } from "./context";
+import { useCMSContextValues } from "./useCMSContextValues";
 
 export interface CMSRuntimeProviderProps {
   /** 외부 프로젝트가 제공하는 블록 정의 목록 */
@@ -52,27 +53,12 @@ export function CMSRuntimeProvider({
   stylesheetScope,
   children,
 }: CMSRuntimeProviderProps) {
-  const blockMeta = useMemo(
-    () => Object.fromEntries(blocks.map((b) => [b.meta.name, b.meta])),
-    [blocks],
-  );
-
-  const blockRegistry = useMemo(
-    () => Object.fromEntries(blocks.map((b) => [b.meta.name, b.component])),
-    [blocks],
-  );
+  const { blockMeta, blockRegistry, derivedRenderer } = useCMSContextValues(blocks, layouts);
 
   const stylesheetConfig = useMemo(
     () => ({ stylesheet, stylesheetScope }),
     [stylesheet, stylesheetScope],
   );
-
-  // layouts 배열에서 LayoutRenderer 파생: id로 템플릿을 찾아 renderer 호출
-  const derivedRenderer = useMemo<LayoutRenderer | undefined>(() => {
-    if (!layouts.length) return undefined;
-    return (layoutType, layoutProps) =>
-      layouts.find((t) => t.id === layoutType)?.renderer?.(layoutProps) ?? {};
-  }, [layouts]);
 
   return (
     <StylesheetContext.Provider value={stylesheetConfig}>

@@ -8,12 +8,12 @@ import { useState } from "react";
 import { arrayMove } from "@dnd-kit/sortable";
 import type {
   BlockInteraction,
+  BlockMeta,
   BlockPadding,
   CMSBlock,
   CMSOverlay,
   CMSPage,
 } from "../types";
-import type { BlockMeta } from "../types";
 
 export interface BuilderState {
   blocks: CMSBlock[];

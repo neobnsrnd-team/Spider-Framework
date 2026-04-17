@@ -5,7 +5,7 @@
 import { useMemo } from "react";
 import { createBrowserRouter, RouterProvider, Navigate } from "react-router-dom";
 import { CMSBuilder } from "@cms-core/CMSBuilder";
-import type { BlockDefinition, LayoutRenderer, LayoutTemplate, OverlayTemplate, CMSCodegenConfig } from "./types";
+import type { BlockDefinition, LayoutTemplate, OverlayTemplate, CMSCodegenConfig } from "./types";
 import type { CMSPage } from "./types";
 import type { SavePageParams } from "@cms-core/SavePageModal";
 import PreviewPage from "@cms-core/preview/PreviewPage";
@@ -20,6 +20,7 @@ import {
   StylesheetContext,
   CodegenConfigContext,
 } from "./context";
+import { useCMSContextValues } from "./useCMSContextValues";
 
 export interface CMSAppProps {
   /** 팔레트에 표시할 블록 목록 — 필수 */
@@ -59,27 +60,12 @@ export interface CMSAppProps {
 }
 
 export function CMSApp({ blocks, overlays = [], layouts = [], onSave, basename, stylesheetContent, stylesheet, stylesheetScope, codegenConfig = {} }: CMSAppProps) {
-  const blockMeta = useMemo(
-    () => Object.fromEntries(blocks.map((b) => [b.meta.name, b.meta])),
-    [blocks],
-  );
-
-  const blockRegistry = useMemo(
-    () => Object.fromEntries(blocks.map((b) => [b.meta.name, b.component])),
-    [blocks],
-  );
+  const { blockMeta, blockRegistry, derivedRenderer } = useCMSContextValues(blocks, layouts);
 
   const onSaveFn = useMemo(
     () => onSave ?? defaultSave,
     [onSave],
   );
-
-  // layouts 배열에서 LayoutRenderer 파생: id로 템플릿을 찾아 renderer 호출
-  const derivedRenderer = useMemo<LayoutRenderer | undefined>(() => {
-    if (!layouts.length) return undefined;
-    return (layoutType, layoutProps) =>
-      layouts.find((t) => t.id === layoutType)?.renderer?.(layoutProps) ?? {};
-  }, [layouts]);
 
   const router = useMemo(
     () =>
@@ -110,8 +96,6 @@ export function CMSApp({ blocks, overlays = [], layouts = [], onSave, basename, 
     [stylesheetContent, stylesheet, stylesheetScope],
   );
 
-  const codegenConfigMemo = useMemo(() => codegenConfig, [codegenConfig]);
-
   return (
     <StylesheetContext.Provider value={stylesheetConfig}>
       <BlockDefinitionsContext.Provider value={blocks}>
@@ -120,7 +104,7 @@ export function CMSApp({ blocks, overlays = [], layouts = [], onSave, basename, 
             <OverlayTemplatesContext.Provider value={overlays}>
               <LayoutTemplatesContext.Provider value={layouts}>
                 <LayoutRendererContext.Provider value={derivedRenderer}>
-                  <CodegenConfigContext.Provider value={codegenConfigMemo}>
+                  <CodegenConfigContext.Provider value={codegenConfig}>
                     <RouterProvider router={router} />
                   </CodegenConfigContext.Provider>
                 </LayoutRendererContext.Provider>

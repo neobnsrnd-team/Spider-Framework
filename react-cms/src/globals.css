@@ -45,7 +45,7 @@
  * globals.css 안의 @source 경로가 이 프로젝트 구조와 맞지 않으므로 여기서 직접 지정.
  * 경로: src/ → test-vite-cms-custom/ → test-reactive-springware/ → temp/ → study/reactive-springware/
  */
-@source "../../../../reactive-springware/packages/component-library/**/*.{ts,tsx}";
+@source "../../reactive-springware/component-library/**/*.{ts,tsx}";
 /* ================================================================
    BREAKPOINT REFERENCE VARIABLES (JS 참조용)
    CSS media query 내에서는 var() 사용 불가.
