@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>오류 발생</title>
+    
+    <!-- 1. Bootstrap 5.3.3 -->
+    <link th:href="@{/webjars/bootstrap/5.3.3/css/bootstrap.min.css}" rel="stylesheet">
+    <!-- 2. Bootstrap Icons 1.11.3 -->
+    <link th:href="@{/webjars/bootstrap-icons/1.11.3/font/bootstrap-icons.min.css}" rel="stylesheet">
+    <!-- Design Tokens -->
+    <link rel="stylesheet" th:href="@{/css/design-tokens.css}">
+    <!-- Application CSS -->
+    <link rel="stylesheet" th:href="@{/css/app.css}">
+</head>
+<body>
+    <div class="error-container">
+        <i class="bi bi-exclamation-triangle-fill error-icon"></i>
+        
+        <div class="error-code" th:text="${status} ?: '500'">500</div>
+        
+        <div class="error-message">
+            <span th:if="${status == 404}">요청하신 페이지를 찾을 수 없습니다.</span>
+            <span th:if="${status == 403}">접근 권한이 없습니다.</span>
+            <span th:if="${status == 500}">서버 오류가 발생했습니다.</span>
+            <span th:if="${status != 404 && status != 403 && status != 500}">오류가 발생했습니다.</span>
+        </div>
+        
+        <p class="text-muted mb-4 fs-6">
+            문제가 지속되면 관리자에게 문의해 주세요.
+        </p>
+
+        <a href="/home" class="btn-home">
+            <i class="bi bi-house"></i> 홈으로 돌아가기
+        </a>
+    </div>
+    
+    <!-- Bootstrap JS -->
+    <script th:src="@{/webjars/bootstrap/5.3.3/js/bootstrap.bundle.min.js}"></script>
+</body>
+</html>

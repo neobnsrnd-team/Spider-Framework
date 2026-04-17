@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<!-- Menu Search Fragment -->
+<div th:fragment="search" class="card border p-2 mb-3">
+    <div class="d-flex flex-wrap align-items-center gap-2 mb-1">
+        <select id="searchField" class="form-select form-select-sm flex-fixed-100">
+            <option value="menuName">메뉴명</option>
+            <option value="menuId">메뉴ID</option>
+        </select>
+        <input type="text" id="searchValue" class="form-control form-control-sm flex-fixed-150" placeholder="검색어 입력"
+               onkeypress="if(event.key === 'Enter') { Menus.currentPage = 1; Menus.load(); }">
+
+        <label class="form-label mb-0 small fw-medium fs-xs">메뉴URL</label>
+        <input type="text" id="menuUrl" class="form-control form-control-sm flex-fixed-150" placeholder="메뉴URL"
+               onkeypress="if(event.key === 'Enter') { Menus.currentPage = 1; Menus.load(); }">
+
+        <label class="form-label mb-0 small fw-medium fs-xs">상위메뉴ID</label>
+        <div class="sp-input-with-btn">
+            <input type="text" id="parentMenuId" class="form-control form-control-sm flex-fixed-120" placeholder="상위메뉴ID"
+                   onkeypress="if(event.key === 'Enter') { Menus.currentPage = 1; Menus.load(); }">
+            <button type="button" class="btn-search-icon" onclick="SearchParentMenu.open()" title="상위메뉴 찾기">
+                <i class="bi bi-search"></i>
+            </button>
+        </div>
+
+        <!-- Spacer -->
+        <div class="flex-grow-1"></div>
+
+        <select id="limitRows" class="form-select form-select-sm sp-limit-select">
+            <option value="10" selected>10</option>
+            <option value="20">20</option>
+            <option value="50">50</option>
+            <option value="100">100</option>
+            <option value="500">500</option>
+            <option value="1000">1000</option>
+        </select>
+        <label class="form-label mb-0 small fw-medium ms-1 me-2 fs-xs">건씩</label>
+
+        <button id="btnSearch" class="btn btn-primary btn-sm" onclick="Menus.currentPage = 1; Menus.load()">
+            <i class="bi bi-search"></i> 조회
+        </button>
+    </div>
+</div>
+
+<!-- 상위메뉴 선택 팝업 -->
+<div th:fragment="parentMenuSearchPopup" id="searchParentMenuModal" class="modal sp-search-parent-modal d-hidden">
+    <div class="modal-content">
+        <div class="modal-header">
+            <span class="modal-title">상위메뉴 찾기</span>
+            <button type="button" class="btn-close" onclick="SearchParentMenu.close()">
+                <i class="bi bi-x-lg"></i>
+            </button>
+        </div>
+        <div class="modal-body" id="searchParentMenuList">
+            <!-- 트리 메뉴가 여기에 로드됨 -->
+        </div>
+    </div>
+</div>
+</body>
+</html>

@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<!-- Role Menu Permission Modal Fragment -->
+<div th:fragment="modal">
+    <div class="modal fade" id="roleMenuPermissionModal" tabindex="-1">
+        <div class="modal-dialog modal-xl sp-modal-xxl modal-dialog-centered">
+            <div class="modal-content">
+                <!-- Modal Header -->
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <span id="modalRoleName"></span> - Role에 권한 관리
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+
+                <!-- Modal Body -->
+                <div class="modal-body">
+                    <div class="row g-3">
+                        <!-- Left Panel: Available Menus to Assign -->
+                        <div class="col-md-6">
+                            <div class="permission-panel">
+                                <div class="d-flex justify-content-between align-items-center mb-3">
+                                    <h6 class="section-title mb-0">
+                                        <i class="bi bi-list-ul text-danger"></i> 할당 가능 메뉴
+                                    </h6>
+                                    <button class="btn btn-outline-primary btn-sm"
+                                            th:if="${userAuthorities != null and userAuthorities.contains('ROLE:W')}"
+                                            onclick="RoleMenuModal.addSelectedMenus()">
+                                        추가 <i class="bi bi-arrow-right"></i>
+                                    </button>
+                                </div>
+
+                                <!-- Search Box -->
+                                <div class="d-flex align-items-center gap-2 mb-2">
+                                    <select class="form-select form-select-sm w-100px" id="leftSearchField">
+                                        <option value="menuName">메뉴명</option>
+                                        <option value="menuId">메뉴ID</option>
+                                    </select>
+                                    <input type="text"
+                                           class="form-control form-control-sm"
+                                           id="leftSearchInput"
+                                           placeholder="검색어 입력">
+                                </div>
+
+                                <!-- Available Menu List Table -->
+                                <div class="menu-list-container">
+                                    <table class="menu-table sp-data-grid" id="availableMenuTable">
+                                        <thead>
+                                            <tr>
+                                                <th class="col-w-40 text-center">
+                                                    <input type="checkbox" id="availableSelectAll"
+                                                           onchange="RoleMenuModal.toggleSelectAll('available', this)">
+                                                </th>
+                                                <th class="col-w-160 sortable" data-sort="menuId" data-panel="available">메뉴ID</th>
+                                                <th class="sortable" data-sort="menuPath" data-panel="available">메뉴명</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="availableMenuList">
+                                            <tr>
+                                                <td colspan="3" class="text-center py-4 text-muted">
+                                                    메뉴 목록을 불러오는 중...
+                                                </td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Right Panel: Assigned Menus with Permissions -->
+                        <div class="col-md-6">
+                            <div class="permission-panel">
+                                <div class="d-flex justify-content-between align-items-center mb-3">
+                                    <h6 class="section-title mb-0">
+                                        <i class="bi bi-check2-square text-danger"></i> 할당된 메뉴
+                                    </h6>
+                                    <button class="btn btn-outline-secondary btn-sm"
+                                            th:if="${userAuthorities != null and userAuthorities.contains('ROLE:W')}"
+                                            onclick="RoleMenuModal.removeSelectedMenus()">
+                                        <i class="bi bi-arrow-left"></i> 제거
+                                    </button>
+                                </div>
+
+                                <!-- Assigned Menu List Table -->
+                                <div class="menu-list-container">
+                                    <table class="menu-table sp-data-grid" id="assignedMenuTable">
+                                        <thead>
+                                            <tr>
+                                                <th class="col-w-40 text-center">
+                                                    <input type="checkbox" id="assignedSelectAll"
+                                                           onchange="RoleMenuModal.toggleSelectAll('assigned', this)">
+                                                </th>
+                                                <th class="col-w-140 sortable" data-sort="menuId" data-panel="assigned">메뉴ID</th>
+                                                <th class="sortable" data-sort="menuPath" data-panel="assigned">메뉴명</th>
+                                                <th class="col-w-70 text-center">Read</th>
+                                                <th class="col-w-80 text-center">R/Write</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="assignedMenuList">
+                                            <tr>
+                                                <td colspan="5" class="text-center py-4 text-muted">
+                                                    할당된 메뉴가 없습니다.
+                                                </td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Modal Footer -->
+                <div class="modal-footer justify-content-end">
+                    <button type="button" class="btn btn-success btn-sm"
+                            th:if="${userAuthorities != null and userAuthorities.contains('ROLE:W')}"
+                            onclick="RoleMenuModal.savePermissions()">
+                        <i class="bi bi-floppy"></i> 변경사항 저장
+                    </button>
+                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">
+                        <i class="bi bi-x-lg"></i> 닫기
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Role Menu Modal Script -->
+<th:block th:fragment="script">
+<script>
+    var RoleMenuModal = {
+        currentRoleId: null,
+        allMenus: [],
+        availableSortBy: null,
+        availableSortDir: null,
+        assignedSortBy: null,
+        assignedSortDir: null,
+
+        open: function(roleId, roleName) {
+            this.currentRoleId = roleId;
+            this.availableSortBy = null;
+            this.availableSortDir = null;
+            this.assignedSortBy = null;
+            this.assignedSortDir = null;
+
+            $('#modalRoleName').text(roleName);
+            $('#leftSearchInput').val('');
+            this.loadMenuPermissions();
+            this.bindSearchEvents();
+            this.bindSortEvents();
+
+            var modal = bootstrap.Modal.getOrCreateInstance(document.getElementById('roleMenuPermissionModal'));
+            modal.show();
+        },
+
+        loadMenuPermissions: function() {
+            var self = this;
+            $.ajax({
+                url: API_BASE_URL + '/role-menus/' + this.currentRoleId,
+                method: 'GET',
+                success: function(response) {
+                    if (response.success && response.data) {
+                        self.allMenus = response.data.allMenusWithPermissions || [];
+                        self.renderBothPanels();
+                    } else {
+                        self.showError('메뉴 권한 데이터를 불러오는데 실패했습니다.');
+                    }
+                },
+                error: function(xhr) {
+                    var errorMsg = (xhr.responseJSON && xhr.responseJSON.message) || '메뉴 권한을 불러오는데 실패했습니다.';
+                    self.showError(errorMsg);
+                }
+            });
+        },
+
+        renderBothPanels: function() {
+            this.renderAvailableMenus();
+            this.renderAssignedMenus();
+            $('#availableSelectAll').prop('checked', false);
+            $('#assignedSelectAll').prop('checked', false);
+        },
+
+        renderAvailableMenus: function() {
+            var tbody = $('#availableMenuList');
+            tbody.empty();
+
+            if (!this.allMenus || this.allMenus.length === 0) {
+                tbody.append('<tr class="empty-row"><td colspan="3" class="text-center py-4 text-muted">사용 가능한 메뉴가 없습니다.</td></tr>');
+                return;
+            }
+
+            var unassignedMenus = this.sortMenuList(
+                this.allMenus.filter(function(menu) { return !menu.hasRead && !menu.hasWrite; }),
+                this.availableSortBy, this.availableSortDir
+            );
+
+            if (unassignedMenus.length === 0) {
+                tbody.append('<tr class="empty-row"><td colspan="3" class="text-center py-4 text-muted">모든 메뉴가 할당되었습니다.</td></tr>');
+                return;
+            }
+
+            unassignedMenus.forEach(function(menu) {
+                var id = HtmlUtils.escape(menu.menuId);
+                var path = HtmlUtils.escape(menu.menuPath || menu.menuName || '');
+                tbody.append(
+                    '<tr data-menu-id="' + id + '">'
+                    + '<td class="text-center col-w-40"><input type="checkbox" class="available-menu-checkbox" data-menu-id="' + id + '"></td>'
+                    + '<td class="col-w-160">' + id + '</td>'
+                    + '<td class="text-start">' + path + '</td>'
+                    + '</tr>'
+                );
+            });
+
+            this.filterAvailableMenus();
+        },
+
+        renderAssignedMenus: function() {
+            var tbody = $('#assignedMenuList');
+            tbody.empty();
+
+            var assignedMenus = this.sortMenuList(
+                this.allMenus.filter(function(menu) { return menu.hasRead || menu.hasWrite; }),
+                this.assignedSortBy, this.assignedSortDir
+            );
+
+            if (assignedMenus.length === 0) {
+                tbody.append('<tr class="empty-row"><td colspan="5" class="text-center py-4 text-muted">할당된 메뉴가 없습니다.</td></tr>');
+                return;
+            }
+
+            assignedMenus.forEach(function(menu) {
+                var id = HtmlUtils.escape(menu.menuId);
+                var path = HtmlUtils.escape(menu.menuPath || menu.menuName || '');
+                var isReadOnly = menu.hasRead && !menu.hasWrite;
+                var isReadWrite = menu.hasWrite;
+
+                tbody.append(
+                    '<tr data-menu-id="' + id + '">'
+                    + '<td class="text-center col-w-40"><input type="checkbox" class="assigned-menu-checkbox" data-menu-id="' + id + '"></td>'
+                    + '<td class="col-w-140">' + id + '</td>'
+                    + '<td class="text-start">' + path + '</td>'
+                    + '<td class="text-center col-w-70"><input type="radio" class="form-check-input permission-radio" name="permission-' + id + '" value="R" data-menu-id="' + id + '"' + (isReadOnly ? ' checked' : '') + '></td>'
+                    + '<td class="text-center col-w-80"><input type="radio" class="form-check-input permission-radio" name="permission-' + id + '" value="W" data-menu-id="' + id + '"' + (isReadWrite ? ' checked' : '') + '></td>'
+                    + '</tr>'
+                );
+            });
+
+            this.bindRadioEvents();
+        },
+
+        toggleSelectAll: function(panel, checkbox) {
+            if (panel === 'available') {
+                $('#availableMenuList tr[data-menu-id]:visible .available-menu-checkbox').prop('checked', checkbox.checked);
+            } else {
+                $('#assignedMenuList tr[data-menu-id]:visible .assigned-menu-checkbox').prop('checked', checkbox.checked);
+            }
+        },
+
+        addSelectedMenus: function() {
+            var self = this;
+            var added = false;
+            $('.available-menu-checkbox:checked').each(function() {
+                var menuId = $(this).data('menu-id').toString();
+                var menu = self.allMenus.find(function(m) { return m.menuId === menuId; });
+                if (menu) { menu.hasRead = true; menu.hasWrite = false; added = true; }
+            });
+            if (!added) { Toast.warning('추가할 메뉴를 선택해주세요.'); return; }
+            this.renderBothPanels();
+        },
+
+        removeSelectedMenus: function() {
+            var self = this;
+            var removed = false;
+            $('.assigned-menu-checkbox:checked').each(function() {
+                var menuId = $(this).data('menu-id').toString();
+                var menu = self.allMenus.find(function(m) { return m.menuId === menuId; });
+                if (menu) { menu.hasRead = false; menu.hasWrite = false; removed = true; }
+            });
+            if (!removed) { Toast.warning('제거할 메뉴를 선택해주세요.'); return; }
+            this.renderBothPanels();
+        },
+
+        bindRadioEvents: function() {
+            $('.permission-radio').off('change').on('change', function() {
+                var menuId = $(this).data('menu-id').toString();
+                var value = $(this).val();
+                var menu = RoleMenuModal.allMenus.find(function(m) { return m.menuId === menuId; });
+                if (menu) { menu.hasRead = (value === 'R'); menu.hasWrite = (value === 'W'); }
+            });
+        },
+
+        bindSortEvents: function() {
+            $('#availableMenuTable thead th[data-sort]').off('click').on('click', function() {
+                var col = $(this).data('sort');
+                if (RoleMenuModal.availableSortBy === col) {
+                    RoleMenuModal.availableSortDir = RoleMenuModal.availableSortDir === 'ASC' ? 'DESC' : null;
+                    if (!RoleMenuModal.availableSortDir) RoleMenuModal.availableSortBy = null;
+                } else { RoleMenuModal.availableSortBy = col; RoleMenuModal.availableSortDir = 'ASC'; }
+                RoleMenuModal.updateModalSortIndicators('available');
+                RoleMenuModal.renderAvailableMenus();
+            });
+            $('#assignedMenuTable thead th[data-sort]').off('click').on('click', function() {
+                var col = $(this).data('sort');
+                if (RoleMenuModal.assignedSortBy === col) {
+                    RoleMenuModal.assignedSortDir = RoleMenuModal.assignedSortDir === 'ASC' ? 'DESC' : null;
+                    if (!RoleMenuModal.assignedSortDir) RoleMenuModal.assignedSortBy = null;
+                } else { RoleMenuModal.assignedSortBy = col; RoleMenuModal.assignedSortDir = 'ASC'; }
+                RoleMenuModal.updateModalSortIndicators('assigned');
+                RoleMenuModal.renderAssignedMenus();
+            });
+        },
+
+        updateModalSortIndicators: function(panel) {
+            var sortBy = panel === 'available' ? this.availableSortBy : this.assignedSortBy;
+            var sortDir = panel === 'available' ? this.availableSortDir : this.assignedSortDir;
+            var tableId = panel === 'available' ? '#availableMenuTable' : '#assignedMenuTable';
+            $(tableId + ' thead th[data-sort]').removeClass('sort-asc sort-desc');
+            if (sortBy && sortDir) {
+                $(tableId + ' thead th[data-sort="' + sortBy + '"]').addClass(sortDir === 'ASC' ? 'sort-asc' : 'sort-desc');
+            }
+        },
+
+        sortMenuList: function(menus, sortBy, sortDir) {
+            if (!sortBy || !sortDir) return menus;
+            return [].concat(menus).sort(function(a, b) {
+                var valA = (a[sortBy] || '').toString().toLowerCase();
+                var valB = (b[sortBy] || '').toString().toLowerCase();
+                var cmp = valA.localeCompare(valB, 'ko');
+                return sortDir === 'ASC' ? cmp : -cmp;
+            });
+        },
+
+        bindSearchEvents: function() {
+            $('#leftSearchInput').off('input').on('input', function() { RoleMenuModal.filterAvailableMenus(); });
+            $('#leftSearchField').off('change').on('change', function() { RoleMenuModal.filterAvailableMenus(); });
+        },
+
+        filterAvailableMenus: function() {
+            var searchField = $('#leftSearchField').val();
+            var keyword = ($('#leftSearchInput').val() || '').toLowerCase().trim();
+            $('#availableMenuList tr[data-menu-id]').each(function() {
+                var menuId = ($(this).data('menu-id') || '').toString().toLowerCase();
+                var menuName = $(this).find('td').eq(2).text().toLowerCase();
+                var target = searchField === 'menuId' ? menuId : menuName;
+                $(this).toggle(!keyword || target.includes(keyword));
+            });
+            $('#availableSelectAll').prop('checked', false);
+        },
+
+        savePermissions: function() {
+            var menuPermissions = [];
+            $('#assignedMenuList tr[data-menu-id]').each(function() {
+                var menuId = $(this).data('menu-id').toString();
+                var selectedRadio = $(this).find('.permission-radio:checked');
+                if (selectedRadio.length > 0) {
+                    var authValue = selectedRadio.val();
+                    menuPermissions.push({ menuId: menuId, read: authValue === 'R', write: authValue === 'W' });
+                }
+            });
+
+            var self = this;
+            Toast.confirm(menuPermissions.length + '개의 메뉴 권한을 저장하시겠습니까?', function() {
+                $.ajax({
+                    url: API_BASE_URL + '/role-menus/' + self.currentRoleId,
+                    method: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify({ menuPermissions: menuPermissions }),
+                    success: function() {
+                        bootstrap.Modal.getInstance(document.getElementById('roleMenuPermissionModal')).hide();
+                        Toast.success('권한이 저장되었습니다.');
+                    },
+                    error: function(xhr) {
+                        var errorMsg = xhr.responseJSON ? xhr.responseJSON.message : '권한 저장에 실패했습니다.';
+                        Toast.error(errorMsg);
+                    }
+                });
+            });
+        },
+
+        showError: function(message) {
+            $('#availableMenuList').html('<tr><td colspan="3" class="text-center py-4 text-danger">' + HtmlUtils.escape(message) + '</td></tr>');
+            $('#assignedMenuList').html('<tr><td colspan="5" class="text-center py-4 text-danger">' + HtmlUtils.escape(message) + '</td></tr>');
+        }
+    };
+</script>
+</th:block>
+</body>
+</html>
