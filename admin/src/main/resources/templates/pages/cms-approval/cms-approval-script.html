@@ -309,22 +309,29 @@
                 .then(r => r.json())
                 .then(res => {
                     if (!res.success || !res.data || res.data.length === 0) {
-                        $('#historyTableBody').html('<tr><td colspan="4" class="text-center text-body-secondary">이력이 없습니다.</td></tr>');
+                        $('#historyTableBody').html('<tr><td colspan="5" class="text-center text-body-secondary">이력이 없습니다.</td></tr>');
                         return;
                     }
-                    const html = res.data.map(h => {
+                    const html = res.data.map((h, index) => {
                         const badge = this.APPROVE_STATE_BADGE[h.approveState] || HtmlUtils.escape(h.approveState);
+                        // index === 0 은 최신 버전 — 이미 현재 상태이므로 롤백 불필요
+                        const isLatest = index === 0;
+                        const rollbackBtn = (HAS_CMS_WRITE && !isLatest)
+                            ? `<button class="btn btn-outline-warning btn-sm"
+                                   onclick="CmsApprovalPage.submitRollback('${pageId}', ${h.version})">롤백</button>`
+                            : '';
                         return `<tr>
                             <td class="text-center">${h.version}</td>
                             <td class="text-center">${badge}</td>
                             <td>${HtmlUtils.escape(h.lastModifierName || '')}</td>
                             <td class="text-center">${HtmlUtils.escape(h.approveDate || '-')}</td>
+                            <td class="text-center">${rollbackBtn}</td>
                         </tr>`;
                     }).join('');
                     $('#historyTableBody').html(html);
                 })
                 .catch(() => {
-                    $('#historyTableBody').html('<tr><td colspan="4" class="text-center text-danger">이력 조회 실패</td></tr>');
+                    $('#historyTableBody').html('<tr><td colspan="5" class="text-center text-danger">이력 조회 실패</td></tr>');
                 });
         },
 
