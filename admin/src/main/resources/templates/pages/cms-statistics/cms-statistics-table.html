@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<!-- CMS 통계 테이블 프래그먼트 -->
+<div th:fragment="table" class="table-responsive">
+    <table class="table table-sm table-hover sp-data-grid" id="statisticsTable">
+        <thead class="table-light">
+            <tr>
+                <th>페이지명</th>
+                <th class="col-w-160">페이지 ID</th>
+                <th class="col-w-100 text-end">조회 수</th>
+                <th class="col-w-100 text-end">클릭 수</th>
+                <th class="col-w-80">상세</th>
+            </tr>
+        </thead>
+        <tbody id="statisticsTableBody">
+            <tr>
+                <td colspan="5" class="text-center py-4 text-body-secondary">
+                    조회 버튼을 클릭하여 데이터를 불러오세요.
+                </td>
+            </tr>
+        </tbody>
+    </table>
+</div>
+</body>
+</html>

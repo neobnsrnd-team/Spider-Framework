@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+
+<!-- User Menu Permission Modal -->
+<div th:fragment="modal" class="modal fade" id="userMenuModal" tabindex="-1" aria-hidden="true"
+     data-bs-backdrop="static" data-bs-keyboard="false">
+    <div class="modal-dialog modal-xl sp-modal-xxl modal-dialog-centered">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h5 class="modal-title" id="umModalTitle">사용자 메뉴 권한 관리</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+            <div class="row g-3">
+                <!-- Left Panel: Available Menus -->
+                <div class="col-md-6">
+                    <div class="permission-panel">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <h6 class="section-title mb-0">
+                                <i class="bi bi-list-ul text-danger"></i> 할당 가능 메뉴
+                            </h6>
+                            <button class="btn btn-outline-primary btn-sm"
+                                    onclick="UserMenuModal.addSelectedMenus()">
+                                추가 <i class="bi bi-arrow-right"></i>
+                            </button>
+                        </div>
+
+                        <!-- Search Box -->
+                        <div class="d-flex align-items-center gap-2 mb-2">
+                            <select class="form-select form-select-sm w-100px" id="umSearchField">
+                                <option value="menuName">메뉴명</option>
+                                <option value="menuId">메뉴ID</option>
+                            </select>
+                            <input type="text"
+                                   class="form-control form-control-sm"
+                                   id="umSearchValue"
+                                   placeholder="검색어 입력">
+                        </div>
+
+                        <!-- Available Menu List Table -->
+                        <div class="menu-list-container">
+                            <table class="menu-table sp-data-grid" id="umAvailableTable">
+                                <thead>
+                                    <tr>
+                                        <th class="col-w-40 text-center">
+                                            <input type="checkbox" id="umAvailableSelectAll"
+                                                   onchange="UserMenuModal.toggleSelectAll('available', this)">
+                                        </th>
+                                        <th class="col-w-160 sortable" data-sort="menuId" data-panel="available">메뉴ID</th>
+                                        <th class="sortable" data-sort="menuPath" data-panel="available">메뉴명</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="umAvailableBody">
+                                    <tr>
+                                        <td colspan="3" class="text-center py-4 text-muted">
+                                            메뉴 목록을 불러오는 중...
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right Panel: Assigned Menus with Permissions -->
+                <div class="col-md-6">
+                    <div class="permission-panel">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <h6 class="section-title mb-0">
+                                <i class="bi bi-check2-square text-danger"></i> 할당된 메뉴
+                            </h6>
+                            <button class="btn btn-outline-secondary btn-sm"
+                                    onclick="UserMenuModal.removeSelectedMenus()">
+                                <i class="bi bi-arrow-left"></i> 제거
+                            </button>
+                        </div>
+
+                        <!-- Assigned Menu List Table -->
+                        <div class="menu-list-container">
+                            <table class="menu-table sp-data-grid" id="umUserTable">
+                                <thead>
+                                    <tr>
+                                        <th class="col-w-40 text-center">
+                                            <input type="checkbox" id="umAssignedSelectAll"
+                                                   onchange="UserMenuModal.toggleSelectAll('assigned', this)">
+                                        </th>
+                                        <th class="col-w-140 sortable" data-sort="menuId" data-panel="assigned">메뉴ID</th>
+                                        <th class="sortable" data-sort="menuPath" data-panel="assigned">메뉴명</th>
+                                        <th class="col-w-70 text-center">Read</th>
+                                        <th class="col-w-80 text-center">R/Write</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="umUserBody">
+                                    <tr>
+                                        <td colspan="5" class="text-center py-4 text-muted">
+                                            할당된 메뉴가 없습니다.
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Modal Footer -->
+        <div class="modal-footer justify-content-end">
+            <button type="button" class="btn btn-success btn-sm"
+                    onclick="UserMenuModal.save()">
+                <i class="bi bi-floppy"></i> 변경사항 저장
+            </button>
+            <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">
+                <i class="bi bi-x-lg"></i> 닫기
+            </button>
+        </div>
+    </div>
+    </div>
+</div>
+
+</body>
+</html>

@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<!-- 승인 이력 검색 영역 Fragment -->
+<div th:fragment="search" class="card border p-2 mb-3">
+    <div class="d-flex flex-wrap align-items-center gap-2 mb-1">
+
+        <label class="form-label mb-0 small fw-medium">상태</label>
+        <select id="hisSearchStatus" class="form-select form-select-sm flex-fixed-130">
+            <option value="">전체</option>
+            <option value="APPROVED">승인 완료</option>
+            <option value="REJECTED">반려</option>
+        </select>
+
+        <label class="form-label mb-0 small fw-medium ms-2">승인자</label>
+        <input type="text" id="hisSearchApprovalUserId"
+               class="form-control form-control-sm flex-fixed-120"
+               placeholder="승인자 ID">
+
+        <label class="form-label mb-0 small fw-medium ms-2">요청자</label>
+        <input type="text" id="hisSearchCreateUserId"
+               class="form-control form-control-sm flex-fixed-120"
+               placeholder="요청자 ID">
+
+        <label class="form-label mb-0 small fw-medium ms-2">처리일 시작</label>
+        <input type="date" id="hisSearchFromDate"
+               class="form-control form-control-sm flex-fixed-140">
+
+        <label class="form-label mb-0 small fw-medium ms-2">처리일 종료</label>
+        <input type="date" id="hisSearchToDate"
+               class="form-control form-control-sm flex-fixed-140">
+
+        <div class="flex-grow-1"></div>
+
+        <!-- 내 것만 보기: 요청자(createUserId)를 현재 로그인 사용자로 고정 -->
+        <div class="form-check form-check-inline ms-2 mb-0">
+            <input class="form-check-input" type="checkbox" id="chkHisMyOnly">
+            <label class="form-check-label small fw-medium" for="chkHisMyOnly">나의 승인 이력</label>
+        </div>
+
+        <select id="limitRows" class="form-select form-select-sm sp-limit-select">
+            <option value="10" selected>10</option>
+            <option value="20">20</option>
+            <option value="50">50</option>
+        </select>
+        <label class="form-label mb-0 small fw-medium">건씩</label>
+
+        <button class="btn btn-outline-secondary btn-sm" id="btnSearchReset">
+            <i class="bi bi-arrow-counterclockwise"></i> 초기화
+        </button>
+        <button class="btn btn-primary btn-sm" id="btnSearch">
+            <i class="bi bi-search"></i> 조회
+        </button>
+    </div>
+</div>
+</body>
+</html>

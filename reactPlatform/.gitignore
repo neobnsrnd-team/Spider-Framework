@@ -1,0 +1,13 @@
+target/
+*.class
+*.jar
+*.war
+.env
+*.log
+.idea/
+*.iml
+.settings/
+.classpath
+.project
+generated/
+uploads/

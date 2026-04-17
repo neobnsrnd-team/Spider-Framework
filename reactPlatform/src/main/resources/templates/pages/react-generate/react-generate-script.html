@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<th:block th:fragment="script">
+<script th:inline="javascript">
+(function () {
+    const HAS_REACT_WRITE = /*[[${userAuthorities != null && userAuthorities.contains('REACT_GENERATE:W')}]]*/ false;
+
+    let currentId = null;
+    let currentStatus = null;
+
+    // 승인·반려 상태는 승인 관리 메뉴에서 처리하므로 GENERATED/FAILED/PENDING_APPROVAL만 표시
+    const STATUS_LABEL = {
+        GENERATED:        { text: '생성 완료',  cls: 'bg-secondary' },
+        FAILED:           { text: '실패',        cls: 'bg-danger' },
+        PENDING_APPROVAL: { text: '승인 대기',   cls: 'bg-warning text-dark' },
+        APPROVED:         { text: '승인 완료',   cls: 'bg-success' },
+        REJECTED:         { text: '반려',        cls: 'bg-danger' },
+    };
+
+    function updateStatusBadge(status) {
+        currentStatus = status;
+        const info = STATUS_LABEL[status] || { text: status, cls: 'bg-secondary' };
+        const badge = $('#statusBadge');
+        badge.text(info.text).removeClass().addClass('badge ' + info.cls);
+
+        // 승인 요청은 GENERATED 상태에서만 가능
+        $('#btnRequestApproval').prop('disabled', status !== 'GENERATED');
+    }
+
+    // ─── 생성 ───────────────────────────────────────────────
+    $('#btnGenerate').on('click', function () {
+        const figmaUrl = $('#figmaUrlInput').val().trim();
+        if (!figmaUrl) {
+            Toast.warning('Figma URL을 입력해주세요.');
+            return;
+        }
+        if (!figmaUrl.startsWith('https://www.figma.com/')) {
+            Toast.warning('올바른 Figma URL 형식이 아닙니다.');
+            return;
+        }
+
+        $('#resultSection').addClass('d-none');
+        $('#generatingIndicator').removeClass('d-none');
+        $('#btnGenerate').prop('disabled', true);
+        // 생성 중에는 초기화 버튼도 비활성화하여 요청 중간에 폼이 바뀌는 것을 방지
+        $('#btnReset').prop('disabled', true);
+
+        const requirements = $('#requirementsInput').val().trim() || null;
+
+        $.ajax({
+            url: API_BASE_URL + '/react-generate/generate',
+            method: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify({ figmaUrl: figmaUrl, requirements: requirements }),
+            success: function (res) {
+                if (res.success && res.data) {
+                    renderResult(res.data);
+                } else {
+                    Toast.error(res.message || '코드 생성에 실패했습니다.');
+                }
+            },
+            error: function (xhr) {
+                const msg = xhr.responseJSON?.message || '코드 생성 중 오류가 발생했습니다.';
+                Toast.error(msg);
+            },
+            complete: function () {
+                $('#generatingIndicator').addClass('d-none');
+                $('#btnGenerate').prop('disabled', false);
+                $('#btnReset').prop('disabled', false);
+            }
+        });
+    });
+
+    function renderResult(data) {
+        currentId = data.codeId;
+
+        // 메타 정보
+        $('#resultMeta').text('생성일시: ' + (data.createDtime || ''));
+
+        // 화면 미리보기: postMessage로 Preview App에 생성 코드와 codeId 전달
+        // codeId는 Preview App이 렌더링 오류 보고 시 레코드 특정에 사용한다
+        // iframe이 이미 로드되어 있으면 즉시 전달, 아직 로딩 중이면 onload 후 전달
+        const frame = document.getElementById('previewFrame');
+        const sendCode = () => {
+            // 같은 출처(origin)로만 메시지 전송하여 외부 수신 차단
+            frame.contentWindow.postMessage(
+                { type: 'UPDATE_CODE', code: data.reactCode || '', codeId: data.codeId },
+                window.location.origin
+            );
+        };
+        if (frame.contentDocument?.readyState === 'complete') {
+            sendCode();
+        } else {
+            frame.onload = sendCode;
+        }
+
+        // 코드 미리보기: textContent 할당으로 HTML 파싱을 우회해 XSS를 원천 차단
+        document.getElementById('codeDisplay').textContent = data.reactCode || '';
+
+        updateStatusBadge(data.status);
+        $('#resultSection').removeClass('d-none');
+
+        // 첫 탭 활성화
+        const screenTab = new bootstrap.Tab(document.getElementById('tab-screen'));
+        screenTab.show();
+    }
+
+    // ─── 코드 복사 ───────────────────────────────────────────
+    $('#btnCopyCode').on('click', function () {
+        const code = document.getElementById('codeDisplay').textContent;
+        navigator.clipboard.writeText(code).then(function () {
+            Toast.success('코드가 클립보드에 복사되었습니다.');
+        }).catch(function () {
+            Toast.error('복사에 실패했습니다.');
+        });
+    });
+
+    // ─── 승인 요청 ───────────────────────────────────────────
+    $('#btnRequestApproval').on('click', function () {
+        if (!currentId) return;
+        if (!confirm('승인을 요청하시겠습니까?')) return;
+
+        $.ajax({
+            url: API_BASE_URL + '/react-generate/' + currentId + '/request-approval',
+            method: 'POST',
+            success: function (res) {
+                if (res.success && res.data) {
+                    updateStatusBadge(res.data.status);
+                    Toast.success('승인 요청이 완료되었습니다.');
+                } else {
+                    Toast.error(res.message || '승인 요청에 실패했습니다.');
+                }
+            },
+            error: function (xhr) {
+                Toast.error(xhr.responseJSON?.message || '승인 요청 중 오류가 발생했습니다.');
+            }
+        });
+    });
+
+    // ─── 초기화 ─────────────────────────────────────────────
+    $('#btnReset').on('click', function () {
+        // 입력 폼 초기화
+        $('#figmaUrlInput').val('');
+        $('#requirementsInput').val('');
+
+        // 결과 영역 숨김 및 내부 상태 초기화
+        $('#resultSection').addClass('d-none');
+        $('#resultMeta').text('');
+        document.getElementById('codeDisplay').textContent = '';
+        currentId = null;
+        currentStatus = null;
+
+        // Preview App에 빈 코드를 전달하여 미리보기 화면 초기화
+        const frame = document.getElementById('previewFrame');
+        if (frame.contentDocument?.readyState === 'complete') {
+            frame.contentWindow.postMessage({ type: 'UPDATE_CODE', code: '' }, window.location.origin);
+        }
+
+        $('#figmaUrlInput').focus();
+    });
+
+    // ─── Enter 키 지원 ──────────────────────────────────────
+    $('#figmaUrlInput').on('keydown', function (e) {
+        if (e.key === 'Enter') {
+            $('#btnGenerate').trigger('click');
+        }
+    });
+
+    // 캐시에서 복원 시(tab:activated) React 코드 생성 페이지 상태 유지 (별도 load 불필요)
+    $('[data-tab-page]').off('tab:activated.reactGenerate').on('tab:activated.reactGenerate', function () {
+        // 폼 기반 페이지이므로 추가 데이터 로드 없음
+    });
+
+    // ─── Preview App 렌더링 오류 수신 ───────────────────────
+    // iframe(Preview App)이 postMessage로 전달한 RENDER_ERROR를 수신해 서버에 기록한다.
+    // fire-and-forget: 오류 기록 실패가 UX에 영향을 주지 않도록 에러 핸들러 생략
+    window.addEventListener('message', function (e) {
+        if (e.data?.type !== 'RENDER_ERROR' || !currentId) return;
+        $.ajax({
+            url: API_BASE_URL + '/react-generate/render-error',
+            method: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify({ codeId: currentId, errorMessage: e.data.error })
+        });
+    });
+})();
+</script>
+</th:block>
+</body>
+</html>

@@ -1,0 +1,147 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<!--
+    CmsDeployment Mapper
+    - SPW_CMS_PAGE             : 배포 대상 페이지 목록 (APPROVE_STATE = 'APPROVED')
+    - FWK_CMS_FILE_SEND_HIS    : 배포 이력 INSERT / SELECT
+    - FWK_CMS_SERVER_INSTANCE  : 배포 이력 조회 및 미리보기 URL 구성 시 서버 정보 JOIN
+-->
+<mapper namespace="com.example.admin_demo.domain.cmsdeployment.mapper.CmsDeployMapper">
+
+    <!-- ==================== 배포 대상 페이지 목록 ==================== -->
+
+    <sql id="approvedPageConditions">
+        <where>
+            p.USE_YN = 'Y'
+            AND p.APPROVE_STATE = 'APPROVED'
+            <if test="req.search != null and req.search != ''">
+                AND (
+                    p.PAGE_NAME LIKE '%' || #{req.search} || '%'
+                    OR p.CREATE_USER_NAME LIKE '%' || #{req.search} || '%'
+                )
+            </if>
+        </where>
+    </sql>
+
+    <select id="findApprovedPageList" resultType="com.example.admin_demo.domain.cmsdeployment.dto.CmsDeployPageResponse">
+        SELECT * FROM (
+            SELECT INNER_QRY.*, ROWNUM AS RNUM FROM (
+                SELECT
+                    p.PAGE_ID                                                   AS pageId,
+                    p.PAGE_NAME                                                 AS pageName,
+                    p.CREATE_USER_NAME                                          AS createUserName,
+                    CASE WHEN lh.FILE_ID IS NOT NULL
+                        THEN 'http://' || si.INSTANCE_IP || ':' || TO_CHAR(si.INSTANCE_PORT)
+                             || '/deployed/' || p.PAGE_ID || '.html'
+                    END                                                         AS deployedUrl
+                FROM SPW_CMS_PAGE p
+                LEFT JOIN (
+                    SELECT
+                        REGEXP_REPLACE(FILE_ID, '_v\d+\.html$', '') AS PAGE_ID,
+                        FILE_ID,
+                        INSTANCE_ID,
+                        ROW_NUMBER() OVER (
+                            PARTITION BY REGEXP_REPLACE(FILE_ID, '_v\d+\.html$', '')
+                            ORDER BY LAST_MODIFIED_DTIME DESC
+                        ) AS RN
+                    FROM FWK_CMS_FILE_SEND_HIS
+                    WHERE FILE_ID LIKE '%_v%.html'
+                ) lh ON lh.PAGE_ID = p.PAGE_ID AND lh.RN = 1
+                LEFT JOIN FWK_CMS_SERVER_INSTANCE si ON lh.INSTANCE_ID = si.INSTANCE_ID
+                <include refid="approvedPageConditions"/>
+                ORDER BY p.LAST_MODIFIED_DTIME DESC NULLS LAST
+            ) INNER_QRY
+            WHERE ROWNUM <![CDATA[<=]]> #{endRow}
+        ) WHERE RNUM > #{offset}
+    </select>
+
+    <select id="countApprovedPageList" resultType="long">
+        SELECT COUNT(*)
+        FROM SPW_CMS_PAGE p
+        <include refid="approvedPageConditions"/>
+    </select>
+
+    <!-- ==================== 배포 이력 조회 ==================== -->
+
+    <sql id="historySearchConditions">
+        <where>
+            <if test="req.pageId != null and req.pageId != ''">
+                h.FILE_ID LIKE #{req.pageId} || '_v%.html'
+            </if>
+        </where>
+    </sql>
+
+    <select id="findHistoryList" resultType="com.example.admin_demo.domain.cmsdeployment.dto.CmsDeployHistoryResponse">
+        SELECT * FROM (
+            SELECT INNER_QRY.*, ROWNUM AS RNUM FROM (
+                SELECT
+                    h.INSTANCE_ID                                               AS instanceId,
+                    s.INSTANCE_NAME                                             AS instanceName,
+                    s.INSTANCE_IP                                               AS instanceIp,
+                    s.INSTANCE_PORT                                             AS instancePort,
+                    h.FILE_ID                                                   AS fileId,
+                    h.FILE_SIZE                                                 AS fileSize,
+                    h.FILE_CRC_VALUE                                            AS fileCrcValue,
+                    h.LAST_MODIFIER_ID                                          AS lastModifierId,
+                    h.LAST_MODIFIED_DTIME                                       AS lastModifiedDtime
+                FROM FWK_CMS_FILE_SEND_HIS h
+                JOIN FWK_CMS_SERVER_INSTANCE s ON h.INSTANCE_ID = s.INSTANCE_ID
+                <include refid="historySearchConditions"/>
+                ORDER BY h.LAST_MODIFIED_DTIME DESC
+            ) INNER_QRY
+            WHERE ROWNUM <![CDATA[<=]]> #{endRow}
+        ) WHERE RNUM > #{offset}
+    </select>
+
+    <select id="countHistoryList" resultType="long">
+        SELECT COUNT(*)
+        FROM FWK_CMS_FILE_SEND_HIS h
+        JOIN FWK_CMS_SERVER_INSTANCE s ON h.INSTANCE_ID = s.INSTANCE_ID
+        <include refid="historySearchConditions"/>
+    </select>
+
+    <!-- ==================== 서버 인스턴스 조회 ==================== -->
+
+    <select id="findFirstInstanceId" resultType="string">
+        SELECT TO_CHAR(INSTANCE_ID) FROM FWK_CMS_SERVER_INSTANCE WHERE ROWNUM = 1
+    </select>
+
+    <!-- ==================== 다음 파일 버전 조회 ==================== -->
+
+    <select id="findNextFileVersion" resultType="int">
+        SELECT NVL(MAX(
+            TO_NUMBER(REGEXP_SUBSTR(FILE_ID, '_v(\d+)\.html$', 1, 1, NULL, 1))
+        ), 0) + 1
+        FROM FWK_CMS_FILE_SEND_HIS
+        WHERE FILE_ID LIKE #{pageId} || '_v%.html'
+    </select>
+
+    <!-- ==================== 배포 대상 페이지 HTML 조회 (push용) ==================== -->
+    <!--
+        CLOB 타입인 PAGE_HTML을 resultType=map 으로 반환하면 MyBatis가 java.sql.Clob 객체를
+        반환하는데, NOT_SUPPORTED 전파 메서드에서 커넥션이 닫힌 후 읽으면 "Closed Connection" 오류가 발생한다.
+        resultType=string 으로 직접 매핑하면 MyBatis가 커넥션이 열려 있는 동안 문자열로 변환한다.
+    -->
+    <select id="findApprovedPageHtml" resultType="string">
+        SELECT PAGE_HTML
+        FROM SPW_CMS_PAGE
+        WHERE PAGE_ID      = #{pageId}
+          AND APPROVE_STATE = 'APPROVED'
+          AND USE_YN        = 'Y'
+    </select>
+
+    <!-- ==================== 배포 이력 INSERT ==================== -->
+
+    <insert id="insertSendHistory">
+        INSERT INTO FWK_CMS_FILE_SEND_HIS (
+            INSTANCE_ID, FILE_ID, FILE_SIZE, FILE_CRC_VALUE,
+            LAST_MODIFIER_ID, LAST_MODIFIED_DTIME
+        ) VALUES (
+            #{instanceId}, #{fileId}, #{fileSize}, #{fileCrcValue},
+            #{userId}, TO_CHAR(SYSTIMESTAMP, 'YYYYMMDDHH24MISS')
+        )
+    </insert>
+
+</mapper>

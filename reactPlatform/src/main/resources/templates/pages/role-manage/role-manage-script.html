@@ -1,0 +1,622 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<!-- Role Page Scripts -->
+<th:block th:fragment="script">
+<script>
+    var PAGE_CONFIG = {
+        search: {
+            fields: [
+                {
+                    type: 'select',
+                    id: 'searchField',
+                    width: '120px',
+                    options: [
+                        { value: 'roleName', label: '권한명' },
+                        { value: 'roleId', label: '권한ID' }
+                    ]
+                },
+                {
+                    type: 'text',
+                    id: 'searchValue',
+                    placeholder: ''
+                }
+            ],
+            limit: { default: 10, showLarge: true }
+        }
+    };
+
+    const Roles = {
+        currentPage: 1,
+        totalItems: 0,
+        itemsPerPage: 20,
+        newRowCounter: 0,
+        roles: [],
+        originalRoles: [],
+        sortBy: null,
+        sortDirection: null,
+
+        load: function() {
+            const params = SearchForm.getParams('#searchContainer');
+            this.itemsPerPage = params.size || 10;
+
+            const searchParams = {
+                page: this.currentPage,
+                size: this.itemsPerPage
+            };
+
+            // 정렬 파라미터
+            if (this.sortBy) {
+                searchParams.sortBy = this.sortBy;
+                searchParams.sortDirection = this.sortDirection;
+            }
+
+            // 검색 파라미터
+            const searchField = params.searchField || 'roleName';
+            const keyword = params.searchValue || '';
+            if (keyword) {
+                searchParams[searchField] = keyword;
+            }
+
+            $.ajax({
+                url: API_BASE_URL + '/roles/page',
+                method: 'GET',
+                data: searchParams,
+                success: (response) => {
+                    if (response.success && response.data) {
+                        const pageData = response.data;
+                        const content = pageData.content || [];
+                        // 원본 데이터 깊은 복사 저장
+                        this.originalRoles = JSON.parse(JSON.stringify(content));
+                        this.roles = content.map(r => ({...r, crud: ''}));
+                        this.newRowCounter = 0;
+                        this.renderTable();
+                        this.totalItems = pageData.totalElements || 0;
+                        this.itemsPerPage = pageData.size || limitRows;
+                        this.renderPagination();
+                    } else {
+                        this.roles = [];
+                        this.originalRoles = [];
+                        this.renderTable();
+                        this.totalItems = 0;
+                        this.renderPagination();
+                    }
+                },
+                error: (xhr) => {
+                    console.error('Failed to load roles:', xhr);
+                    Toast.error('역할 목록을 불러오는데 실패했습니다.');
+                    this.roles = [];
+                    this.originalRoles = [];
+                    this.renderTable();
+                    this.totalItems = 0;
+                    this.renderPagination();
+                }
+            });
+        },
+
+        // CRUD 배지 클래스
+        getCrudBadgeClass: function(crud) {
+            switch(crud) {
+                case 'C': return 'bg-success';
+                case 'U': return 'bg-warning text-dark';
+                case 'D': return 'bg-danger';
+                default: return 'bg-secondary';
+            }
+        },
+
+        // CRUD 한글 라벨
+        getCrudLabel: function(crud) {
+            switch(crud) {
+                case 'C': return '추가';
+                case 'U': return '수정';
+                case 'D': return '삭제';
+                default: return '';
+            }
+        },
+
+        // 행 생성
+        createRow: function(role, index, isNew) {
+            // R-only 사용자: 읽기 전용 행 렌더링
+            if (!hasRoleWrite) {
+                const useYnLabel = (role.useYn === 'Y' || role.useYn === 'y') ? '사용중' : '중지';
+                return `
+                    <tr data-index="${index}" data-role-id="${HtmlUtils.escape(role.roleId || '')}">
+                        <td>${HtmlUtils.escape(role.roleId || '')}</td>
+                        <td>${HtmlUtils.escape(role.roleName || '')}</td>
+                        <td>${useYnLabel}</td>
+                        <td class="text-start">${HtmlUtils.escape(role.roleDesc || '')}</td>
+                        <td>${HtmlUtils.escape(String(role.ranking || ''))}</td>
+                        <td>
+                            <button class="btn btn-outline-secondary btn-sm"
+                                    data-role-id="${HtmlUtils.escape(role.roleId || '')}"
+                                    data-role-name="${HtmlUtils.escape(role.roleName || '')}">
+                                메뉴 권한
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            }
+
+            const newFieldClass = isNew ? 'field-new' : '';
+
+            // 권한ID 필드: 기존 행은 readonly, 신규 행은 편집 가능
+            const roleIdField = isNew ?
+                `<input type="text" class="editable-field field-new"
+                        value="${HtmlUtils.escape(role.roleId || '')}"
+                        data-field="roleId" data-index="${index}" placeholder="권한ID 입력">` :
+                `<input type="text" class="editable-field sp-pk-readonly"
+                        value="${HtmlUtils.escape(role.roleId || '')}"
+                        data-field="roleId" data-index="${index}" readonly tabindex="-1">`;
+
+            // 사용여부 select
+            const useYnY = (role.useYn === 'Y' || role.useYn === 'y') ? 'selected' : '';
+            const useYnN = (role.useYn === 'N' || role.useYn === 'n') ? 'selected' : '';
+
+            return `
+                <tr data-index="${index}" data-role-id="${HtmlUtils.escape(role.roleId || '')}" data-is-new="${isNew}">
+                    <td>
+                        <input type="checkbox" class="row-checkbox" data-index="${index}">
+                    </td>
+                    <td class="text-center crud-cell">
+                        <span class="badge ${this.getCrudBadgeClass(role.crud)}">${this.getCrudLabel(role.crud)}</span>
+                    </td>
+                    <td>
+                        ${roleIdField}
+                    </td>
+                    <td>
+                        <input type="text" class="editable-field ${newFieldClass}"
+                               value="${HtmlUtils.escape(role.roleName || '')}"
+                               data-field="roleName" data-index="${index}" placeholder="권한명 입력">
+                    </td>
+                    <td>
+                        <select class="editable-field ${newFieldClass}" data-field="useYn" data-index="${index}">
+                            <option value="Y" ${useYnY}>사용중</option>
+                            <option value="N" ${useYnN}>중지</option>
+                        </select>
+                    </td>
+                    <td>
+                        <input type="text" class="editable-field text-start ${newFieldClass}"
+                               value="${HtmlUtils.escape(role.roleDesc || '')}"
+                               data-field="roleDesc" data-index="${index}" placeholder="권한 설명">
+                    </td>
+                    <td>
+                        <input type="number" class="editable-field ${newFieldClass}"
+                               value="${role.ranking || ''}"
+                               data-field="ranking" data-index="${index}" min="0">
+                    </td>
+                    <td>
+                        <button class="btn btn-outline-secondary btn-sm"
+                                data-role-id="${HtmlUtils.escape(role.roleId || '')}"
+                                data-role-name="${HtmlUtils.escape(role.roleName || '')}"
+                                ${isNew ? 'disabled title="저장 후 설정 가능"' : ''}>
+                            메뉴 권한
+                        </button>
+                    </td>
+                </tr>
+            `;
+        },
+
+        renderTable: function() {
+            const tbody = $('#roleTableBody');
+            tbody.empty();
+
+            if (!this.roles || this.roles.length === 0) {
+                const cols = hasRoleWrite ? 8 : 6;
+                tbody.append(`
+                    <tr>
+                        <td colspan="${cols}" class="text-center py-4 text-body-secondary">
+                            조회된 데이터가 없습니다.
+                        </td>
+                    </tr>
+                `);
+                return;
+            }
+
+            this.roles.forEach((role, index) => {
+                const isNew = role.crud === 'C';
+                tbody.append(this.createRow(role, index, isNew));
+            });
+
+            // 메뉴 권한 버튼 이벤트
+            $('button[data-role-id]').off('click').on('click', function() {
+                if ($(this).prop('disabled')) return;
+                const roleId = $(this).data('role-id');
+                const roleName = $(this).data('role-name');
+                Roles.openMenuPermissionModal(roleId, roleName);
+            });
+
+            // 변경 감지 이벤트 바인딩
+            this.bindChangeEvents();
+        },
+
+        // 변경 감지 이벤트 바인딩
+        bindChangeEvents: function() {
+            const self = this;
+
+            $('#roleTableBody').off('input change', 'input.editable-field, select.editable-field')
+                .on('input change', 'input.editable-field, select.editable-field', function() {
+                const $input = $(this);
+                const index = parseInt($input.data('index'));
+                const field = $input.data('field');
+                const newValue = $input.val();
+                const $row = $input.closest('tr');
+                const isNew = $row.data('is-new') === true || $row.data('is-new') === 'true';
+
+                if (self.roles[index]) {
+                    self.roles[index][field] = newValue;
+
+                    // 새 행이 아니고 삭제 상태가 아닌 경우에만 변경 감지
+                    if (!isNew && self.roles[index].crud !== 'D') {
+                        const original = self.originalRoles.find(
+                            r => r.roleId === self.roles[index].roleId
+                        );
+
+                        if (original) {
+                            // 개별 필드 변경 스타일
+                            self.updateFieldStyle($input, field, original, self.roles[index]);
+
+                            // 전체 행 변경 여부
+                            if (self.hasChanges(original, self.roles[index])) {
+                                self.updateCrudStatus(index, 'U');
+                            } else {
+                                self.updateCrudStatus(index, '');
+                            }
+                        }
+                    }
+                }
+            });
+        },
+
+        // 개별 필드 스타일 업데이트
+        updateFieldStyle: function($input, field, original, current) {
+            const originalValue = (original[field] || '').toString();
+            const currentValue = (current[field] || '').toString();
+
+            if (originalValue !== currentValue) {
+                $input.addClass('field-changed');
+            } else {
+                $input.removeClass('field-changed');
+            }
+        },
+
+        // 원본과 비교하여 변경 여부 확인
+        hasChanges: function(original, current) {
+            const fields = ['roleName', 'useYn', 'roleDesc', 'ranking'];
+            return fields.some(field =>
+                (original[field] || '').toString() !== (current[field] || '').toString()
+            );
+        },
+
+        // CRUD 상태 업데이트
+        updateCrudStatus: function(index, status) {
+            this.roles[index].crud = status;
+            const $row = $(`#roleTableBody tr[data-index="${index}"]`);
+            const $crudCell = $row.find('.crud-cell');
+            $crudCell.html(`<span class="badge ${this.getCrudBadgeClass(status)}">${this.getCrudLabel(status)}</span>`);
+        },
+
+        // 정렬 인디케이터 업데이트
+        updateSortIndicators: function() {
+            const headers = $('#roleTable thead th[data-sort]');
+            headers.removeClass('sort-asc sort-desc');
+            if (!this.sortBy || !this.sortDirection) return;
+            headers.filter(`[data-sort="${this.sortBy}"]`)
+                .addClass(this.sortDirection === 'ASC' ? 'sort-asc' : 'sort-desc');
+        },
+
+        toggleSelectAll: function(checkbox) {
+            $('.row-checkbox').prop('checked', checkbox.checked);
+        },
+
+        openMenuPermissionModal: function(roleId, roleName) {
+            RoleMenuModal.open(roleId, roleName);
+        },
+
+        renderPagination: function() {
+            const totalPages = Math.ceil(this.totalItems / this.itemsPerPage);
+            const pagination = $('#pagination');
+            pagination.empty();
+
+            pagination.append(`
+                <li class="page-item ${this.currentPage === 1 ? 'disabled' : ''}">
+                    <a class="page-link" href="#" onclick="Roles.changePage(1); return false;">
+                        <i class="bi bi-chevron-double-left"></i>
+                    </a>
+                </li>
+                <li class="page-item ${this.currentPage === 1 ? 'disabled' : ''}">
+                    <a class="page-link" href="#" onclick="Roles.changePage(${this.currentPage - 1}); return false;">
+                        <i class="bi bi-chevron-left"></i>
+                    </a>
+                </li>
+            `);
+
+            const maxButtons = 10;
+            let startPage = Math.max(1, this.currentPage - Math.floor(maxButtons / 2));
+            let endPage = Math.min(totalPages, startPage + maxButtons - 1);
+
+            if (endPage - startPage + 1 < maxButtons) {
+                startPage = Math.max(1, endPage - maxButtons + 1);
+            }
+
+            for (let i = startPage; i <= endPage; i++) {
+                pagination.append(`
+                    <li class="page-item ${i === this.currentPage ? 'active' : ''}">
+                        <a class="page-link" href="#" onclick="Roles.changePage(${i}); return false;">${i}</a>
+                    </li>
+                `);
+            }
+
+            pagination.append(`
+                <li class="page-item ${this.currentPage === totalPages || totalPages === 0 ? 'disabled' : ''}">
+                    <a class="page-link" href="#" onclick="Roles.changePage(${this.currentPage + 1}); return false;">
+                        <i class="bi bi-chevron-right"></i>
+                    </a>
+                </li>
+                <li class="page-item ${this.currentPage === totalPages || totalPages === 0 ? 'disabled' : ''}">
+                    <a class="page-link" href="#" onclick="Roles.changePage(${totalPages}); return false;">
+                        <i class="bi bi-chevron-double-right"></i>
+                    </a>
+                </li>
+            `);
+
+            const start = this.totalItems === 0 ? 0 : (this.currentPage - 1) * this.itemsPerPage + 1;
+            const end = Math.min(this.currentPage * this.itemsPerPage, this.totalItems);
+            $('#pageInfo').text(`${start} - ${end} of ${this.totalItems} items`);
+        },
+
+        changePage: function(page) {
+            const totalPages = Math.ceil(this.totalItems / this.itemsPerPage);
+            if (page < 1 || page > totalPages) return;
+            this.currentPage = page;
+            this.load();
+        },
+
+        addRow: function() {
+            this.newRowCounter++;
+            const newIndex = this.roles.length;
+
+            const newRole = {
+                roleId: '',
+                roleName: '',
+                useYn: 'Y',
+                roleDesc: '',
+                ranking: '',
+                crud: 'C'
+            };
+
+            this.roles.push(newRole);
+
+            const tbody = $('#roleTableBody');
+
+            // "조회된 데이터가 없습니다" 메시지 제거
+            tbody.find('tr td[colspan="8"]').closest('tr').remove();
+
+            tbody.prepend(this.createRow(newRole, newIndex, true));
+
+            // 이벤트 재바인딩
+            this.bindChangeEvents();
+
+            // 새 행의 권한ID 입력 필드에 포커스
+            tbody.find(`tr[data-index="${newIndex}"] input[data-field="roleId"]`).focus();
+        },
+
+        deleteSelected: function() {
+            const $checked = $('.row-checkbox:checked');
+
+            if ($checked.length === 0) {
+                Toast.warning('삭제할 항목을 선택하세요.');
+                return;
+            }
+
+            const self = this;
+            $checked.each(function() {
+                const index = parseInt($(this).data('index'));
+                const $row = $(this).closest('tr');
+                const isNew = $row.data('is-new') === true || $row.data('is-new') === 'true';
+
+                if (isNew) {
+                    // 새 행은 바로 제거
+                    $row.remove();
+                    self.roles[index] = null;
+                } else {
+                    // 기존 행은 D 마킹
+                    self.updateCrudStatus(index, 'D');
+                    $(this).prop('checked', false);
+                    $row.addClass('row-deleted');
+                    $row.find('input, select').prop('disabled', true);
+                    $row.find('.row-checkbox').prop('disabled', false);
+                }
+            });
+
+            $('#selectAll').prop('checked', false);
+        },
+
+        saveChanges: function() {
+            const changes = {
+                newRoles: [],
+                updatedRoles: [],
+                deletedRoleIds: []
+            };
+
+            let hasError = false;
+
+            this.roles.forEach((role, index) => {
+                if (role === null) return;
+
+                if (role.crud === 'C') {
+                    // 필수값 검증
+                    if (!role.roleId || role.roleId.trim() === '') {
+                        Toast.error('새로 추가된 항목의 권한ID를 입력해주세요.');
+                        hasError = true;
+                        return false;
+                    }
+                    if (!role.roleName || role.roleName.trim() === '') {
+                        Toast.error('권한ID [' + role.roleId.trim() + ']의 권한명을 입력해주세요.');
+                        hasError = true;
+                        return false;
+                    }
+                    if (!role.ranking || role.ranking.trim() === '') {
+                        Toast.error('권한ID [' + role.roleId.trim() + ']의 Ranking을 입력해주세요.');
+                        hasError = true;
+                        return false;
+                    }
+                    changes.newRoles.push({
+                        roleId: role.roleId,
+                        roleName: role.roleName,
+                        useYn: role.useYn,
+                        roleDesc: role.roleDesc,
+                        ranking: role.ranking
+                    });
+                } else if (role.crud === 'U') {
+                    if (!role.ranking || role.ranking.trim() === '') {
+                        Toast.error('권한ID [' + role.roleId.trim() + ']의 Ranking을 입력해주세요.');
+                        hasError = true;
+                        return false;
+                    }
+                    changes.updatedRoles.push({
+                        roleId: role.roleId,
+                        roleName: role.roleName,
+                        useYn: role.useYn,
+                        roleDesc: role.roleDesc,
+                        ranking: role.ranking
+                    });
+                } else if (role.crud === 'D') {
+                    if (role.roleId) {
+                        changes.deletedRoleIds.push(role.roleId);
+                    }
+                }
+            });
+
+            if (hasError) return;
+
+            if (changes.newRoles.length === 0 && changes.updatedRoles.length === 0 && changes.deletedRoleIds.length === 0) {
+                Toast.warning('저장할 변경사항이 없습니다.');
+                return;
+            }
+
+            let confirmMessage = '다음 변경사항을 저장하시겠습니까?\n';
+            let confirmMessageArr = [];
+            if (changes.newRoles.length > 0) {
+                confirmMessageArr.push(`추가: ${changes.newRoles.length}개`);
+            }
+            if (changes.updatedRoles.length > 0) {
+                confirmMessageArr.push(`수정: ${changes.updatedRoles.length}개`);
+            }
+            if (changes.deletedRoleIds.length > 0) {
+                confirmMessageArr.push(`삭제: ${changes.deletedRoleIds.length}개`);
+            }
+            confirmMessage += confirmMessageArr.join(', ');
+
+            Toast.confirm(confirmMessage, () => {
+                $.ajax({
+                    url: API_BASE_URL + '/roles/batch',
+                    method: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify(changes),
+                    success: (response) => {
+                        Toast.success('변경사항이 저장되었습니다.');
+                        this.load();
+                        $('#selectAll').prop('checked', false);
+                    },
+                    error: (xhr) => {
+                        console.error('Failed to save changes:', xhr);
+                        const errorMessage = xhr.responseJSON?.message || '변경사항 저장에 실패했습니다.';
+                        Toast.error(errorMessage);
+                    }
+                });
+            });
+        },
+
+        exportExcel: function() {
+            const params = {};
+            if (this.sortBy) {
+                params.sortBy = this.sortBy;
+                params.sortDirection = this.sortDirection || 'ASC';
+            }
+            const searchParams = SearchForm.getParams('#searchContainer');
+            const searchField = searchParams.searchField || 'roleName';
+            const keyword = searchParams.searchValue || '';
+            if (keyword) {
+                params[searchField] = keyword;
+            }
+            const qs = $.param(params);
+            window.location.href = API_BASE_URL + '/roles/export' + (qs ? '?' + qs : '');
+        },
+
+        print: function() {
+            const columns = [
+                { key: 'roleId', label: '권한ID' },
+                { key: 'roleName', label: '권한명' },
+                { key: 'useYn', label: '사용여부' },
+                { key: 'roleDesc', label: '설명' },
+                { key: 'ranking', label: '순위' }
+            ];
+            const data = this.roles.filter(r => r !== null);
+            PrintUtil.print({ title: '권한 목록', columns: columns, data: data });
+        }
+    };
+
+    // 정렬 헤더 클릭
+    $('#roleTable thead th[data-sort]').off('click').on('click', function() {
+        const sortKey = $(this).data('sort');
+        if (!sortKey) return;
+        if (Roles.sortBy === sortKey) {
+            if (Roles.sortDirection === 'ASC') {
+                Roles.sortDirection = 'DESC';
+            } else {
+                Roles.sortBy = null;
+                Roles.sortDirection = null;
+            }
+        } else {
+            Roles.sortBy = sortKey;
+            Roles.sortDirection = 'ASC';
+        }
+        Roles.currentPage = 1;
+        Roles.updateSortIndicators();
+        Roles.load();
+    });
+
+    // SearchForm 초기화
+    SearchForm.render('#searchContainer', PAGE_CONFIG.search, () => {
+        Roles.currentPage = 1;
+        Roles.load();
+    });
+
+    // 화면 진입 시 자동 조회
+    Roles.load();
+
+    // 캐시에서 복원 시(tab:activated) 권한 목록 최신화
+    $('[data-tab-page]').off('tab:activated.roleManage').on('tab:activated.roleManage', function () {
+        Roles.load();
+    });
+
+    // Toolbar buttons
+    $(document).ready(function() {
+        $('#btnExcel').off('click').on('click', function() {
+            Roles.exportExcel();
+        });
+
+        $('#btnPrint').off('click').on('click', function() {
+            Roles.print();
+        });
+
+        $('#btnRefresh').off('click').on('click', function() {
+            Roles.load();
+        });
+
+        $('#btnAddRow').off('click').on('click', function() {
+            Roles.addRow();
+        });
+
+        $('#btnDeleteSelected').off('click').on('click', function() {
+            Roles.deleteSelected();
+        });
+
+        $('#btnSaveChanges').off('click').on('click', function() {
+            Roles.saveChanges();
+        });
+    });
+</script>
+</th:block>
+</body>
+</html>

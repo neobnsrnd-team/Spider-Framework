@@ -1,0 +1,23 @@
+menu-resource:
+  permissions:
+    v3_user_manage:
+      R: USER:R
+      W: USER:W
+    v3_my_info_manage:
+      R: PROFILE:R
+      W: PROFILE:W
+    v3_role_manage:
+      R: ROLE:R, MENU:R
+      W: ROLE:W, MENU:R
+    v3_menu_manage:
+      R: MENU:R
+      W: MENU:W
+    v3_react_generate:
+      R: REACT_GENERATE:R
+      W: REACT_GENERATE:W
+    v3_react_generate_his:
+      R: REACT_GENERATE:R
+      W: REACT_GENERATE:W
+    v3_react_approval:
+      R: REACT_APPROVAL:R
+      W: REACT_APPROVAL:W

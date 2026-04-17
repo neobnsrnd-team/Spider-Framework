@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<!-- User Search Fragment -->
+<div th:fragment="search" class="card border p-2 mb-3">
+    <div class="d-flex flex-wrap align-items-center gap-2 mb-1">
+        <!-- Left Side Components -->
+        <select id="searchField" class="form-select form-select-sm flex-fixed-120">
+            <option value="userName">사용자명</option>
+            <option value="userId">사용자ID</option>
+        </select>
+        <input type="text" id="searchValue" class="form-control form-control-sm flex-fixed-180" placeholder="" onkeypress="if(event.key === 'Enter') window.Users.load()">
+
+        <label class="form-label mb-0 small fw-medium ms-2">사용자상태</label>
+        <select id="userStateCodeFilter" class="form-select form-select-sm flex-fixed-120">
+            <th:block th:replace="~{pages/user-manage/user-manage-state-options :: userStateFilterOptions}"></th:block>
+        </select>
+
+        <label class="form-label mb-0 small fw-medium ms-2">권한</label>
+        <select id="roleFilter" class="form-select form-select-sm flex-fixed-120">
+            <option value="">전체</option>
+        </select>
+
+        <label class="form-label mb-0 small fw-medium ms-2">직급</label>
+        <select id="classNameFilter" class="form-select form-select-sm flex-fixed-120">
+            <th:block th:replace="~{pages/my-info-manage/my-info-manage-classname-options :: classNameOptions}"></th:block>
+        </select>
+
+        <!-- Spacer to push right side to the end -->
+        <div class="flex-grow-1"></div>
+
+        <!-- Right Side Components -->
+        <select id="limitRows" class="form-select form-select-sm sp-limit-select">
+            <option value="10" selected>10</option>
+            <option value="20">20</option>
+            <option value="50">50</option>
+            <option value="100">100</option>
+            <option value="200">200</option>
+            <option value="1000">1000</option>
+        </select>
+        <label class="form-label mb-0 small fw-medium ms-1 me-2 fs-2xs">건씩</label>
+
+        <button class="btn btn-primary btn-sm" onclick="window.Users.load()">
+            <i class="bi bi-search"></i> 조회
+        </button>
+    </div>
+</div>
+</body>
+</html>

@@ -386,4 +386,51 @@ public class PageController {
     public String datasources(HttpServletRequest request, Model model) {
         return resolveView(request, "pages/datasource-manage/datasource-manage :: content", model);
     }
+
+    // ── CMS 관리 ── v3_cms_admin_pages, v3_cms_admin_approvals, v3_cms_admin_files,
+    //                 v3_cms_admin_ab_tests, v3_cms_admin_deployments,
+    //                 v3_cms_admin_statistics, v3_cms_admin_components
+
+    @GetMapping("/cms-admin/pages")
+    public String cmsAdminPages() {
+        return "redirect:/cms-admin/approvals";
+    }
+
+    @GetMapping("/cms-admin/approvals")
+    public String cmsAdminApprovals(HttpServletRequest request, Model model) {
+        return resolveView(request, "pages/cms-approval/cms-approval :: content", model);
+    }
+
+    @GetMapping("/cms-admin/files")
+    public String cmsAdminFiles() {
+        return "redirect:/cms-admin/approvals";
+    }
+
+    @GetMapping("/cms-admin/ab-tests")
+    public String cmsAdminAbTests(HttpServletRequest request, Model model) {
+        return resolveView(request, "pages/cms-ab-test/cms-ab-test :: content", model);
+    }
+
+    @GetMapping("/cms-admin/deployments")
+    public String cmsAdminDeployments(HttpServletRequest request, Model model) {
+        return resolveView(request, "pages/cms-deployment/cms-deployment :: content", model);
+    }
+
+    @GetMapping("/cms-admin/statistics")
+    public String cmsAdminStatistics(HttpServletRequest request, Model model) {
+        return resolveView(request, "pages/cms-statistics/cms-statistics :: content", model);
+    }
+
+    @GetMapping("/cms-admin/components")
+    public String cmsAdminComponents(HttpServletRequest request, Model model) {
+        return cmsAdminSkeleton(request, model, "CMS 컴포넌트 관리", "컴포넌트 카탈로그와 페이지 매핑 관리", "Issue 7에서 컴포넌트 데이터 연동 예정입니다.");
+    }
+
+    private String cmsAdminSkeleton(
+            HttpServletRequest request, Model model, String title, String description, String note) {
+        model.addAttribute("cmsAdminTitle", title);
+        model.addAttribute("cmsAdminDescription", description);
+        model.addAttribute("cmsAdminNote", note);
+        return resolveView(request, "pages/cms-admin-skeleton/cms-admin-skeleton :: content", model);
+    }
 }
