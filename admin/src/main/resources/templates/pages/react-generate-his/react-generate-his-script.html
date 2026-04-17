@@ -3,6 +3,7 @@
 <body>
 <th:block th:fragment="script">
 <script th:inline="javascript">
+(function () {
     const HAS_REACT_WRITE = /*[[${userAuthorities != null && userAuthorities.contains('REACT_GENERATE:W')}]]*/ false;
     // 현재 로그인 사용자 ID — 승인 요청 버튼 노출 여부 판단에 사용
     const CURRENT_USER_ID = /*[[${currentUserId}]]*/ '';
@@ -52,7 +53,7 @@
     }
 
     // ─── 이력 목록 모듈 ────────────────────────────────────────
-    const ReactGenerateHis = {
+    const ReactGenerateHis = window.ReactGenerateHis = {
         currentPage: 1,
         totalItems: 0,
         itemsPerPage: 10,
@@ -483,6 +484,7 @@
     $('[data-tab-page]').on('tab:activated', function () {
         ReactGenerateHis.search();
     });
+})();
 </script>
 </th:block>
 </body>
