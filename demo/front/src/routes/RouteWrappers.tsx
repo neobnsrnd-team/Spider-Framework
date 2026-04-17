@@ -1383,19 +1383,19 @@ export function NoticePreviewRoute() {
 }
 
 /* ------------------------------------------------------------------ */
-/* Admin 승인 배포 컴포넌트 미리보기                                       */
+/* Admin 승인 컴포넌트 뷰어                                              */
 /* ------------------------------------------------------------------ */
 
 /**
- * Admin에서 승인 시 생성된 React 컴포넌트 미리보기 페이지.
+ * Admin에서 승인 시 저장된 React 컴포넌트 뷰어 페이지.
  *
- * /preview/react/:codeId 경로로 접근하며, 인증 없이 사용 가능하다.
+ * /react/viewer/:codeId 경로로 접근하며, 인증 없이 사용 가능하다.
  * import.meta.glob으로 src/generated/ 디렉토리의 .tsx 파일을 동적으로 탐색하여
  * :codeId에 해당하는 컴포넌트를 렌더링한다.
  *
  * Vite HMR이 파일 추가를 감지하므로 Admin에서 승인 즉시 새 경로가 활성화된다.
  */
-export function ReactDeployedRoute() {
+export function ReactViewerRoute() {
   const { codeId } = useParams<{ codeId: string }>();
   const [Component, setComponent] = useState<ComponentType | null>(null);
   const [notFound, setNotFound] = useState(false);
@@ -1424,16 +1424,16 @@ export function ReactDeployedRoute() {
 
   return (
     <div className="min-h-screen bg-bg-base">
-      {/* 미리보기 모드 안내 배너 */}
+      {/* 뷰어 안내 배너 */}
       <div className="flex items-center justify-center py-1 bg-blue-50 border-b border-blue-200">
         <span className="text-xs text-blue-600 font-medium">
-          배포된 React 컴포넌트 미리보기 — {codeId}
+          승인된 React 컴포넌트 뷰어 — {codeId}
         </span>
       </div>
 
       {notFound && (
         <div className="flex items-center justify-center min-h-[80vh] text-sm text-text-muted">
-          배포된 컴포넌트를 찾을 수 없습니다. (codeId: {codeId})
+          승인된 컴포넌트를 찾을 수 없습니다. (codeId: {codeId})
         </div>
       )}
 

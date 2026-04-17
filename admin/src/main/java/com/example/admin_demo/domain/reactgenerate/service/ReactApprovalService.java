@@ -37,7 +37,7 @@ import org.springframework.transaction.support.TransactionSynchronizationManager
 public class ReactApprovalService {
 
     private final ReactGenerateMapper reactGenerateMapper;
-    private final ReactDeployProperties deployProperties;
+    private final ReactApprovalProperties approvalProperties;
 
     private static final DateTimeFormatter FORMATTER = DateTimeFormatter.ofPattern("yyyyMMddHHmmss");
 
@@ -269,7 +269,7 @@ public class ReactApprovalService {
      * <p>파일 쓰기 실패는 승인 결과에 영향을 주지 않는다 — DB에는 이미 APPROVED로 기록되었으므로
      * 로그만 남기고 계속 진행한다. (재배포 시 파일을 다시 생성할 수 있음)
      *
-     * @param codeId    배포할 코드 ID (파일명으로 사용)
+     * @param codeId    저장할 코드 ID (파일명으로 사용)
      * @param reactCode 저장할 React TSX 코드
      */
     private void writeReactCodeToFile(String codeId, String reactCode) {
@@ -278,14 +278,14 @@ public class ReactApprovalService {
             return;
         }
         try {
-            Path dir = Path.of(deployProperties.getOutputDir());
+            Path dir = Path.of(approvalProperties.getOutputDir());
             Files.createDirectories(dir); // 디렉토리가 없으면 생성
             Path target = dir.resolve(codeId + ".tsx");
             Files.writeString(target, reactCode, StandardCharsets.UTF_8);
             log.info("React 컴포넌트 파일 생성 완료 — path={}, codeId={}", target.toAbsolutePath(), codeId);
         } catch (IOException e) {
             // 파일 쓰기 실패는 비치명적 — DB 승인은 이미 커밋됨
-            log.error("React 컴포넌트 파일 생성 실패 — outputDir={}, codeId={}", deployProperties.getOutputDir(), codeId, e);
+            log.error("React 컴포넌트 파일 생성 실패 — outputDir={}, codeId={}", approvalProperties.getOutputDir(), codeId, e);
         }
     }
 }
