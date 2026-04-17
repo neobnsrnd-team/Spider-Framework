@@ -1,6 +1,6 @@
 package com.example.batchwas.job.db2foreign;
 
-import com.example.batchwas.job.common.SampleMember;
+import com.example.batchwas.job.common.CardUsage;
 import java.util.Map;
 import javax.sql.DataSource;
 import lombok.RequiredArgsConstructor;
@@ -24,7 +24,7 @@ import org.springframework.web.client.RestTemplate;
  * DB2ForeignJob 설정.
  *
  * <p>DB → 외부 시스템 HTTP 전문 연계 패턴을 시연한다.
- * JdbcPagingItemReader로 SAMPLE_MEMBER를 페이징 조회한 후,
+ * JdbcPagingItemReader로 POC_카드사용내역을 페이징 조회한 후,
  * TransferItemWriter가 각 건을 Mock 외부 엔드포인트(POST /mock/external/transfer)로 전송한다.</p>
  *
  * <p>Job Bean 이름 "db2foreign"이 FWK_BATCH_APP.BATCH_APP_FILE_NAME과 일치해야 한다.</p>
@@ -53,7 +53,7 @@ public class Db2ForeignJobConfig {
     public Step db2ForeignStep(JobRepository jobRepository,
                                PlatformTransactionManager transactionManager) {
         return new StepBuilder("db2ForeignStep", jobRepository)
-                .<SampleMember, SampleMember>chunk(PAGE_SIZE, transactionManager)
+                .<CardUsage, CardUsage>chunk(PAGE_SIZE, transactionManager)
                 .reader(db2ForeignReader())
                 .writer(transferItemWriter())
                 .faultTolerant()
@@ -63,17 +63,34 @@ public class Db2ForeignJobConfig {
     }
 
     /**
-     * JdbcPagingItemReader: SAMPLE_MEMBER 전체를 pageSize 단위로 페이징 조회.
+     * JdbcPagingItemReader: POC_카드사용내역 전체를 pageSize 단위로 페이징 조회.
+     * 한글 컬럼명을 영문 alias로 매핑하여 CardUsage Bean과 연결.
      */
     @Bean
-    public JdbcPagingItemReader<SampleMember> db2ForeignReader() {
-        return new JdbcPagingItemReaderBuilder<SampleMember>()
+    public JdbcPagingItemReader<CardUsage> db2ForeignReader() {
+        return new JdbcPagingItemReaderBuilder<CardUsage>()
                 .name("db2ForeignReader")
                 .dataSource(dataSource)
-                .selectClause("SELECT MEMBER_ID, MEMBER_NAME, EMAIL, PHONE")
-                .fromClause("FROM SAMPLE_MEMBER")
-                .sortKeys(Map.of("MEMBER_ID", Order.ASCENDING))
-                .rowMapper(new BeanPropertyRowMapper<>(SampleMember.class))
+                .selectClause("""
+                        SELECT 이용자        AS userId,
+                               카드번호      AS cardNo,
+                               이용일자      AS usageDt,
+                               이용가맹점    AS merchant,
+                               이용금액      AS amount,
+                               할부개월      AS installmentMonths,
+                               승인여부      AS approvalYn,
+                               카드명        AS cardName,
+                               승인시각      AS approvalTime,
+                               결제예정일    AS paymentDueDate,
+                               승인번호      AS approvalNo,
+                               결제잔액      AS paymentBalance,
+                               누적결제금액  AS cumulativeAmount,
+                               결제상태코드  AS paymentStatusCode,
+                               최종결제일자  AS lastPaymentDt
+                        """)
+                .fromClause("FROM POC_카드사용내역")
+                .sortKeys(Map.of("이용일자", Order.ASCENDING))
+                .rowMapper(new BeanPropertyRowMapper<>(CardUsage.class))
                 .pageSize(PAGE_SIZE)
                 .build();
     }

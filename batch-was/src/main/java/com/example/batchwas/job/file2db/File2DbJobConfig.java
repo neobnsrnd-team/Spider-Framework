@@ -1,6 +1,6 @@
 package com.example.batchwas.job.file2db;
 
-import com.example.batchwas.job.common.SampleMember;
+import com.example.batchwas.job.common.PocUser;
 import javax.sql.DataSource;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -23,7 +23,7 @@ import org.springframework.transaction.PlatformTransactionManager;
  * File2DBJob 설정.
  *
  * <p>CSV 파일 → Oracle DB 적재 패턴을 시연한다.
- * FlatFileItemReader로 sample-data/members.csv를 읽어 SAMPLE_MEMBER 테이블에 INSERT.</p>
+ * FlatFileItemReader로 sample-data/poc-users.csv를 읽어 POC_USER 테이블에 UPSERT(MERGE).</p>
  *
  * <p>Job Bean 이름 "file2db"가 FWK_BATCH_APP.BATCH_APP_FILE_NAME과 일치해야 한다.</p>
  *
@@ -56,18 +56,18 @@ public class File2DbJobConfig {
     public Step file2DbStep(JobRepository jobRepository,
                             PlatformTransactionManager transactionManager) {
         return new StepBuilder("file2DbStep", jobRepository)
-                .<SampleMember, SampleMember>chunk(CHUNK_SIZE, transactionManager)
+                .<PocUser, PocUser>chunk(CHUNK_SIZE, transactionManager)
                 .reader(file2DbReader())
                 .processor(item -> {
-                    // 간단한 검증: 이름이 없으면 skip
-                    if (item.getMemberName() == null || item.getMemberName().isBlank()) {
-                        log.warn("회원명 없음 — skip: memberId={}", item.getMemberId());
+                    // 사용자명 없으면 skip
+                    if (item.getUserName() == null || item.getUserName().isBlank()) {
+                        log.warn("사용자명 없음 — skip: userId={}", item.getUserId());
                         return null;
                     }
                     return item;
                 })
                 .writer(file2DbWriter())
-                // skip: 개별 아이템 오류 시 해당 Chunk 내 아이템만 건너뜀 (트랜잭션 보장)
+                // skip: 개별 아이템 오류 시 해당 아이템만 건너뜀
                 .faultTolerant()
                 .skip(Exception.class)
                 .skipLimit(10)
@@ -76,41 +76,45 @@ public class File2DbJobConfig {
 
     /**
      * CSV FlatFileItemReader.
-     * 컬럼 순서: memberId, memberName, email, phone
+     * 컬럼 순서: userId, userName, password, userGrade, logYn, lastLoginDtime
      */
     @Bean
-    public FlatFileItemReader<SampleMember> file2DbReader() {
-        BeanWrapperFieldSetMapper<SampleMember> fieldSetMapper = new BeanWrapperFieldSetMapper<>();
-        fieldSetMapper.setTargetType(SampleMember.class);
+    public FlatFileItemReader<PocUser> file2DbReader() {
+        BeanWrapperFieldSetMapper<PocUser> fieldSetMapper = new BeanWrapperFieldSetMapper<>();
+        fieldSetMapper.setTargetType(PocUser.class);
 
-        return new FlatFileItemReaderBuilder<SampleMember>()
+        return new FlatFileItemReaderBuilder<PocUser>()
                 .name("file2DbReader")
-                .resource(new ClassPathResource("sample-data/members.csv"))
+                .resource(new ClassPathResource("sample-data/poc-users.csv"))
                 // CSV 헤더 없음 — 컬럼 이름 직접 지정
                 .delimited()
-                .names("memberId", "memberName", "email", "phone")
+                .names("userId", "userName", "password", "userGrade", "logYn", "lastLoginDtime")
                 .fieldSetMapper(fieldSetMapper)
                 .build();
     }
 
     /**
-     * SAMPLE_MEMBER 테이블에 배치 INSERT.
-     * 동일 MEMBER_ID가 있으면 MERGE로 UPSERT 처리.
+     * POC_USER 테이블에 배치 UPSERT.
+     * 동일 USER_ID가 있으면 UPDATE, 없으면 INSERT (MERGE).
      */
     @Bean
-    public JdbcBatchItemWriter<SampleMember> file2DbWriter() {
-        return new JdbcBatchItemWriterBuilder<SampleMember>()
+    public JdbcBatchItemWriter<PocUser> file2DbWriter() {
+        return new JdbcBatchItemWriterBuilder<PocUser>()
                 .dataSource(dataSource)
                 .sql("""
-                        MERGE INTO SAMPLE_MEMBER t
-                        USING (SELECT :memberId AS MEMBER_ID FROM DUAL) s
-                        ON (t.MEMBER_ID = s.MEMBER_ID)
+                        MERGE INTO POC_USER t
+                        USING (SELECT :userId AS USER_ID FROM DUAL) s
+                        ON (t.USER_ID = s.USER_ID)
                         WHEN MATCHED THEN UPDATE SET
-                            t.MEMBER_NAME = :memberName,
-                            t.EMAIL       = :email,
-                            t.PHONE       = :phone
-                        WHEN NOT MATCHED THEN INSERT (MEMBER_ID, MEMBER_NAME, EMAIL, PHONE)
-                        VALUES (:memberId, :memberName, :email, :phone)
+                            t.USER_NAME        = :userName,
+                            t.PASSWORD         = :password,
+                            t.USER_GRADE       = :userGrade,
+                            t.LOG_YN           = :logYn,
+                            t.LAST_LOGIN_DTIME = :lastLoginDtime
+                        WHEN NOT MATCHED THEN INSERT
+                            (USER_ID, USER_NAME, PASSWORD, USER_GRADE, LOG_YN, LAST_LOGIN_DTIME)
+                        VALUES
+                            (:userId, :userName, :password, :userGrade, :logYn, :lastLoginDtime)
                         """)
                 .beanMapped()
                 .build();

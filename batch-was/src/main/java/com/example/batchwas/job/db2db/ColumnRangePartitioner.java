@@ -9,17 +9,18 @@ import org.springframework.batch.item.ExecutionContext;
 import org.springframework.jdbc.core.JdbcTemplate;
 
 /**
- * MEMBER_ID 범위 기반 Partitioner.
+ * 이용일자(YYYYMMDD) 범위 기반 Partitioner.
  *
- * <p>SAMPLE_MEMBER 테이블을 MEMBER_ID 범위로 분할하여 병렬 처리한다.
- * gridSize(파티션 수)에 따라 각 파티션에 minId~maxId 범위를 균등 배분한다.</p>
+ * <p>POC_카드사용내역 테이블을 이용일자 범위로 분할하여 병렬 처리한다.
+ * 이용일자는 YYYYMMDD 형식의 VARCHAR2이지만 숫자로 변환하면 대소 비교가 동일하므로
+ * TO_NUMBER를 사용해 MIN/MAX를 구하고 gridSize로 균등 분할한다.</p>
  *
  * <pre>
- * 예) MEMBER_ID 1~100, gridSize=4 이면:
- *   partition0: 1 ~ 25
- *   partition1: 26 ~ 50
- *   partition2: 51 ~ 75
- *   partition3: 76 ~ 100
+ * 예) 이용일자 20240101~20241231, gridSize=4 이면:
+ *   partition0: 20240101 ~ 20240407
+ *   partition1: 20240408 ~ 20240715
+ *   partition2: 20240716 ~ 20241022
+ *   partition3: 20241023 ~ 20241231
  * </pre>
  */
 @Slf4j
@@ -28,22 +29,21 @@ public class ColumnRangePartitioner implements Partitioner {
 
     private final JdbcTemplate jdbcTemplate;
 
-    /** 파티션 분할 기준 테이블 */
-    private static final String TABLE = "SAMPLE_MEMBER";
+    /** 파티션 분할 대상 테이블 */
+    private static final String TABLE = "POC_카드사용내역";
 
-    /** 파티션 분할 기준 컬럼 */
-    private static final String COLUMN = "MEMBER_ID";
+    /** 파티션 분할 기준 컬럼 — YYYYMMDD VARCHAR2를 숫자 변환하여 범위 비교 */
+    private static final String COLUMN = "TO_NUMBER(이용일자)";
 
     /**
      * gridSize 수만큼 파티션을 생성한다.
-     * 각 파티션의 ExecutionContext에 minValue, maxValue를 저장한다.
+     * 각 파티션의 ExecutionContext에 minValue, maxValue(숫자형 날짜)를 저장한다.
      *
      * @param gridSize 병렬 처리할 파티션 수 (스레드 수와 동일)
      * @return 파티션 이름 → ExecutionContext 맵
      */
     @Override
     public Map<String, ExecutionContext> partition(int gridSize) {
-        // MEMBER_ID의 전체 범위 조회
         Long minId = jdbcTemplate.queryForObject(
                 "SELECT MIN(" + COLUMN + ") FROM " + TABLE, Long.class);
         Long maxId = jdbcTemplate.queryForObject(
@@ -60,7 +60,6 @@ public class ColumnRangePartitioner implements Partitioner {
             return empty;
         }
 
-        // 범위를 gridSize로 균등 분할
         long rangeSize = (maxId - minId) / gridSize + 1;
         Map<String, ExecutionContext> result = new HashMap<>();
 
@@ -77,7 +76,7 @@ public class ColumnRangePartitioner implements Partitioner {
             start = end + 1;
         }
 
-        log.info("파티션 생성 완료: table={}, gridSize={}, range={}~{}", TABLE, gridSize, minId, maxId);
+        log.info("파티션 생성 완료: table={}, gridSize={}, 이용일자={}~{}", TABLE, gridSize, minId, maxId);
         return result;
     }
 }

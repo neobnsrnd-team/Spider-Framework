@@ -1,6 +1,6 @@
 package com.example.batchwas.job.db2db;
 
-import com.example.batchwas.job.common.SampleMember;
+import com.example.batchwas.job.common.CardUsage;
 import java.util.Map;
 import javax.sql.DataSource;
 import lombok.RequiredArgsConstructor;
@@ -30,13 +30,15 @@ import org.springframework.transaction.PlatformTransactionManager;
 /**
  * DB2DBJob 설정.
  *
- * <p>Oracle → Oracle 복사 패턴을 시연한다. 대용량 처리를 위해:
+ * <p>Oracle → Oracle 복사(아카이브) 패턴을 시연한다. 대용량 처리를 위해:
  * <ul>
  *   <li>JdbcPagingItemReader: pageSize 단위로 페이징 조회</li>
- *   <li>ColumnRangePartitioner: MEMBER_ID 범위로 분할하여 병렬 처리</li>
+ *   <li>ColumnRangePartitioner: 이용일자(YYYYMMDD) 범위로 분할하여 병렬 처리</li>
  *   <li>TaskExecutorPartitionHandler: 멀티스레드로 파티션 병렬 실행</li>
  * </ul>
  * </p>
+ *
+ * <p>POC_카드사용내역 → POC_카드사용내역_백업 으로 아카이브한다.</p>
  *
  * <p>Job Bean 이름 "db2db"가 FWK_BATCH_APP.BATCH_APP_FILE_NAME과 일치해야 한다.</p>
  */
@@ -45,7 +47,7 @@ import org.springframework.transaction.PlatformTransactionManager;
 @RequiredArgsConstructor
 public class Db2DbJobConfig {
 
-    /** 페이지 당 읽을 건수 */
+    /** 페이지당 읽을 건수 */
     private static final int PAGE_SIZE = 5;
 
     /** 병렬 처리할 파티션(스레드) 수 */
@@ -54,15 +56,14 @@ public class Db2DbJobConfig {
     private final DataSource dataSource;
 
     @Bean(name = "db2db")
-    public Job db2DbJob(JobRepository jobRepository,
-                        Step db2DbPartitionStep) {
+    public Job db2DbJob(JobRepository jobRepository, Step db2DbPartitionStep) {
         return new JobBuilder("db2db", jobRepository)
                 .start(db2DbPartitionStep)
                 .build();
     }
 
     /**
-     * 매니저 Step: Partitioner로 파티션을 분할하고 PartitionHandler로 병렬 실행.
+     * 매니저 Step: Partitioner로 이용일자 범위를 분할하고 PartitionHandler로 병렬 실행.
      */
     @Bean
     public Step db2DbPartitionStep(JobRepository jobRepository,
@@ -86,9 +87,7 @@ public class Db2DbJobConfig {
         return handler;
     }
 
-    /**
-     * 파티션 병렬 실행용 스레드 풀.
-     */
+    /** 파티션 병렬 실행용 스레드 풀. */
     @Bean
     public TaskExecutor db2DbTaskExecutor() {
         ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
@@ -100,13 +99,13 @@ public class Db2DbJobConfig {
     }
 
     /**
-     * 워커 Step: 각 파티션(minValue~maxValue 범위)에서 페이징 읽기 → BACKUP 테이블에 쓰기.
+     * 워커 Step: 파티션(이용일자 minValue~maxValue 범위)에서 페이징 읽기 → 백업 테이블에 쓰기.
      */
     @Bean
     public Step db2DbWorkerStep(JobRepository jobRepository,
                                 PlatformTransactionManager transactionManager) {
         return new StepBuilder("db2DbWorkerStep", jobRepository)
-                .<SampleMember, SampleMember>chunk(PAGE_SIZE, transactionManager)
+                .<CardUsage, CardUsage>chunk(PAGE_SIZE, transactionManager)
                 .reader(db2DbReader(null, null))   // @StepScope로 런타임 주입
                 .writer(db2DbWriter())
                 .faultTolerant()
@@ -116,52 +115,92 @@ public class Db2DbJobConfig {
     }
 
     /**
-     * JdbcPagingItemReader: 파티션의 minValue~maxValue 범위에서 페이징 조회.
+     * JdbcPagingItemReader: 파티션의 이용일자 범위에서 페이징 조회.
+     * 한글 컬럼명을 영문 alias로 매핑하여 CardUsage Bean과 연결.
      *
-     * @param minValue 파티션 시작 MEMBER_ID (ColumnRangePartitioner가 ExecutionContext에 주입)
-     * @param maxValue 파티션 종료 MEMBER_ID
+     * @param minValue 파티션 시작 이용일자(숫자, ColumnRangePartitioner 주입)
+     * @param maxValue 파티션 종료 이용일자(숫자)
      */
     @Bean
     @StepScope
-    public JdbcPagingItemReader<SampleMember> db2DbReader(
+    public JdbcPagingItemReader<CardUsage> db2DbReader(
             @Value("#{stepExecutionContext['minValue']}") Long minValue,
             @Value("#{stepExecutionContext['maxValue']}") Long maxValue) {
 
-        log.debug("db2DbReader 생성: minValue={}, maxValue={}", minValue, maxValue);
+        log.debug("db2DbReader 생성: 이용일자 {}~{}", minValue, maxValue);
 
-        return new JdbcPagingItemReaderBuilder<SampleMember>()
+        return new JdbcPagingItemReaderBuilder<CardUsage>()
                 .name("db2DbReader")
                 .dataSource(dataSource)
-                .selectClause("SELECT MEMBER_ID, MEMBER_NAME, EMAIL, PHONE")
-                .fromClause("FROM SAMPLE_MEMBER")
-                // 파티션 범위 조건
-                .whereClause("WHERE MEMBER_ID BETWEEN :minValue AND :maxValue")
-                .sortKeys(Map.of("MEMBER_ID", Order.ASCENDING))
-                .rowMapper(new BeanPropertyRowMapper<>(SampleMember.class))
+                .selectClause("""
+                        SELECT 이용자        AS userId,
+                               카드번호      AS cardNo,
+                               이용일자      AS usageDt,
+                               이용가맹점    AS merchant,
+                               이용금액      AS amount,
+                               할부개월      AS installmentMonths,
+                               승인여부      AS approvalYn,
+                               카드명        AS cardName,
+                               승인시각      AS approvalTime,
+                               결제예정일    AS paymentDueDate,
+                               승인번호      AS approvalNo,
+                               결제잔액      AS paymentBalance,
+                               누적결제금액  AS cumulativeAmount,
+                               결제상태코드  AS paymentStatusCode,
+                               최종결제일자  AS lastPaymentDt
+                        """)
+                .fromClause("FROM POC_카드사용내역")
+                // 이용일자를 숫자로 변환하여 파티션 범위 필터
+                .whereClause("WHERE TO_NUMBER(이용일자) BETWEEN :minValue AND :maxValue")
+                .sortKeys(Map.of("이용일자", Order.ASCENDING))
+                .rowMapper(new BeanPropertyRowMapper<>(CardUsage.class))
                 .parameterValues(Map.of(
                         "minValue", minValue != null ? minValue : 0L,
-                        "maxValue", maxValue != null ? maxValue : Long.MAX_VALUE))
+                        "maxValue", maxValue != null ? maxValue : 99991231L))
                 .pageSize(PAGE_SIZE)
                 .build();
     }
 
     /**
-     * SAMPLE_MEMBER_BACKUP 테이블에 배치 INSERT.
+     * POC_카드사용내역_백업 테이블에 배치 UPSERT.
+     * PK(이용자, 카드번호, 이용일자, 승인시각) 기준으로 MERGE.
      */
     @Bean
-    public JdbcBatchItemWriter<SampleMember> db2DbWriter() {
-        return new JdbcBatchItemWriterBuilder<SampleMember>()
+    public JdbcBatchItemWriter<CardUsage> db2DbWriter() {
+        return new JdbcBatchItemWriterBuilder<CardUsage>()
                 .dataSource(dataSource)
                 .sql("""
-                        MERGE INTO SAMPLE_MEMBER_BACKUP t
-                        USING (SELECT :memberId AS MEMBER_ID FROM DUAL) s
-                        ON (t.MEMBER_ID = s.MEMBER_ID)
+                        MERGE INTO POC_카드사용내역_백업 t
+                        USING (SELECT :userId    AS 이용자,
+                                      :cardNo    AS 카드번호,
+                                      :usageDt   AS 이용일자,
+                                      :approvalTime AS 승인시각
+                               FROM DUAL) s
+                        ON (t.이용자   = s.이용자
+                        AND t.카드번호 = s.카드번호
+                        AND t.이용일자 = s.이용일자
+                        AND t.승인시각 = s.승인시각)
                         WHEN MATCHED THEN UPDATE SET
-                            t.MEMBER_NAME = :memberName,
-                            t.EMAIL       = :email,
-                            t.PHONE       = :phone
-                        WHEN NOT MATCHED THEN INSERT (MEMBER_ID, MEMBER_NAME, EMAIL, PHONE)
-                        VALUES (:memberId, :memberName, :email, :phone)
+                            t.이용가맹점   = :merchant,
+                            t.이용금액     = :amount,
+                            t.할부개월     = :installmentMonths,
+                            t.승인여부     = :approvalYn,
+                            t.카드명       = :cardName,
+                            t.결제예정일   = :paymentDueDate,
+                            t.승인번호     = :approvalNo,
+                            t.결제잔액     = :paymentBalance,
+                            t.누적결제금액 = :cumulativeAmount,
+                            t.결제상태코드 = :paymentStatusCode,
+                            t.최종결제일자 = :lastPaymentDt
+                        WHEN NOT MATCHED THEN INSERT (
+                            이용자, 카드번호, 이용일자, 이용가맹점, 이용금액, 할부개월,
+                            승인여부, 카드명, 승인시각, 결제예정일, 승인번호,
+                            결제잔액, 누적결제금액, 결제상태코드, 최종결제일자
+                        ) VALUES (
+                            :userId, :cardNo, :usageDt, :merchant, :amount, :installmentMonths,
+                            :approvalYn, :cardName, :approvalTime, :paymentDueDate, :approvalNo,
+                            :paymentBalance, :cumulativeAmount, :paymentStatusCode, :lastPaymentDt
+                        )
                         """)
                 .beanMapped()
                 .build();

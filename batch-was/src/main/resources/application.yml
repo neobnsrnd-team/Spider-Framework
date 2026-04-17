@@ -5,7 +5,7 @@ spring:
     jdbc:
       # never: Spring Batch 메타 테이블을 자동 생성하지 않음 (Oracle은 always 설정 시 ORA-00955 오류)
       # BATCH_JOB_INSTANCE 등 메타 테이블이 DB에 이미 존재하는 경우 그대로 사용
-      # 존재하지 않는 경우에만 batch-was/docs/sql/03_spring_batch_meta_tables.sql 수동 실행
+      # 존재하지 않는 경우에만 batch-was/docs/sql/02_spring_batch_meta_tables.sql 수동 실행
       initialize-schema: never
     job:
       # 애플리케이션 시작 시 Job 자동 실행 방지 (API 호출로만 실행)
