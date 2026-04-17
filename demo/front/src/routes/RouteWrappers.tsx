@@ -1419,7 +1419,11 @@ export function ReactViewerRoute() {
 
     modules[key]()
       .then((mod) => setComponent(() => mod.default))
-      .catch(() => setNotFound(true));
+      .catch((err) => {
+        // 네트워크 오류와 파일 미존재를 구분하기 위해 에러를 기록한다
+        console.error(`[ReactViewer] 컴포넌트 로드 실패 — codeId=${codeId}`, err);
+        setNotFound(true);
+      });
   }, [codeId]);
 
   return (

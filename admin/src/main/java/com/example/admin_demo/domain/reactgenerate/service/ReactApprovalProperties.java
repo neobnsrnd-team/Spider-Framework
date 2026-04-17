@@ -1,14 +1,3 @@
-/**
- * @file ReactApprovalProperties.java
- * @description React 코드 승인 파일 경로 설정.
- *     승인(approval) 시 생성된 .tsx 파일을 저장할 디렉토리 경로를 바인딩한다.
- *
- * <pre>{@code
- * approval:
- *   react:
- *     output-dir: ../demo/front/src/generated
- * }</pre>
- */
 package com.example.admin_demo.domain.reactgenerate.service;
 
 import lombok.Getter;
