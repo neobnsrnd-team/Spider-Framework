@@ -312,11 +312,22 @@
                         $('#historyTableBody').html('<tr><td colspan="5" class="text-center text-body-secondary">이력이 없습니다.</td></tr>');
                         return;
                     }
+                    const row = this.rowsByPageId[pageId];
+                    // 롤백 가능 조건:
+                    //  1) CMS:W 권한 보유
+                    //  2) 비공개(isPublic=N) 상태가 아닐 것
+                    //  3) APPROVED 이거나, WORK 상태이면서 이전 승인 이력이 존재(hasApproveHistory=1)
+                    const canRollback = HAS_CMS_WRITE
+                        && row
+                        && row.isPublic !== 'N'
+                        && (row.approveState === 'APPROVED'
+                            || (row.approveState === 'WORK' && row.hasApproveHistory === 1));
+
                     const html = res.data.map((h, index) => {
                         const badge = this.APPROVE_STATE_BADGE[h.approveState] || HtmlUtils.escape(h.approveState);
                         // index === 0 은 최신 버전 — 이미 현재 상태이므로 롤백 불필요
                         const isLatest = index === 0;
-                        const rollbackBtn = (HAS_CMS_WRITE && !isLatest)
+                        const rollbackBtn = (canRollback && !isLatest)
                             ? `<button class="btn btn-outline-warning btn-sm"
                                    onclick="CmsApprovalPage.submitRollback('${pageId}', ${h.version})">롤백</button>`
                             : '';
