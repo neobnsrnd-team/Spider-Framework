@@ -20,6 +20,9 @@ CREATE TABLE POC_카드사용내역_백업 (
     누적결제금액    NUMBER(15),
     결제상태코드    VARCHAR2(1),
     최종결제일자    VARCHAR2(8),
-    CONSTRAINT PK_POC_카드사용내역_백업
+    -- 제약명은 ASCII로 작성 (한글 포함 시 30바이트 초과로 ORA-00972 발생)
+    CONSTRAINT PK_POC_CARD_USAGE_BAK
         PRIMARY KEY (이용자, 카드번호, 이용일자, 승인시각)
 );
+
+COMMIT;
