@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title th:text="${appTitle} + ' - 로그인'">Neo Spider Admin - 로그인</title>
+
+    <!-- 1. Bootstrap 5.3.3 -->
+    <link th:href="@{/webjars/bootstrap/5.3.3/css/bootstrap.min.css}" rel="stylesheet">
+    <!-- 2. Bootstrap Icons 1.11.3 -->
+    <link th:href="@{/webjars/bootstrap-icons/1.11.3/font/bootstrap-icons.min.css}" rel="stylesheet">
+    <!-- Design Tokens -->
+    <link rel="stylesheet" th:href="@{/css/design-tokens.css}">
+    <!-- Application CSS -->
+    <link rel="stylesheet" th:href="@{/css/app.css}">
+
+    <!-- Theme Manager (FOUC 방지) -->
+    <script th:src="@{/js/utils/theme-manager.js}"></script>
+    <!-- 공통 HTML 이스케이프 유틸리티 (XSS 방지) -->
+    <script th:src="@{/js/utils/html-utils.js}"></script>
+</head>
+<body>
+    <button type="button" class="btn-theme-toggle position-fixed top-0 end-0 m-3" onclick="ThemeManager.toggle()" title="테마 전환">
+        <i id="themeToggleIcon" class="bi bi-moon"></i>
+    </button>
+    <div class="login-container">
+        <div class="login-card">
+            <!-- Header -->
+            <div class="login-header text-center position-relative">
+                <h2 class="mb-2"><i class="bi bi-shield-lock"></i> <span th:text="${appTitle}">Neo Spider Admin</span></h2>
+                <p class="m-0 opacity-75">관리자 시스템에 오신 것을 환영합니다</p>
+            </div>
+
+            <!-- Body -->
+            <div class="login-body">
+                <!-- Error Message -->
+                <div th:if="${param.error}" class="alert alert-danger">
+                    <i class="bi bi-exclamation-circle"></i>
+                    <span th:text="${param.message != null ? param.message : '아이디 또는 비밀번호가 올바르지 않습니다.'}"></span>
+                </div>
+
+                <!-- Logout Success Message -->
+                <div th:if="${param.logout}" class="alert alert-success">
+                    <i class="bi bi-check-circle"></i>
+                    로그아웃되었습니다.
+                </div>
+
+                <!-- Session Expired Message -->
+                <div th:if="${param.expired}" class="alert alert-warning">
+                    <i class="bi bi-clock"></i>
+                    세션이 만료되었습니다. 다시 로그인해 주세요.
+                </div>
+
+                <!-- Login Form -->
+                <form th:action="@{/login}" method="post">
+                    <!-- Username -->
+                    <div class="mb-3">
+                        <label for="userId" class="form-label">사용자 ID</label>
+                        <div class="input-group">
+                            <span class="input-group-text">
+                                <i class="bi bi-person"></i>
+                            </span>
+                            <input type="text"
+                                   class="form-control"
+                                   id="userId"
+                                   name="userId"
+                                   placeholder="사용자 ID를 입력하세요"
+                                   required
+                                   autofocus>
+                        </div>
+                    </div>
+
+                    <!-- Password -->
+                    <div class="mb-3">
+                        <label for="password" class="form-label">비밀번호</label>
+                        <div class="position-relative">
+                            <div class="input-group">
+                                <span class="input-group-text">
+                                    <i class="bi bi-lock"></i>
+                                </span>
+                                <input type="password"
+                                       class="form-control"
+                                       id="password"
+                                       name="password"
+                                       placeholder="비밀번호를 입력하세요"
+                                       required>
+                            </div>
+                            <i class="bi bi-eye position-absolute top-50 end-0 translate-middle-y pe-3 password-toggle"
+                               id="togglePassword"
+                               onclick="togglePasswordVisibility()"></i>
+                        </div>
+                    </div>
+
+                    <!-- Remember Me -->
+                    <div class="form-check mt-3 mb-2">
+                        <input class="form-check-input"
+                               type="checkbox"
+                               id="remember-me"
+                               name="remember-me">
+                        <label class="form-check-label" for="remember-me">
+                            로그인 상태 유지
+                        </label>
+                    </div>
+
+                    <!-- Submit Button -->
+                    <button type="submit" class="btn btn-primary w-100 mt-3">
+                        <i class="bi bi-box-arrow-in-right"></i> 로그인
+                    </button>
+                </form>
+            </div>
+
+            <!-- Footer -->
+            <div class="login-footer text-center">
+                <i class="bi bi-c-circle"></i> 2026 <span th:text="${appTitle}">Neo Spider Admin</span>. All rights reserved.
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap JS -->
+    <script th:src="@{/webjars/bootstrap/5.3.3/js/bootstrap.bundle.min.js}"></script>
+
+    <!-- Custom JS -->
+    <script>
+        // Password visibility toggle
+        function togglePasswordVisibility() {
+            const passwordInput = document.getElementById('password');
+            const toggleIcon = document.getElementById('togglePassword');
+
+            if (passwordInput.type === 'password') {
+                passwordInput.type = 'text';
+                toggleIcon.classList.remove('bi-eye');
+                toggleIcon.classList.add('bi-eye-slash');
+            } else {
+                passwordInput.type = 'password';
+                toggleIcon.classList.remove('bi-eye-slash');
+                toggleIcon.classList.add('bi-eye');
+            }
+        }
+
+        // Auto-hide alerts after 5 seconds
+        document.addEventListener('DOMContentLoaded', function() {
+            const alerts = document.querySelectorAll('.alert');
+            alerts.forEach(alert => {
+                setTimeout(() => {
+                    alert.style.transition = 'opacity 0.5s';
+                    alert.style.opacity = '0';
+                    setTimeout(() => alert.remove(), 500);
+                }, 5000);
+            });
+        });
+    </script>
+</body>
+</html>

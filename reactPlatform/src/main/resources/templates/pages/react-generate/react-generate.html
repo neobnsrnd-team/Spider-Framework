@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<div th:fragment="content">
+
+    <!-- Page Header -->
+    <div class="page-header">
+        <h4 class="page-title">
+            <i class="bi bi-code-slash text-primary"></i>
+            React 코드 생성
+        </h4>
+    </div>
+
+    <!-- Input Card -->
+    <div class="card mb-3">
+        <div class="card-body">
+            <div class="mb-2">
+                <label for="figmaUrlInput" class="form-label fw-semibold">Figma URL</label>
+                <input type="url"
+                       id="figmaUrlInput"
+                       class="form-control"
+                       placeholder="https://www.figma.com/design/..."
+                       autocomplete="off">
+            </div>
+            <div class="mb-3">
+                <label for="requirementsInput" class="form-label fw-semibold">
+                    요구사항 <span class="text-muted fw-normal small">(선택)</span>
+                </label>
+                <textarea id="requirementsInput"
+                          class="form-control"
+                          rows="3"
+                          placeholder="예: 이체 화면의 계좌 선택 카드를 생성해줘. primary 버튼만 사용할 것."></textarea>
+            </div>
+            <div class="d-flex justify-content-end gap-2">
+                <button type="button" class="btn btn-outline-secondary" id="btnReset">
+                    <i class="bi bi-arrow-counterclockwise me-1"></i>초기화
+                </button>
+                <button type="button" class="btn btn-primary" id="btnGenerate">
+                    <i class="bi bi-lightning-charge-fill me-1"></i>생성
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Generating Indicator -->
+    <div id="generatingIndicator" class="d-none text-center py-4">
+        <div class="spinner-border text-primary me-2" role="status" aria-hidden="true"></div>
+        <span class="text-muted">React 코드를 생성하는 중입니다...</span>
+    </div>
+
+    <!-- Result Section -->
+    <div id="resultSection" class="d-none">
+
+        <!-- Status Badge -->
+        <div class="d-flex align-items-center justify-content-between mb-2">
+            <span class="text-muted small" id="resultMeta"></span>
+            <span class="badge" id="statusBadge"></span>
+        </div>
+
+        <!-- Preview Tabs -->
+        <ul class="nav nav-tabs" id="previewTabs" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active"
+                        id="tab-screen"
+                        data-bs-toggle="tab"
+                        data-bs-target="#screenPreview"
+                        type="button"
+                        role="tab">
+                    <i class="bi bi-display me-1"></i>화면 미리보기
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link"
+                        id="tab-code"
+                        data-bs-toggle="tab"
+                        data-bs-target="#codePreview"
+                        type="button"
+                        role="tab">
+                    <i class="bi bi-file-code me-1"></i>코드 미리보기
+                </button>
+            </li>
+        </ul>
+
+        <div class="tab-content border border-top-0 rounded-bottom">
+            <!-- Screen Preview Tab -->
+            <div class="tab-pane fade show active p-0" id="screenPreview" role="tabpanel">
+                <iframe id="previewFrame"
+                        src="/preview-app/index.html"
+                        title="화면 미리보기"
+                        style="width:100%; height:500px; border:none; border-radius: 0 0 4px 4px;">
+                </iframe>
+            </div>
+
+            <!-- Code Preview Tab -->
+            <div class="tab-pane fade" id="codePreview" role="tabpanel">
+                <div class="position-relative">
+                    <button class="btn btn-sm btn-outline-secondary position-absolute top-0 end-0 m-2"
+                            id="btnCopyCode" title="코드 복사">
+                        <i class="bi bi-clipboard"></i>
+                    </button>
+                    <pre id="codeDisplay"
+                         class="bg-dark text-light p-4 m-0 rounded-bottom"
+                         style="overflow-x:auto; max-height:500px; font-size:0.85rem; white-space:pre-wrap;"></pre>
+                </div>
+            </div>
+        </div>
+
+        <!-- Action Buttons -->
+        <!-- 승인 프로세스는 React 코드 승인 관리 메뉴에서 진행한다 -->
+        <div class="d-flex gap-2 mt-3">
+            <button type="button" class="btn btn-outline-warning" id="btnRequestApproval">
+                <i class="bi bi-send me-1"></i>승인 요청
+            </button>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <th:block th:replace="~{pages/react-generate/react-generate-script :: script}" />
+</div>
+</body>
+</html>
