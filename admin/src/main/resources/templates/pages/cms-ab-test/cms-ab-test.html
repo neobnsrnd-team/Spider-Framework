@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<div th:fragment="content">
+
+    <link rel="stylesheet" th:href="@{/css/ab-tests-content.css}">
+
+    <div class="page-header">
+        <h4 class="page-title">
+            <i class="bi bi-exclamation-circle-fill text-danger"></i>
+            검색조건
+        </h4>
+    </div>
+
+    <div class="card border p-2 mb-3">
+        <div class="d-flex flex-wrap align-items-center gap-2 mb-1">
+            <input type="text" id="filterSearch" class="form-control form-control-sm flex-fixed-240"
+                   placeholder="페이지명, 작성자, 그룹 ID"
+                   onkeypress="if(event.key === 'Enter') CmsAbTestPage.load(1)">
+            <div class="flex-grow-1"></div>
+
+            <select id="limitRows" class="form-select form-select-sm sp-limit-select">
+                <option value="10" selected>10</option>
+                <option value="20">20</option>
+                <option value="50">50</option>
+                <option value="100">100</option>
+            </select>
+            <label class="form-label mb-0 small fw-medium ms-1 me-2 fs-xs">건씩 조회</label>
+
+            <button class="btn btn-primary btn-sm" onclick="CmsAbTestPage.load(1)">
+                <i class="bi bi-search"></i> 조회
+            </button>
+            <button class="btn btn-outline-secondary btn-sm" onclick="CmsAbTestPage.reset()">초기화</button>
+        </div>
+    </div>
+
+    <div class="page-header mt-3">
+        <h4 class="page-title">
+            <i class="bi bi-exclamation-circle-fill text-danger"></i>
+            A/B 테스트 그룹
+        </h4>
+        <div class="page-header-actions">
+            <button class="btn btn-outline-secondary btn-sm" id="btnRefresh">
+                <i class="bi bi-arrow-clockwise"></i> 새로고침
+            </button>
+            <button class="btn btn-primary btn-sm" id="btnOpenCreate" data-write-only>
+                <i class="bi bi-plus-lg"></i> 그룹 생성
+            </button>
+        </div>
+    </div>
+
+    <div class="alert alert-info py-2 small" role="alert">
+        승인 완료 및 공개 상태인 페이지를 A/B 그룹으로 묶고, 노출 가중치를 조정하거나 Winner를 정식 페이지로 승격할 수 있습니다.
+    </div>
+
+    <div id="abGroupList" class="ab-group-list">
+        <div class="text-center py-4 text-body-secondary">불러오는 중...</div>
+    </div>
+
+    <div class="page-header mt-4">
+        <h4 class="page-title">
+            <i class="bi bi-exclamation-circle-fill text-danger"></i>
+            그룹 생성 가능 페이지
+        </h4>
+    </div>
+
+    <div class="table-responsive">
+        <table class="table table-sm table-hover sp-data-grid" id="abPageTable">
+            <thead class="table-light">
+                <tr>
+                    <th data-sort="pageName">페이지명</th>
+                    <th class="col-w-120" data-sort="viewMode">뷰 모드</th>
+                    <th class="col-w-140" data-sort="createUserName">작성자</th>
+                    <th class="col-w-150" data-sort="abGroupId">A/B 그룹</th>
+                    <th class="col-w-90" data-sort="abWeight">가중치</th>
+                    <th class="col-w-90" data-sort="viewCount">노출</th>
+                    <th class="col-w-90" data-sort="clickCount">클릭</th>
+                    <th class="col-w-160" data-sort="lastModifiedDtime">수정일시</th>
+                </tr>
+            </thead>
+            <tbody id="abPageTableBody">
+                <tr>
+                    <td colspan="8" class="text-center py-4 text-body-secondary">불러오는 중...</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <div th:replace="~{fragments/page-content-layout :: pagination}"></div>
+
+    <div class="modal fade" id="abGroupModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="abGroupModalTitle">A/B 그룹 생성</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">그룹 ID <span class="text-danger">*</span></label>
+                        <input type="text" id="abGroupId" class="form-control form-control-sm"
+                               placeholder="예: banner-event-2026">
+                        <div class="form-text">영문 소문자, 숫자, 하이픈만 사용할 수 있습니다. 최대 64자.</div>
+                    </div>
+                    <div class="d-flex align-items-center justify-content-between mb-2">
+                        <label class="form-label mb-0">페이지와 노출 가중치</label>
+                        <button type="button" class="btn btn-outline-primary btn-sm" id="btnAddAbPage">
+                            <i class="bi bi-plus-lg"></i> 페이지 추가
+                        </button>
+                    </div>
+                    <div id="abPageRows" class="ab-page-edit-list"></div>
+                    <p class="small text-body-secondary mt-2 mb-0">
+                        가중치는 상대 비율입니다. 7과 3이면 약 70:30으로 노출됩니다.
+                    </p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">취소</button>
+                    <button type="button" class="btn btn-primary" id="btnSaveAbGroup">저장</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="abPromoteModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Winner 승격</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" id="promoteGroupId">
+                    <p class="small text-body-secondary mb-3">
+                        선택한 페이지는 단독 노출 가중치 1로 고정되고, 같은 그룹의 나머지 페이지는 가중치 0으로 변경됩니다.
+                    </p>
+                    <div id="promotePageList" class="ab-promote-list"></div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">취소</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <th:block th:replace="~{pages/cms-ab-test/cms-ab-test-script :: script}"/>
+
+</div>
+</body>
+</html>

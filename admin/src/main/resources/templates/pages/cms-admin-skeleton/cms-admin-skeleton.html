@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<div th:fragment="content">
+    <div class="page-header">
+        <h4 class="page-title mb-0">
+            <i class="bi bi-exclamation-circle-fill text-danger"></i>
+            <span th:text="${cmsAdminTitle}">CMS 관리</span>
+        </h4>
+    </div>
+
+    <div class="sp-empty-state mt-4">
+        <div class="sp-empty-state-icon">
+            <i class="bi bi-layout-text-window-reverse"></i>
+        </div>
+        <h5 th:text="${cmsAdminDescription}">CMS 관리</h5>
+        <p th:text="${cmsAdminNote}">후속 이슈에서 데이터 연동 예정입니다.</p>
+    </div>
+</div>
+</body>
+</html>

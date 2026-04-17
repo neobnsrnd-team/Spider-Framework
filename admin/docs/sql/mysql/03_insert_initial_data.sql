@@ -23,6 +23,12 @@ VALUES ('itdev', 'IT 개발팀', 'Y', 'IT 개발팀 역할', DATE_FORMAT(NOW(), 
 INSERT INTO FWK_USER (USER_ID, USER_NAME, PASSWD, ROLE_ID, USER_STATE_CODE, LAST_UPDATE_DTIME, LAST_UPDATE_USER_ID)
 VALUES ('admin', '관리자', 'PW는 BCrypt 인코딩 필요', 'ADMIN', '1', DATE_FORMAT(NOW(), '%Y%m%d%H%i%s'), 'system');
 
+INSERT INTO FWK_USER (USER_ID, USER_NAME, PASSWD, ROLE_ID, USER_STATE_CODE, LAST_UPDATE_DTIME, LAST_UPDATE_USER_ID)
+VALUES ('cmsAdmin01', 'CMS 관리자', '$2a$10$Wb1dr5GFcbmpYC03AqKMC.8QGlMyVZkeRgFrE3khAb6y.PtXLyiG2', 'ADMIN', '1', DATE_FORMAT(NOW(), '%Y%m%d%H%i%s'), 'system');
+
+INSERT INTO FWK_USER (USER_ID, USER_NAME, PASSWD, ROLE_ID, USER_STATE_CODE, LAST_UPDATE_DTIME, LAST_UPDATE_USER_ID)
+VALUES ('cmsUser01', 'CMS 제작자', '$2a$10$Wb1dr5GFcbmpYC03AqKMC.8QGlMyVZkeRgFrE3khAb6y.PtXLyiG2', 'itdev', '1', DATE_FORMAT(NOW(), '%Y%m%d%H%i%s'), 'system');
+
 
 -- =============================================================
 -- 3. v3_ 메뉴 데이터 (FWK_MENU — 56건)
@@ -338,6 +344,70 @@ INSERT INTO FWK_ROLE_MENU (ROLE_ID, MENU_ID, AUTH_CODE) VALUES ('ADMIN', 'v3_boa
 INSERT INTO FWK_ROLE_MENU (ROLE_ID, MENU_ID, AUTH_CODE) VALUES ('ADMIN', 'v3_BOARD_AUTH', 'W');
 INSERT INTO FWK_ROLE_MENU (ROLE_ID, MENU_ID, AUTH_CODE) VALUES ('ADMIN', 'v3_FWKB_NOTICE_BOARD', 'W');
 INSERT INTO FWK_ROLE_MENU (ROLE_ID, MENU_ID, AUTH_CODE) VALUES ('ADMIN', 'v3_FWKB_TEST_BOARD', 'W');
+
+-- CMS extension menus
+INSERT INTO FWK_MENU (MENU_ID, PRIOR_MENU_ID, SORT_ORDER, MENU_NAME, MENU_URL, DISPLAY_YN, USE_YN, LAST_UPDATE_DTIME, LAST_UPDATE_USER_ID)
+VALUES ('v3_cms_manage', 'v3_acl_manage', 12, 'CMS', '/cms', 'Y', 'Y', DATE_FORMAT(NOW(), '%Y%m%d%H%i%s'), 'system');
+
+INSERT INTO FWK_MENU (MENU_ID, PRIOR_MENU_ID, SORT_ORDER, MENU_NAME, MENU_URL, DISPLAY_YN, USE_YN, LAST_UPDATE_DTIME, LAST_UPDATE_USER_ID)
+VALUES ('v3_cms_dashboard', 'v3_cms_manage', 1, 'CMS 작업자 대시보드', '/cms/dashboard', 'N', 'Y', DATE_FORMAT(NOW(), '%Y%m%d%H%i%s'), 'system');
+
+INSERT INTO FWK_MENU (MENU_ID, PRIOR_MENU_ID, SORT_ORDER, MENU_NAME, MENU_URL, DISPLAY_YN, USE_YN, LAST_UPDATE_DTIME, LAST_UPDATE_USER_ID)
+VALUES ('v3_cms_approve', 'v3_cms_manage', 2, 'CMS 관리자 승인 관리', '/cms/approve', 'N', 'N', DATE_FORMAT(NOW(), '%Y%m%d%H%i%s'), 'system');
+
+INSERT INTO FWK_MENU (MENU_ID, PRIOR_MENU_ID, SORT_ORDER, MENU_NAME, MENU_URL, DISPLAY_YN, USE_YN, LAST_UPDATE_DTIME, LAST_UPDATE_USER_ID)
+VALUES ('v3_cms_edit', 'v3_cms_manage', 3, 'CMS 편집', '/cms/edit', 'N', 'Y', DATE_FORMAT(NOW(), '%Y%m%d%H%i%s'), 'system');
+
+INSERT INTO FWK_MENU (MENU_ID, PRIOR_MENU_ID, SORT_ORDER, MENU_NAME, MENU_URL, DISPLAY_YN, USE_YN, LAST_UPDATE_DTIME, LAST_UPDATE_USER_ID)
+VALUES ('v3_cms_files', 'v3_cms_manage', 4, 'CMS 파일 관리', '/cms/files', 'N', 'N', DATE_FORMAT(NOW(), '%Y%m%d%H%i%s'), 'system');
+
+INSERT INTO FWK_MENU (MENU_ID, PRIOR_MENU_ID, SORT_ORDER, MENU_NAME, MENU_URL, DISPLAY_YN, USE_YN, LAST_UPDATE_DTIME, LAST_UPDATE_USER_ID)
+VALUES ('v3_cms_admin_pages', 'v3_cms_manage', 10, 'CMS 페이지 관리', '/cms-admin/pages', 'N', 'N', DATE_FORMAT(NOW(), '%Y%m%d%H%i%s'), 'system');
+
+INSERT INTO FWK_MENU (MENU_ID, PRIOR_MENU_ID, SORT_ORDER, MENU_NAME, MENU_URL, DISPLAY_YN, USE_YN, LAST_UPDATE_DTIME, LAST_UPDATE_USER_ID)
+VALUES ('v3_cms_admin_approvals', 'v3_cms_manage', 11, 'CMS 승인 관리', '/cms-admin/approvals', 'Y', 'Y', DATE_FORMAT(NOW(), '%Y%m%d%H%i%s'), 'system');
+
+INSERT INTO FWK_MENU (MENU_ID, PRIOR_MENU_ID, SORT_ORDER, MENU_NAME, MENU_URL, DISPLAY_YN, USE_YN, LAST_UPDATE_DTIME, LAST_UPDATE_USER_ID)
+VALUES ('v3_cms_admin_files', 'v3_cms_manage', 12, 'CMS 리소스 검토', '/cms-admin/files', 'N', 'N', DATE_FORMAT(NOW(), '%Y%m%d%H%i%s'), 'system');
+
+INSERT INTO FWK_MENU (MENU_ID, PRIOR_MENU_ID, SORT_ORDER, MENU_NAME, MENU_URL, DISPLAY_YN, USE_YN, LAST_UPDATE_DTIME, LAST_UPDATE_USER_ID)
+VALUES ('v3_cms_admin_ab_tests', 'v3_cms_manage', 13, 'CMS A/B 관리', '/cms-admin/ab-tests', 'Y', 'Y', DATE_FORMAT(NOW(), '%Y%m%d%H%i%s'), 'system');
+
+INSERT INTO FWK_MENU (MENU_ID, PRIOR_MENU_ID, SORT_ORDER, MENU_NAME, MENU_URL, DISPLAY_YN, USE_YN, LAST_UPDATE_DTIME, LAST_UPDATE_USER_ID)
+VALUES ('v3_cms_admin_deployments', 'v3_cms_manage', 14, 'CMS 배포 관리', '/cms-admin/deployments', 'Y', 'Y', DATE_FORMAT(NOW(), '%Y%m%d%H%i%s'), 'system');
+
+INSERT INTO FWK_MENU (MENU_ID, PRIOR_MENU_ID, SORT_ORDER, MENU_NAME, MENU_URL, DISPLAY_YN, USE_YN, LAST_UPDATE_DTIME, LAST_UPDATE_USER_ID)
+VALUES ('v3_cms_admin_statistics', 'v3_cms_manage', 15, 'CMS 통계', '/cms-admin/statistics', 'Y', 'Y', DATE_FORMAT(NOW(), '%Y%m%d%H%i%s'), 'system');
+
+INSERT INTO FWK_MENU (MENU_ID, PRIOR_MENU_ID, SORT_ORDER, MENU_NAME, MENU_URL, DISPLAY_YN, USE_YN, LAST_UPDATE_DTIME, LAST_UPDATE_USER_ID)
+VALUES ('v3_cms_admin_components', 'v3_cms_manage', 16, 'CMS 컴포넌트 관리', '/cms-admin/components', 'Y', 'Y', DATE_FORMAT(NOW(), '%Y%m%d%H%i%s'), 'system');
+
+INSERT INTO FWK_ROLE_MENU (ROLE_ID, MENU_ID, AUTH_CODE) VALUES ('ADMIN', 'v3_cms_manage', 'W');
+INSERT INTO FWK_ROLE_MENU (ROLE_ID, MENU_ID, AUTH_CODE) VALUES ('ADMIN', 'v3_cms_admin_approvals', 'W');
+INSERT INTO FWK_ROLE_MENU (ROLE_ID, MENU_ID, AUTH_CODE) VALUES ('ADMIN', 'v3_cms_admin_ab_tests', 'W');
+INSERT INTO FWK_ROLE_MENU (ROLE_ID, MENU_ID, AUTH_CODE) VALUES ('ADMIN', 'v3_cms_admin_deployments', 'W');
+INSERT INTO FWK_ROLE_MENU (ROLE_ID, MENU_ID, AUTH_CODE) VALUES ('ADMIN', 'v3_cms_admin_statistics', 'W');
+INSERT INTO FWK_ROLE_MENU (ROLE_ID, MENU_ID, AUTH_CODE) VALUES ('ADMIN', 'v3_cms_admin_components', 'W');
+INSERT INTO FWK_ROLE_MENU (ROLE_ID, MENU_ID, AUTH_CODE) VALUES ('itdev', 'v3_cms_manage', 'W');
+INSERT INTO FWK_ROLE_MENU (ROLE_ID, MENU_ID, AUTH_CODE) VALUES ('itdev', 'v3_cms_dashboard', 'W');
+INSERT INTO FWK_ROLE_MENU (ROLE_ID, MENU_ID, AUTH_CODE) VALUES ('itdev', 'v3_cms_edit', 'W');
+
+INSERT INTO FWK_USER_MENU (USER_ID, MENU_ID, AUTH_CODE, LAST_UPDATE_DTIME, LAST_UPDATE_USER_ID) VALUES ('admin', 'v3_cms_manage', 'W', DATE_FORMAT(NOW(), '%Y%m%d%H%i%s'), 'system');
+INSERT INTO FWK_USER_MENU (USER_ID, MENU_ID, AUTH_CODE, LAST_UPDATE_DTIME, LAST_UPDATE_USER_ID) VALUES ('admin', 'v3_cms_admin_approvals', 'W', DATE_FORMAT(NOW(), '%Y%m%d%H%i%s'), 'system');
+INSERT INTO FWK_USER_MENU (USER_ID, MENU_ID, AUTH_CODE, LAST_UPDATE_DTIME, LAST_UPDATE_USER_ID) VALUES ('admin', 'v3_cms_admin_ab_tests', 'W', DATE_FORMAT(NOW(), '%Y%m%d%H%i%s'), 'system');
+INSERT INTO FWK_USER_MENU (USER_ID, MENU_ID, AUTH_CODE, LAST_UPDATE_DTIME, LAST_UPDATE_USER_ID) VALUES ('admin', 'v3_cms_admin_deployments', 'W', DATE_FORMAT(NOW(), '%Y%m%d%H%i%s'), 'system');
+INSERT INTO FWK_USER_MENU (USER_ID, MENU_ID, AUTH_CODE, LAST_UPDATE_DTIME, LAST_UPDATE_USER_ID) VALUES ('admin', 'v3_cms_admin_statistics', 'W', DATE_FORMAT(NOW(), '%Y%m%d%H%i%s'), 'system');
+INSERT INTO FWK_USER_MENU (USER_ID, MENU_ID, AUTH_CODE, LAST_UPDATE_DTIME, LAST_UPDATE_USER_ID) VALUES ('admin', 'v3_cms_admin_components', 'W', DATE_FORMAT(NOW(), '%Y%m%d%H%i%s'), 'system');
+INSERT INTO FWK_USER_MENU (USER_ID, MENU_ID, AUTH_CODE, LAST_UPDATE_DTIME, LAST_UPDATE_USER_ID) VALUES ('cmsAdmin01', 'v3_acl_manage', 'W', DATE_FORMAT(NOW(), '%Y%m%d%H%i%s'), 'system');
+INSERT INTO FWK_USER_MENU (USER_ID, MENU_ID, AUTH_CODE, LAST_UPDATE_DTIME, LAST_UPDATE_USER_ID) VALUES ('cmsAdmin01', 'v3_cms_manage', 'W', DATE_FORMAT(NOW(), '%Y%m%d%H%i%s'), 'system');
+INSERT INTO FWK_USER_MENU (USER_ID, MENU_ID, AUTH_CODE, LAST_UPDATE_DTIME, LAST_UPDATE_USER_ID) VALUES ('cmsAdmin01', 'v3_cms_admin_approvals', 'W', DATE_FORMAT(NOW(), '%Y%m%d%H%i%s'), 'system');
+INSERT INTO FWK_USER_MENU (USER_ID, MENU_ID, AUTH_CODE, LAST_UPDATE_DTIME, LAST_UPDATE_USER_ID) VALUES ('cmsAdmin01', 'v3_cms_admin_ab_tests', 'W', DATE_FORMAT(NOW(), '%Y%m%d%H%i%s'), 'system');
+INSERT INTO FWK_USER_MENU (USER_ID, MENU_ID, AUTH_CODE, LAST_UPDATE_DTIME, LAST_UPDATE_USER_ID) VALUES ('cmsAdmin01', 'v3_cms_admin_deployments', 'W', DATE_FORMAT(NOW(), '%Y%m%d%H%i%s'), 'system');
+INSERT INTO FWK_USER_MENU (USER_ID, MENU_ID, AUTH_CODE, LAST_UPDATE_DTIME, LAST_UPDATE_USER_ID) VALUES ('cmsAdmin01', 'v3_cms_admin_statistics', 'W', DATE_FORMAT(NOW(), '%Y%m%d%H%i%s'), 'system');
+INSERT INTO FWK_USER_MENU (USER_ID, MENU_ID, AUTH_CODE, LAST_UPDATE_DTIME, LAST_UPDATE_USER_ID) VALUES ('cmsAdmin01', 'v3_cms_admin_components', 'W', DATE_FORMAT(NOW(), '%Y%m%d%H%i%s'), 'system');
+INSERT INTO FWK_USER_MENU (USER_ID, MENU_ID, AUTH_CODE, LAST_UPDATE_DTIME, LAST_UPDATE_USER_ID) VALUES ('cmsUser01', 'v3_cms_manage', 'W', DATE_FORMAT(NOW(), '%Y%m%d%H%i%s'), 'system');
+INSERT INTO FWK_USER_MENU (USER_ID, MENU_ID, AUTH_CODE, LAST_UPDATE_DTIME, LAST_UPDATE_USER_ID) VALUES ('cmsUser01', 'v3_cms_dashboard', 'W', DATE_FORMAT(NOW(), '%Y%m%d%H%i%s'), 'system');
+INSERT INTO FWK_USER_MENU (USER_ID, MENU_ID, AUTH_CODE, LAST_UPDATE_DTIME, LAST_UPDATE_USER_ID) VALUES ('cmsUser01', 'v3_cms_edit', 'W', DATE_FORMAT(NOW(), '%Y%m%d%H%i%s'), 'system');
 
 -- ============================================================
 -- React 플랫폼 메뉴

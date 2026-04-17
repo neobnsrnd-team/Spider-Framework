@@ -1,0 +1,131 @@
+/* CMS A/B test page styles */
+
+.ab-group-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.ab-group-card {
+    border: 1px solid var(--sp-border);
+    border-radius: 8px;
+    background: var(--sp-surface);
+    padding: 14px;
+}
+
+.ab-group-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 10px;
+}
+
+.ab-group-actions {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+}
+
+.ab-weight-bar {
+    display: flex;
+    width: 100%;
+    height: 12px;
+    overflow: hidden;
+    border-radius: 6px;
+    background: var(--sp-neutral-200);
+    margin-bottom: 10px;
+}
+
+.ab-weight-segment {
+    min-width: 0;
+    height: 100%;
+}
+
+.ab-group-pages {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.ab-group-page {
+    display: grid;
+    grid-template-columns: 12px minmax(180px, 1fr) auto auto minmax(130px, auto) minmax(150px, auto);
+    gap: 8px;
+    align-items: center;
+    padding: 8px 10px;
+    border-radius: 8px;
+    background: var(--sp-neutral-50);
+}
+
+.ab-group-page.is-loser {
+    opacity: 0.65;
+}
+
+.ab-page-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+}
+
+.ab-page-name {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-weight: 600;
+}
+
+.ab-page-weight,
+.ab-page-stat {
+    color: var(--sp-text-secondary);
+    font-size: var(--sp-font-size-xs);
+    white-space: nowrap;
+}
+
+.ab-page-edit-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.ab-page-edit-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 120px 70px;
+    gap: 8px;
+    align-items: center;
+}
+
+.ab-promote-list {
+    display: flex;
+    flex-direction: column;
+}
+
+.ab-color-0 { background-color: #0d6efd; }
+.ab-color-1 { background-color: #198754; }
+.ab-color-2 { background-color: #fd7e14; }
+.ab-color-3 { background-color: #dc3545; }
+.ab-color-4 { background-color: #6f42c1; }
+
+@media (max-width: 768px) {
+    .ab-group-header,
+    .ab-group-actions {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .ab-group-page {
+        grid-template-columns: 12px minmax(0, 1fr);
+    }
+
+    .ab-group-page .badge,
+    .ab-page-weight,
+    .ab-page-stat {
+        grid-column: 2;
+    }
+
+    .ab-page-edit-row {
+        grid-template-columns: 1fr;
+    }
+}
