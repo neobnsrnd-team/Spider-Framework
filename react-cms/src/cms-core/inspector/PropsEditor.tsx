@@ -1,5 +1,18 @@
-// Props 에디터 (inspector 버전)
-// group / array / icon-picker / event 포함한 완전판 props 편집 UI
+/**
+ * @file PropsEditor.tsx
+ * @description 블록 props 편집기 (인스펙터 버전).
+ * group / array / leaf / icon-picker / event 타입을 모두 지원하는 완전판 props 편집 UI.
+ * 선택된 블록의 prop 스키마(propSchema)를 기반으로 동적 폼을 생성합니다.
+ * 이벤트 prop(type: "event")은 인터랙션 섹션에서 Action 바인딩으로 처리됩니다.
+ * 패딩 편집 섹션이 항상 하단에 표시됩니다.
+ *
+ * @param block 편집 대상 CMSBlock
+ * @param onChange props 변경 핸들러
+ * @param onPaddingChange 패딩 변경 핸들러
+ * @param blockMeta 블록 메타 정보 맵 (propSchema 조회에 사용)
+ * @param overlays 현재 페이지 오버레이 목록 (openOverlay 액션 바인딩에 사용)
+ * @param onInteractionChange 이벤트 인터랙션 변경 핸들러
+ */
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { ChevronDown, Plus, Trash2 } from "lucide-react";
 import type { Action, BlockInteraction, BlockPadding, CMSBlock, CMSOverlay } from "../types";
@@ -152,8 +165,10 @@ const EventField = React.memo(function EventField({
   label: string;
   action?: Action;
   overlays: CMSOverlay[];
-  onChange: (action: Action) => void;
-  onClear: () => void;
+  /** eventKey를 첫 번째 인자로 받아 부모에서 직접 전달 가능 */
+  onChange: (key: string, action: Action) => void;
+  /** eventKey를 인자로 받아 부모에서 직접 전달 가능 */
+  onClear: (key: string) => void;
 }) {
   const actionType = action?.type ?? "none";
 
@@ -164,15 +179,15 @@ const EventField = React.memo(function EventField({
       overlays.length > 0 &&
       !overlays.some((o) => o.id === action.target)
     ) {
-      onChange({ type: "openOverlay", target: overlays[0].id });
+      onChange(eventKey, { type: "openOverlay", target: overlays[0].id });
     }
-  }, [action, overlays, onChange]);
+  }, [action, overlays, onChange, eventKey]);
 
   function handleTypeChange(type: string) {
-    if (type === "none") { onClear(); return; }
-    if (type === "openOverlay") onChange({ type: "openOverlay", target: overlays[0]?.id ?? "" });
-    else if (type === "closeOverlay") onChange({ type: "closeOverlay" });
-    else onChange({ type: "navigate", path: "/" });
+    if (type === "none") { onClear(eventKey); return; }
+    if (type === "openOverlay") onChange(eventKey, { type: "openOverlay", target: overlays[0]?.id ?? "" });
+    else if (type === "closeOverlay") onChange(eventKey, { type: "closeOverlay" });
+    else onChange(eventKey, { type: "navigate", path: "/" });
   }
 
   return (
@@ -181,7 +196,7 @@ const EventField = React.memo(function EventField({
         <label className="text-xs font-semibold text-text-secondary font-mono">{label !== eventKey ? `${eventKey} (${label})` : eventKey}</label>
         {action && (
           <button
-            onClick={onClear}
+            onClick={() => onClear(eventKey)}
             className="text-xs text-text-muted hover:text-red-400 transition-colors"
           >
             해제
@@ -207,7 +222,7 @@ const EventField = React.memo(function EventField({
           <select
             className={inputCls}
             value={(action as Extract<Action, { type: "openOverlay" }>).target}
-            onChange={(e) => onChange({ type: "openOverlay", target: e.target.value })}
+            onChange={(e) => onChange(eventKey, { type: "openOverlay", target: e.target.value })}
           >
             {overlays.map((o) => (
               <option key={o.id} value={o.id}>{o.type}: {o.id}</option>
@@ -222,7 +237,7 @@ const EventField = React.memo(function EventField({
           className={inputCls}
           placeholder="/accounts"
           value={(action as Extract<Action, { type: "navigate" }>).path}
-          onChange={(e) => onChange({ type: "navigate", path: e.target.value })}
+          onChange={(e) => onChange(eventKey, { type: "navigate", path: e.target.value })}
         />
       )}
     </div>
@@ -433,10 +448,9 @@ export default function PropsEditor({
                 label={label}
                 action={interaction[key]}
                 overlays={overlays}
-                // handleEventChange/handleEventClear는 stable useCallback
-                // EventField의 커스텀 memo comparator가 onChange/onClear를 비교에서 제외
-                onChange={(action) => handleEventChange(key, action)}
-                onClear={() => handleEventClear(key)}
+                // handleEventChange/handleEventClear가 (key, ...) 시그니처와 일치 — 직접 전달
+                onChange={handleEventChange}
+                onClear={handleEventClear}
               />
             );
           })}

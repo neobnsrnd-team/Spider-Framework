@@ -1,6 +1,16 @@
-// 아이콘 선택기
-// lucide-react 전체 목록을 그리드로 표시하고 검색/선택 가능
-// 선택 값은 kebab-case 정규화 이름 (예: "ChevronRight" → "chevron-right")
+/**
+ * @file IconPicker.tsx
+ * @description Lucide 아이콘 선택기 컴포넌트.
+ * lucide-react 전체 아이콘 목록을 6열 그리드로 표시하고 검색·선택 가능합니다.
+ * 선택 값은 kebab-case 정규화 이름으로 반환됩니다 (예: "ChevronRight" → "chevron-right").
+ * useDeferredValue로 검색 입력을 디퍼드 처리해 타이핑 중 렌더링 부하를 줄입니다.
+ *
+ * 부가 유틸:
+ * - renderLucideIcon: kebab-case 이름을 받아 Lucide 아이콘 ReactNode를 반환합니다.
+ *
+ * @param value 현재 선택된 아이콘 이름 (kebab-case)
+ * @param onSelect 아이콘 선택 콜백
+ */
 import { memo, useDeferredValue, useMemo, useState } from "react";
 import * as LucideIcons from "lucide-react";
 

@@ -4,7 +4,7 @@
  * 블록 추가/삭제/수정/정렬 + 레이아웃 타입/props + 오버레이 CRUD 관리.
  * editingOverlayId가 설정된 경우 블록 조작은 해당 오버레이의 blocks를 대상으로 합니다.
  */
-import { useState, useCallback, useMemo } from "react";
+import { useState, useCallback, useMemo, useRef } from "react";
 import { arrayMove } from "@dnd-kit/sortable";
 import type {
   BlockInteraction,
@@ -74,11 +74,31 @@ export function useBuilderState(
     initialPage?.layoutProps ?? DEFAULT_LAYOUT_PROPS,
   );
 
+  // blockMeta는 외부 주입 레지스트리 — ref로 유지해 addBlock deps에서 제외
+  const blockMetaRef = useRef(blockMeta);
+  blockMetaRef.current = blockMeta;
+
+  // ─── 내부 헬퍼: 현재 컨텍스트(page/overlay) 블록 패치 ────────────────────────
+  // updateBlockProps / updateBlockPadding / updateBlockInteraction의 공통 분기 처리
+  const patchBlock = useCallback((id: string, patch: (b: CMSBlock) => CMSBlock) => {
+    if (editingOverlayId) {
+      setOverlays((prev) =>
+        prev.map((o) =>
+          o.id === editingOverlayId
+            ? { ...o, blocks: o.blocks.map((b) => (b.id === id ? patch(b) : b)) }
+            : o,
+        ),
+      );
+    } else {
+      setBlocks((prev) => prev.map((b) => (b.id === id ? patch(b) : b)));
+    }
+  }, [editingOverlayId]);
+
   // ─── 블록 ────────────────────────────────────────────────────────────────────
 
-  // editingOverlayId를 읽으므로 deps에 포함
+  // blockMetaRef로 최신 meta를 읽어 blockMeta를 deps에서 제외
   const addBlock = useCallback((type: string, atIndex?: number) => {
-    const meta = blockMeta[type];
+    const meta = blockMetaRef.current[type];
     const newBlock: CMSBlock = {
       id: crypto.randomUUID(),
       component: type,
@@ -107,7 +127,7 @@ export function useBuilderState(
         return next;
       });
     }
-  }, [editingOverlayId, blockMeta]);
+  }, [editingOverlayId]);
 
   const removeBlock = useCallback((id: string) => {
     if (editingOverlayId) {
@@ -123,46 +143,16 @@ export function useBuilderState(
   }, [editingOverlayId]);
 
   const updateBlockProps = useCallback((id: string, newProps: Record<string, unknown>) => {
-    if (editingOverlayId) {
-      setOverlays((prev) =>
-        prev.map((o) =>
-          o.id === editingOverlayId
-            ? { ...o, blocks: o.blocks.map((b) => b.id === id ? { ...b, props: { ...b.props, ...newProps } } : b) }
-            : o,
-        ),
-      );
-    } else {
-      setBlocks((prev) => prev.map((b) => b.id === id ? { ...b, props: { ...b.props, ...newProps } } : b));
-    }
-  }, [editingOverlayId]);
+    patchBlock(id, (b) => ({ ...b, props: { ...b.props, ...newProps } }));
+  }, [patchBlock]);
 
   const updateBlockPadding = useCallback((id: string, padding: BlockPadding) => {
-    if (editingOverlayId) {
-      setOverlays((prev) =>
-        prev.map((o) =>
-          o.id === editingOverlayId
-            ? { ...o, blocks: o.blocks.map((b) => b.id === id ? { ...b, padding } : b) }
-            : o,
-        ),
-      );
-    } else {
-      setBlocks((prev) => prev.map((b) => b.id === id ? { ...b, padding } : b));
-    }
-  }, [editingOverlayId]);
+    patchBlock(id, (b) => ({ ...b, padding }));
+  }, [patchBlock]);
 
   const updateBlockInteraction = useCallback((id: string, interaction: BlockInteraction) => {
-    if (editingOverlayId) {
-      setOverlays((prev) =>
-        prev.map((o) =>
-          o.id === editingOverlayId
-            ? { ...o, blocks: o.blocks.map((b) => b.id === id ? { ...b, interaction } : b) }
-            : o,
-        ),
-      );
-    } else {
-      setBlocks((prev) => prev.map((b) => b.id === id ? { ...b, interaction } : b));
-    }
-  }, [editingOverlayId]);
+    patchBlock(id, (b) => ({ ...b, interaction }));
+  }, [patchBlock]);
 
   const reorderBlocks = useCallback((oldIndex: number, newIndex: number) => {
     if (editingOverlayId) {

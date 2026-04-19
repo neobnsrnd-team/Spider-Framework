@@ -1,6 +1,10 @@
-// 블록 컨트롤 UI
-// - SortableBlockWrapper: 캔버스 블록 (선택/삭제/정렬)
-
+/**
+ * @file BlockControls.tsx
+ * @description 캔버스 블록 컨트롤 UI.
+ * SortableBlockWrapper: dnd-kit useSortable 기반 블록 래퍼.
+ * 호버 시 드래그 핸들 + 블록명 + 삭제 버튼 바를 -top-6 위치에 표시합니다.
+ * React.memo로 감싸 isSelected나 block 내용이 바뀌지 않으면 리렌더링을 건너뜁니다.
+ */
 import React from "react";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";

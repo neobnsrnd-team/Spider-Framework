@@ -1,5 +1,19 @@
-// <CMSBuilder /> — 외부 프로젝트에 임베드 가능한 CMS 빌더 컴포넌트
-// CMSPage.tsx의 하드코딩된 의존성을 props로 교체합니다.
+/**
+ * @file CMSBuilder.tsx
+ * @description 외부 프로젝트에 임베드 가능한 CMS 빌더 컴포넌트.
+ * dnd-kit DndContext 위에 좌측 팔레트(LeftSidebar), 중앙 캔버스(Canvas),
+ * 우측 인스펙터(RightSidebar)를 배치합니다.
+ *
+ * 주요 기능:
+ * - 블록/오버레이 드래그·추가·삭제·정렬
+ * - 레이아웃 타입 및 props 편집
+ * - JSON 가져오기/내보내기
+ * - JSX 코드 보기 및 페이지 저장 모달
+ * - 새 탭 미리보기 (localStorage → PreviewPage)
+ *
+ * @param onSave 페이지 저장 핸들러. 생략 시 defaultSave 사용
+ * @param initialPage 초기 페이지 데이터 (불러오기용)
+ */
 
 import { useState, useRef, useMemo, useCallback } from "react";
 import { createPortal } from "react-dom";
@@ -74,6 +88,12 @@ export function CMSBuilder({ onSave, initialPage }: CMSBuilderProps) {
   // builder 액션들은 builderStore에서 useCallback으로 안정화되어 있으므로
   // 여기서 복합 동작만 useCallback으로 감쌈
 
+  // ref로 최신 id만 유지 — 객체 전체를 deps에 넣지 않아도 stale 없음
+  const selectedBlockIdRef = useRef<string | null>(null);
+  selectedBlockIdRef.current = builder.selectedBlockId;
+  const editingOverlayIdRef = useRef<string | undefined>(undefined);
+  editingOverlayIdRef.current = editingOverlay?.id;
+
   const handleSelectBlock = useCallback(
     (id: string) => { builder.selectBlock(id); setRightTab("props"); },
     [builder.selectBlock],
@@ -89,28 +109,38 @@ export function CMSBuilder({ onSave, initialPage }: CMSBuilderProps) {
     [builder.enterOverlay],
   );
 
+  // selectedBlock 객체 대신 ref로 id만 읽어 props 수정 중 핸들러 재생성 방지
   const handlePropsChange = useCallback(
-    (newProps: Record<string, unknown>) =>
-      selectedBlock && builder.updateBlockProps(selectedBlock.id, newProps),
-    [selectedBlock, builder.updateBlockProps],
+    (newProps: Record<string, unknown>) => {
+      const id = selectedBlockIdRef.current;
+      if (id) builder.updateBlockProps(id, newProps);
+    },
+    [builder.updateBlockProps],
   );
 
   const handlePaddingChange = useCallback(
-    (padding: Parameters<typeof builder.updateBlockPadding>[1]) =>
-      selectedBlock && builder.updateBlockPadding(selectedBlock.id, padding),
-    [selectedBlock, builder.updateBlockPadding],
+    (padding: Parameters<typeof builder.updateBlockPadding>[1]) => {
+      const id = selectedBlockIdRef.current;
+      if (id) builder.updateBlockPadding(id, padding);
+    },
+    [builder.updateBlockPadding],
   );
 
   const handleInteractionChange = useCallback(
-    (interaction: Parameters<typeof builder.updateBlockInteraction>[1]) =>
-      selectedBlock && builder.updateBlockInteraction(selectedBlock.id, interaction),
-    [selectedBlock, builder.updateBlockInteraction],
+    (interaction: Parameters<typeof builder.updateBlockInteraction>[1]) => {
+      const id = selectedBlockIdRef.current;
+      if (id) builder.updateBlockInteraction(id, interaction);
+    },
+    [builder.updateBlockInteraction],
   );
 
+  // editingOverlay 객체 대신 ref로 id만 읽어 오버레이 편집 중 핸들러 재생성 방지
   const handleOverlayPropsChange = useCallback(
-    (props: Record<string, unknown>) =>
-      editingOverlay && builder.updateOverlayProps(editingOverlay.id, props),
-    [editingOverlay, builder.updateOverlayProps],
+    (props: Record<string, unknown>) => {
+      const id = editingOverlayIdRef.current;
+      if (id) builder.updateOverlayProps(id, props);
+    },
+    [builder.updateOverlayProps],
   );
 
   function handleDragStart(event: DragStartEvent) {
