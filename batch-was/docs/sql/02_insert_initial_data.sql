@@ -1,6 +1,7 @@
 -- =============================================================
 -- batch-was 연동을 위한 Admin DB 초기 데이터
 -- Admin DB(D_SPIDERLINK 스키마)에서 실행
+-- ※ 쿼리 실행은 개발자가 DB에서 직접 수행해야 함
 -- =============================================================
 
 -- 1. Batch WAS 인스턴스 등록
@@ -70,7 +71,7 @@ INSERT INTO FWK_BATCH_APP (
 );
 
 -- 3. 배치-인스턴스 매핑 등록
---    BWAS 인스턴스에서 3개 Job 모두 실행 가능
+--    BT01 인스턴스에서 3개 Job 모두 실행 가능
 INSERT INTO FWK_WAS_EXEC_BATCH (BATCH_APP_ID, INSTANCE_ID, USE_YN, LAST_UPDATE_USER_ID)
 VALUES ('FILE2DB_JOB', 'BT01', 'Y', 'SYSTEM');
 
