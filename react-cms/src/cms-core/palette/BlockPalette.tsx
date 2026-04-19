@@ -4,7 +4,7 @@
  */
 import { useDraggable } from "@dnd-kit/core";
 import type { BlockMeta } from "../types";
-import React from "react";
+import React, { useCallback, useMemo } from "react";
 import { UserScopeWrapper } from "../UserScopeWrapper";
 
 // ─── 썸네일 상수 ────────────────────────────────────────────
@@ -49,12 +49,13 @@ interface BlockThumbnailProps {
 
 /**
  * @description 실제 컴포넌트를 CSS scale로 축소해 썸네일로 렌더링.
+ * React.memo로 감싸 props가 바뀌지 않으면 리렌더링을 건너뜁니다.
  * @param type 블록 타입 문자열
  * @param blockRegistry 블록 렌더러 레지스트리
  * @param blockMeta 블록 메타 정보 맵
  * @returns React 컴포넌트 | null
  */
-function BlockThumbnail({ type, blockRegistry, blockMeta }: BlockThumbnailProps) {
+const BlockThumbnail = React.memo(function BlockThumbnail({ type, blockRegistry, blockMeta }: BlockThumbnailProps) {
   const Component = blockRegistry[type];
   const meta = blockMeta[type];
   if (!Component || !meta) return null;
@@ -75,7 +76,7 @@ function BlockThumbnail({ type, blockRegistry, blockMeta }: BlockThumbnailProps)
       </UserScopeWrapper>
     </div>
   );
-}
+});
 
 // ─── 드래그 가능한 팔레트 아이템 ───────────────────────────
 
@@ -89,23 +90,27 @@ interface PaletteItemProps {
 
 /**
  * @description 드래그 & 클릭으로 캔버스에 추가할 수 있는 팔레트 아이템.
+ * React.memo로 감싸 type/name/onAdd가 바뀌지 않으면 리렌더링을 건너뜁니다.
  * @param type 블록 타입 문자열
  * @param name 표시 이름
- * @param onAdd 클릭 시 블록 추가 콜백
+ * @param onAdd 클릭 시 블록 추가 콜백 (stable 참조 권장)
  * @returns React 컴포넌트
  */
-export function DraggablePaletteItem({ type, name, onAdd, blockRegistry, blockMeta }: PaletteItemProps) {
+export const DraggablePaletteItem = React.memo(function DraggablePaletteItem({ type, name, onAdd, blockRegistry, blockMeta }: PaletteItemProps) {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: `palette::${type}`,
     data: { type: "palette-item", blockType: type },
   });
+
+  // onAdd와 type이 stable하면 이 핸들러도 재생성되지 않음
+  const handleClick = useCallback(() => onAdd(type), [onAdd, type]);
 
   return (
     <div
       ref={setNodeRef}
       {...listeners}
       {...attributes}
-      onClick={() => onAdd(type)}
+      onClick={handleClick}
       className={`rounded-xl border overflow-hidden transition-all cursor-grab active:cursor-grabbing select-none bg-white ${
         isDragging
           ? "opacity-40 border-primary ring-2 ring-primary/40"
@@ -118,7 +123,7 @@ export function DraggablePaletteItem({ type, name, onAdd, blockRegistry, blockMe
       </div>
     </div>
   );
-}
+});
 
 // ─── 접기/펼치기 섹션 헤더 ──────────────────────────────────
 
@@ -182,23 +187,45 @@ export function BlockPalette({ onAdd, filter, blockMeta, blockRegistry }: BlockP
   const q = filter?.trim().toLowerCase() ?? "";
   const [collapsed, setCollapsed] = React.useState<Record<string, boolean>>({});
 
-  const toggle = (key: string) =>
-    setCollapsed((prev) => ({ ...prev, [key]: !prev[key] }));
+  // setCollapsed는 stable setter이므로 deps 불필요
+  const toggle = useCallback(
+    (key: string) => setCollapsed((prev) => ({ ...prev, [key]: !prev[key] })),
+    [],
+  );
 
-  const allEntries = Object.entries(blockMeta);
+  // blockMeta 참조가 바뀔 때만 재계산
+  const allEntries = useMemo(() => Object.entries(blockMeta), [blockMeta]);
 
-  // ── 검색 결과 ──
-  if (q) {
-    const filtered = allEntries.filter(
+  // 검색 필터 결과 메모이제이션 — 훅 규칙상 조건문 이전에 선언
+  const filteredEntries = useMemo(() => {
+    if (!q) return null;
+    return allEntries.filter(
       ([type, meta]) =>
         meta.name.toLowerCase().includes(q) || type.toLowerCase().includes(q),
     );
-    if (filtered.length === 0) {
+  }, [q, allEntries]);
+
+  // 카테고리 목록: blockMeta에서 동적 파생 후 우선순위 순 정렬
+  const allCategories = useMemo(
+    () => [...new Set(allEntries.map(([, m]) => m.category))],
+    [allEntries],
+  );
+  const categories = useMemo(
+    () => [
+      ...PREFERRED_CATEGORY_ORDER.filter((c) => allCategories.includes(c)),
+      ...allCategories.filter((c) => !PREFERRED_CATEGORY_ORDER.includes(c)),
+    ],
+    [allCategories],
+  );
+
+  // ── 검색 결과 ──
+  if (filteredEntries !== null) {
+    if (filteredEntries.length === 0) {
       return <p className="text-xs text-gray-400 text-center py-8">검색 결과가 없습니다</p>;
     }
     return (
       <div className="flex flex-col gap-2">
-        {filtered.map(([type, meta]) => (
+        {filteredEntries.map(([type, meta]) => (
           <DraggablePaletteItem
             key={type}
             type={type}
@@ -211,13 +238,6 @@ export function BlockPalette({ onAdd, filter, blockMeta, blockRegistry }: BlockP
       </div>
     );
   }
-
-  // ── 카테고리 목록: blockMeta에서 동적 파생 후 우선순위 순 정렬 ──
-  const allCategories = [...new Set(allEntries.map(([, m]) => m.category))];
-  const categories = [
-    ...PREFERRED_CATEGORY_ORDER.filter((c) => allCategories.includes(c)),
-    ...allCategories.filter((c) => !PREFERRED_CATEGORY_ORDER.includes(c)),
-  ];
 
   // ── 카테고리별 계층 ──
   return (

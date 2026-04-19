@@ -1,6 +1,7 @@
 // 블록 컨트롤 UI
 // - SortableBlockWrapper: 캔버스 블록 (선택/삭제/정렬)
 
+import React from "react";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import type { CMSBlock } from "../types";
@@ -17,7 +18,12 @@ interface SortableBlockWrapperProps {
   blockMeta: Record<string, BlockMeta>;
 }
 
-export function SortableBlockWrapper({
+/**
+ * 드래그 정렬·선택·삭제 컨트롤을 제공하는 블록 래퍼.
+ * React.memo로 감싸 isSelected나 block 내용이 바뀌지 않으면 리렌더링을 건너뜁니다.
+ * useSortable은 내부 dnd-kit 컨텍스트를 구독하므로 드래그 상태 변경 시에는 정상 리렌더됩니다.
+ */
+export const SortableBlockWrapper = React.memo(function SortableBlockWrapper({
   block,
   isSelected,
   onSelect,
@@ -90,5 +96,5 @@ export function SortableBlockWrapper({
       <div style={innerPaddingStyle}>{children}</div>
     </div>
   );
-}
+});
 

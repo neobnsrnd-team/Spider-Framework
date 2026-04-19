@@ -5,7 +5,7 @@
  * 오버레이 편집 모드에서는 레이아웃 탭이 오버레이 탭으로 전환됩니다.
  * 각 탭 콘텐츠는 PropsEditor / LayoutEditor / OverlayEditor로 분리됩니다.
  */
-import type React from "react";
+import React from "react";
 import type {
   BlockInteraction,
   BlockPadding,
@@ -43,7 +43,11 @@ interface RightSidebarProps {
   blockMeta: Record<string, BlockMeta>;
 }
 
-export default function RightSidebar({
+/**
+ * 속성/레이아웃/JSON 탭 인스펙터.
+ * React.memo로 감싸 selectedBlock 등 관련 props가 바뀌지 않으면 리렌더링을 건너뜁니다.
+ */
+const RightSidebar = React.memo(function RightSidebar({
   selectedBlock,
   layoutType,
   layoutProps,
@@ -129,10 +133,12 @@ export default function RightSidebar({
       </div>
     </aside>
   );
-}
+});
+
+export default RightSidebar;
 
 // ── 탭 버튼 ──────────────────────────────────────────────────
-function TabButton({
+const TabButton = React.memo(function TabButton({
   children,
   active,
   onClick,
@@ -151,7 +157,7 @@ function TabButton({
       {children}
     </button>
   );
-}
+});
 
 // ── 블록 미선택 안내 ─────────────────────────────────────────
 function PropsEmpty({ message }: { message?: React.ReactNode }) {

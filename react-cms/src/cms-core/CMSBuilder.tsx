@@ -1,7 +1,7 @@
 // <CMSBuilder /> — 외부 프로젝트에 임베드 가능한 CMS 빌더 컴포넌트
 // CMSPage.tsx의 하드코딩된 의존성을 props로 교체합니다.
 
-import { useState, useRef, useMemo } from "react";
+import { useState, useRef, useMemo, useCallback } from "react";
 import {
   DndContext,
   PointerSensor,
@@ -52,14 +52,65 @@ export function CMSBuilder({ onSave, initialPage }: CMSBuilderProps) {
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
   );
 
-  const selectedBlock = builder.activeBlocks.find((b) => b.id === builder.selectedBlockId) ?? null;
-  const editingOverlay: CMSOverlay | undefined = builder.editingOverlayId
-    ? builder.overlays.find((o) => o.id === builder.editingOverlayId)
-    : undefined;
+  // activeBlocks/overlays는 builderStore에서 이미 useMemo로 관리되므로 여기서 find만 메모이제이션
+  const selectedBlock = useMemo(
+    () => builder.activeBlocks.find((b) => b.id === builder.selectedBlockId) ?? null,
+    [builder.activeBlocks, builder.selectedBlockId],
+  );
+  const editingOverlay = useMemo<CMSOverlay | undefined>(
+    () =>
+      builder.editingOverlayId
+        ? builder.overlays.find((o) => o.id === builder.editingOverlayId)
+        : undefined,
+    [builder.editingOverlayId, builder.overlays],
+  );
 
   const activePaletteType = activeDragId?.startsWith("palette::")
     ? activeDragId.replace("palette::", "")
     : null;
+
+  // ── 안정화된 핸들러 ─────────────────────────────────────────────────────────
+  // builder 액션들은 builderStore에서 useCallback으로 안정화되어 있으므로
+  // 여기서 복합 동작만 useCallback으로 감쌈
+
+  const handleSelectBlock = useCallback(
+    (id: string) => { builder.selectBlock(id); setRightTab("props"); },
+    [builder.selectBlock],
+  );
+
+  const handleDeselect = useCallback(
+    () => builder.selectBlock(null),
+    [builder.selectBlock],
+  );
+
+  const handleEnterOverlay = useCallback(
+    (id: string) => { builder.enterOverlay(id); setRightTab("layout"); },
+    [builder.enterOverlay],
+  );
+
+  const handlePropsChange = useCallback(
+    (newProps: Record<string, unknown>) =>
+      selectedBlock && builder.updateBlockProps(selectedBlock.id, newProps),
+    [selectedBlock, builder.updateBlockProps],
+  );
+
+  const handlePaddingChange = useCallback(
+    (padding: Parameters<typeof builder.updateBlockPadding>[1]) =>
+      selectedBlock && builder.updateBlockPadding(selectedBlock.id, padding),
+    [selectedBlock, builder.updateBlockPadding],
+  );
+
+  const handleInteractionChange = useCallback(
+    (interaction: Parameters<typeof builder.updateBlockInteraction>[1]) =>
+      selectedBlock && builder.updateBlockInteraction(selectedBlock.id, interaction),
+    [selectedBlock, builder.updateBlockInteraction],
+  );
+
+  const handleOverlayPropsChange = useCallback(
+    (props: Record<string, unknown>) =>
+      editingOverlay && builder.updateOverlayProps(editingOverlay.id, props),
+    [editingOverlay, builder.updateOverlayProps],
+  );
 
   function handleDragStart(event: DragStartEvent) {
     setActiveDragId(event.active.id as string);
@@ -115,6 +166,12 @@ export function CMSBuilder({ onSave, initialPage }: CMSBuilderProps) {
 
   const page = builder.getPage();
 
+  // page 선언 이후에 위치해야 TDZ 에러가 발생하지 않음
+  const handlePreview = useCallback(() => {
+    localStorage.setItem("cms_preview", JSON.stringify(page));
+    window.open("/preview", "_blank");
+  }, [page]);
+
   // Context 정보(layouts, codegenConfig, overlayTemplates)를 포함해 코드를 생성한 뒤
   // SavePageParams.code에 주입하여 저장 함수가 올바른 코드를 받도록 래핑
   const wrappedOnSave = useMemo(() => {
@@ -139,10 +196,7 @@ export function CMSBuilder({ onSave, initialPage }: CMSBuilderProps) {
           onExport={() => downloadPageJson(page)}
           onViewCode={() => setCodeOpen(true)}
           onSavePage={() => setSaveOpen(true)}
-          onPreview={() => {
-            localStorage.setItem("cms_preview", JSON.stringify(page));
-            window.open("/preview", "_blank");
-          }}
+          onPreview={handlePreview}
           onClear={builder.clearBlocks}
         />
 
@@ -158,7 +212,7 @@ export function CMSBuilder({ onSave, initialPage }: CMSBuilderProps) {
             onAddOverlayFromTemplate={builder.addOverlayFromTemplate}
             onRemoveOverlay={builder.removeOverlay}
             onRenameOverlay={builder.renameOverlay}
-            onEnterOverlay={(id) => { builder.enterOverlay(id); setRightTab("layout"); }}
+            onEnterOverlay={handleEnterOverlay}
             onExitOverlay={builder.exitOverlay}
           />
 
@@ -171,9 +225,9 @@ export function CMSBuilder({ onSave, initialPage }: CMSBuilderProps) {
             editingOverlay={editingOverlay}
             blockMeta={blockMeta}
             blockRegistry={blockRegistry}
-            onSelectBlock={(id) => { builder.selectBlock(id); setRightTab("props"); }}
+            onSelectBlock={handleSelectBlock}
             onRemoveBlock={builder.removeBlock}
-            onDeselect={() => builder.selectBlock(null)}
+            onDeselect={handleDeselect}
           />
 
           {/* ── 우측: 속성 / 레이아웃 / JSON ── */}
@@ -189,10 +243,10 @@ export function CMSBuilder({ onSave, initialPage }: CMSBuilderProps) {
             isEditingOverlay={!!editingOverlay}
             blockMeta={blockMeta}
             onTabChange={setRightTab}
-            onPropsChange={(newProps) => selectedBlock && builder.updateBlockProps(selectedBlock.id, newProps)}
-            onPaddingChange={(padding) => selectedBlock && builder.updateBlockPadding(selectedBlock.id, padding)}
-            onInteractionChange={(interaction) => selectedBlock && builder.updateBlockInteraction(selectedBlock.id, interaction)}
-            onOverlayPropsChange={(props) => editingOverlay && builder.updateOverlayProps(editingOverlay.id, props)}
+            onPropsChange={handlePropsChange}
+            onPaddingChange={handlePaddingChange}
+            onInteractionChange={handleInteractionChange}
+            onOverlayPropsChange={handleOverlayPropsChange}
             onLayoutTypeChange={builder.updateLayoutType}
             onLayoutPropsChange={builder.updateLayoutProps}
           />

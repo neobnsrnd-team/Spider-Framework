@@ -2,7 +2,7 @@
  * @file LayoutCanvas.tsx
  * @description 캔버스 영역 — 레이아웃 크롬 + 드롭 존 + 정렬 가능 블록
  */
-import React, { useContext } from "react";
+import React, { useCallback, useContext, useMemo } from "react";
 import { DragOverlay, useDroppable } from "@dnd-kit/core";
 import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import type { CMSBlock, CMSOverlay, CMSPage } from "../types";
@@ -119,32 +119,47 @@ export function LayoutCanvas({ layoutType, layoutProps, children }: LayoutCanvas
 
 // ─── 정렬 가능 블록 ───────────────────────────────────────────
 
-export function SortableBlock({
+/**
+ * @description 드래그 정렬 + 선택/삭제 컨트롤이 붙은 블록 래퍼.
+ * React.memo로 감싸 isSelected나 block 내용이 바뀌지 않으면 리렌더링을 건너뜁니다.
+ * onSelectBlock/onRemoveBlock은 부모에서 stable한 참조(useCallback)로 전달받아야 합니다.
+ */
+export const SortableBlock = React.memo(function SortableBlock({
   block,
   isSelected,
-  onSelect,
-  onRemove,
+  onSelectBlock,
+  onRemoveBlock,
   blockRegistry,
   blockMeta,
 }: {
   block: CMSBlock;
   isSelected: boolean;
-  onSelect: () => void;
-  onRemove: () => void;
+  /** block.id를 인자로 받는 stable 콜백 */
+  onSelectBlock: (id: string) => void;
+  /** block.id를 인자로 받는 stable 콜백 */
+  onRemoveBlock: (id: string) => void;
   blockRegistry: Record<string, React.ComponentType<Record<string, unknown>>>;
   blockMeta: Record<string, BlockMeta>;
 }) {
   const Component = blockRegistry[block.component];
 
+  // block.id와 부모 콜백이 바뀌지 않으면 재생성되지 않음
+  const handleSelect = useCallback(() => onSelectBlock(block.id), [onSelectBlock, block.id]);
+  const handleRemove = useCallback(() => onRemoveBlock(block.id), [onRemoveBlock, block.id]);
+  const handleContentClick = useCallback(
+    (e: React.MouseEvent) => { e.stopPropagation(); handleSelect(); },
+    [handleSelect],
+  );
+
   return (
     <SortableBlockWrapper
       block={block}
       isSelected={isSelected}
-      onSelect={onSelect}
-      onRemove={onRemove}
+      onSelect={handleSelect}
+      onRemove={handleRemove}
       blockMeta={blockMeta}
     >
-      <div onClick={(e) => { e.stopPropagation(); onSelect(); }}>
+      <div onClick={handleContentClick}>
         <UserScopeWrapper>
           {Component ? (
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -156,7 +171,7 @@ export function SortableBlock({
       </div>
     </SortableBlockWrapper>
   );
-}
+});
 
 function UnknownBlock({ type }: { type: string }) {
   return (
@@ -232,7 +247,8 @@ export function Canvas({
   blockRegistry,
   blockMeta,
 }: CanvasProps) {
-  const blockIds = blocks.map((b) => b.id);
+  // blocks 배열 참조가 바뀔 때만 재계산
+  const blockIds = useMemo(() => blocks.map((b) => b.id), [blocks]);
   const blockGap = (page.layoutProps as Record<string, unknown>)?.blockGap as string | undefined;
 
   const blockList = (
@@ -246,8 +262,8 @@ export function Canvas({
               key={block.id}
               block={block}
               isSelected={block.id === selectedBlockId}
-              onSelect={() => onSelectBlock(block.id)}
-              onRemove={() => onRemoveBlock(block.id)}
+              onSelectBlock={onSelectBlock}
+              onRemoveBlock={onRemoveBlock}
               blockRegistry={blockRegistry}
               blockMeta={blockMeta}
             />
