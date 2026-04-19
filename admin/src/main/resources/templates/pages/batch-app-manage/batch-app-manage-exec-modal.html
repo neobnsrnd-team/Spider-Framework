@@ -145,6 +145,8 @@
             $('#execBatchDate').val(today);
             $('#execParameters').val('');
             $('#execSelectAll').prop('checked', false);
+            // 이전 실행에서 disabled 상태가 잔류하는 경우 방어적 초기화
+            $('#btnExecuteBatch').prop('disabled', false);
 
             // 배치 APP 상세 정보 로드
             this.loadBatchAppDetail(batchAppId);
