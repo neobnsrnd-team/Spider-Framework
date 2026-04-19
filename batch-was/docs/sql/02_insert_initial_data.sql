@@ -9,11 +9,11 @@ INSERT INTO FWK_WAS_INSTANCE (
     INSTANCE_ID, INSTANCE_NAME, INSTANCE_DESC,
     INSTANCE_TYPE, IP, PORT, OPER_MODE_TYPE
 ) VALUES (
-    'BWAS',                    -- application.yml의 batch.was.instance-id와 일치
+    'BT01',                    -- BT(Batch) + 01 / application.yml의 batch.was.instance-id와 일치
     'Batch WAS',
     'Spring Batch 실행 WAS (POC)',
-    '3',                       -- 3: 통합 (배치 전용 타입 없음 — 1:WEB, 2:AP, 3:통합)
-    '127.0.0.1',               -- localhost 대신 실제 IP 형식 사용
+    '2',                       -- 2: AP (1:WEB, 2:AP, 3:통합)
+    '127.0.0.1',
     '8081',                    -- batch-was 포트 (※ #41 TCP 전환 시 소켓 포트로 변경 예정)
     'D'                        -- D: 개발 서버 (D:개발, R:운영, T:테스트)
 );
@@ -72,12 +72,12 @@ INSERT INTO FWK_BATCH_APP (
 -- 3. 배치-인스턴스 매핑 등록
 --    BWAS 인스턴스에서 3개 Job 모두 실행 가능
 INSERT INTO FWK_WAS_EXEC_BATCH (BATCH_APP_ID, INSTANCE_ID, USE_YN, LAST_UPDATE_USER_ID)
-VALUES ('FILE2DB_JOB', 'BWAS', 'Y', 'SYSTEM');
+VALUES ('FILE2DB_JOB', 'BT01', 'Y', 'SYSTEM');
 
 INSERT INTO FWK_WAS_EXEC_BATCH (BATCH_APP_ID, INSTANCE_ID, USE_YN, LAST_UPDATE_USER_ID)
-VALUES ('DB2DB_JOB', 'BWAS', 'Y', 'SYSTEM');
+VALUES ('DB2DB_JOB', 'BT01', 'Y', 'SYSTEM');
 
 INSERT INTO FWK_WAS_EXEC_BATCH (BATCH_APP_ID, INSTANCE_ID, USE_YN, LAST_UPDATE_USER_ID)
-VALUES ('DB2FOREIGN_JOB', 'BWAS', 'Y', 'SYSTEM');
+VALUES ('DB2FOREIGN_JOB', 'BT01', 'Y', 'SYSTEM');
 
 COMMIT;
