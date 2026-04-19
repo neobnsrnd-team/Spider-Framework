@@ -12,10 +12,10 @@ INSERT INTO FWK_WAS_INSTANCE (
     'BWAS',                    -- application.yml의 batch.was.instance-id와 일치
     'Batch WAS',
     'Spring Batch 실행 WAS (POC)',
-    'B',                       -- B: Batch WAS
-    'localhost',
-    '8081',                    -- batch-was 포트
-    'N'                        -- N: 일반 운영
+    '3',                       -- 3: 통합 (배치 전용 타입 없음 — 1:WEB, 2:AP, 3:통합)
+    '127.0.0.1',               -- localhost 대신 실제 IP 형식 사용
+    '8081',                    -- batch-was 포트 (※ #41 TCP 전환 시 소켓 포트로 변경 예정)
+    'D'                        -- D: 개발 서버 (D:개발, R:운영, T:테스트)
 );
 
 -- 2. 샘플 배치 Job 등록
