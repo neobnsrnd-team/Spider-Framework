@@ -58,9 +58,15 @@ interface LayoutCanvasProps {
 
 export function LayoutCanvas({ layoutType, layoutProps, children }: LayoutCanvasProps) {
   const layoutRenderer = useContext(LayoutRendererContext);
-  const slots = layoutType && layoutRenderer
-    ? layoutRenderer(layoutType, layoutProps)
-    : {};
+  // layoutType / layoutProps / layoutRenderer가 실제로 바뀔 때만 헤더·푸터 재생성
+  // 블록 선택·props 수정 등 무관한 리렌더에서 헤더·푸터가 재생성되는 것을 방지
+  const slots = useMemo(
+    () =>
+      layoutType && layoutRenderer
+        ? layoutRenderer(layoutType, layoutProps)
+        : {},
+    [layoutType, layoutProps, layoutRenderer],
+  );
 
   if (!layoutType) {
     return (

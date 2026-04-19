@@ -4,7 +4,7 @@
  */
 import { useDraggable } from "@dnd-kit/core";
 import type { BlockMeta } from "../types";
-import React, { useCallback, useMemo } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { UserScopeWrapper } from "../UserScopeWrapper";
 
 // ─── 썸네일 상수 ────────────────────────────────────────────
@@ -49,7 +49,9 @@ interface BlockThumbnailProps {
 
 /**
  * @description 실제 컴포넌트를 CSS scale로 축소해 썸네일로 렌더링.
- * React.memo로 감싸 props가 바뀌지 않으면 리렌더링을 건너뜁니다.
+ * Intersection Observer로 뷰포트에 진입할 때만 실제 컴포넌트를 마운트합니다.
+ * 진입 전에는 같은 높이의 placeholder를 표시해 레이아웃이 밀리지 않도록 합니다.
+ * 한 번 visible 처리되면 다시 해제되지 않아(observer.disconnect) 스크롤 복귀 시에도 유지됩니다.
  * @param type 블록 타입 문자열
  * @param blockRegistry 블록 렌더러 레지스트리
  * @param blockMeta 블록 메타 정보 맵
@@ -58,22 +60,50 @@ interface BlockThumbnailProps {
 const BlockThumbnail = React.memo(function BlockThumbnail({ type, blockRegistry, blockMeta }: BlockThumbnailProps) {
   const Component = blockRegistry[type];
   const meta = blockMeta[type];
+  const containerRef = useRef<HTMLDivElement>(null);
+  // 화면에 진입한 적이 있으면 true — 한 번 true가 되면 다시 false로 돌아가지 않음
+  const [isVisible, setIsVisible] = useState(false);
+
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el || !Component || !meta) return;
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setIsVisible(true);
+          // 한 번 진입하면 더 이상 관찰 불필요 — 컴포넌트는 계속 유지
+          observer.disconnect();
+        }
+      },
+      // 100px 여유를 두어 스크롤 직전에 미리 렌더링 시작
+      { rootMargin: "100px" },
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [Component, meta]);
+
   if (!Component || !meta) return null;
 
   return (
-    <div className="w-full overflow-hidden rounded-t-xl bg-white" style={{ height: THUMB_H }}>
-      <UserScopeWrapper
-        style={{
-          width: INNER_W,
-          transform: `scale(${SCALE})`,
-          transformOrigin: "top left",
-          pointerEvents: "none",
-          userSelect: "none",
-        }}
-      >
-        {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-        <Component {...(meta.defaultProps as any)} />
-      </UserScopeWrapper>
+    <div ref={containerRef} className="w-full overflow-hidden rounded-t-xl bg-white" style={{ height: THUMB_H }}>
+      {isVisible ? (
+        <UserScopeWrapper
+          style={{
+            width: INNER_W,
+            transform: `scale(${SCALE})`,
+            transformOrigin: "top left",
+            pointerEvents: "none",
+            userSelect: "none",
+          }}
+        >
+          {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+          <Component {...(meta.defaultProps as any)} />
+        </UserScopeWrapper>
+      ) : (
+        // 실제 컴포넌트와 동일한 높이를 유지해 레이아웃 shift 방지
+        <div className="w-full h-full bg-gray-100 animate-pulse rounded-t-xl" />
+      )}
     </div>
   );
 });
