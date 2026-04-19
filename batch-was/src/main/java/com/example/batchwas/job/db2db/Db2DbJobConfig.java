@@ -1,6 +1,7 @@
 package com.example.batchwas.job.db2db;
 
 import com.example.batchwas.job.common.CardUsage;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import javax.sql.DataSource;
 import lombok.RequiredArgsConstructor;
@@ -22,7 +23,6 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.task.TaskExecutor;
-import org.springframework.jdbc.core.BeanPropertyRowMapper;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.springframework.transaction.PlatformTransactionManager;
@@ -54,6 +54,16 @@ public class Db2DbJobConfig {
     private static final int GRID_SIZE = 4;
 
     private final DataSource dataSource;
+
+    /** 이용일자를 첫 번째로 고정한 compound sort key — 파티션 BETWEEN 범위와 일치 */
+    private static Map<String, Order> buildSortKeys() {
+        Map<String, Order> keys = new LinkedHashMap<>();
+        keys.put("이용일자", Order.ASCENDING);
+        keys.put("이용자", Order.ASCENDING);
+        keys.put("카드번호", Order.ASCENDING);
+        keys.put("승인시각", Order.ASCENDING);
+        return keys;
+    }
 
     @Bean(name = "db2db")
     public Job db2DbJob(JobRepository jobRepository, Step db2DbPartitionStep) {
@@ -132,28 +142,39 @@ public class Db2DbJobConfig {
         return new JdbcPagingItemReaderBuilder<CardUsage>()
                 .name("db2DbReader")
                 .dataSource(dataSource)
+                // alias 없이 원본 한글 컬럼명 그대로 SELECT —
+                // JdbcPagingItemReader 내부 PagingRowMapper가 sort key(이용일자)를
+                // rs.getObject("이용일자")로 추출하므로 alias하면 ORA-17006 발생
                 .selectClause("""
-                        SELECT 이용자        AS userId,
-                               카드번호      AS cardNo,
-                               이용일자      AS usageDt,
-                               이용가맹점    AS merchant,
-                               이용금액      AS amount,
-                               할부개월      AS installmentMonths,
-                               승인여부      AS approvalYn,
-                               카드명        AS cardName,
-                               승인시각      AS approvalTime,
-                               결제예정일    AS paymentDueDate,
-                               승인번호      AS approvalNo,
-                               결제잔액      AS paymentBalance,
-                               누적결제금액  AS cumulativeAmount,
-                               결제상태코드  AS paymentStatusCode,
-                               최종결제일자  AS lastPaymentDt
+                        SELECT 이용자, 카드번호, 이용일자, 이용가맹점, 이용금액,
+                               할부개월, 회차, 할부구분코드, 승인여부, 카드명, 승인시각, 결제예정일,
+                               승인번호, 결제잔액, 누적결제금액, 결제상태코드, 최종결제일자
                         """)
                 .fromClause("FROM POC_카드사용내역")
-                // 이용일자를 숫자로 변환하여 파티션 범위 필터
                 .whereClause("WHERE TO_NUMBER(이용일자) BETWEEN :minValue AND :maxValue")
-                .sortKeys(Map.of("이용일자", Order.ASCENDING))
-                .rowMapper(new BeanPropertyRowMapper<>(CardUsage.class))
+                // PK(이용일자+이용자+카드번호+승인시각) 순서로 compound sort key 설정 —
+                // Map.of()는 순서 비보장 → LinkedHashMap.put()으로 명시적 순서 지정
+                // 이용일자를 첫 번째로 유지해야 partition BETWEEN 범위와 next-page 조건이 충돌하지 않음
+                .sortKeys(buildSortKeys())
+                .rowMapper((rs, rowNum) -> CardUsage.builder()
+                        .userId(rs.getString("이용자"))
+                        .cardNo(rs.getString("카드번호"))
+                        .usageDt(rs.getString("이용일자"))
+                        .merchant(rs.getString("이용가맹점"))
+                        .amount(rs.getObject("이용금액") != null ? rs.getLong("이용금액") : null)
+                        .installmentMonths(rs.getObject("할부개월") != null ? rs.getInt("할부개월") : null)
+                        .installmentRound(rs.getObject("회차") != null ? rs.getInt("회차") : null)
+                        .installmentTypeCode(rs.getString("할부구분코드"))
+                        .approvalYn(rs.getString("승인여부"))
+                        .cardName(rs.getString("카드명"))
+                        .approvalTime(rs.getString("승인시각"))
+                        .paymentDueDate(rs.getString("결제예정일"))
+                        .approvalNo(rs.getString("승인번호"))
+                        .paymentBalance(rs.getObject("결제잔액") != null ? rs.getLong("결제잔액") : null)
+                        .cumulativeAmount(rs.getObject("누적결제금액") != null ? rs.getLong("누적결제금액") : null)
+                        .paymentStatusCode(rs.getString("결제상태코드"))
+                        .lastPaymentDt(rs.getString("최종결제일자"))
+                        .build())
                 .parameterValues(Map.of(
                         "minValue", minValue != null ? minValue : 0L,
                         "maxValue", maxValue != null ? maxValue : 99991231L))
@@ -184,6 +205,8 @@ public class Db2DbJobConfig {
                             t.이용가맹점   = :merchant,
                             t.이용금액     = :amount,
                             t.할부개월     = :installmentMonths,
+                            t.회차         = :installmentRound,
+                            t.할부구분코드 = :installmentTypeCode,
                             t.승인여부     = :approvalYn,
                             t.카드명       = :cardName,
                             t.결제예정일   = :paymentDueDate,
@@ -194,12 +217,13 @@ public class Db2DbJobConfig {
                             t.최종결제일자 = :lastPaymentDt
                         WHEN NOT MATCHED THEN INSERT (
                             이용자, 카드번호, 이용일자, 이용가맹점, 이용금액, 할부개월,
-                            승인여부, 카드명, 승인시각, 결제예정일, 승인번호,
+                            회차, 할부구분코드, 승인여부, 카드명, 승인시각, 결제예정일, 승인번호,
                             결제잔액, 누적결제금액, 결제상태코드, 최종결제일자
                         ) VALUES (
                             :userId, :cardNo, :usageDt, :merchant, :amount, :installmentMonths,
-                            :approvalYn, :cardName, :approvalTime, :paymentDueDate, :approvalNo,
-                            :paymentBalance, :cumulativeAmount, :paymentStatusCode, :lastPaymentDt
+                            :installmentRound, :installmentTypeCode, :approvalYn, :cardName, :approvalTime,
+                            :paymentDueDate, :approvalNo, :paymentBalance, :cumulativeAmount,
+                            :paymentStatusCode, :lastPaymentDt
                         )
                         """)
                 .beanMapped()

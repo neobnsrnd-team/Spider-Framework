@@ -112,9 +112,9 @@ public class File2DbJobConfig {
                             t.LOG_YN           = :logYn,
                             t.LAST_LOGIN_DTIME = :lastLoginDtime
                         WHEN NOT MATCHED THEN INSERT
-                            (USER_ID, USER_NAME, PASSWORD, USER_GRADE, LOG_YN, LAST_LOGIN_DTIME)
+                            (USER_ID, USER_NAME, PASSWORD, USER_GRADE, LOG_YN, LAST_LOGIN_DTIME, SSN)
                         VALUES
-                            (:userId, :userName, :password, :userGrade, :logYn, :lastLoginDtime)
+                            (:userId, :userName, :password, :userGrade, :logYn, :lastLoginDtime, '0000000000000')
                         """)
                 .beanMapped()
                 .build();

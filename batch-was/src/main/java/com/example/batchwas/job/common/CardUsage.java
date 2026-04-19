@@ -34,6 +34,12 @@ public class CardUsage {
     /** 할부개월 (0·1 = 일시불, 2 이상 = 할부) */
     private Integer installmentMonths;
 
+    /** 현재 할부 회차 (전체 할부개월 중 몇 번째) */
+    private Integer installmentRound;
+
+    /** 할부구분코드 (예: 00=일시불, 01=할부) */
+    private String installmentTypeCode;
+
     /** 승인여부 (Y = 정상승인, N = 취소) */
     private String approvalYn;
 
