@@ -69,6 +69,13 @@
             <optional>true</optional>
         </dependency>
 
+        <!-- .env 파일 로딩 (admin과 동일한 방식) -->
+        <dependency>
+            <groupId>me.paulschwarz</groupId>
+            <artifactId>spring-dotenv</artifactId>
+            <version>4.0.0</version>
+        </dependency>
+
         <!-- Dev Tools -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
