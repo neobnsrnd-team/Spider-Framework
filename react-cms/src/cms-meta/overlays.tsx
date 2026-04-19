@@ -53,7 +53,7 @@ function BottomSheetRenderer({ open, onClose, children, container, props }: Over
       onClose={onClose}
       title={title}
       hideCloseButton={hideCloseButton}
-      container={container}
+      container={container ?? undefined}
       bottomBtnCnt={bottomBtnCnt}
       bottomBtn1Label={bottomBtn1Label}
       bottomBtn2Label={bottomBtn2Label}
@@ -95,7 +95,7 @@ function ModalRenderer({ open, onClose, children, container, props }: OverlayRen
       open={open}
       onClose={onClose}
       title={title}
-      container={container}
+      container={container ?? undefined}
       bottomBtnCnt={bottomBtnCnt}
       bottomBtn1Label={bottomBtn1Label}
       bottomBtn2Label={bottomBtn2Label}
@@ -206,14 +206,14 @@ export const overlays: OverlayTemplate[] = [
     blocks:      [],
     props: {
       title:     "모달 제목",
-      content:   "모달 내용 입니다.",
+      children:  "모달 내용 입니다.",
       bottomBtnCnt: "0",
       bottomBtn1Label: "확인",
       bottomBtn2Label: "취소"
     },
     propSchema: {
       title:           { type: "string",  label: "제목",          default: "모달 제목" },
-      content:         { type: "string",  label: "모달 내용",      default: "모달 내용 입니다." },
+      children:        { type: "string",  label: "모달 내용",      default: "모달 내용 입니다." },
       bottomBtnCnt:    { type: "select",  label: "하단 버튼 수",    options: ["0", "1", "2"],  default: "0" },
       bottomBtn1Label: { type: "string",  label: "버튼1 텍스트",    default: "확인" },
       bottomBtn2Label: { type: "string",  label: "버튼2 텍스트",    default: "취소" },

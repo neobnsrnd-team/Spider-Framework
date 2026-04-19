@@ -29,7 +29,7 @@ export function BottomNav({ items, activeId, className }: BottomNavProps) {
       aria-label="하단 메뉴"
       className={cn(
         /* 화면 하단 고정 — z-sticky로 콘텐츠 위에 항상 표시 */
-        'fixed bottom-0 left-0 right-0 z-sticky',
+        'sticky bottom-0 left-0 right-0 z-sticky',
         'flex items-end justify-around',
         'pt-sm pb-2 px-standard',
         /* blur 배경: 스크롤 중에도 콘텐츠가 배경에 묻히지 않도록 처리 */

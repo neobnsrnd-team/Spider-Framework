@@ -2,6 +2,7 @@
 // CMSPage.tsx의 하드코딩된 의존성을 props로 교체합니다.
 
 import { useState, useRef, useMemo, useCallback } from "react";
+import { createPortal } from "react-dom";
 import {
   DndContext,
   PointerSensor,
@@ -254,14 +255,19 @@ export function CMSBuilder({ onSave, initialPage }: CMSBuilderProps) {
 
         <input ref={fileInputRef} type="file" accept=".json" className="hidden" onChange={handleFileChange} />
 
-        {codeOpen && <CodeModal code={generateJSX(page, layouts, codegenConfig, overlayTemplates)} onClose={() => setCodeOpen(false)} />}
+        {/* createPortal로 document.body에 직접 마운트 — overflow/flex 컨테이너의 fixed 포지셔닝 제약을 우회 */}
+        {codeOpen && createPortal(
+          <CodeModal code={generateJSX(page, layouts, codegenConfig, overlayTemplates)} onClose={() => setCodeOpen(false)} />,
+          document.body,
+        )}
 
-        {saveOpen && (
+        {saveOpen && createPortal(
           <SavePageModal
             page={page}
             onSave={wrappedOnSave}
             onClose={() => setSaveOpen(false)}
-          />
+          />,
+          document.body,
         )}
       </div>
 
@@ -392,7 +398,7 @@ function CodeModal({ code, onClose }: { code: string; onClose: () => void }) {
       onClick={onClose}
     >
       <div
-        className="relative bg-gray-900 rounded-2xl shadow-2xl w-full max-w-2xl max-h-[80vh] flex flex-col overflow-hidden"
+        className="relative bg-gray-900 rounded-2xl shadow-2xl w-full max-w-[42rem] max-h-[80vh] flex flex-col overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between px-4 py-2.5 border-b border-gray-700 flex-shrink-0">

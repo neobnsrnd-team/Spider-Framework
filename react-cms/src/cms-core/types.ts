@@ -110,7 +110,7 @@ export interface OverlayRendererProps {
   open: boolean;
   onClose: () => void;
   children?: React.ReactNode;
-  container: HTMLDivElement | null;
+  container: HTMLElement | null;
   props?: Record<string, unknown>;
 }
 

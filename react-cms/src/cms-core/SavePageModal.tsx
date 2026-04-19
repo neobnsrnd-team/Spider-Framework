@@ -58,7 +58,7 @@ export default function SavePageModal({ page, onClose, onSave }: SavePageModalPr
       onClick={onClose}
     >
       <div
-        className="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6 flex flex-col gap-4"
+        className="bg-white rounded-2xl shadow-2xl w-full max-w-[24rem] p-6 flex flex-col gap-4"
         onClick={(e) => e.stopPropagation()}
       >
         <h2 className="text-sm font-bold text-gray-900">페이지 저장</h2>
