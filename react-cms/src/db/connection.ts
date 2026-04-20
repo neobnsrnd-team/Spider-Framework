@@ -24,7 +24,12 @@ async function initPool(): Promise<void> {
 
       // ORACLE_CLIENT_DIR 설정 시 PATH 의존 없이 경로 직접 지정 (Windows 개발환경 대응)
       // clientDir 미설정 시 인수 없이 호출 → Oracle Instant Client를 PATH에서 자동 탐색
-      oracledb.initOracleClient(clientDir ? { libDir: clientDir } : undefined);
+      // NJS-077: Vite dev 서버 재로드 시 중복 호출 가능 → 이미 초기화된 경우는 무시
+      try {
+        oracledb.initOracleClient(clientDir ? { libDir: clientDir } : undefined);
+      } catch (err: unknown) {
+        if ((err as NodeJS.ErrnoException & { code?: string }).code !== 'NJS-077') throw err;
+      }
       // CLOB 컬럼을 string으로 자동 변환 (PAGE_JSON)
       oracledb.fetchAsString = [oracledb.CLOB];
 
@@ -126,7 +131,7 @@ export async function withTransaction<T>(
  */
 export function clobBind(
   value: string | null | undefined,
-): string | { val: string; type: number } | null {
+): string | { val: string; type: oracledb.DbType } | null {
   if (!value) return null;
   return value.length > 4000 ? { val: value, type: oracledb.CLOB } : value;
 }

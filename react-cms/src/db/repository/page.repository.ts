@@ -70,7 +70,7 @@ const SQL_INSERT = `
   VALUES
     (:pageId, :pageName, :pageHtml, :pageDesc, '${PAGE_TYPE}', :viewMode, 'WORK',
      'Y', 'N', :createUserId, :createUserName,
-     :lastModifierId, :lastModifierName, SYSDATE, SYSTIMESTAMP)
+     :lastModifierId, :lastModifierName, SYSTIMESTAMP, SYSTIMESTAMP)
 `;
 
 const SQL_UPDATE = `

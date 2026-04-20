@@ -165,45 +165,32 @@ export function cmsBankPlugin(options: CmsBankPluginOptions = {}): Plugin {
 
         // ── POST /__cms/create-page ────────────────────────────
         if (urlPath === "/__cms/create-page" && req.method === "POST") {
-          let body = "";
-          req.on("data", (chunk: Buffer) => { body += chunk.toString(); });
-          req.on("end", () => {
-            try {
-              const payload: CreatePagePayload = JSON.parse(body);
+          try {
+            const payload = await readBody(req) as CreatePagePayload;
 
-              // PascalCase 영숫자만 허용 — 경로 조작(../ 등) 방지
-              const NAME_REGEX = /^[A-Z][a-zA-Z0-9]*$/;
-              if (!NAME_REGEX.test(payload.pageName)) {
-                res.statusCode = 400;
-                res.setHeader("Content-Type", "application/json");
-                res.end(JSON.stringify({ error: "pageName은 PascalCase 영숫자만 허용됩니다." }));
-                return;
-              }
-
-              const routerFile = path.join(root, options.routerPath ?? "src/routes/index.tsx");
-              const pagesDir   = path.join(root, options.pagesDir   ?? "src/pages/cms");
-
-              // @/ alias는 src/ 를 가리키므로 routerFile 경로에서 /src/ 위치를 찾아 srcDir 추론
-              const srcMatch = routerFile.replace(/\\/g, "/").match(/^(.*\/src)\//);
-              const srcDir = srcMatch ? srcMatch[1] : path.join(root, "src");
-              const relativePath = path.relative(srcDir, pagesDir).replace(/\\/g, "/");
-              const pageImportPath = `@/${relativePath}/${payload.pageName}`;
-
-              createPageFile(pagesDir, payload.pageName, payload.code);
-              addToRouter(routerFile, payload.pageName, payload.uri, pageImportPath);
-
-              res.setHeader("Content-Type", "application/json");
-              res.end(JSON.stringify({ success: true }));
-            } catch (err) {
-              res.statusCode = 500;
-              res.setHeader("Content-Type", "application/json");
-              res.end(JSON.stringify({ error: String(err) }));
+            // PascalCase 영숫자만 허용 — 경로 조작(../ 등) 방지
+            const NAME_REGEX = /^[A-Z][a-zA-Z0-9]*$/;
+            if (!NAME_REGEX.test(payload.pageName)) {
+              jsonResponse(res, 400, { error: "pageName은 PascalCase 영숫자만 허용됩니다." });
+              return;
             }
-          });
-          req.on("error", () => {
-            res.statusCode = 500;
-            res.end(JSON.stringify({ error: "Stream error" }));
-          });
+
+            const routerFile = path.join(root, options.routerPath ?? "src/routes/index.tsx");
+            const pagesDir   = path.join(root, options.pagesDir   ?? "src/pages/cms");
+
+            // @/ alias는 src/ 를 가리키므로 routerFile 경로에서 /src/ 위치를 찾아 srcDir 추론
+            const srcMatch = routerFile.replace(/\\/g, "/").match(/^(.*\/src)\//);
+            const srcDir = srcMatch ? srcMatch[1] : path.join(root, "src");
+            const relativePath = path.relative(srcDir, pagesDir).replace(/\\/g, "/");
+            const pageImportPath = `@/${relativePath}/${payload.pageName}`;
+
+            createPageFile(pagesDir, payload.pageName, payload.code);
+            addToRouter(routerFile, payload.pageName, payload.uri, pageImportPath);
+
+            jsonResponse(res, 200, { success: true });
+          } catch (err) {
+            jsonResponse(res, 500, { error: String(err) });
+          }
           return;
         }
 
