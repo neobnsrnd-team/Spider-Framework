@@ -464,7 +464,7 @@ VALUES ('v3_cms_admin_components', 'v3_cms_manage', 16, 'CMS 컴포넌트 관리
 
 -- CMS 사용자 대시보드 (admin 포털에서 본인 페이지 목록 조회·생성·삭제·승인 요청)
 INSERT INTO FWK_MENU (MENU_ID, PRIOR_MENU_ID, SORT_ORDER, MENU_NAME, MENU_URL, DISPLAY_YN, USE_YN, LAST_UPDATE_DTIME, LAST_UPDATE_USER_ID)
-VALUES ('v3_cms_user_dashboard', 'v3_cms_manage', 5, 'CMS 사용자 대시보드', '/cms-dashboard', 'Y', 'Y', TO_CHAR(SYSDATE, 'YYYYMMDDHH24MISS'), 'system');
+VALUES ('v3_cms_user_dashboard', 'v3_cms_manage', 5, 'CMS 사용자 대시보드', '/cms/dashboard', 'Y', 'Y', TO_CHAR(SYSDATE, 'YYYYMMDDHH24MISS'), 'system');
 
 INSERT INTO FWK_ROLE_MENU (ROLE_ID, MENU_ID, AUTH_CODE) VALUES ('ADMIN', 'v3_cms_manage', 'W');
 INSERT INTO FWK_ROLE_MENU (ROLE_ID, MENU_ID, AUTH_CODE) VALUES ('ADMIN', 'v3_cms_admin_approvals', 'W');

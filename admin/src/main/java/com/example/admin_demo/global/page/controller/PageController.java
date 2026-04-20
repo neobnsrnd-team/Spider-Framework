@@ -392,7 +392,7 @@ public class PageController {
 
     // ── CMS 사용자 대시보드 ── v3_cms_user_dashboard
 
-    @GetMapping("/cms-dashboard")
+    @GetMapping("/cms/dashboard")
     public String cmsDashboard(HttpServletRequest request, Model model) {
         // CMS 에디터 이동 URL을 JS에서 사용할 수 있도록 모델에 추가
         model.addAttribute("cmsUserUrl", cmsUserUrl);

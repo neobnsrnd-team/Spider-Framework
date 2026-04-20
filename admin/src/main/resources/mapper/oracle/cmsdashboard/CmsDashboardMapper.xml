@@ -17,9 +17,9 @@
         p.VIEW_MODE                                                         AS viewMode,
         p.APPROVE_STATE                                                     AS approveState,
         <!-- admin은 파일시스템 접근 불가 → PAGE_HTML 존재 여부로 판단 (CMS의 FILE_PATH 폴백 미지원) -->
-        CASE WHEN p.PAGE_HTML IS NOT NULL AND p.PAGE_HTML != ''
+        <!-- PAGE_HTML은 CLOB이므로 != '' 비교 불가 (ORA-00932). IS NOT NULL + 길이 체크로 대체 -->
+        CASE WHEN p.PAGE_HTML IS NOT NULL AND DBMS_LOB.GETLENGTH(p.PAGE_HTML) > 0
              THEN 'Y' ELSE 'N' END                                         AS hasFile,
-        <!-- CLOB인 PAGE_HTML은 CASE 결과값만 사용하여 목록 로딩 시 전체 CLOB 조회 방지 -->
         CASE WHEN p.EXPIRED_DATE IS NOT NULL AND p.EXPIRED_DATE <![CDATA[<]]> SYSDATE
              THEN 'Y' ELSE 'N' END                                         AS isExpired,
         TO_CHAR(p.BEGINNING_DATE, 'YYYY-MM-DD')                            AS beginningDate,
