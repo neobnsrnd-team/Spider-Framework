@@ -22,7 +22,7 @@ const SYSTEM_USER_ID   = 'CMS_BUILDER';
 const SYSTEM_USER_NAME = 'CMS Builder';
 
 // react-cms에서 저장한 페이지를 구분하는 타입 값
-const PAGE_TYPE = 'react';
+const PAGE_TYPE = 'REACT';
 
 // ── SQL ──────────────────────────────────────────────────────────
 
@@ -171,7 +171,7 @@ export async function createPage(input: {
       pageName:         input.pageName,
       pageHtml:         clobBind(input.pageJson ?? null),
       pageDesc:         clobBind(input.pageCode ?? null),
-      viewMode:         input.viewMode ?? 'PC',
+      viewMode:         input.viewMode ?? 'mobile',
       createUserId:     SYSTEM_USER_ID,
       createUserName:   SYSTEM_USER_NAME,
       lastModifierId:   SYSTEM_USER_ID,

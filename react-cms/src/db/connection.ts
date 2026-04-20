@@ -23,6 +23,7 @@ async function initPool(): Promise<void> {
       const { user, password, host, port, service, clientDir } = oracleEnv;
 
       // ORACLE_CLIENT_DIR 설정 시 PATH 의존 없이 경로 직접 지정 (Windows 개발환경 대응)
+      // clientDir 미설정 시 인수 없이 호출 → Oracle Instant Client를 PATH에서 자동 탐색
       oracledb.initOracleClient(clientDir ? { libDir: clientDir } : undefined);
       // CLOB 컬럼을 string으로 자동 변환 (PAGE_JSON)
       oracledb.fetchAsString = [oracledb.CLOB];

@@ -1,9 +1,11 @@
 /**
  * @file savePage.ts
  * @description CMS 빌더 페이지 저장 핸들러.
- * 두 가지 저장을 병행합니다:
- *   1. Oracle DB 저장 (/__cms/api/save) — 재편집·이력 관리용 JSON
- *   2. 파일 시스템 저장 (/__cms/create-page) — demo/front 앱 라우트 등록용 JSX
+ * 실행 모드에 따라 저장 방식을 분기합니다:
+ *   - admin 연동 모드 (npm run dev:proxy, BASE_URL=/react-cms/):
+ *       Oracle DB 저장만 수행 — 파일 생성 없음
+ *   - 단독 실행 모드 (npm run dev, BASE_URL=/):
+ *       파일 시스템 저장만 수행 — demo/front 앱 라우트 자동 등록
  *
  * DB 저장 시 pageId를 localStorage에 캐싱합니다.
  * pageName이 같으면 재저장 시 동일 pageId로 UPDATE합니다.
@@ -22,45 +24,50 @@ const PAGE_ID_KEY_PREFIX = "cms_page_id_"
 // 단독 모드(BASE_URL=/):             '/__cms'           → Vite 직접 처리
 const cmsBase = `${import.meta.env.BASE_URL.replace(/\/$/, "")}/__cms`
 
+// BASE_URL이 '/'가 아니면 nginx 프록시를 거쳐 admin과 연동되는 모드로 판단
+const isAdminMode = import.meta.env.BASE_URL !== "/"
+
 export async function savePage(page: CMSPage, params: SavePageParams): Promise<void> {
   const { pageName, uri } = params
   // CMSBuilder에서 Context 정보를 포함해 사전 생성한 코드 우선 사용.
   // 없으면(직접 호출 시) generateJSX로 폴백 — Context 정보 미포함 주의.
   const code = params.code ?? generateJSX(page)
 
-  // ── 1. DB 저장 ───────────────────────────────────────────────
-  const storedPageId = localStorage.getItem(`${PAGE_ID_KEY_PREFIX}${pageName}`) ?? undefined
+  if (isAdminMode) {
+    // ── admin 연동 모드: DB 저장만 수행 ─────────────────────────
+    const storedPageId = localStorage.getItem(`${PAGE_ID_KEY_PREFIX}${pageName}`) ?? undefined
 
-  const dbRes = await fetch(`${cmsBase}/api/save`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      pageId:   storedPageId,
-      pageName,
-      pageJson: JSON.stringify(page),
-      pageCode: code,           // 생성된 React JSX 코드 — PAGE_DESC 컬럼에 저장
-    }),
-  })
+    const dbRes = await fetch(`${cmsBase}/api/save`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        pageId:   storedPageId,
+        pageName,
+        pageJson: JSON.stringify(page),
+        pageCode: code,
+      }),
+    })
 
-  if (!dbRes.ok) {
-    const data = await dbRes.json().catch(() => ({}))
-    throw new Error((data as { error?: string }).error ?? "DB 저장에 실패했습니다.")
-  }
+    if (!dbRes.ok) {
+      const data = await dbRes.json().catch(() => ({}))
+      throw new Error((data as { error?: string }).error ?? "DB 저장에 실패했습니다.")
+    }
 
-  const { pageId } = (await dbRes.json()) as { pageId: string }
-  // 반환된 pageId를 캐싱 — 재저장 시 UPDATE로 처리
-  localStorage.setItem(`${PAGE_ID_KEY_PREFIX}${pageName}`, pageId)
+    const { pageId } = (await dbRes.json()) as { pageId: string }
+    // 반환된 pageId를 캐싱 — 재저장 시 UPDATE로 처리
+    localStorage.setItem(`${PAGE_ID_KEY_PREFIX}${pageName}`, pageId)
+  } else {
+    // ── 단독 실행 모드: 파일 시스템 저장만 수행 ─────────────────
+    // demo/front 앱의 JSX 파일 생성 + 라우트 자동 등록
+    const fsRes = await fetch(`${cmsBase}/create-page`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ uri, code, pageName }),
+    })
 
-  // ── 2. 파일 시스템 저장 ─────────────────────────────────────
-  // 기존 Vite 플러그인 방식 유지 — demo/front 앱 라우트 자동 등록
-  const fsRes = await fetch(`${cmsBase}/create-page`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ uri, code, pageName }),
-  })
-
-  if (!fsRes.ok) {
-    const data = await fsRes.json().catch(() => ({}))
-    throw new Error((data as { error?: string }).error ?? "파일 저장에 실패했습니다.")
+    if (!fsRes.ok) {
+      const data = await fsRes.json().catch(() => ({}))
+      throw new Error((data as { error?: string }).error ?? "파일 저장에 실패했습니다.")
+    }
   }
 }
