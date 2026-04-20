@@ -103,10 +103,21 @@
                 const aid   = HtmlUtils.escape(row.assetId);
                 const fileSize = this._formatFileSize(row.fileSize);
 
-                // 승인요청 버튼: WORK 상태 + CMS:W 권한일 때만 노출
-                const tdAction = (window.HAS_CMS_WRITE && row.assetState === 'WORK')
-                    ? `<button class="btn btn-primary btn-xs" onclick="CmsAssetRequestPage.requestApproval('${aid}')">승인요청</button>`
-                    : '-';
+                // 액션 버튼 — 상태·권한 조합별 분기 (Issue #88)
+                //   WORK     + CMS:W → [승인요청] [삭제]
+                //   REJECTED + CMS:W → [삭제]
+                //   그 외 (PENDING/APPROVED, 권한없음)       → '-'
+                // text-nowrap 과 gap 으로 두 버튼이 한 줄에 유지되고 td 좁아도 줄바꿈으로 가려지지 않게 한다.
+                let tdAction = '-';
+                if (window.HAS_CMS_WRITE) {
+                    const btnDelete = `<button class="btn btn-outline-danger btn-xs" onclick="CmsAssetRequestPage.deleteAsset('${aid}')">삭제</button>`;
+                    if (row.assetState === 'WORK') {
+                        const btnRequest = `<button class="btn btn-primary btn-xs" onclick="CmsAssetRequestPage.requestApproval('${aid}')">승인요청</button>`;
+                        tdAction = `<div class="d-inline-flex gap-1 text-nowrap">${btnRequest}${btnDelete}</div>`;
+                    } else if (row.assetState === 'REJECTED') {
+                        tdAction = btnDelete;
+                    }
+                }
 
                 return `<tr>
                     <td class="text-center">
@@ -204,6 +215,25 @@
                     else             { Toast.error(res.message); }
                 })
                 .catch(() => Toast.error('승인 요청 처리 중 오류가 발생했습니다.'));
+        },
+
+        // ── 삭제 (Issue #88) — WORK / REJECTED 상태에서만 허용, 서버가 최종 상태 가드 ──
+        deleteAsset: function(assetId) {
+            if (!confirm('해당 이미지를 삭제하시겠습니까?\n삭제 후에는 복구할 수 없습니다.')) return;
+
+            fetch(`/api/cms-admin/asset-requests/${encodeURIComponent(assetId)}`, {
+                method: 'DELETE',
+            })
+                .then(r => r.json().then(body => ({ status: r.status, body })))
+                .then(({ status, body }) => {
+                    if (status >= 200 && status < 300 && body.success) {
+                        Toast.success(body.message || '이미지가 삭제되었습니다.');
+                        this.load();
+                    } else {
+                        Toast.error(body.message || '이미지 삭제 중 오류가 발생했습니다.');
+                    }
+                })
+                .catch(() => Toast.error('이미지 삭제 중 오류가 발생했습니다.'));
         },
 
         _formatFileSize: function(bytes) {

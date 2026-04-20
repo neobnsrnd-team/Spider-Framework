@@ -37,6 +37,9 @@ public interface CmsAssetMapper {
     /** 현재 ASSET_STATE 조회 (USE_YN='Y'). null 반환 시 미존재 또는 논리 삭제 */
     String findAssetStateById(@Param("assetId") String assetId);
 
+    /** 업로더(소유자) ID 조회 (USE_YN='Y'). 소유자 검증용 경량 PK 조회 */
+    String findCreateUserIdByAssetId(@Param("assetId") String assetId);
+
     /** 상세 조회 — 모달 프리뷰용 */
     CmsAssetDetailResponse findDetailById(@Param("assetId") String assetId);
 

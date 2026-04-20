@@ -29,6 +29,12 @@ import org.springframework.web.multipart.MultipartFile;
 @Component
 public class CmsBuilderClient {
 
+    /**
+     * CMS 자산 삭제 엔드포인트 경로 템플릿.
+     * RESTful 고정 경로라 외부 설정화 이점이 크지 않아 상수로 둔다. 필요 시 baseUrl 과 함께 프로퍼티로 이동.
+     */
+    private static final String DELETE_PATH_TEMPLATE = "/cms/api/assets/{assetId}";
+
     private final RestClient cmsBuilderRestClient;
     private final CmsBuilderProperties properties;
 
@@ -81,6 +87,33 @@ public class CmsBuilderClient {
 
         } catch (RestClientException e) {
             log.error("CMS Builder 호출 중 오류 발생: userId={}", userId, e);
+            throw new BaseException(ErrorType.EXTERNAL_SERVICE_ERROR, "CMS 서버와 통신할 수 없습니다. 잠시 후 다시 시도하세요.", e);
+        }
+    }
+
+    /**
+     * CMS Builder 에 이미지 자산 삭제를 요청한다 — Issue #88.
+     *
+     * <p>DELETE 엔드포인트는 성공 시 빈 body(204) 또는 비JSON body 를 반환할 수 있어
+     * 업로드와 달리 body 파싱을 하지 않는다. HTTP status 기반으로 판정하며,
+     * 2xx 이면 성공, 4xx/5xx 는 {@link RestClientException} 으로 전파되어 {@link BaseException}(502) 로 래핑된다.
+     *
+     * @param assetId 삭제 대상 자산 식별자 (CMS 가 발급한 UUID)
+     * @param userId  삭제 수행자 ID (로그용)
+     * @throws BaseException 삭제 실패 시 (HTTP 502)
+     */
+    public void delete(String assetId, String userId) {
+        try {
+            cmsBuilderRestClient
+                    .delete()
+                    .uri(DELETE_PATH_TEMPLATE, assetId)
+                    .retrieve()
+                    .toBodilessEntity();
+
+            log.info("CMS Builder 삭제 성공: assetId={}, userId={}", assetId, userId);
+
+        } catch (RestClientException e) {
+            log.error("CMS Builder 삭제 호출 중 오류 발생: assetId={}, userId={}", assetId, userId, e);
             throw new BaseException(ErrorType.EXTERNAL_SERVICE_ERROR, "CMS 서버와 통신할 수 없습니다. 잠시 후 다시 시도하세요.", e);
         }
     }
