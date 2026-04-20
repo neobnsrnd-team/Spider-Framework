@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<!-- Role Bottom Actions Fragment -->
+<div th:fragment="buttons" class="bottom-actions"
+     th:if="${userAuthorities != null and userAuthorities.contains('ROLE:W')}">
+    <button class="btn btn-outline-secondary btn-sm" id="btnAddRow">
+        <i class="bi bi-plus-lg"></i> 행 추가
+    </button>
+    <button class="btn btn-outline-danger btn-sm ms-2" id="btnDeleteSelected">
+        <i class="bi bi-trash"></i> 선택 행 삭제
+    </button>
+    <button class="btn btn-primary btn-sm ms-2" id="btnSaveChanges">
+        <i class="bi bi-floppy"></i> 변경사항 저장
+    </button>
+</div>
+</body>
+</html>

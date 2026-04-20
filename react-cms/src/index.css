@@ -1,0 +1,272 @@
+/*
+ * index.css
+ * CMS 빌더 셸(모달, 사이드바, 툴바 등) 전용 전역 스타일.
+ * user-scope.css와 달리 @scope 격리 없이 CMS UI 전체에 적용됩니다.
+ * Tailwind 유틸리티(bg-primary 등 커스텀 클래스)와 디자인 토큰(CSS 변수)을 포함합니다.
+ *
+ * 주의: 이 파일의 스타일은 캔버스 내부 컴포넌트에도 영향을 줄 수 있으므로
+ *       외부 프로젝트 스타일은 user-scope.css?inline 방식으로 주입해야 합니다.
+ */
+/* ═══════════════════════════════════════════════════════════════════════════
+   @neobnsrnd-team/cms-ui — styles/themes.css
+
+   Tailwind에 의존하지 않는 순수 CSS 변수 파일입니다.
+   소비자 프로젝트에서 아래처럼 import해서 사용합니다:
+
+     @import "@neobnsrnd-team/cms-ui/styles";
+
+   ThemeProvider(또는 직접 setAttribute)로 테마를 전환합니다:
+     document.documentElement.setAttribute("data-theme", "hana");
+
+   하나은행이 기본값(default)입니다.
+═══════════════════════════════════════════════════════════════════════════ */
+
+/* ── 공통 토큰 + 하나은행 기본값 ── */
+:root {
+  /* Gray Palette */
+  --color-gray-50: #f8fafc;
+  --color-gray-100: #f1f5f9;
+  --color-gray-200: #e2e8f0;
+  --color-gray-300: #cbd5e1;
+  --color-gray-400: #94a3b8;
+  --color-gray-500: #64748b;
+  --color-gray-600: #475569;
+  --color-gray-700: #334155;
+  --color-gray-800: #1e293b;
+  --color-gray-900: #0f172a;
+
+  /* Primary Palette — 하나은행 기본값 */
+  --color-primary-50: #f0f9f9;
+  --color-primary-100: #d0eeee;
+  --color-primary-200: #a1dddd;
+  --color-primary-300: #6ecbcb;
+  --color-primary-400: #33acac;
+  --color-primary-500: #008485;
+  --color-primary-600: #006d6d;
+  --color-primary-700: #005757;
+  --color-primary-800: #003f3f;
+  --color-primary-900: #002828;
+
+  /* Spacing */
+  --spacing-1: 4px;
+  --spacing-2: 8px;
+  --spacing-3: 12px;
+  --spacing-4: 16px;
+  --spacing-5: 20px;
+  --spacing-6: 24px;
+  --spacing-8: 32px;
+  --spacing-10: 40px;
+  --spacing-12: 48px;
+  --spacing-16: 64px;
+
+  /* Radius */
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-xl: 18px;
+  --radius-full: 9999px;
+
+  /* Shadow */
+  --shadow-sm: 0 1px 4px 0 rgb(0 0 0 / 0.06);
+  --shadow-md: 0 4px 16px 0 rgb(0 0 0 / 0.1);
+  --shadow-xl: 0 20px 60px -10px rgb(0 0 0 / 0.15);
+  --shadow-invert: 0 -2px 12px 0 rgb(0 0 0 / 0.08);
+  --shadow-primary: 0 2px 8px 0 rgb(0 132 133 / 0.4);
+
+  /* Typography */
+  --font-sans: "Noto Sans KR", "Noto Sans", sans-serif;
+  --text-xs: 0.75rem;
+  --text-sm: 0.875rem;
+  --text-base: 1rem;
+  --text-lg: 1.125rem;
+  --text-xl: 1.25rem;
+  --text-2xl: 1.5rem;
+  --text-3xl: 1.875rem;
+
+  /* Semantic: Text */
+  --color-text-primary: var(--color-gray-900);
+  --color-text-secondary: var(--color-gray-500);
+  --color-text-muted: var(--color-gray-400);
+  --color-text-accent: var(--color-primary-500);
+  --color-slate: var(--color-gray-700);
+  --color-slate-light: var(--color-gray-600);
+  --color-text-inverse: #ffffff;
+
+  /* Semantic: Background */
+  --color-surface: #ffffff;
+  --color-surface-sub: var(--color-gray-50);
+  --color-surface-hover: var(--color-gray-100);
+  --color-app-bg: #f5f8f8;
+  --color-desktop-bg: #e8edf2;
+  --color-input-bg: var(--color-gray-50);
+  --color-overlay: rgb(0 0 0 / 0.5);
+
+  /* Semantic: Border */
+  --color-border: var(--color-gray-200);
+  --color-border-focus: var(--color-primary-500);
+  --color-divider: var(--color-gray-100);
+  --color-focus-ring: var(--color-primary-500);
+
+  /* Semantic: State */
+  --color-success: #10b981;
+  --color-success-light: #ecfdf5;
+  --color-warning: #f59e0b;
+  --color-warning-light: #fffbeb;
+  --color-error: #ef4444;
+  --color-error-light: #fef2f2;
+  --color-info: #3b82f6;
+  --color-info-light: #eff6ff;
+
+  /* Brand aliases */
+  --color-primary: var(--color-primary-500);
+  --color-primary-dark: var(--color-primary-600);
+  --color-primary-light: var(--color-primary-50);
+
+  /* Component: Button */
+  --color-btn-primary-bg: var(--color-primary-500);
+  --color-btn-primary-bg-hover: var(--color-primary-600);
+  --color-btn-primary-text: var(--color-text-inverse);
+  --color-btn-secondary-bg: var(--color-gray-100);
+  --color-btn-secondary-bg-hover: var(--color-gray-200);
+  --color-btn-secondary-text: var(--color-primary-500);
+  --color-btn-secondary-border: var(--color-primary-500);
+  --color-btn-outline-border: var(--color-border);
+  --color-btn-outline-text: var(--color-slate);
+  --color-btn-outline-border-hover: var(--color-primary);
+  --color-btn-outline-text-hover: var(--color-primary);
+  --color-btn-ghost-text: var(--color-text-secondary);
+  --color-btn-ghost-text-hover: var(--color-primary);
+  --color-btn-disabled-bg: var(--color-gray-100);
+  --color-btn-disabled-text: var(--color-gray-400);
+
+  /* Component: Input */
+  --color-input-border: var(--color-border);
+  --color-input-border-focus: var(--color-border-focus);
+  --color-input-border-error: var(--color-error);
+  --color-input-text: var(--color-text-primary);
+  --color-input-placeholder: var(--color-text-muted);
+  --color-input-label: var(--color-slate);
+
+  /* Component: Badge */
+  --color-badge-primary-text: var(--color-primary);
+  --color-badge-primary-bg: var(--color-primary-light);
+  --color-badge-primary-border: var(--color-primary);
+  --color-badge-success-text: var(--color-success);
+  --color-badge-success-bg: var(--color-success-light);
+  --color-badge-error-text: var(--color-error);
+  --color-badge-error-bg: var(--color-error-light);
+  --color-badge-neutral-text: var(--color-text-secondary);
+  --color-badge-neutral-bg: var(--color-divider);
+  --color-badge-neutral-border: var(--color-border);
+
+  /* Component: Modal */
+  --color-modal-bg: var(--color-surface);
+  --shadow-modal: var(--shadow-xl);
+  --radius-modal: var(--radius-xl);
+
+  /* Shadow aliases */
+  --shadow-card: var(--shadow-sm);
+  --shadow-dropdown: var(--shadow-md);
+  --shadow-sticky: var(--shadow-invert);
+
+  /* Z-Index */
+  --z-sticky: 40;
+  --z-dropdown: 50;
+  --z-overlay: 100;
+  --z-modal: 101;
+  --z-toast: 200;
+
+  /* Container */
+  --width-app: 390px;
+
+  /* Animation */
+  --duration-fast: 100ms;
+  --duration-normal: 200ms;
+  --duration-slow: 300ms;
+  --ease-smooth: cubic-bezier(0.4, 0, 0.2, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* ── KB국민은행 ── */
+[data-theme="kb"] {
+  --color-primary-50: #fffbe6;
+  --color-primary-100: #fff6cc;
+  --color-primary-200: #ffea99;
+  --color-primary-300: #ffde66;
+  --color-primary-400: #ffd633;
+  --color-primary-500: #ffce0b;
+  --color-primary-600: #dbaf00;
+  --color-primary-700: #b79000;
+  --color-primary-800: #937200;
+  --color-primary-900: #6f5400;
+  --shadow-primary: 0 2px 8px 0 rgb(255 206 11 / 0.3);
+  --color-text-inverse: var(--color-gray-900);
+}
+
+/* ── IBK기업은행 ── */
+[data-theme="ibk"] {
+  --color-primary-50: #e6f0f9;
+  --color-primary-100: #cce1f3;
+  --color-primary-200: #99c3e7;
+  --color-primary-300: #66a5db;
+  --color-primary-400: #3387cf;
+  --color-primary-500: #0062ad;
+  --color-primary-600: #00538f;
+  --color-primary-700: #004373;
+  --color-primary-800: #003356;
+  --color-primary-900: #00233a;
+  --shadow-primary: 0 2px 8px 0 rgb(0 98 173 / 0.35);
+  --color-app-bg: #f4f7fb;
+  --color-desktop-bg: #e5eaf2;
+}
+
+/* ── 우리은행 ── */
+[data-theme="woori"] {
+  --color-primary-50: #e6eef7;
+  --color-primary-100: #ccddf0;
+  --color-primary-200: #99bbe1;
+  --color-primary-300: #6699d2;
+  --color-primary-400: #3377c3;
+  --color-primary-500: #0052a5;
+  --color-primary-600: #00448a;
+  --color-primary-700: #003570;
+  --color-primary-800: #002855;
+  --color-primary-900: #001a3a;
+  --shadow-primary: 0 2px 8px 0 rgb(0 82 165 / 0.35);
+  --color-app-bg: #f4f7fb;
+  --color-desktop-bg: #e5eaf2;
+}
+
+/* ── 신한은행 ── */
+[data-theme="shinhan"] {
+  --color-primary-50: #e6ecf5;
+  --color-primary-100: #ccd9eb;
+  --color-primary-200: #99b3d7;
+  --color-primary-300: #668ec3;
+  --color-primary-400: #3368af;
+  --color-primary-500: #0046a3;
+  --color-primary-600: #003a87;
+  --color-primary-700: #002d6b;
+  --color-primary-800: #00214f;
+  --color-primary-900: #001534;
+  --shadow-primary: 0 2px 8px 0 rgb(0 70 163 / 0.35);
+  --color-app-bg: #f4f7fb;
+  --color-desktop-bg: #e5eaf2;
+}
+
+/* ── NH농협은행 ── */
+[data-theme="nh"] {
+  --color-primary-50: #e6f7ee;
+  --color-primary-100: #ccefdd;
+  --color-primary-200: #99dfbb;
+  --color-primary-300: #66cf99;
+  --color-primary-400: #33bf77;
+  --color-primary-500: #00a651;
+  --color-primary-600: #008a43;
+  --color-primary-700: #006d35;
+  --color-primary-800: #005027;
+  --color-primary-900: #003319;
+  --shadow-primary: 0 2px 8px 0 rgb(0 166 81 / 0.35);
+  --color-app-bg: #f4f8f5;
+  --color-desktop-bg: #e5ede8;
+}

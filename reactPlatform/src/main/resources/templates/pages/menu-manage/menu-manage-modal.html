@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+
+<!-- Menu Add/Edit Modal -->
+<div th:fragment="modal" class="modal fade" id="menuModal" tabindex="-1" aria-hidden="true"
+     data-bs-backdrop="static" data-bs-keyboard="false">
+    <div class="modal-dialog modal-dialog-centered sp-modal-lg">
+    <div class="modal-content">
+        <div class="modal-header py-2">
+            <h6 class="modal-title">메뉴 등록</h6>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+            <div class="modal-section">
+                <div class="section-header">
+                    <i class="bi bi-caret-right-fill"></i>
+                    <span>상세정보</span>
+                </div>
+
+                <div class="row g-3">
+                    <div class="row g-3 mb-2">
+                        <div class="col-md-6 mb-2">
+                            <label class="sp-menu-form-label">
+                                메뉴ID
+                                <span class="sp-required">*</span>
+                            </label>
+                            <input type="text" id="modalMenuId" class="form-control form-control-sm" />
+                        </div>
+                        <div class="col-md-6 mb-2">
+                            <label class="sp-menu-form-label">
+                                메뉴명
+                                <span class="sp-required">*</span>
+                            </label>
+                            <input type="text" id="modalMenuName" class="form-control form-control-sm" />
+                        </div>
+                    </div>
+
+                    <div class="row g-3 mb-2">
+                        <div class="col-md-6 mb-2">
+                            <label class="sp-menu-form-label">상위메뉴ID</label>
+                            <div class="d-flex gap-4px">
+                                <input type="text" id="modalPriorMenuId" class="form-control form-control-sm" placeholder="상위메뉴ID" />
+                                <button class="sp-btn-search-icon" onclick="MenuModal.searchParentMenu()" title="상위메뉴 찾기">
+                                    <i class="bi bi-search"></i>
+                                </button>
+                            </div>
+                            <small class="sp-hint-text">비워두면 루트 메뉴(최상위)로 등록됩니다</small>
+                        </div>
+                        <div class="col-md-6 mb-2">
+                            <label class="sp-menu-form-label">
+                                정렬순서
+                                <span class="sp-required">*</span>
+                            </label>
+                            <input type="number" id="modalSortOrder" class="form-control form-control-sm" value="0" min="0" max="999" step="1" />
+                            <small class="sp-hint-text">숫자가 작을수록 위에 표시됩니다</small>
+                        </div>
+                    </div>
+
+                    <div class="row g-3 mb-2">
+                        <div class="col-12 mb-2">
+                            <label class="sp-menu-form-label">
+                                메뉴URL
+                                <span class="sp-required">*</span>
+                            </label>
+                            <textarea id="modalMenuUrl" class="sp-form-textarea" rows="3"></textarea>
+                        </div>
+                    </div>
+
+                    <div class="row g-3 mb-2">
+                        <div class="col-md-6 mb-2">
+                            <label class="sp-menu-form-label">메뉴 IMAGE</label>
+                            <input type="text" id="modalMenuImage" class="form-control form-control-sm" />
+                        </div>
+                        <div class="col-md-6 mb-2">
+                            <label class="sp-menu-form-label">Web App ID</label>
+                            <input type="text" id="modalWebAppId" class="form-control form-control-sm" />
+                        </div>
+                    </div>
+
+                    <div class="row g-3 mb-2">
+                        <div class="col-md-6 mb-2">
+                            <label class="sp-menu-form-label">
+                                출력여부
+                                <span class="sp-required">*</span>
+                            </label>
+                            <select id="modalDisplayYn" class="form-select">
+                                <option value="Y">사용</option>
+                                <option value="N">사용안함</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6 mb-2">
+                            <label class="sp-menu-form-label">
+                                사용여부
+                                <span class="sp-required">*</span>
+                            </label>
+                            <select id="modalUseYn" class="form-select">
+                                <option value="Y">사용</option>
+                                <option value="N">사용안함</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="modal-footer py-2">
+            <button th:if="${userAuthorities != null and userAuthorities.contains('MENU:W')}"
+                    id="btnDelete" class="btn btn-danger btn-sm me-auto d-hidden" onclick="MenuModal.delete()">
+                <i class="bi bi-trash"></i> 삭제
+            </button>
+            <button class="btn btn-secondary btn-sm" data-bs-dismiss="modal">
+                <i class="bi bi-x-lg"></i> 닫기
+            </button>
+            <button th:if="${userAuthorities != null and userAuthorities.contains('MENU:W')}"
+                    class="btn btn-primary btn-sm" onclick="MenuModal.save()">
+                <i class="bi bi-floppy"></i> 저장
+            </button>
+        </div>
+    </div>
+    </div>
+</div>
+
+<!-- Parent Menu Search Modal -->
+<div th:fragment="parentSearchModal" class="modal fade" id="parentMenuSearchModal" tabindex="-1" aria-hidden="true"
+     data-bs-backdrop="static" data-bs-keyboard="false">
+    <div class="modal-dialog modal-dialog-centered sp-modal-sm">
+    <div class="modal-content">
+        <div class="modal-header py-2">
+            <h6 class="modal-title">상위 메뉴 검색</h6>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="sp-modal-body-search">
+            <div class="sp-search-info">
+                <i class="bi bi-info-circle"></i>
+                <span>상위 메뉴를 선택하거나 루트 메뉴로 등록하세요</span>
+            </div>
+
+            <div class="sp-root-menu-option" onclick="ParentMenuSearch.selectRootMenu()">
+                <div class="sp-parent-menu-item-name">
+                    <i class="bi bi-folder2-open"></i>
+                    루트 메뉴로 등록 (최상위 메뉴)
+                </div>
+                <span class="sp-menu-item-badge">추천</span>
+            </div>
+
+            <div class="sp-form-divider"></div>
+
+            <div class="sp-menu-list" id="parentMenuList">
+                <div class="sp-empty-state">
+                    <i class="bi bi-arrow-repeat sp-spin"></i> 로딩 중...
+                </div>
+            </div>
+        </div>
+        <div class="modal-footer py-2">
+            <button class="btn btn-secondary btn-sm" data-bs-dismiss="modal">
+                <i class="bi bi-x-lg"></i> 닫기
+            </button>
+        </div>
+    </div>
+    </div>
+</div>
+
+<!-- Modal Styles (extracted to app.css) -->
+<th:block th:fragment="styles">
+<!-- All styles moved to app.css -->
+</th:block>
+
+</body>
+</html>

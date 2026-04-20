@@ -1,0 +1,1215 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<!-- User Page Scripts - IMPROVED VERSION with Enhanced Validation & Security -->
+<th:block th:fragment="script">
+    <script th:inline="javascript">
+        const CURRENT_USER_ID = /*[[${currentUserId}]]*/ null;
+        const CURRENT_USER_ROLE_ID = /*[[${currentUserRoleId}]]*/ null;
+        const HAS_USER_WRITE = /*[[${userAuthorities != null && userAuthorities.contains('USER:W')}]]*/ false;
+        // ==================== Security Utilities ====================
+
+        /**
+         * 에러 메시지를 사용자 친화적으로 변환
+         */
+        function getUserFriendlyErrorMessage(error) {
+            // 기본 에러 메시지
+            let message = '요청 처리 중 오류가 발생했습니다.';
+
+            if (!error) return message;
+
+            // 서버에서 전달된 메시지
+            if (error.response && error.response.data) {
+                const data = error.response.data;
+
+                // API 응답 메시지가 있으면 사용
+                if (data.message) {
+                    message = data.message;
+                }
+
+                // Validation 에러
+                if (data.errors && Array.isArray(data.errors)) {
+                    message = data.errors.map(e => e.message || e).join('\n');
+                }
+            } else if (error.message) {
+                // 네트워크 에러 등
+                if (error.message.includes('Network Error')) {
+                    message = '네트워크 연결을 확인해주세요.';
+                } else if (error.message.includes('timeout')) {
+                    message = '요청 시간이 초과되었습니다. 다시 시도해주세요.';
+                }
+            }
+
+            // HTML 태그 제거 (보안)
+            message = message.replace(/<[^>]*>/g, '');
+
+            return message;
+        }
+
+        /**
+         * Debounce 함수 - API 호출 최적화
+         */
+        function debounce(func, wait) {
+            let timeout;
+            return function executedFunction(...args) {
+                const later = () => {
+                    clearTimeout(timeout);
+                    func(...args);
+                };
+                clearTimeout(timeout);
+                timeout = setTimeout(later, wait);
+            };
+        }
+
+        // ==================== Validation Utilities ====================
+
+        const Validators = {
+            /**
+             * 사용자ID 검증
+             */
+            userId: function(value) {
+                if (!value) {
+                    return '사용자ID를 입력하세요.';
+                }
+                if (value.length > 50) {
+                    return '사용자ID는 50자 이하여야 합니다.';
+                }
+                if (!/^[a-zA-Z0-9_-]+$/.test(value)) {
+                    return '영문, 숫자, 언더스코어(_), 하이픈(-)만 사용 가능합니다.';
+                }
+                return null;
+            },
+
+            /**
+             * 사용자명 검증
+             */
+            userName: function(value) {
+                if (!value) {
+                    return '사용자명을 입력하세요.';
+                }
+                if (value.length > 50) {
+                    return '사용자명은 50자 이하여야 합니다.';
+                }
+                return null;
+            },
+
+            /**
+             * 비밀번호 검증
+             */
+            password: function(value, isRequired) {
+                if (!value && !isRequired) {
+                    return null; // 수정 시 비밀번호는 선택사항
+                }
+                if (!value && isRequired) {
+                    return '비밀번호를 입력하세요.';
+                }
+                // ReDoS 방지: lookahead 대신 개별 테스트 (S5852)
+                if (!/^[A-Za-z\d@$!%*#?&]{8,50}$/.test(value)
+                        || !/[A-Za-z]/.test(value)
+                        || !/\d/.test(value)
+                        || !/[@$!%*#?&]/.test(value)) {
+                    return '8~50자, 영문, 숫자, 특수문자(@$!%*#?&)를 모두 포함해야 합니다.';
+                }
+                return null;
+            },
+
+            /**
+             * 이메일 검증
+             */
+            email: function(value) {
+                if (!value) {
+                    return null; // 선택사항
+                }
+                if (value.length > 100) {
+                    return '이메일은 100자 이하여야 합니다.';
+                }
+                const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+                if (!emailRegex.test(value)) {
+                    return '올바른 이메일 형식이 아닙니다.';
+                }
+                return null;
+            },
+
+            /**
+             * 전화번호 검증
+             */
+            phone: function(value) {
+                if (!value) {
+                    return null; // 선택사항
+                }
+                if (!/^\d{1,13}$/.test(value)) {
+                    return '10-11자리 숫자를 입력하세요 (하이픈 제외).';
+                }
+                return null;
+            },
+
+            /**
+             * IP 주소 검증
+             */
+            accessIp: function(value) {
+                if (!value || value === '*') {
+                    return null; // * 또는 빈값 허용
+                }
+                // ReDoS 방지: 단순 포맷 체크 + 범위 검증 분리 (S5852)
+                if (!/^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$/.test(value)) {
+                    return '올바른 IP 주소 형식이 아닙니다 (예: 192.168.1.1).';
+                }
+                const valid = value.split('.').every(part => {
+                    const num = parseInt(part, 10);
+                    return num >= 0 && num <= 255 && part === String(num);
+                });
+                if (!valid) {
+                    return '올바른 IP 주소 형식이 아닙니다 (예: 192.168.1.1).';
+                }
+                return null;
+            },
+
+            /**
+             * 직번 검증
+             */
+            userSsn: function(value) {
+                if (!value) {
+                    return null; // 선택사항
+                }
+                if (value.length > 13) {
+                    return '직번은 13자 이하여야 합니다.';
+                }
+                return null;
+            },
+
+            /**
+             * 지점코드 검증
+             */
+            branchNo: function(value) {
+                if (!value) {
+                    return null; // 선택사항
+                }
+                if (value.length > 10) {
+                    return '지점코드는 10자 이하여야 합니다.';
+                }
+                return null;
+            },
+
+            /**
+             * 권한ID 검증
+             */
+            roleId: function(value) {
+                if (!value) {
+                    return '권한을 선택하세요.';
+                }
+                return null;
+            }
+        };
+
+        // ==================== Users Object ====================
+
+        window.Users = window.Users || {
+            currentPage: 1,
+            totalItems: 0,
+            itemsPerPage: 20,
+            sortBy: null,
+            sortDirection: null,
+            usersData: [],
+
+            load: function() {
+                const searchParams = {
+                    searchField: $('#searchField').val(),
+                    searchValue: $('#searchValue').val(),
+                    roleFilter: $('#roleFilter').val(),
+                    classNameFilter: $('#classNameFilter').val(),
+                    userStateCodeFilter: $('#userStateCodeFilter').val(),
+                    page: this.currentPage,
+                    size: this.itemsPerPage,
+                    sortBy: this.sortBy || null,
+                    sortDirection: this.sortDirection || null
+                };
+
+                $.ajax({
+                    url: API_BASE_URL + '/users/page',
+                    method: 'GET',
+                    data: searchParams,
+                    success: (response) => {
+                        console.log('API Response:', response);
+
+                        const pageData = response.data;
+                        const users = pageData.content;
+
+                        console.log('Users array:', users);
+
+                        this.usersData = users;
+                        this.renderTable(users);
+                        this.totalItems = pageData.totalElements;
+                        this.renderPagination();
+                    },
+                    error: (xhr) => {
+                        console.error('Failed to load users:', xhr);
+                        const errorMsg = getUserFriendlyErrorMessage(xhr);
+                        Toast.info(errorMsg);
+                    }
+                });
+            },
+
+            renderTable: function(users) {
+                const tbody = $('#userTableBody');
+                tbody.empty();
+
+                if (!users || users.length === 0) {
+                    tbody.append(`
+                    <tr>
+                        <td colspan="12" class="text-center py-4 text-body-secondary">
+                            조회된 데이터가 없습니다.
+                        </td>
+                    </tr>
+                `);
+                    return;
+                }
+
+                // 상태 코드 변환 함수
+                const getStatusText = (code) => {
+                    switch(code) {
+                        case '1': return '정상';
+                        case '2': return '삭제';
+                        case '3': return '정지';
+                        default: return HtmlUtils.escape(code) || '';
+                    }
+                };
+
+                users.forEach((user, index) => {
+                    const statusText = getStatusText(user.userStateCode);
+
+                    // XSS 방지: 모든 사용자 데이터 escape
+                    const isCurrentUser = (user.userId === CURRENT_USER_ID);
+                    const isSuperAdmin = (CURRENT_USER_ROLE_ID === 'superadmin');
+                    const showButtons = HAS_USER_WRITE && (isCurrentUser || isSuperAdmin);
+                    const uid = HtmlUtils.escape(user.userId);
+                    const uname = HtmlUtils.escape(user.userName);
+                    const btnResetMenu  = showButtons ? '<button class="btn btn-primary btn-sm" data-action="resetMenu"  data-userid="' + uid + '">초기화</button>' : '';
+                    const btnOpenMenu   = showButtons ? '<button class="btn btn-primary btn-sm" data-action="openMenu"   data-userid="' + uid + '" data-username="' + uname + '">메뉴</button>' : '';
+                    const failCount = user.loginFailCount != null ? user.loginFailCount : 0;
+                    const btnResetError = showButtons ? '<button class="btn btn-primary btn-sm" data-action="resetError" data-userid="' + uid + '">해제(' + failCount + ')</button>' : '';
+                    const btnImpersonate = isSuperAdmin ? '<button class="btn btn-primary btn-sm" data-action="impersonate" data-userid="' + uid + '">로그인하기</button>' : '';
+                    const row = $(`
+                    <tr data-user-index="${index}" class="cursor-pointer">
+                        <td>${HtmlUtils.escape(user.userId)}</td>
+                        <td>${HtmlUtils.escape(user.userName)}</td>
+                        <td>${HtmlUtils.escape(user.className)}</td>
+                        <td>${HtmlUtils.escape(user.userSsn)}</td>
+                        <td>${HtmlUtils.escape(user.roleName)}</td>
+                        <td>${HtmlUtils.escape(user.positionName)}</td>
+                        <td>${statusText}</td>
+                        <td>${HtmlUtils.escape(user.lastUpdateDtime)}</td>
+                        <td>${btnResetMenu}</td>
+                        <td>${btnOpenMenu}</td>
+                        <td>${btnResetError}</td>
+                        <td>${btnImpersonate}</td>
+                    </tr>
+                `);
+
+                    row.find('button[data-action]').on('click', function(e) {
+                        e.stopPropagation();
+                        const action = $(this).data('action');
+                        const userId = $(this).data('userid');
+                        if (action === 'resetMenu')   window.UserAction.resetMenu(userId);
+                        if (action === 'openMenu')    window.UserAction.openMenu(userId, $(this).data('username'));
+                        if (action === 'resetError')  window.UserAction.resetError(userId);
+                        if (action === 'impersonate') window.UserAction.impersonate(userId);
+                    });
+
+                    row.on('click', function() {
+                        const userIndex = $(this).data('user-index');
+                        const userData = window.Users.usersData[userIndex];
+                        window.UserModal.open('edit', userData);
+                    });
+
+                    tbody.append(row);
+                });
+            },
+
+            renderPagination: function() {
+                const totalPages = Math.ceil(this.totalItems / this.itemsPerPage);
+                const pagination = $('#pagination');
+                pagination.empty();
+
+                pagination.append(`
+                <li class="page-item ${this.currentPage === 1 ? 'disabled' : ''}">
+                    <a class="page-link" href="#" onclick="window.Users.changePage(1); return false;">
+                        <i class="bi bi-chevron-double-left"></i>
+                    </a>
+                </li>
+                <li class="page-item ${this.currentPage === 1 ? 'disabled' : ''}">
+                    <a class="page-link" href="#" onclick="window.Users.changePage(${this.currentPage - 1}); return false;">
+                        <i class="bi bi-chevron-left"></i>
+                    </a>
+                </li>
+            `);
+
+                const maxButtons = 5;
+                let startPage = Math.max(1, this.currentPage - Math.floor(maxButtons / 2));
+                let endPage = Math.min(totalPages, startPage + maxButtons - 1);
+
+                if (endPage - startPage + 1 < maxButtons) {
+                    startPage = Math.max(1, endPage - maxButtons + 1);
+                }
+
+                for (let i = startPage; i <= endPage; i++) {
+                    pagination.append(`
+                    <li class="page-item ${i === this.currentPage ? 'active' : ''}">
+                        <a class="page-link" href="#" onclick="window.Users.changePage(${i}); return false;">${i}</a>
+                    </li>
+                `);
+                }
+
+                pagination.append(`
+                <li class="page-item ${this.currentPage === totalPages || totalPages === 0 ? 'disabled' : ''}">
+                    <a class="page-link" href="#" onclick="window.Users.changePage(${this.currentPage + 1}); return false;">
+                        <i class="bi bi-chevron-right"></i>
+                    </a>
+                </li>
+                <li class="page-item ${this.currentPage === totalPages || totalPages === 0 ? 'disabled' : ''}">
+                    <a class="page-link" href="#" onclick="window.Users.changePage(${totalPages}); return false;">
+                        <i class="bi bi-chevron-double-right"></i>
+                    </a>
+                </li>
+            `);
+
+                const start = this.totalItems === 0 ? 0 : (this.currentPage - 1) * this.itemsPerPage + 1;
+                const end = Math.min(this.currentPage * this.itemsPerPage, this.totalItems);
+                $('#pageInfo').text(`${start} - ${end} of ${this.totalItems} items`);
+            },
+
+            changePage: function(page) {
+                const totalPages = Math.ceil(this.totalItems / this.itemsPerPage);
+                if (page < 1 || page > totalPages) return;
+                this.currentPage = page;
+                this.load();
+            },
+
+            exportExcel: function() {
+                const params = {};
+                const searchField = $('#searchField').val();
+                const searchValue = $('#searchValue').val();
+                const roleFilter = $('#roleFilter').val();
+                const classNameFilter = $('#classNameFilter').val();
+                const userStateCodeFilter = $('#userStateCodeFilter').val();
+                if (searchField) params.searchField = searchField;
+                if (searchValue) params.searchValue = searchValue;
+                if (roleFilter) params.roleFilter = roleFilter;
+                if (classNameFilter) params.classNameFilter = classNameFilter;
+                if (userStateCodeFilter) params.userStateCodeFilter = userStateCodeFilter;
+                if (this.sortBy) { params.sortBy = this.sortBy; params.sortDirection = this.sortDirection || 'ASC'; }
+                const qs = $.param(params);
+                window.location.href = API_BASE_URL + '/users/export' + (qs ? '?' + qs : '');
+            },
+
+            print: function() {
+                const columns = [
+                    { key: 'userId', label: '사용자ID' },
+                    { key: 'userName', label: '사용자명' },
+                    { key: 'className', label: '소속' },
+                    { key: 'roleName', label: '권한' },
+                    { key: 'positionName', label: '직위' },
+                    { key: 'userStateCode', label: '상태' },
+                    { key: 'lastUpdateDtime', label: '최종수정일시' }
+                ];
+                PrintUtil.print({ title: '사용자 목록', columns: columns, data: this.usersData });
+            },
+
+            updateSortIndicators: function() {
+                const headers = $('#userTable thead th.sortable');
+                headers.removeClass('sort-asc sort-desc');
+
+                if (!this.sortBy || !this.sortDirection) {
+                    return;
+                }
+
+                headers.filter(`[data-sort="${this.sortBy}"]`)
+                    .addClass(this.sortDirection === 'ASC' ? 'sort-asc' : 'sort-desc');
+            }
+        };
+
+        // ==================== UserModal Object ====================
+
+        window.UserModal = window.UserModal || {
+            mode: 'create',
+            currentUserId: null,
+            roles: [],
+
+            init: function() {
+                this.loadRoles();
+                this.bindValidationEvents();
+            },
+
+            /**
+             * 실시간 검증 이벤트 바인딩
+             */
+            bindValidationEvents: function() {
+                // 사용자ID 중복 체크 (debounce 적용)
+                $('#modalUserId').on('blur', debounce(function() {
+                    const userId = $(this).val().trim();
+                    if (userId && window.UserModal.mode === 'create') {
+                        window.UserModal.checkUserIdDuplicate(userId);
+                    }
+                }, 500));
+
+                // 이메일 중복 체크 (debounce 적용)
+                $('#modalEmail').on('blur', debounce(function() {
+                    const email = $(this).val().trim();
+                    if (email) {
+                        window.UserModal.checkEmailDuplicate(email);
+                    }
+                }, 500));
+
+                // 각 필드 검증
+                $('#modalUserId').on('blur', () => this.validateField('userId'));
+                $('#modalUserName').on('blur', () => this.validateField('userName'));
+                $('#modalPassword').on('blur', () => this.validateField('password'));
+                $('#modalEmail').on('blur', () => this.validateField('email'));
+                $('#modalPhone').on('blur', () => this.validateField('phone'));
+                $('#modalAccessIp').on('blur', () => this.validateField('accessIp'));
+                $('#modalUserSsn').on('blur', () => this.validateField('userSsn'));
+                $('#modalBranchNo').on('blur', () => this.validateField('branchNo'));
+                $('#modalRoleId').on('change', () => this.validateField('roleId'));
+            },
+
+            /**
+             * 필드 검증
+             */
+            validateField: function(fieldName) {
+                const fieldId = '#modal' + fieldName.charAt(0).toUpperCase() + fieldName.slice(1);
+                const value = $(fieldId).val()?.trim();
+                const errorId = fieldName + 'Error';
+
+                let errorMessage = null;
+
+                // 검증 실행
+                if (fieldName === 'password') {
+                    const isRequired = this.mode === 'create';
+                    errorMessage = Validators[fieldName](value, isRequired);
+                } else if (Validators[fieldName]) {
+                    errorMessage = Validators[fieldName](value);
+                }
+
+                // 에러 메시지 표시/숨김
+                if (errorMessage) {
+                    $('#' + errorId).text(errorMessage).addClass('visible');
+                    $(fieldId).closest('[class*="col-"]').addClass('has-error');
+                    return false;
+                } else {
+                    $('#' + errorId).removeClass('visible');
+                    $(fieldId).closest('[class*="col-"]').removeClass('has-error');
+                    return true;
+                }
+            },
+
+            /**
+             * 전체 폼 검증
+             */
+            validateForm: function() {
+                let isValid = true;
+
+                // 필수 필드 검증
+                const requiredFields = ['userId', 'userName', 'roleId'];
+
+                // 신규 생성 시에는 비밀번호 필수
+                if (this.mode === 'create') {
+                    requiredFields.push('password');
+                }
+
+                requiredFields.forEach(field => {
+                    if (!this.validateField(field)) {
+                        isValid = false;
+                    }
+                });
+
+                // 선택 필드 검증
+                const optionalFields = ['email', 'phone', 'accessIp', 'userSsn', 'branchNo'];
+                optionalFields.forEach(field => {
+                    this.validateField(field);
+                });
+
+                return isValid;
+            },
+
+            /**
+             * 사용자ID 중복 체크
+             */
+            checkUserIdDuplicate: function(userId) {
+                $.ajax({
+                    url: API_BASE_URL + '/users/check/username',
+                    method: 'GET',
+                    data: { userName: userId },
+                    success: (response) => {
+                        if (response.success && response.data === true) {
+                            $('#userIdError').text('이미 사용 중인 사용자ID입니다.').addClass('visible');
+                            $('#modalUserId').closest('.form-group').addClass('has-error');
+                        }
+                    },
+                    error: (xhr) => {
+                        console.error('Failed to check userId:', xhr);
+                    }
+                });
+            },
+
+            /**
+             * 이메일 중복 체크
+             */
+            checkEmailDuplicate: function(email) {
+                // 현재 사용자 이메일과 동일하면 체크하지 않음
+                if (this.mode === 'edit') {
+                    const currentUser = window.Users.usersData?.find(u => u.userId === this.currentUserId);
+                    if (currentUser && currentUser.email === email) {
+                        return;
+                    }
+                }
+
+                $.ajax({
+                    url: API_BASE_URL + '/users/check/email',
+                    method: 'GET',
+                    data: { email: email },
+                    success: (response) => {
+                        if (response.success && response.data === true) {
+                            $('#emailError').text('이미 사용 중인 이메일입니다.').addClass('visible');
+                            $('#modalEmail').closest('.form-group').addClass('has-error');
+                        }
+                    },
+                    error: (xhr) => {
+                        console.error('Failed to check email:', xhr);
+                    }
+                });
+            },
+
+            loadRoles: function(callback) {
+                if (this.roles.length > 0 && callback) {
+                    callback();
+                    return;
+                }
+
+                $.ajax({
+                    url: API_BASE_URL + '/roles',
+                    method: 'GET',
+                    success: (response) => {
+                        console.log('Roles loaded:', response);
+
+                        if (response.success && response.data) {
+                            this.roles = response.data;
+                            this.renderRoleOptions();
+
+                            if (callback) {
+                                callback();
+                            }
+                        } else {
+                            console.error('Failed to load roles:', response.message);
+                        }
+                    },
+                    error: (xhr) => {
+                        console.error('Failed to load roles:', xhr);
+                        const errorMsg = getUserFriendlyErrorMessage(xhr);
+                        Toast.warning('권한 목록을 불러올 수 없습니다.\n' + errorMsg);
+                    }
+                });
+            },
+
+            renderRoleOptions: function() {
+                const select = $('#modalRoleId');
+                select.find('option:not(:first)').remove();
+
+                this.roles.forEach(role => {
+                    // XSS 방지: escape 처리
+                    const roleId = HtmlUtils.escape(role.roleId);
+                    const roleName = HtmlUtils.escape(role.roleName);
+                    select.append(`
+                    <option value="${roleId}">${roleName} (${roleId})</option>
+                `);
+                });
+
+                // 검색 필터의 권한 select도 채우기
+                const roleFilter = $('#roleFilter');
+                roleFilter.find('option:not(:first)').remove();
+
+                this.roles.forEach(role => {
+                    const roleId = HtmlUtils.escape(role.roleId);
+                    const roleName = HtmlUtils.escape(role.roleName);
+                    roleFilter.append(`
+                    <option value="${roleId}">${roleName} (${roleId})</option>
+                `);
+                });
+            },
+
+            open: function(mode, userData) {
+                this.mode = mode;
+                this.clearErrors(); // 에러 메시지 초기화
+
+                if (mode === 'create') {
+                    $('#modalTitle').text('사용자 등록');
+                    $('#btnDelete').addClass('d-hidden');
+                    $('#modalUserId').prop('disabled', false);
+
+                    this.loadRoles(() => {
+                        this.clearForm();
+                    });
+                } else {
+                    $('#modalTitle').text('사용자 상세');
+                    $('#btnDelete').removeClass('d-hidden');
+                    $('#modalUserId').prop('disabled', true);
+
+                    this.loadRoles(() => {
+                        this.loadData(userData);
+                    });
+                }
+
+                bootstrap.Modal.getOrCreateInstance(document.getElementById('userModal')).show();
+            },
+
+            close: function() {
+                bootstrap.Modal.getInstance(document.getElementById('userModal')).hide();
+                this.clearErrors();
+            },
+
+            clearForm: function() {
+                $('#modalUserId').val('');
+                $('#modalUserName').val('');
+                $('#modalPassword').val('');
+                $('#modalAccessIp').val('');
+                $('#modalUserSsn').val('');
+                $('#modalBranchNo').val('');
+                $('#modalPhone').val('');
+                $('#modalEmail').val('');
+                $('#modalRoleId').val('');
+                $('#modalClassName').val('');
+                $('#modalPositionName').val('');
+                $('#modalUserStateCode').val('');
+                this.clearErrors();
+            },
+
+            /**
+             * 에러 메시지 초기화
+             */
+            clearErrors: function() {
+                $('.error-message').removeClass('visible');
+                $('.form-group').removeClass('has-error');
+            },
+
+            loadData: function(userData) {
+                this.currentUserId = userData.userId;
+
+                $('#modalUserId').val(userData.userId || '');
+                $('#modalUserName').val(userData.userName || '');
+                $('#modalPassword').val('');
+                $('#modalAccessIp').val(userData.accessIp || '');
+                $('#modalUserSsn').val(userData.userSsn || '');
+                $('#modalBranchNo').val(userData.branchNo || '');
+                $('#modalPhone').val(userData.phone || '');
+                $('#modalEmail').val(userData.email || '');
+                $('#modalRoleId').val(userData.roleId || '');
+                $('#modalClassName').val(userData.className || '');
+                $('#modalPositionName').val(userData.positionName || '');
+                $('#modalUserStateCode').val(userData.userStateCode || '');
+
+                this.clearErrors();
+            },
+
+            save: function() {
+                // 폼 검증
+                if (!this.validateForm()) {
+                    Toast.info('입력 항목을 확인해주세요.');
+                    return;
+                }
+
+                const userData = {
+                    userId: $('#modalUserId').val().trim(),
+                    userName: $('#modalUserName').val().trim(),
+                    password: $('#modalPassword').val(),
+                    accessIp: $('#modalAccessIp').val().trim(),
+                    roleId: $('#modalRoleId').val(),
+                    userSsn: $('#modalUserSsn').val().trim(),
+                    branchNo: $('#modalBranchNo').val().trim(),
+                    phone: $('#modalPhone').val().trim(),
+                    email: $('#modalEmail').val().trim(),
+                    className: $('#modalClassName').val(),
+                    positionName: $('#modalPositionName').val().trim(),
+                    userStateCode: $('#modalUserStateCode').val()
+                };
+
+                // 수정 모드에서 비밀번호가 비어있으면 제외
+                if (this.mode === 'edit' && !userData.password) {
+                    delete userData.password;
+                }
+
+                const method = this.mode === 'create' ? 'POST' : 'PUT';
+                const url = this.mode === 'create'
+                    ? API_BASE_URL + '/users'
+                    : API_BASE_URL + '/users/' + encodeURIComponent(this.currentUserId);
+
+                $.ajax({
+                    url: url,
+                    method: method,
+                    contentType: 'application/json',
+                    data: JSON.stringify(userData),
+                    success: (response) => {
+                        if (response.success) {
+                            Toast.success(this.mode === 'create' ? '사용자가 등록되었습니다.' : '사용자가 수정되었습니다.');
+                            this.close();
+                            if (typeof window.Users !== 'undefined' && window.Users.load) {
+                                window.Users.load();
+                            }
+                        } else {
+                            const errorMsg = getUserFriendlyErrorMessage(response);
+                            Toast.error('저장 실패\n' + errorMsg);
+                        }
+                    },
+                    error: (xhr) => {
+                        const errorMsg = getUserFriendlyErrorMessage(xhr);
+                        Toast.error('저장 실패\n' + errorMsg);
+                    }
+                });
+            },
+
+            delete: function() {
+                Toast.confirm('정말 삭제하시겠습니까?\n이 작업은 되돌릴 수 없습니다.', () => {
+                    $.ajax({
+                        url: API_BASE_URL + '/users/' + encodeURIComponent(this.currentUserId),
+                        method: 'DELETE',
+                        success: (response) => {
+                            if (response.success) {
+                                Toast.success('사용자가 삭제되었습니다.');
+                                this.close();
+                                if (typeof window.Users !== 'undefined' && window.Users.load) {
+                                    window.Users.load();
+                                }
+                            } else {
+                                const errorMsg = getUserFriendlyErrorMessage(response);
+                                Toast.error('삭제 실패\n' + errorMsg);
+                            }
+                        },
+                        error: (xhr) => {
+                            const errorMsg = getUserFriendlyErrorMessage(xhr);
+                            Toast.error('삭제 실패\n' + errorMsg);
+                        }
+                    });
+                });
+            }
+        };
+
+        // ==================== UserAction Object ====================
+
+        window.UserAction = window.UserAction || {
+
+            resetMenu: function(userId) {
+                Toast.confirm(`[${userId}]의 메뉴 목록을 초기화 하겠습니까?`, () => {
+                    $.ajax({
+                        url: API_BASE_URL + '/user-menus/' + encodeURIComponent(userId),
+                        method: 'DELETE',
+                        success: (response) => {
+                            if (response.success) {
+                                Toast.success('메뉴가 초기화되었습니다.');
+                                window.Users.load();
+                            } else {
+                                Toast.error('초기화 실패\n' + getUserFriendlyErrorMessage(response));
+                            }
+                        },
+                        error: (xhr) => {
+                            Toast.error('초기화 실패\n' + getUserFriendlyErrorMessage(xhr));
+                        }
+                    });
+                });
+            },
+
+            openMenu: function(userId, userName) {
+                window.UserMenuModal.open(userId, userName);
+            },
+
+            impersonate: function(userId) {
+                Toast.confirm(`[${userId}] 사용자로 로그인 하시겠습니까?`, () => {
+                    $.ajax({
+                        url: API_BASE_URL + '/users/' + encodeURIComponent(userId) + '/impersonate',
+                        method: 'POST',
+                        success: (response) => {
+                            if (response.success) {
+                                window.location.href = '/';
+                            } else {
+                                Toast.error('전환 실패\n' + getUserFriendlyErrorMessage(response));
+                            }
+                        },
+                        error: (xhr) => {
+                            Toast.error('전환 실패\n' + getUserFriendlyErrorMessage(xhr));
+                        }
+                    });
+                });
+            },
+
+            resetError: function(userId) {
+                Toast.confirm('사용자 로그인 오류 횟수를 초기화 하시겠습니까?', () => {
+                    $.ajax({
+                        url: API_BASE_URL + '/users/' + encodeURIComponent(userId) + '/error-count/reset',
+                        method: 'PUT',
+                        success: (response) => {
+                            if (response.success) {
+                                Toast.success('사용자 패스워드는 직번으로 초기화되었습니다.');
+                                window.Users.load();
+                            } else {
+                                Toast.error('해제 실패\n' + getUserFriendlyErrorMessage(response));
+                            }
+                        },
+                        error: (xhr) => {
+                            Toast.error('해제 실패\n' + getUserFriendlyErrorMessage(xhr));
+                        }
+                    });
+                });
+            }
+        };
+
+        // ==================== UserMenuModal Object ====================
+
+        window.UserMenuModal = window.UserMenuModal || {
+            currentUserId: null,
+            allMenus: [],
+            allMenusMap: {},
+            userMenuState: [],
+            availableSortBy: null,
+            availableSortDir: null,
+            assignedSortBy: null,
+            assignedSortDir: null,
+
+            open: function(userId, userName) {
+                this.currentUserId = userId;
+                this.availableSortBy = null;
+                this.availableSortDir = null;
+                this.assignedSortBy = null;
+                this.assignedSortDir = null;
+
+                $('#umModalTitle').text('사용자 메뉴 권한 관리 - ' + HtmlUtils.escape(userId));
+                $('#umSearchValue').val('');
+                this.loadData();
+                this.bindSearchEvents();
+                this.bindSortEvents();
+                bootstrap.Modal.getOrCreateInstance(document.getElementById('userMenuModal')).show();
+            },
+
+            close: function() {
+                bootstrap.Modal.getInstance(document.getElementById('userMenuModal')).hide();
+                this.currentUserId = null;
+            },
+
+            loadData: function() {
+                var self = this;
+                $.ajax({
+                    url: API_BASE_URL + '/menus/active',
+                    method: 'GET',
+                    success: function(allResp) {
+                        if (allResp.success && allResp.data) {
+                            self.allMenus = allResp.data;
+                            self.allMenusMap = {};
+                            self.allMenus.forEach(function(m) { self.allMenusMap[m.menuId] = m; });
+                        }
+                        $.ajax({
+                            url: API_BASE_URL + '/user-menus/user/' + encodeURIComponent(self.currentUserId),
+                            method: 'GET',
+                            success: function(userResp) {
+                                if (userResp.success) {
+                                    self.userMenuState = (userResp.data || []).map(function(um) {
+                                        return {
+                                            menuId: um.menuId,
+                                            menuPath: self.buildMenuPath(um.menuId) || um.menuName || um.menuId,
+                                            authCode: um.authCode || 'R'
+                                        };
+                                    });
+                                }
+                                self.renderBothPanels();
+                            },
+                            error: function(xhr) {
+                                Toast.warning('사용자 메뉴를 불러올 수 없습니다.');
+                            }
+                        });
+                    },
+                    error: function(xhr) {
+                        Toast.warning('메뉴 목록을 불러올 수 없습니다.');
+                    }
+                });
+            },
+
+            buildMenuPath: function(menuId) {
+                var parts = [];
+                var currentId = menuId;
+                var visited = {};
+                while (currentId && !visited[currentId]) {
+                    visited[currentId] = true;
+                    var menu = this.allMenusMap[currentId];
+                    if (!menu) break;
+                    parts.unshift(menu.menuName);
+                    currentId = menu.priorMenuId;
+                }
+                return parts.join(' > ');
+            },
+
+            renderBothPanels: function() {
+                this.renderAvailableMenus();
+                this.renderAssignedMenus();
+                $('#umAvailableSelectAll').prop('checked', false);
+                $('#umAssignedSelectAll').prop('checked', false);
+            },
+
+            getAvailableMenus: function() {
+                var userMenuIds = {};
+                this.userMenuState.forEach(function(um) { userMenuIds[um.menuId] = true; });
+                return this.allMenus.filter(function(m) { return !userMenuIds[m.menuId]; });
+            },
+
+            renderAvailableMenus: function() {
+                var tbody = $('#umAvailableBody');
+                tbody.empty();
+
+                var menus = this.sortMenuList(this.getAvailableMenus(), this.availableSortBy, this.availableSortDir);
+
+                if (menus.length === 0) {
+                    tbody.append('<tr class="empty-row"><td colspan="3" class="text-center py-4 text-muted">추가 가능한 메뉴가 없습니다.</td></tr>');
+                    return;
+                }
+
+                var self = this;
+                menus.forEach(function(menu) {
+                    var id = HtmlUtils.escape(menu.menuId);
+                    var path = HtmlUtils.escape(self.buildMenuPath(menu.menuId) || menu.menuName || menu.menuId);
+                    tbody.append(
+                        '<tr data-menu-id="' + id + '">'
+                        + '<td class="text-center col-w-40"><input type="checkbox" class="um-available-checkbox" data-menu-id="' + id + '"></td>'
+                        + '<td class="col-w-160">' + id + '</td>'
+                        + '<td class="text-start">' + path + '</td>'
+                        + '</tr>'
+                    );
+                });
+
+                this.filterAvailableMenus();
+            },
+
+            renderAssignedMenus: function() {
+                var tbody = $('#umUserBody');
+                tbody.empty();
+
+                var menus = this.sortMenuList(this.userMenuState, this.assignedSortBy, this.assignedSortDir);
+
+                if (menus.length === 0) {
+                    tbody.append('<tr class="empty-row"><td colspan="5" class="text-center py-4 text-muted">할당된 메뉴가 없습니다.</td></tr>');
+                    return;
+                }
+
+                menus.forEach(function(um) {
+                    var id = HtmlUtils.escape(um.menuId);
+                    var path = HtmlUtils.escape(um.menuPath || um.menuId);
+                    var isRead = um.authCode === 'R';
+                    var isWrite = um.authCode === 'W';
+
+                    tbody.append(
+                        '<tr data-menu-id="' + id + '">'
+                        + '<td class="text-center col-w-40"><input type="checkbox" class="um-assigned-checkbox" data-menu-id="' + id + '"></td>'
+                        + '<td class="col-w-140">' + id + '</td>'
+                        + '<td class="text-start">' + path + '</td>'
+                        + '<td class="text-center col-w-70"><input type="radio" class="form-check-input um-permission-radio" name="um-permission-' + id + '" value="R" data-menu-id="' + id + '"' + (isRead ? ' checked' : '') + '></td>'
+                        + '<td class="text-center col-w-80"><input type="radio" class="form-check-input um-permission-radio" name="um-permission-' + id + '" value="W" data-menu-id="' + id + '"' + (isWrite ? ' checked' : '') + '></td>'
+                        + '</tr>'
+                    );
+                });
+
+                this.bindRadioEvents();
+            },
+
+            toggleSelectAll: function(panel, checkbox) {
+                if (panel === 'available') {
+                    $('#umAvailableBody tr[data-menu-id]:visible .um-available-checkbox').prop('checked', checkbox.checked);
+                } else {
+                    $('#umUserBody tr[data-menu-id]:visible .um-assigned-checkbox').prop('checked', checkbox.checked);
+                }
+            },
+
+            addSelectedMenus: function() {
+                var self = this;
+                var added = false;
+                $('.um-available-checkbox:checked').each(function() {
+                    var menuId = $(this).data('menu-id').toString();
+                    if (self.userMenuState.some(function(um) { return um.menuId === menuId; })) return;
+                    self.userMenuState.push({
+                        menuId: menuId,
+                        menuPath: self.buildMenuPath(menuId) || (self.allMenusMap[menuId] && self.allMenusMap[menuId].menuName) || menuId,
+                        authCode: 'R'
+                    });
+                    added = true;
+                });
+                if (!added) { Toast.warning('추가할 메뉴를 선택해주세요.'); return; }
+                this.renderBothPanels();
+            },
+
+            removeSelectedMenus: function() {
+                var toRemove = {};
+                $('.um-assigned-checkbox:checked').each(function() {
+                    toRemove[$(this).data('menu-id').toString()] = true;
+                });
+                if (Object.keys(toRemove).length === 0) { Toast.warning('제거할 메뉴를 선택해주세요.'); return; }
+                this.userMenuState = this.userMenuState.filter(function(um) { return !toRemove[um.menuId]; });
+                this.renderBothPanels();
+            },
+
+            bindRadioEvents: function() {
+                var self = this;
+                $('.um-permission-radio').off('change').on('change', function() {
+                    var menuId = $(this).data('menu-id').toString();
+                    var value = $(this).val();
+                    var um = self.userMenuState.find(function(m) { return m.menuId === menuId; });
+                    if (um) { um.authCode = value; }
+                });
+            },
+
+            bindSortEvents: function() {
+                $('#umAvailableTable thead th[data-sort]').off('click').on('click', function() {
+                    var col = $(this).data('sort');
+                    if (UserMenuModal.availableSortBy === col) {
+                        UserMenuModal.availableSortDir = UserMenuModal.availableSortDir === 'ASC' ? 'DESC' : null;
+                        if (!UserMenuModal.availableSortDir) UserMenuModal.availableSortBy = null;
+                    } else { UserMenuModal.availableSortBy = col; UserMenuModal.availableSortDir = 'ASC'; }
+                    UserMenuModal.renderAvailableMenus();
+                });
+                $('#umUserTable thead th[data-sort]').off('click').on('click', function() {
+                    var col = $(this).data('sort');
+                    if (UserMenuModal.assignedSortBy === col) {
+                        UserMenuModal.assignedSortDir = UserMenuModal.assignedSortDir === 'ASC' ? 'DESC' : null;
+                        if (!UserMenuModal.assignedSortDir) UserMenuModal.assignedSortBy = null;
+                    } else { UserMenuModal.assignedSortBy = col; UserMenuModal.assignedSortDir = 'ASC'; }
+                    UserMenuModal.renderAssignedMenus();
+                });
+            },
+
+            sortMenuList: function(menus, sortBy, sortDir) {
+                if (!sortBy || !sortDir) return menus;
+                return [].concat(menus).sort(function(a, b) {
+                    var valA = (a[sortBy] || '').toString().toLowerCase();
+                    var valB = (b[sortBy] || '').toString().toLowerCase();
+                    var cmp = valA.localeCompare(valB, 'ko');
+                    return sortDir === 'ASC' ? cmp : -cmp;
+                });
+            },
+
+            bindSearchEvents: function() {
+                $('#umSearchValue').off('input').on('input', function() { UserMenuModal.filterAvailableMenus(); });
+                $('#umSearchField').off('change').on('change', function() { UserMenuModal.filterAvailableMenus(); });
+            },
+
+            filterAvailableMenus: function() {
+                var searchField = $('#umSearchField').val();
+                var keyword = ($('#umSearchValue').val() || '').toLowerCase().trim();
+                var visibleCount = 0;
+                $('#umAvailableBody tr[data-menu-id]').each(function() {
+                    var menuId = ($(this).data('menu-id') || '').toString().toLowerCase();
+                    var menuName = $(this).find('td').eq(2).text().toLowerCase();
+                    var target = searchField === 'menuId' ? menuId : menuName;
+                    var visible = !keyword || target.includes(keyword);
+                    $(this).toggle(visible);
+                    if (visible) visibleCount++;
+                });
+
+                // 필터 결과가 없을 때 빈 상태 메시지 표시
+                $('#umAvailableBody tr.filter-empty-row').remove();
+                if (keyword && visibleCount === 0) {
+                    $('#umAvailableBody').append(
+                        '<tr class="filter-empty-row"><td colspan="3" class="text-center py-4 text-muted">추가 가능한 메뉴가 없습니다.</td></tr>'
+                    );
+                }
+
+                $('#umAvailableSelectAll').prop('checked', false);
+            },
+
+            save: function() {
+                var menus = this.userMenuState.map(function(um) {
+                    return { menuId: um.menuId, authCode: um.authCode };
+                });
+
+                var self = this;
+                Toast.confirm(menus.length + '개의 메뉴 권한을 저장하시겠습니까?', function() {
+                    $.ajax({
+                        url: API_BASE_URL + '/user-menus/' + encodeURIComponent(self.currentUserId) + '/batch',
+                        method: 'PUT',
+                        contentType: 'application/json',
+                        data: JSON.stringify({ menus: menus }),
+                        success: function(response) {
+                            if (response.success) {
+                                Toast.success('처리가 완료되었습니다.');
+                                self.close();
+                                window.Users.load();
+                            } else {
+                                Toast.error('저장 실패');
+                            }
+                        },
+                        error: function(xhr) {
+                            var errorMsg = xhr.responseJSON ? xhr.responseJSON.message : '저장 실패';
+                            Toast.error(errorMsg);
+                        }
+                    });
+                });
+            }
+        };
+
+        // ==================== Event Bindings ====================
+
+        // Bind toolbar buttons
+        $('#btnExcel').off('click').on('click', function() {
+            window.Users.exportExcel();
+        });
+
+        $('#btnPrint').off('click').on('click', function() {
+            window.Users.print();
+        });
+
+        $('#btnRefresh').off('click').on('click', function() {
+            window.Users.load();
+        });
+
+        $('#userTable thead th').off('click').on('click', function() {
+            const sortKey = $(this).data('sort');
+            if (!sortKey) {
+                return;
+            }
+
+            // 3단계 순환: ASC → DESC → DEFAULT
+            if (window.Users.sortBy === sortKey) {
+                // 같은 컬럼 클릭: ASC → DESC → null (기본 정렬)
+                if (window.Users.sortDirection === 'ASC') {
+                    window.Users.sortDirection = 'DESC';
+                } else if (window.Users.sortDirection === 'DESC') {
+                    // 기본 정렬로 복귀
+                    window.Users.sortBy = null;
+                    window.Users.sortDirection = null;
+                }
+            } else {
+                // 다른 컬럼 클릭: 새로운 컬럼으로 ASC 시작
+                window.Users.sortBy = sortKey;
+                window.Users.sortDirection = 'ASC';
+            }
+            window.Users.currentPage = 1;
+            window.Users.updateSortIndicators();
+            window.Users.load();
+        });
+
+        // limitRows 변경 시 itemsPerPage만 업데이트 (자동 조회 안 함)
+        $('#limitRows').change(function() {
+            window.Users.itemsPerPage = parseInt($(this).val()) || 20;
+        });
+
+        // ==================== Initialization ====================
+
+        // 페이지 로드 시 권한 목록 초기화
+        window.UserModal.init();
+
+        // 페이지 재진입 시 UI와 상태 동기화 (옵션 1: 상태를 UI 값으로 리셋)
+        window.Users.itemsPerPage = parseInt($('#limitRows').val()) || 20;
+        window.Users.currentPage = 1;
+        $('#userTable thead th[data-sort]').addClass('sortable');
+        window.Users.updateSortIndicators();
+
+        // 페이지 로드 시 초기 데이터 조회
+        window.Users.load();
+
+        // 캐시에서 복원 시(tab:activated) 사용자 목록 최신화
+        $('[data-tab-page]').off('tab:activated.userManage').on('tab:activated.userManage', function () {
+            window.Users.load();
+        });
+    </script>
+</th:block>
+</body>
+</html>

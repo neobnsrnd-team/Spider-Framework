@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+
+<!-- User Add/Edit Modal - IMPROVED VERSION with HTML5 Validation -->
+<div th:fragment="modal" class="modal fade" id="userModal" tabindex="-1" aria-hidden="true"
+     data-bs-backdrop="static" data-bs-keyboard="false">
+    <div class="modal-dialog modal-dialog-centered sp-modal-lg">
+    <div class="modal-content">
+        <div class="modal-header py-2">
+            <h6 class="modal-title" id="modalTitle">사용자 상세</h6>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+            <div class="modal-section">
+                <div class="section-header">
+                    <i class="bi bi-caret-right-fill"></i>
+                    <span>상세정보</span>
+                </div>
+
+                    <div class="row g-2">
+                        <div class="col-md-6">
+                            <label class="form-label" for="modalUserId">
+                                사용자ID
+                                <span class="required">*</span>
+                            </label>
+                            <input type="text"
+                                   id="modalUserId"
+                                   class="form-control form-control-sm"
+                                   required
+                                   maxlength="50"
+                                   pattern="^[a-zA-Z0-9_-]+$"
+                                   title="영문, 숫자, 언더스코어(_), 하이픈(-)만 사용 가능합니다"
+                                   aria-required="true" />
+                            <span class="error-message" id="userIdError"></span>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label" for="modalUserName">
+                                사용자명
+                                <span class="required">*</span>
+                            </label>
+                            <input type="text"
+                                   id="modalUserName"
+                                   class="form-control form-control-sm"
+                                   required
+                                   maxlength="50"
+                                   title="사용자명을 입력하세요 (최대 50자)"
+                                   aria-required="true" />
+                            <span class="error-message" id="userNameError"></span>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label" for="modalPassword">패스워드</label>
+                            <input type="password"
+                                   id="modalPassword"
+                                   class="form-control form-control-sm"
+                                   maxlength="50"
+                                   pattern="^(?=.*[A-Za-z])(?=.*\d)(?=.*[@$!%*#?&])[A-Za-z\d@$!%*#?&]{8,}$"
+                                   title="8자 이상, 영문/숫자/특수문자 조합"
+                                   placeholder="변경 시에만 입력 (8자 이상)"
+                                   autocomplete="new-password" />
+                            <span class="error-message" id="passwordError"></span>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label" for="modalAccessIp">접근 허용 IP</label>
+                            <input type="text"
+                                   id="modalAccessIp"
+                                   class="form-control form-control-sm"
+                                   maxlength="15"
+                                   pattern="^(\*|((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?))$"
+                                   title="올바른 IP 주소 형식을 입력하세요 (예: 192.168.1.1 또는 *)"
+                                   placeholder="* (모든 IP 허용)" />
+                            <span class="error-message" id="accessIpError"></span>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label" for="modalUserSsn">직번</label>
+                            <input type="text"
+                                   id="modalUserSsn"
+                                   class="form-control form-control-sm"
+                                   maxlength="13"
+                                   pattern="^\d{13}$"
+                                   title="13자리 숫자를 입력하세요"
+                                   inputmode="numeric" />
+                            <span class="error-message" id="userSsnError"></span>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label" for="modalBranchNo">지점코드</label>
+                            <input type="text"
+                                   id="modalBranchNo"
+                                   class="form-control form-control-sm"
+                                   maxlength="10"
+                                   pattern="^\d+$"
+                                   title="숫자만 입력 가능합니다"
+                                   inputmode="numeric" />
+                            <span class="error-message" id="branchNoError"></span>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label" for="modalPhone">연락처(-생략)</label>
+                            <input type="tel"
+                                   id="modalPhone"
+                                   class="form-control form-control-sm"
+                                   maxlength="13"
+                                   pattern="^\d{10,11}$"
+                                   title="10-11자리 숫자를 입력하세요 (하이픈 제외)"
+                                   placeholder="01012345678"
+                                   inputmode="numeric" />
+                            <span class="error-message" id="phoneError"></span>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label" for="modalEmail">이메일</label>
+                            <input type="email"
+                                   id="modalEmail"
+                                   class="form-control form-control-sm"
+                                   maxlength="100"
+                                   title="유효한 이메일 주소를 입력하세요"
+                                   placeholder="example@domain.com" />
+                            <span class="error-message" id="emailError"></span>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label" for="modalRoleId">
+                                권한명
+                                <span class="required">*</span>
+                            </label>
+                            <select id="modalRoleId"
+                                    class="form-select form-select-sm"
+                                    required
+                                    aria-required="true">
+                                <option value="">선택</option>
+                            </select>
+                            <span class="error-message" id="roleIdError"></span>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label" for="modalClassName">직급</label>
+                            <select id="modalClassName" class="form-select form-select-sm">
+                                <th:block th:replace="~{pages/my-info-manage/my-info-manage-classname-options :: classNameOptions}"></th:block>
+                            </select>
+                            <span class="error-message" id="classNameError"></span>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label" for="modalPositionName">부서명</label>
+                            <input type="text"
+                                   id="modalPositionName"
+                                   class="form-control form-control-sm"
+                                   maxlength="100"
+                                   title="부서명을 입력하세요 (최대 100자)" />
+                            <span class="error-message" id="positionNameError"></span>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label" for="modalUserStateCode">사용자상태</label>
+                            <select id="modalUserStateCode" class="form-select form-select-sm">
+                                <th:block th:replace="~{pages/user-manage/user-manage-state-options :: userStateOptions}"></th:block>
+                            </select>
+                            <span class="error-message" id="userStateCodeError"></span>
+                        </div>
+                    </div>
+            </div>
+        </div>
+        <div class="modal-footer py-2">
+            <button th:if="${userAuthorities != null and userAuthorities.contains('USER:W')}"
+                    class="btn btn-danger btn-sm me-auto d-hidden" id="btnDelete" onclick="UserModal.delete()">
+                <i class="bi bi-trash"></i> 삭제
+            </button>
+            <div class="flex-grow-1"></div>
+            <button class="btn btn-secondary btn-sm" data-bs-dismiss="modal"><i class="bi bi-x-lg"></i> 닫기</button>
+            <button th:if="${userAuthorities != null and userAuthorities.contains('USER:W')}"
+                    class="btn btn-primary btn-sm" onclick="UserModal.save()"><i class="bi bi-floppy"></i> 저장</button>
+        </div>
+    </div>
+    </div>
+</div>
+
+
+</body>
+</html>

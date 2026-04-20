@@ -12,9 +12,15 @@
 export const PATHS = {
   LOGIN: "/login",
 
-  /** Admin 미리보기 전용 경로 — 인증 없이 접근 가능 */
+  /** 긴급공지 미리보기 전용 경로 — 배포 전 초안 확인, 인증 없이 접근 가능 */
   PREVIEW: {
     NOTICE: "/preview/notice",
+  },
+
+  /** 승인 완료된 React 컴포넌트 뷰어 경로 — 인증 없이 접근 가능 */
+  VIEWER: {
+    /** 승인된 React 컴포넌트 뷰어. :codeId = FWK_RPS_CODE_HIS.CODE_ID */
+    REACT: "/react/viewer/:codeId",
   },
 
   CARD: {

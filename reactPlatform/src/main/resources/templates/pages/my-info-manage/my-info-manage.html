@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<div th:fragment="content">
+    <!-- Include Page Content Layout Styles -->
+
+    <!-- Profile Section Header -->
+    <div class="page-header">
+        <h4 class="page-title">
+            <i class="bi bi-person-gear"></i>
+            상세정보
+        </h4>
+    </div>
+
+    <!-- Profile Form -->
+    <div class="content-box">
+        <table class="table table-bordered table-sm mb-0" style="table-layout: fixed;">
+            <colgroup>
+                <col style="width: 12%;" />
+                <col style="width: 38%;" />
+                <col style="width: 12%;" />
+                <col style="width: 38%;" />
+            </colgroup>
+            <tbody>
+                <!-- Row 1: 사용자ID, 사용자명 -->
+                <tr>
+                    <th class="table-light align-middle">사용자ID</th>
+                    <td>
+                        <input type="text" id="profileUserId"
+                               class="form-control form-control-sm"
+                               maxlength="20" />
+                    </td>
+                    <th class="table-light align-middle">
+                        사용자명 <span class="required">*</span>
+                    </th>
+                    <td>
+                        <input type="text" id="profileUserName"
+                               class="form-control form-control-sm"
+                               required maxlength="50"
+                               title="사용자명을 입력하세요 (최대 50자)"
+                               aria-required="true" />
+                        <span class="error-message" id="userNameError"></span>
+                    </td>
+                </tr>
+                <!-- Row 2: 비밀번호, 비밀번호 확인 -->
+                <tr>
+                    <th class="table-light align-middle">비밀번호</th>
+                    <td>
+                        <input type="password" id="profilePassword"
+                               class="form-control form-control-sm"
+                               maxlength="50"
+                               title="변경 시 새 비밀번호 입력 (8자 이상, 영문/숫자/특수문자)"
+                               autocomplete="new-password" />
+                        <span class="error-message" id="passwordError"></span>
+                    </td>
+                    <th class="table-light align-middle">
+                        비밀번호 확인 <span class="required">*</span>
+                    </th>
+                    <td>
+                        <input type="password" id="profileConfirmPassword"
+                               class="form-control form-control-sm"
+                               required maxlength="50"
+                               title="현재 비밀번호를 입력하세요"
+                               placeholder="수정 시 비밀번호 입력 필수"
+                               autocomplete="current-password" />
+                        <span class="error-message" id="confirmPasswordError"></span>
+                    </td>
+                </tr>
+                <!-- Row 3: 연락처, 이메일 -->
+                <tr>
+                    <th class="table-light align-middle">연락처(-생략)</th>
+                    <td>
+                        <input type="tel" id="profilePhone"
+                               class="form-control form-control-sm"
+                               maxlength="13" pattern="^\d{10,11}$"
+                               title="10-11자리 숫자를 입력하세요 (하이픈 제외)"
+                               placeholder="01012345678" inputmode="numeric" />
+                        <span class="error-message" id="phoneError"></span>
+                    </td>
+                    <th class="table-light align-middle">이메일</th>
+                    <td>
+                        <input type="email" id="profileEmail"
+                               class="form-control form-control-sm"
+                               maxlength="100"
+                               title="유효한 이메일 주소를 입력하세요"
+                               placeholder="example@domain.com" />
+                        <span class="error-message" id="emailError"></span>
+                    </td>
+                </tr>
+                <!-- Row 4: 주소 -->
+                <tr>
+                    <th class="table-light align-middle">주소</th>
+                    <td colspan="3">
+                        <input type="text" id="profileAddress"
+                               class="form-control form-control-sm"
+                               maxlength="200"
+                               title="주소를 입력하세요 (최대 200자)"
+                               placeholder="주소를 입력하세요" />
+                        <span class="error-message" id="addressError"></span>
+                    </td>
+                </tr>
+                <!-- Row 5: 부서명, 직급 -->
+                <tr>
+                    <th class="table-light align-middle">부서명</th>
+                    <td>
+                        <input type="text" id="profilePositionName"
+                               class="form-control form-control-sm" disabled readonly />
+                    </td>
+                    <th class="table-light align-middle">직급</th>
+                    <td>
+                        <select id="profileClassName" class="form-select form-select-sm">
+                            <th:block th:replace="~{pages/my-info-manage/my-info-manage-classname-options :: classNameOptions}"></th:block>
+                        </select>
+                        <span class="error-message" id="classNameError"></span>
+                    </td>
+                </tr>
+                <!-- Row 6: 역할, 사용자상태 -->
+                <tr>
+                    <th class="table-light align-middle">역할</th>
+                    <td>
+                        <input type="text" id="profileRoleName"
+                               class="form-control form-control-sm" disabled readonly />
+                    </td>
+                    <th class="table-light align-middle">사용자상태</th>
+                    <td>
+                        <input type="text" id="profileUserStateName"
+                               class="form-control form-control-sm" disabled readonly />
+                    </td>
+                </tr>
+                <!-- Row 7: 최근수정시간, 최근수정자ID -->
+                <tr>
+                    <th class="table-light align-middle">최근수정시간</th>
+                    <td>
+                        <input type="text" id="profileLastUpdateDtime"
+                               class="form-control form-control-sm" disabled readonly />
+                    </td>
+                    <th class="table-light align-middle">최근수정자ID</th>
+                    <td>
+                        <input type="text" id="profileLastUpdateUserId"
+                               class="form-control form-control-sm" disabled readonly />
+                    </td>
+                </tr>
+                <!-- Row 8: 접근IP -->
+                <tr>
+                    <th class="table-light align-middle">접근 허용 IP</th>
+                    <td>
+                        <input type="text" id="profileAccessIp"
+                               class="form-control form-control-sm" disabled readonly />
+                    </td>
+                    <td colspan="2"></td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Bottom Action Buttons -->
+    <div class="action-buttons mt-3 text-end"
+         th:if="${userAuthorities != null and userAuthorities.contains('PROFILE:W')}">
+        <button class="btn btn-primary" id="btnSaveProfile" onclick="Profile.save()">
+            <i class="bi bi-floppy"></i> 저장
+        </button>
+    </div>
+
+    <!-- Scripts -->
+    <th:block th:replace="~{pages/my-info-manage/my-info-manage-script :: script}" />
+
+
+</div>
+</body>
+</html>

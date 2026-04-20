@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<!--
+    공통 페이지 콘텐츠 레이아웃
+    - searchFragment: 검색 영역 프래그먼트
+    - tableFragment: 테이블 영역 프래그먼트
+    - buttonsFragment: 하단 버튼 영역 프래그먼트
+    - modalsFragment: 모달 영역 프래그먼트
+    - scriptFragment: 스크립트 영역 프래그먼트
+-->
+<div th:fragment="pageLayout(searchFragment, tableFragment, buttonsFragment, modalsFragment, scriptFragment)">
+    <!-- Search Section Header -->
+    <div class="page-header">
+        <h4 class="page-title">
+            <i class="bi bi-exclamation-circle-fill text-danger"></i>
+            검색조건
+        </h4>
+    </div>
+
+    <!-- Search Box -->
+    <th:block th:replace="${searchFragment}" />
+
+    <!-- List Section Header + Toolbar (같은 줄) -->
+    <div class="page-header mt-3">
+        <h4 class="page-title">
+            <i class="bi bi-exclamation-circle-fill text-danger"></i>
+            리스트
+        </h4>
+        <div class="page-header-actions">
+            <span id="toolbarCountdown" class="d-hidden me-2 fs-sm text-body-secondary">
+                <i class="bi bi-arrow-clockwise text-primary me-1"></i>
+                <span id="toolbarCountdownText"></span>
+            </span>
+            <button class="btn btn-outline-secondary btn-sm" id="btnExcel">
+                <i class="bi bi-file-earmark-excel"></i> 엑셀
+            </button>
+            <button class="btn btn-outline-secondary btn-sm" id="btnPrint">
+                <i class="bi bi-file-earmark-text"></i> 출력
+            </button>
+        </div>
+    </div>
+
+    <!-- Table Container -->
+    <th:block th:replace="${tableFragment}" />
+
+    <!-- Pagination -->
+    <th:block th:replace="~{fragments/page-content-layout :: pagination}" />
+
+    <!-- Bottom Action Buttons -->
+    <th:block th:replace="${buttonsFragment}" />
+
+    <!-- Modals -->
+    <th:block th:replace="${modalsFragment}" />
+
+    <!-- Scripts -->
+    <th:block th:replace="${scriptFragment}" />
+</div>
+
+<!-- Toolbar Fragment -->
+<div th:fragment="toolbar" class="toolbar">
+    <div class="toolbar-left">
+    </div>
+    <div class="toolbar-right">
+        <span id="toolbarCountdown" class="d-hidden me-2 fs-sm text-body-secondary">
+            <i class="bi bi-arrow-clockwise text-primary me-1"></i>
+            <span id="toolbarCountdownText"></span>
+        </span>
+        <button class="btn btn-outline-secondary btn-sm" id="btnExcel">
+            <i class="bi bi-file-earmark-excel"></i> 엑셀
+        </button>
+        <button class="btn btn-outline-secondary btn-sm" id="btnPrint">
+            <i class="bi bi-file-earmark-text"></i> 출력
+        </button>
+    </div>
+</div>
+
+<!-- Custom Toolbar Fragment (with custom export/print functions) -->
+<div th:fragment="toolbarCustom(exportFn, printFn)" class="toolbar">
+    <div class="toolbar-left">
+    </div>
+    <div class="toolbar-right">
+        <button class="btn btn-outline-secondary btn-sm" th:onclick="${exportFn}">
+            <i class="bi bi-file-earmark-excel"></i> 엑셀
+        </button>
+        <button class="btn btn-outline-secondary btn-sm" th:onclick="${printFn}">
+            <i class="bi bi-file-earmark-text"></i> 출력
+        </button>
+        <span class="ms-2 fs-sm text-body-secondary">
+            <i class="bi bi-arrow-clockwise text-primary me-1"></i>
+            <span th:id="${'toolbarCountdownTextCustom'}"></span>
+        </span>
+    </div>
+</div>
+
+<!-- Pagination Fragment -->
+<div th:fragment="pagination" class="pagination-container">
+    <nav>
+        <ul class="pagination pagination-sm" id="pagination">
+        </ul>
+    </nav>
+    <div class="pagination-info">
+        <span id="pageInfo">0 - 0 of 0 items</span>
+        <button class="btn btn-outline-secondary btn-sm" id="btnRefresh" title="새로고침">
+            <i class="bi bi-arrow-clockwise"></i>
+        </button>
+    </div>
+</div>
+
+
+</body>
+</html>

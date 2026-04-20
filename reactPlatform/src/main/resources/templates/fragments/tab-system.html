@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+    <div th:fragment="tabs" class="tab-bar">
+        <!-- 서비스 관리 탭 (기본) -->
+        <div class="tab-item" data-url="/service">
+            <i class="bi bi-file-earmark-text"></i>
+            <span>서비스 관리</span>
+            <span class="tab-close">&times;</span>
+        </div>
+
+        <!-- 내부 사용자 관리 탭 (활성) -->
+        <div class="tab-item active" data-url="/users">
+            <i class="bi bi-file-earmark-text"></i>
+            <span>내부 사용자 관리</span>
+            <span class="tab-close">&times;</span>
+        </div>
+
+        <script>
+            $(document).ready(function() {
+                // Tab close handler
+                $('.tab-close').click(function(e) {
+                    e.stopPropagation();
+                    const $tab = $(this).closest('.tab-item');
+                    const wasActive = $tab.hasClass('active');
+
+                    $tab.remove();
+
+                    if (wasActive) {
+                        const $remaining = $('.tab-item').last();
+                        if ($remaining.length > 0) {
+                            const url = $remaining.data('url');
+                            if (url) {
+                                window.location.href = url;
+                            }
+                        } else {
+                            window.location.href = '/';
+                        }
+                    }
+                });
+
+                // Tab click handler
+                $('.tab-item').click(function() {
+                    if ($(this).hasClass('active')) return;
+
+                    const url = $(this).data('url');
+                    if (url) {
+                        window.location.href = url;
+                    }
+                });
+            });
+        </script>
+    </div>
+</body>
+</html>

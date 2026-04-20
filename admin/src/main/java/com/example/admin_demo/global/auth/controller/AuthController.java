@@ -2,15 +2,25 @@ package com.example.admin_demo.global.auth.controller;
 
 import com.example.admin_demo.domain.user.dto.UserCreateRequest;
 import com.example.admin_demo.domain.user.dto.UserResponse;
+import com.example.admin_demo.domain.user.mapper.UserMapper;
 import com.example.admin_demo.domain.user.service.UserService;
+import com.example.admin_demo.global.auth.dto.CmsApproverResponse;
+import com.example.admin_demo.global.auth.dto.CurrentUserResponse;
 import com.example.admin_demo.global.auth.dto.LoginRequest;
 import com.example.admin_demo.global.auth.dto.LoginResponse;
 import com.example.admin_demo.global.auth.service.AuthService;
 import com.example.admin_demo.global.dto.ApiResponse;
+import com.example.admin_demo.global.security.CustomUserDetails;
 import jakarta.validation.Valid;
+import java.util.List;
+import java.util.Set;
+import java.util.TreeSet;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -20,6 +30,7 @@ public class AuthController {
 
     private final AuthService authService;
     private final UserService userService;
+    private final UserMapper userMapper;
 
     @PostMapping("/register")
     public ResponseEntity<ApiResponse<UserResponse>> register(
@@ -44,6 +55,27 @@ public class AuthController {
     public ResponseEntity<ApiResponse<Boolean>> validateCredentials(@Valid @RequestBody LoginRequest loginRequest) {
         boolean isValid = authService.validateCredentials(loginRequest.getUserId(), loginRequest.getPassword());
         return ResponseEntity.ok(ApiResponse.success(isValid));
+    }
+
+    @GetMapping("/me")
+    public ResponseEntity<ApiResponse<CurrentUserResponse>> me(@AuthenticationPrincipal CustomUserDetails userDetails) {
+        Set<String> authorities = userDetails.getAuthorities().stream()
+                .map(GrantedAuthority::getAuthority)
+                .collect(Collectors.toCollection(TreeSet::new));
+
+        CurrentUserResponse response = CurrentUserResponse.builder()
+                .userId(userDetails.getUserId())
+                .userName(userDetails.getDisplayName())
+                .roleId(userDetails.getRoleId())
+                .authorities(authorities)
+                .build();
+
+        return ResponseEntity.ok(ApiResponse.success(response));
+    }
+
+    @GetMapping("/cms-approvers")
+    public ResponseEntity<ApiResponse<List<CmsApproverResponse>>> cmsApprovers() {
+        return ResponseEntity.ok(ApiResponse.success(userMapper.findCmsApprovers()));
     }
 
     @GetMapping("/permission/menu")

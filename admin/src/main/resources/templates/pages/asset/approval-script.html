@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<th:block th:fragment="script">
+<script th:inline="javascript">
+/*<![CDATA[*/
+    // SPA 탭 전환으로 동일 스크립트가 재실행되는 경우가 있어 const 대신 window 전역에 할당.
+    window.HAS_CMS_WRITE = /*[[${userAuthorities != null && userAuthorities.contains('CMS:W')}]]*/ false;
+/*]]>*/
+</script>
+<script>
+    // ==================== CmsAssetApprovalPage ====================
+    // 결재자 "이미지 승인 관리" 화면 모듈.
+    // 승인(PENDING → APPROVED)은 #53에서 DB UPDATE만 수행, 파일 복사 API 연동은 #55.
+
+    window.CmsAssetApprovalPage = {
+        currentPage: 1,
+        totalItems: 0,
+        itemsPerPage: 10,
+        sortBy: null,
+        sortDirection: null,
+        // 썸네일은 #53 범위에서 placeholder 사용
+        PLACEHOLDER_SRC: '/images/asset-placeholder.svg',
+
+        STATE_BADGE: {
+            WORK:     '<span class="badge bg-secondary">작업중</span>',
+            PENDING:  '<span class="badge bg-warning text-dark">승인대기</span>',
+            APPROVED: '<span class="badge bg-success">승인완료</span>',
+            REJECTED: '<span class="badge bg-danger">반려</span>',
+        },
+
+        load: function(page) {
+            if (page !== undefined) this.currentPage = page;
+            const params = new URLSearchParams({
+                page:             this.currentPage,
+                size:             this.itemsPerPage,
+                assetState:       $('#filterAssetState').val(),
+                uploaderId:       $('#filterUploaderId').val().trim(),
+                businessCategory: $('#filterBusinessCategory').val().trim(),
+                search:           $('#filterSearch').val().trim(),
+                startDate:        $('#filterStartDate').val(),
+                endDate:          $('#filterEndDate').val(),
+            });
+            if (this.sortBy) {
+                params.append('sortBy', this.sortBy);
+                params.append('sortDirection', this.sortDirection);
+            }
+
+            fetch('/api/cms-admin/asset-approvals?' + params)
+                .then(r => r.json())
+                .then(res => {
+                    if (!res.success) { Toast.error(res.message); return; }
+                    const pageData = res.data;
+                    this.totalItems = pageData.totalElements;
+                    this.renderTable(pageData.content);
+                    this.renderPagination();
+                    this.updateSortIndicators();
+                })
+                .catch(() => Toast.error('목록 조회 중 오류가 발생했습니다.'));
+        },
+
+        attachSortHandlers: function() {
+            $('#assetApprovalTable thead th[data-sort]').addClass('sortable cursor-pointer');
+            $(document)
+                .off('click.cmsAssetApprovalSort', '#assetApprovalTable thead th[data-sort]')
+                .on('click.cmsAssetApprovalSort', '#assetApprovalTable thead th[data-sort]', function() {
+                    const sortKey = $(this).data('sort');
+                    if (!sortKey) return;
+
+                    if (CmsAssetApprovalPage.sortBy === sortKey) {
+                        if (CmsAssetApprovalPage.sortDirection === 'ASC') {
+                            CmsAssetApprovalPage.sortDirection = 'DESC';
+                        } else {
+                            CmsAssetApprovalPage.sortBy = null;
+                            CmsAssetApprovalPage.sortDirection = null;
+                        }
+                    } else {
+                        CmsAssetApprovalPage.sortBy = sortKey;
+                        CmsAssetApprovalPage.sortDirection = 'ASC';
+                    }
+
+                    CmsAssetApprovalPage.updateSortIndicators();
+                    CmsAssetApprovalPage.load(1);
+                });
+        },
+
+        updateSortIndicators: function() {
+            const headers = $('#assetApprovalTable thead th.sortable');
+            headers.removeClass('sort-asc sort-desc');
+            if (!this.sortBy || !this.sortDirection) return;
+
+            headers.filter(`[data-sort="${this.sortBy}"]`)
+                .addClass(this.sortDirection === 'ASC' ? 'sort-asc' : 'sort-desc');
+        },
+
+        renderTable: function(rows) {
+            const $tbody = $('#assetApprovalTableBody');
+            if (!rows || rows.length === 0) {
+                $tbody.html('<tr><td colspan="8" class="text-center py-4 text-body-secondary">조회된 데이터가 없습니다.</td></tr>');
+                return;
+            }
+
+            const placeholder = this.PLACEHOLDER_SRC;
+
+            const html = rows.map(row => {
+                const badge    = this.STATE_BADGE[row.assetState] || HtmlUtils.escape(row.assetState || '');
+                const aid      = HtmlUtils.escape(row.assetId);
+                const fileSize = this._formatFileSize(row.fileSize);
+
+                // 결재 컬럼: PENDING + CMS:W 권한일 때만 노출
+                const tdApproval = (window.HAS_CMS_WRITE && row.assetState === 'PENDING')
+                    ? `<div class="d-flex flex-column gap-1">
+                           <button class="btn btn-success btn-xs" onclick="CmsAssetApprovalPage.approve('${aid}')">승인</button>
+                           <button class="btn btn-danger btn-xs"  onclick="CmsAssetApprovalPage.openRejectModal('${aid}')">반려</button>
+                       </div>`
+                    : '-';
+
+                return `<tr>
+                    <td class="text-center">
+                        <img src="${placeholder}" alt="placeholder" class="asset-thumb"
+                             style="width:48px;height:48px;object-fit:cover;border-radius:4px;cursor:pointer;"
+                             onclick="CmsAssetApprovalPage.openPreview('${aid}')"
+                             onerror="this.src='${placeholder}'"/>
+                    </td>
+                    <td>
+                        <span class="clickable-cell"
+                              onclick="CmsAssetApprovalPage.openPreview('${aid}')"
+                              title="상세">${HtmlUtils.escape(row.assetName || '')}</span>
+                    </td>
+                    <td>${HtmlUtils.escape(row.createUserName || '')}</td>
+                    <td>${HtmlUtils.escape(row.businessCategory || '-')}</td>
+                    <td class="small">
+                        <div>${HtmlUtils.escape(row.mimeType || '-')}</div>
+                        <div class="text-body-secondary">${fileSize}</div>
+                    </td>
+                    <td class="text-center">${badge}</td>
+                    <td class="text-center small">${HtmlUtils.escape(row.createDate || '-')}</td>
+                    <td class="text-center">${tdApproval}</td>
+                </tr>`;
+            }).join('');
+
+            $tbody.html(html);
+        },
+
+        renderPagination: function() {
+            const totalPages = Math.ceil(this.totalItems / this.itemsPerPage);
+            const pagination = $('#pagination');
+            pagination.empty();
+
+            pagination.append(`
+                <li class="page-item ${this.currentPage === 1 ? 'disabled' : ''}">
+                    <a class="page-link" href="#" onclick="CmsAssetApprovalPage.changePage(1); return false;"><i class="bi bi-chevron-double-left"></i></a>
+                </li>
+                <li class="page-item ${this.currentPage === 1 ? 'disabled' : ''}">
+                    <a class="page-link" href="#" onclick="CmsAssetApprovalPage.changePage(${this.currentPage - 1}); return false;"><i class="bi bi-chevron-left"></i></a>
+                </li>
+            `);
+
+            const maxButtons = 5;
+            let startPage = Math.max(1, this.currentPage - Math.floor(maxButtons / 2));
+            let endPage   = Math.min(totalPages, startPage + maxButtons - 1);
+            if (endPage - startPage + 1 < maxButtons) {
+                startPage = Math.max(1, endPage - maxButtons + 1);
+            }
+
+            for (let i = startPage; i <= endPage; i++) {
+                pagination.append(`
+                    <li class="page-item ${i === this.currentPage ? 'active' : ''}">
+                        <a class="page-link" href="#" onclick="CmsAssetApprovalPage.changePage(${i}); return false;">${i}</a>
+                    </li>
+                `);
+            }
+
+            pagination.append(`
+                <li class="page-item ${this.currentPage === totalPages || totalPages === 0 ? 'disabled' : ''}">
+                    <a class="page-link" href="#" onclick="CmsAssetApprovalPage.changePage(${this.currentPage + 1}); return false;"><i class="bi bi-chevron-right"></i></a>
+                </li>
+                <li class="page-item ${this.currentPage === totalPages || totalPages === 0 ? 'disabled' : ''}">
+                    <a class="page-link" href="#" onclick="CmsAssetApprovalPage.changePage(${totalPages}); return false;"><i class="bi bi-chevron-double-right"></i></a>
+                </li>
+            `);
+
+            const start = this.totalItems === 0 ? 0 : (this.currentPage - 1) * this.itemsPerPage + 1;
+            const end   = Math.min(this.currentPage * this.itemsPerPage, this.totalItems);
+            $('#pageInfo').text(`${start} - ${end} of ${this.totalItems} items`);
+        },
+
+        changePage: function(page) {
+            const totalPages = Math.ceil(this.totalItems / this.itemsPerPage);
+            if (page < 1 || page > totalPages) return;
+            this.currentPage = page;
+            this.load();
+        },
+
+        reset: function() {
+            $('#filterAssetState').val('');
+            $('#filterUploaderId').val('');
+            $('#filterBusinessCategory').val('');
+            $('#filterSearch').val('');
+            $('#filterStartDate').val('');
+            $('#filterEndDate').val('');
+            this.sortBy = null;
+            this.sortDirection = null;
+            this.updateSortIndicators();
+            this.itemsPerPage = parseInt($('#limitRows').val()) || 10;
+            this.load(1);
+        },
+
+        // ── 프리뷰 모달 ──
+        openPreview: function(assetId) {
+            $('#previewAssetName').text('-');
+            $('#previewBusinessCategory').text('-');
+            $('#previewMimeType').text('-');
+            $('#previewFileSize').text('-');
+            $('#previewAssetDesc').text('-');
+            $('#previewAssetState').text('-');
+            $('#previewCreateUser').text('-');
+            $('#previewCreateDate').text('-');
+            $('#previewImg').attr('src', this.PLACEHOLDER_SRC);
+
+            new bootstrap.Modal('#assetPreviewModal').show();
+
+            fetch(`/api/cms-admin/asset-approvals/${encodeURIComponent(assetId)}`)
+                .then(r => r.json())
+                .then(res => {
+                    if (!res.success || !res.data) { Toast.error(res.message || '상세 조회 실패'); return; }
+                    const d = res.data;
+                    $('#previewAssetName').text(d.assetName || '-');
+                    $('#previewBusinessCategory').text(d.businessCategory || '-');
+                    $('#previewMimeType').text(d.mimeType || '-');
+                    $('#previewFileSize').text(this._formatFileSize(d.fileSize));
+                    $('#previewAssetDesc').text(d.assetDesc || '-');
+                    $('#previewAssetState').html(this.STATE_BADGE[d.assetState] || HtmlUtils.escape(d.assetState || ''));
+                    $('#previewCreateUser').text((d.createUserName || '-') + ' (' + (d.createUserId || '-') + ')');
+                    $('#previewCreateDate').text(d.createDate || '-');
+                    // ASSET_URL 연동은 후속 이슈 — 현재는 placeholder 유지
+                })
+                .catch(() => Toast.error('상세 조회 중 오류가 발생했습니다.'));
+        },
+
+        // ── 승인 ──
+        approve: function(assetId) {
+            if (!confirm('해당 이미지를 승인하시겠습니까?')) return;
+
+            fetch(`/api/cms-admin/asset-approvals/${encodeURIComponent(assetId)}/approve`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+            })
+                .then(r => r.json())
+                .then(res => {
+                    if (res.success) { Toast.success(res.message); this.load(); }
+                    else             { Toast.error(res.message); }
+                })
+                .catch(() => Toast.error('승인 처리 중 오류가 발생했습니다.'));
+        },
+
+        // ── 반려 모달 ──
+        openRejectModal: function(assetId) {
+            $('#rejectAssetId').val(assetId);
+            $('#rejectReason').val('');
+            new bootstrap.Modal('#assetRejectModal').show();
+        },
+
+        _submitReject: function() {
+            const assetId        = $('#rejectAssetId').val();
+            const rejectedReason = $('#rejectReason').val().trim();
+
+            fetch(`/api/cms-admin/asset-approvals/${encodeURIComponent(assetId)}/reject`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ rejectedReason }),
+            })
+                .then(r => r.json())
+                .then(res => {
+                    bootstrap.Modal.getInstance('#assetRejectModal').hide();
+                    if (res.success) { Toast.success(res.message); this.load(); }
+                    else             { Toast.error(res.message); }
+                })
+                .catch(() => Toast.error('반려 처리 중 오류가 발생했습니다.'));
+        },
+
+        _formatFileSize: function(bytes) {
+            if (bytes == null) return '-';
+            const units = ['B', 'KB', 'MB', 'GB'];
+            let idx = 0;
+            let value = bytes;
+            while (value >= 1024 && idx < units.length - 1) {
+                value /= 1024;
+                idx++;
+            }
+            return value.toFixed(idx === 0 ? 0 : 1) + ' ' + units[idx];
+        },
+    };
+
+    // ==================== 이벤트 바인딩 ====================
+
+    $(document).ready(function() {
+        CmsAssetApprovalPage.itemsPerPage = parseInt($('#limitRows').val()) || 10;
+        CmsAssetApprovalPage.attachSortHandlers();
+        CmsAssetApprovalPage.load(1);
+
+        $('#limitRows').on('change', function() {
+            CmsAssetApprovalPage.itemsPerPage = parseInt($(this).val()) || 10;
+            CmsAssetApprovalPage.load(1);
+        });
+
+        $('#btnRejectConfirm').on('click', function() { CmsAssetApprovalPage._submitReject(); });
+    });
+</script>
+</th:block>
+</body>
+</html>
