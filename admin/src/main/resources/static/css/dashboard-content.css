@@ -103,6 +103,112 @@
     line-height: 1.4;
 }
 
+.cms-create-template-toggle {
+    align-items: center;
+    background: #ffffff;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    color: #374151;
+    cursor: pointer;
+    display: flex;
+    font-size: 13px;
+    font-weight: 700;
+    justify-content: space-between;
+    padding: 12px 14px;
+    width: 100%;
+}
+
+.cms-create-template-toggle[aria-expanded="true"] .bi {
+    transform: rotate(180deg);
+}
+
+.cms-create-template-toggle .bi {
+    color: #6b7280;
+    transition: transform 0.15s ease;
+}
+
+.cms-create-template-current {
+    align-items: center;
+    color: #6b7280;
+    display: flex;
+    font-size: 12px;
+    gap: 8px;
+}
+
+.cms-create-template-selected-name {
+    display: block;
+    font-weight: 500;
+    max-width: 180px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.cms-create-template-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    max-height: 220px;
+    overflow-y: auto;
+    padding-right: 4px;
+    padding-top: 8px;
+}
+
+.cms-create-template {
+    align-items: flex-start;
+    background: #ffffff;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    color: #374151;
+    cursor: pointer;
+    display: flex;
+    gap: 10px;
+    padding: 12px 14px;
+    text-align: left;
+    width: 100%;
+}
+
+.cms-create-template.active {
+    background: #f0f4ff;
+    border: 2px solid #0046a4;
+}
+
+.cms-create-template-radio {
+    background: #ffffff;
+    border: 1px solid #d1d5db;
+    border-radius: 50%;
+    flex-shrink: 0;
+    height: 16px;
+    margin-top: 1px;
+    width: 16px;
+}
+
+.cms-create-template.active .cms-create-template-radio {
+    border: 5px solid #0046a4;
+}
+
+.cms-create-template-title,
+.cms-create-template-desc {
+    display: block;
+}
+
+.cms-create-template-title {
+    color: #111827;
+    font-size: 13px;
+    font-weight: 700;
+}
+
+.cms-create-template.active .cms-create-template-title {
+    color: #0046a4;
+}
+
+.cms-create-template-desc {
+    color: #6b7280;
+    font-size: 11px;
+    line-height: 1.4;
+    margin-top: 3px;
+}
+
 #approveRequestModal th {
     white-space: nowrap;
 }

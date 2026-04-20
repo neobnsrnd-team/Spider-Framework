@@ -104,13 +104,13 @@
 
     <insert id="insertPage">
         INSERT INTO SPW_CMS_PAGE (
-            PAGE_ID, PAGE_NAME, VIEW_MODE,
+            PAGE_ID, PAGE_NAME, VIEW_MODE, TEMPLATE_ID,
             CREATE_USER_ID, CREATE_USER_NAME,
             LAST_MODIFIER_ID, LAST_MODIFIER_NAME,
             APPROVE_STATE, USE_YN,
             CREATE_DATE, LAST_MODIFIED_DTIME
         ) VALUES (
-            #{pageId}, #{pageName}, #{viewMode},
+            #{pageId}, #{pageName}, #{viewMode}, #{templateId},
             #{userId}, #{userName},
             #{userId}, #{userName},
             'WORK', 'Y',

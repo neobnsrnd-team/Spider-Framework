@@ -229,6 +229,7 @@
         openCreatePageModal: function() {
             $('#createPageName').val('');
             this.selectCreateViewMode('mobile');
+            this.selectCreateTemplate('blank');
             this.updateCreateButtonState(false);
             new bootstrap.Modal('#createPageModal').show();
         },
@@ -239,6 +240,16 @@
                 .removeClass('active')
                 .filter(`[data-view-mode="${viewMode}"]`)
                 .addClass('active');
+        },
+
+        selectCreateTemplate: function(templateId) {
+            const $template = $(`.cms-create-template[data-template-id="${templateId}"]`);
+            $('#createTemplateId').val(templateId);
+            $('.cms-create-template')
+                .removeClass('active')
+                .filter(`[data-template-id="${templateId}"]`)
+                .addClass('active');
+            $('.cms-create-template-selected-name').text($template.find('.cms-create-template-title').text());
         },
 
         updateCreateButtonState: function(creating) {
@@ -252,6 +263,7 @@
             if ($('#btnCreatePageConfirm').prop('disabled')) return;
             const pageName = $('#createPageName').val().trim();
             const viewMode = $('#createViewMode').val();
+            const templateId = $('#createTemplateId').val();
 
             if (!pageName) { Toast.warning('페이지명을 입력하세요.'); return; }
             this.updateCreateButtonState(true);
@@ -259,7 +271,7 @@
             fetch('/api/cms-dashboard/pages', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ pageName, viewMode }),
+                body: JSON.stringify({ pageName, viewMode, templateId }),
             })
                 .then(r => r.json())
                 .then(res => {
@@ -368,6 +380,9 @@
 
         $('.cms-create-view-mode').on('click', function() {
             CmsDashboardPage.selectCreateViewMode($(this).data('view-mode'));
+        });
+        $('.cms-create-template').on('click', function() {
+            CmsDashboardPage.selectCreateTemplate($(this).data('template-id'));
         });
         $('#createPageName').on('input', function() {
             CmsDashboardPage.updateCreateButtonState(false);

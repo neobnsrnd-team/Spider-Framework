@@ -69,6 +69,29 @@
                             </button>
                         </div>
                     </div>
+                    <div class="mb-3">
+                        <input type="hidden" id="createTemplateId" value="blank"/>
+                        <button class="cms-create-template-toggle" type="button"
+                                data-bs-toggle="collapse" data-bs-target="#createTemplateCollapse"
+                                aria-expanded="true" aria-controls="createTemplateCollapse">
+                            <span>템플릿 선택</span>
+                            <span class="cms-create-template-current">
+                                <span class="cms-create-template-selected-name">빈 페이지</span>
+                                <i class="bi bi-chevron-down"></i>
+                            </span>
+                        </button>
+                        <div class="collapse show" id="createTemplateCollapse">
+                            <div class="cms-create-template-list" role="listbox">
+                                <button type="button" class="cms-create-template active" data-template-id="blank">
+                                    <span class="cms-create-template-radio"></span>
+                                    <span>
+                                        <span class="cms-create-template-title">빈 페이지</span>
+                                        <span class="cms-create-template-desc">아무 컴포넌트도 없는 빈 화면에서 시작합니다.</span>
+                                    </span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
                     <p class="mb-0 text-body-secondary small">레이아웃은 페이지 생성 후 변경할 수 없습니다.</p>
                 </div>
                 <div class="modal-footer">

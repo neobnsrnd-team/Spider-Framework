@@ -30,6 +30,7 @@ public interface CmsDashboardMapper {
             @Param("pageId") String pageId,
             @Param("pageName") String pageName,
             @Param("viewMode") String viewMode,
+            @Param("templateId") String templateId,
             @Param("userId") String userId,
             @Param("userName") String userName);
 
