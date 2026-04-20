@@ -128,6 +128,7 @@ claude:
 
 # CMS Deploy Configuration
 cms:
+  app-base-url: ${CMS_APP_BASE_URL:/cms}
   user-url: ${CMS_USER_URL:http://localhost:3001/}
   preview-url: ${CMS_PREVIEW_URL:http://localhost}
   deploy:
