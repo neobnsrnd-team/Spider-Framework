@@ -206,9 +206,12 @@ export function cmsBankPlugin(options: CmsBankPluginOptions = {}): Plugin {
         // ── POST /__cms/create-page ────────────────────────────
         if (urlPath === "/__cms/create-page" && req.method === "POST") {
           try {
-            // 파일 생성은 쓰기 권한 필요
-            const user = await requireCmsWrite(getCookieHeader(req));
-            void user; // 현재는 userId를 파일에 기록하지 않음
+            // admin 연동 모드(base !== '/')에서만 쓰기 권한 검증
+            // 단독 실행 모드(base === '/')에서는 인증 없이 파일 저장 허용
+            if (base !== "/") {
+              const user = await requireCmsWrite(getCookieHeader(req));
+              void user; // 현재는 userId를 파일에 기록하지 않음
+            }
             const payload = await readBody(req) as CreatePagePayload;
 
             // PascalCase 영숫자만 허용 — 경로 조작(../ 등) 방지
