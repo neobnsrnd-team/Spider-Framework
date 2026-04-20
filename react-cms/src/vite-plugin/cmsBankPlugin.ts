@@ -22,6 +22,14 @@ import type { Plugin } from "vite";
 import fs from "node:fs";
 import path from "node:path";
 import { v4 as uuidv4 } from "uuid";
+import {
+  getCurrentUser,
+  requireCmsWrite,
+  requireCmsRead,
+  canReadCms,
+  UnauthorizedError,
+  type CurrentUser,
+} from "../admin/current-user";
 
 // DB 모듈은 dynamic import로 지연 로드합니다.
 // Vite는 vite.config.ts 평가 단계(서버 초기화 전)에 플러그인을 로드하므로,
@@ -39,6 +47,27 @@ async function getRepo(): Promise<PageRepository> {
 }
 
 // ── 유틸 ────────────────────────────────────────────────────────
+
+/** 요청 헤더에서 Cookie 문자열을 추출한다 */
+function getCookieHeader(req: import("http").IncomingMessage): string {
+  const raw = req.headers.cookie;
+  return Array.isArray(raw) ? raw.join('; ') : (raw ?? '');
+}
+
+/**
+ * UnauthorizedError를 403 JSON 응답으로 변환한다.
+ * @returns true이면 이미 응답 전송 완료, 호출부는 return해야 한다.
+ */
+function handleAuthError(
+  err: unknown,
+  res: import("http").ServerResponse,
+): boolean {
+  if (err instanceof UnauthorizedError) {
+    jsonResponse(res, 403, { error: err.message });
+    return true;
+  }
+  return false;
+}
 
 /** req body를 JSON으로 파싱 */
 function readBody(req: import("http").IncomingMessage): Promise<unknown> {
@@ -163,9 +192,23 @@ export function cmsBankPlugin(options: CmsBankPluginOptions = {}): Plugin {
 
         const urlPath = normalizedUrl.split("?")[0];
 
+        // ── GET /__cms/api/me ──────────────────────────────────
+        // 현재 로그인 사용자 정보를 반환한다.
+        // 클라이언트가 마운트 시 호출해 권한을 확인하는 용도로 사용한다.
+        if (urlPath === "/__cms/api/me" && req.method === "GET") {
+          const cookieHeader = getCookieHeader(req);
+          const user = await getCurrentUser(cookieHeader);
+          // canRead 여부를 함께 반환해 클라이언트 라우트 가드에서 활용
+          jsonResponse(res, 200, { user, canRead: canReadCms(user) });
+          return;
+        }
+
         // ── POST /__cms/create-page ────────────────────────────
         if (urlPath === "/__cms/create-page" && req.method === "POST") {
           try {
+            // 파일 생성은 쓰기 권한 필요
+            const user = await requireCmsWrite(getCookieHeader(req));
+            void user; // 현재는 userId를 파일에 기록하지 않음
             const payload = await readBody(req) as CreatePagePayload;
 
             // PascalCase 영숫자만 허용 — 경로 조작(../ 등) 방지
@@ -189,6 +232,7 @@ export function cmsBankPlugin(options: CmsBankPluginOptions = {}): Plugin {
 
             jsonResponse(res, 200, { success: true });
           } catch (err) {
+            if (handleAuthError(err, res)) return;
             jsonResponse(res, 500, { error: String(err) });
           }
           return;
@@ -198,6 +242,15 @@ export function cmsBankPlugin(options: CmsBankPluginOptions = {}): Plugin {
         // body: { pageId?: string, pageName: string, pageJson: string, pageCode: string }
         // response: { pageId: string }
         if (urlPath === "/__cms/api/save" && req.method === "POST") {
+          let user: CurrentUser;
+          try {
+            // 저장은 CMS:W 권한 필요
+            user = await requireCmsWrite(getCookieHeader(req));
+          } catch (err) {
+            if (handleAuthError(err, res)) return;
+            jsonResponse(res, 500, { error: String(err) });
+            return;
+          }
           try {
             const body = await readBody(req) as {
               pageId?: string;
@@ -212,14 +265,14 @@ export function cmsBankPlugin(options: CmsBankPluginOptions = {}): Plugin {
             if (pageId) {
               const existing = await repo.getPageById(pageId);
               if (existing) {
-                await repo.updatePage({ pageId, pageName: body.pageName, pageJson: body.pageJson, pageCode: body.pageCode });
+                await repo.updatePage({ pageId, pageName: body.pageName, pageJson: body.pageJson, pageCode: body.pageCode, user });
               } else {
                 // 클라이언트가 보낸 pageId가 DB에 없으면 신규 생성
-                await repo.createPage({ pageId, pageName: body.pageName, pageJson: body.pageJson, pageCode: body.pageCode });
+                await repo.createPage({ pageId, pageName: body.pageName, pageJson: body.pageJson, pageCode: body.pageCode, user });
               }
             } else {
               pageId = uuidv4();
-              await repo.createPage({ pageId, pageName: body.pageName, pageJson: body.pageJson, pageCode: body.pageCode });
+              await repo.createPage({ pageId, pageName: body.pageName, pageJson: body.pageJson, pageCode: body.pageCode, user });
             }
 
             jsonResponse(res, 200, { pageId });
@@ -235,10 +288,13 @@ export function cmsBankPlugin(options: CmsBankPluginOptions = {}): Plugin {
         // response: { page: CmsPage | null }
         if (urlPath === "/__cms/api/load" && req.method === "POST") {
           try {
+            // 조회는 CMS:R 권한 필요
+            await requireCmsRead(getCookieHeader(req));
             const body = await readBody(req) as { pageId: string };
             const page = await (await getRepo()).getPageById(body.pageId);
             jsonResponse(res, 200, { page });
           } catch (err) {
+            if (handleAuthError(err, res)) return;
             console.error("[react-cms] DB load error:", err);
             jsonResponse(res, 500, { error: String(err) });
           }
@@ -250,6 +306,8 @@ export function cmsBankPlugin(options: CmsBankPluginOptions = {}): Plugin {
         // response: { list: CmsPage[], totalCount: number }
         if (urlPath === "/__cms/api/pages" && req.method === "GET") {
           try {
+            // 목록 조회는 CMS:R 권한 필요
+            await requireCmsRead(getCookieHeader(req));
             const url          = new URL(normalizedUrl, "http://localhost");
             const search       = url.searchParams.get("search")       ?? undefined;
             const sortBy       = url.searchParams.get("sortBy")       ?? undefined;
@@ -267,6 +325,7 @@ export function cmsBankPlugin(options: CmsBankPluginOptions = {}): Plugin {
 
             jsonResponse(res, 200, result);
           } catch (err) {
+            if (handleAuthError(err, res)) return;
             console.error("[react-cms] DB list error:", err);
             jsonResponse(res, 500, { error: String(err) });
           }
@@ -277,6 +336,8 @@ export function cmsBankPlugin(options: CmsBankPluginOptions = {}): Plugin {
         // response: { success: true }
         if (urlPath === "/__cms/api/pages" && req.method === "DELETE") {
           try {
+            // 삭제는 CMS:W 권한 필요
+            await requireCmsWrite(getCookieHeader(req));
             const url    = new URL(normalizedUrl, "http://localhost");
             const pageId = url.searchParams.get("pageId");
 
@@ -288,6 +349,7 @@ export function cmsBankPlugin(options: CmsBankPluginOptions = {}): Plugin {
             await (await getRepo()).deletePage(pageId);
             jsonResponse(res, 200, { success: true });
           } catch (err) {
+            if (handleAuthError(err, res)) return;
             console.error("[react-cms] DB delete error:", err);
             jsonResponse(res, 500, { error: String(err) });
           }

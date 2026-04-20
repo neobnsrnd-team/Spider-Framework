@@ -14,13 +14,9 @@
 import oracledb from 'oracledb';
 import { getConnection, withTransaction, clobBind } from '../connection';
 import type { CmsPage, ViewMode } from '../types';
+import type { CurrentUser } from '../../lib/current-user';
 
 const OBJ = { outFormat: oracledb.OUT_FORMAT_OBJECT };
-
-// TODO: 인증 구현 후 로그인 사용자 ID/NAME으로 교체
-// 현재는 admin 로그인 세션 연동이 없으므로 시스템 계정으로 고정
-const SYSTEM_USER_ID   = 'CMS_BUILDER';
-const SYSTEM_USER_NAME = 'CMS Builder';
 
 // react-cms에서 저장한 페이지를 구분하는 타입 값
 const PAGE_TYPE = 'REACT';
@@ -157,6 +153,7 @@ export async function listPages(
  * APPROVE_STATE는 항상 'WORK', USE_YN은 'Y', IS_PUBLIC은 'N'으로 초기화됩니다.
  * @param input.pageJson CMS 빌더 직렬화 JSON — PAGE_HTML 컬럼에 저장
  * @param input.pageCode 생성된 React JSX 코드 — PAGE_DESC 컬럼에 저장
+ * @param input.user     인증된 현재 사용자 — CREATE_USER_ID/NAME에 기록됨
  */
 export async function createPage(input: {
   pageId:    string;
@@ -164,6 +161,7 @@ export async function createPage(input: {
   pageJson?: string;
   pageCode?: string;
   viewMode?: ViewMode;
+  user:      Pick<CurrentUser, 'userId' | 'userName'>;
 }): Promise<void> {
   await withTransaction(async (conn) => {
     await conn.execute(SQL_INSERT, {
@@ -172,10 +170,10 @@ export async function createPage(input: {
       pageHtml:         clobBind(input.pageJson ?? null),
       pageDesc:         clobBind(input.pageCode ?? null),
       viewMode:         input.viewMode ?? 'mobile',
-      createUserId:     SYSTEM_USER_ID,
-      createUserName:   SYSTEM_USER_NAME,
-      lastModifierId:   SYSTEM_USER_ID,
-      lastModifierName: SYSTEM_USER_NAME,
+      createUserId:     input.user.userId,
+      createUserName:   input.user.userName,
+      lastModifierId:   input.user.userId,
+      lastModifierName: input.user.userName,
     });
   });
 }
@@ -185,6 +183,7 @@ export async function createPage(input: {
  * null이 아닌 필드만 UPDATE됩니다 (NVL 패턴).
  * @param input.pageJson CMS 빌더 직렬화 JSON — PAGE_HTML 컬럼에 저장
  * @param input.pageCode 생성된 React JSX 코드 — PAGE_DESC 컬럼에 저장
+ * @param input.user     인증된 현재 사용자 — LAST_MODIFIER_ID/NAME에 기록됨
  */
 export async function updatePage(input: {
   pageId:    string;
@@ -192,6 +191,7 @@ export async function updatePage(input: {
   pageJson?: string;
   pageCode?: string;
   viewMode?: ViewMode;
+  user:      Pick<CurrentUser, 'userId' | 'userName'>;
 }): Promise<void> {
   await withTransaction(async (conn) => {
     await conn.execute(SQL_UPDATE, {
@@ -200,8 +200,8 @@ export async function updatePage(input: {
       pageHtml:         clobBind(input.pageJson ?? null),
       pageDesc:         clobBind(input.pageCode ?? null),
       viewMode:         input.viewMode ?? null,
-      lastModifierId:   SYSTEM_USER_ID,
-      lastModifierName: SYSTEM_USER_NAME,
+      lastModifierId:   input.user.userId,
+      lastModifierName: input.user.userName,
     });
   });
 }

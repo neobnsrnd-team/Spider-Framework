@@ -28,3 +28,20 @@ export const oracleEnv = {
   /** Instant Client 설치 경로. 비어 있으면 PATH에서 자동 탐색. */
   get clientDir() { return process.env.ORACLE_CLIENT_DIR  ?? ''; },
 };
+
+// ── CMS 인증 ─────────────────────────────────────────────────────────────────
+
+/**
+ * 개발용 인증 우회 모드.
+ * 'true'로 설정하면 Spider Admin API 호출 없이 쿠키(`cms_bypass_role`) 값으로 역할을 분기한다.
+ */
+export const AUTH_BYPASS = process.env.AUTH_BYPASS ?? 'false';
+
+/**
+ * Spider Admin API 베이스 URL.
+ * 운영 환경에서 `/api/auth/me` 호출에 사용된다.
+ * AUTH_BYPASS=true 환경에서는 사용되지 않는다.
+ *
+ * @example http://localhost:8080
+ */
+export const SPIDER_ADMIN_API_URL = process.env.SPIDER_ADMIN_API_URL ?? '';

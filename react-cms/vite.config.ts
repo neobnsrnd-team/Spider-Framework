@@ -14,8 +14,10 @@ export default defineConfig(({ mode }) => {
   // prefix '' = VITE_ 접두사 없는 변수(ORACLE_*)도 포함해 전부 로드한 뒤,
   // ORACLE_ 접두사 키만 선택적으로 주입 — 민감 정보의 불필요한 노출 방지.
   const env = loadEnv(mode, process.cwd(), '');
+  // 서버 사이드 전용 환경변수를 process.env에 선택 주입 (클라이언트 번들 노출 방지)
+  const SERVER_ENV_KEYS = ['AUTH_BYPASS', 'SPIDER_ADMIN_API_URL'];
   Object.keys(env)
-    .filter(k => k.startsWith('ORACLE_'))
+    .filter(k => k.startsWith('ORACLE_') || SERVER_ENV_KEYS.includes(k))
     .forEach(k => { process.env[k] = env[k]; });
 
   return {
