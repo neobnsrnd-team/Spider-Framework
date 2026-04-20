@@ -18,6 +18,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.web.client.RestTemplate;
 
 /**
@@ -122,7 +123,11 @@ public class Db2ForeignJobConfig {
     @Bean
     public TransferItemWriter transferItemWriter() {
         String mockUrl = "http://localhost:" + serverPort + "/mock/external/transfer";
+        // 타임아웃 미설정 시 외부 API 무응답으로 WAS 스레드가 무한 점유될 수 있음
+        SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
+        factory.setConnectTimeout(5_000);   // 연결 타임아웃 5초
+        factory.setReadTimeout(30_000);     // 읽기 타임아웃 30초
         log.info("DB2Foreign Mock URL: {}", mockUrl);
-        return new TransferItemWriter(new RestTemplate(), mockUrl);
+        return new TransferItemWriter(new RestTemplate(factory), mockUrl);
     }
 }

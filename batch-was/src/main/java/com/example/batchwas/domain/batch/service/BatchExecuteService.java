@@ -230,8 +230,9 @@ public class BatchExecuteService {
                 .filter(msg -> msg != null)
                 .findFirst()
                 .orElse("알 수 없는 오류");
-        // ERROR_REASON VARCHAR2(4000) 길이 초과 방지
-        return reason.length() > 3900 ? reason.substring(0, 3900) + "..." : reason;
+        // Oracle VARCHAR2(4000)는 바이트 기준 — 한글(UTF-8 3바이트/자) 1300자 = 3,900바이트
+        // 3900자 기준으로 잘라내면 순수 한글 시 11,700바이트로 초과 → SQLGrammarException 발생
+        return reason.length() > 1300 ? reason.substring(0, 1300) + "..." : reason;
     }
 
     /** userId가 null이거나 비어 있으면 SYSTEM으로 대체 */
