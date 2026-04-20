@@ -48,38 +48,26 @@ public interface EmergencyNoticeDeployMapper {
     int selectHistoryCount(@Param("reason") String reason);
 
     /**
-     * DEPLOY_STATUS 행의 DEFAULT_VALUE를 업데이트한다.
+     * 배포 시작: DEPLOY_STATUS='DEPLOYED', START_DTIME=now, END_DTIME=NULL을 단일 SQL로 업데이트.
      *
-     * @param value            배포 상태값 (DRAFT / DEPLOYED / ENDED)
+     * @param startDtime       배포 시작 일시 (yyyyMMddHHmmss)
      * @param lastUpdateDtime  변경 일시 (yyyyMMddHHmmss)
      * @param lastUpdateUserId 변경자 ID
      */
-    void updateDeployStatusValue(
-            @Param("value") String value,
+    void updateDeployStart(
+            @Param("startDtime") String startDtime,
             @Param("lastUpdateDtime") String lastUpdateDtime,
             @Param("lastUpdateUserId") String lastUpdateUserId);
 
     /**
-     * START_DTIME 행의 DEFAULT_VALUE를 업데이트한다.
+     * 배포 종료: DEPLOY_STATUS='ENDED', END_DTIME=now를 단일 SQL로 업데이트.
      *
-     * @param value            배포 시작 일시 (yyyyMMddHHmmss). 배포 종료 시 null 허용
+     * @param endDtime         배포 종료 일시 (yyyyMMddHHmmss)
      * @param lastUpdateDtime  변경 일시 (yyyyMMddHHmmss)
      * @param lastUpdateUserId 변경자 ID
      */
-    void updateStartDtimeValue(
-            @Param("value") String value,
-            @Param("lastUpdateDtime") String lastUpdateDtime,
-            @Param("lastUpdateUserId") String lastUpdateUserId);
-
-    /**
-     * END_DTIME 행의 DEFAULT_VALUE를 업데이트한다.
-     *
-     * @param value            배포 종료 일시 (yyyyMMddHHmmss). 배포 시작 시 null 허용
-     * @param lastUpdateDtime  변경 일시 (yyyyMMddHHmmss)
-     * @param lastUpdateUserId 변경자 ID
-     */
-    void updateEndDtimeValue(
-            @Param("value") String value,
+    void updateDeployEnd(
+            @Param("endDtime") String endDtime,
             @Param("lastUpdateDtime") String lastUpdateDtime,
             @Param("lastUpdateUserId") String lastUpdateUserId);
 

@@ -31,7 +31,7 @@ import org.springframework.web.client.RestTemplate;
  *
  * <p>흐름:
  * <ol>
- *   <li>쓰기 트랜잭션 진입 시 USE_YN 행을 SELECT FOR UPDATE로 잠금 (TOCTOU 방지)</li>
+ *   <li>쓰기 트랜잭션 진입 시 DEPLOY_STATUS 행을 SELECT FOR UPDATE로 잠금 (TOCTOU 방지)</li>
  *   <li>Admin DB 업데이트 (FWK_PROPERTY DEPLOY_STATUS 변경) + 이력 스냅샷 삽입</li>
  *   <li>트랜잭션 커밋 후 Demo Backend REST 호출 (비치명적 — 실패 시 재기동 후 복구됨)</li>
  * </ol>
@@ -44,6 +44,8 @@ public class EmergencyNoticeDeployService {
 
     /** 배포 상태 상수 */
     private static final String STATUS_DEPLOYED = "DEPLOYED";
+
+    private static final String STATUS_ENDED = "ENDED";
 
     /** Demo Backend 동기화 엔드포인트 */
     private static final String SYNC_PATH = "/api/notices/sync";
@@ -109,9 +111,7 @@ public class EmergencyNoticeDeployService {
         String now = AuditUtil.now();
         String userId = AuditUtil.currentUserId();
 
-        emergencyNoticeDeployMapper.updateDeployStatusValue(STATUS_DEPLOYED, now, userId);
-        emergencyNoticeDeployMapper.updateStartDtimeValue(now, now, userId);
-        emergencyNoticeDeployMapper.updateEndDtimeValue(null, now, userId);
+        emergencyNoticeDeployMapper.updateDeployStart(now, now, userId);
         emergencyNoticeDeployMapper.insertHistorySnapshot("배포", now, userId);
 
         log.info("긴급공지 배포 완료: userId={}, startDtime={}", userId, now);
@@ -142,8 +142,7 @@ public class EmergencyNoticeDeployService {
         String now = AuditUtil.now();
         String userId = AuditUtil.currentUserId();
 
-        emergencyNoticeDeployMapper.updateDeployStatusValue("ENDED", now, userId);
-        emergencyNoticeDeployMapper.updateEndDtimeValue(now, now, userId);
+        emergencyNoticeDeployMapper.updateDeployEnd(now, now, userId);
         emergencyNoticeDeployMapper.insertHistorySnapshot("배포 종료", now, userId);
 
         log.info("긴급공지 배포 종료 완료: userId={}, endDtime={}", userId, now);
