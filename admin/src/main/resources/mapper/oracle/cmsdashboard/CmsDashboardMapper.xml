@@ -152,7 +152,7 @@
         SELECT USER_NAME
         FROM FWK_USER
         WHERE USER_ID = #{approverId}
-          AND USER_STATE_CODE = '0'
+          AND USER_STATE_CODE = '1'
     </select>
 
     <!-- ==================== 승인 요청 — PENDING 전환 ==================== -->
