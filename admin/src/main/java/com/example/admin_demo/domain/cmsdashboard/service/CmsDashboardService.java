@@ -94,12 +94,7 @@ public class CmsDashboardService {
         }
 
         cmsDashboardMapper.requestApproval(
-                pageId,
-                req.getApproverId(),
-                approverName,
-                req.getBeginningDate(),
-                req.getExpiredDate(),
-                userId);
+                pageId, req.getApproverId(), approverName, req.getBeginningDate(), req.getExpiredDate(), userId);
         log.info("CMS 페이지 승인 요청: pageId={}, approverId={}, userId={}", pageId, req.getApproverId(), userId);
     }
 
