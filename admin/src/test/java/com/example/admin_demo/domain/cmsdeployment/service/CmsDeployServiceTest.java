@@ -5,7 +5,6 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
 
@@ -29,8 +28,6 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.ResponseEntity;
-import org.springframework.transaction.PlatformTransactionManager;
-import org.springframework.transaction.TransactionStatus;
 import org.springframework.web.client.RestTemplate;
 
 @ExtendWith(MockitoExtension.class)
@@ -46,18 +43,11 @@ class CmsDeployServiceTest {
     @Mock
     private CmsDeployProperties deployProperties;
 
-    @Mock
-    private PlatformTransactionManager txManager;
-
-    @Mock
-    private TransactionStatus txStatus;
-
     @InjectMocks
     private CmsDeployService cmsDeployService;
 
     private static final String PAGE_ID = "PAGE-001";
     private static final String USER_ID = "admin";
-    private static final String INSTANCE_ID = "INST-001";
     private static final String HTML = "<html><body>test</body></html>";
 
     // ─── findApprovedPageList ──────────────────────────────────────────
@@ -132,62 +122,42 @@ class CmsDeployServiceTest {
     // ─── push ──────────────────────────────────────────────────────────
 
     @Test
-    @DisplayName("[배포] 정상 배포 시 이력을 저장한다")
+    @DisplayName("[배포] 정상 배포 시 CMS push API를 호출한다")
     @SuppressWarnings("unchecked")
-    void push_success_insertsHistory() {
+    void push_success_callsCmsPushApi() {
         given(cmsDeployMapper.findApprovedPageHtml(PAGE_ID)).willReturn(HTML);
-        given(cmsDeployMapper.findFirstInstanceId()).willReturn(INSTANCE_ID);
-        given(deployProperties.getTrackerJsUrl()).willReturn("http://tracker/cms-tracker.js");
-        given(deployProperties.getReceiveUrl()).willReturn("http://deploy/api/deploy/receive");
+        given(deployProperties.getPushUrl()).willReturn("http://cms/api/deploy/push");
         given(deployProperties.getSecret()).willReturn("secret-token");
-        given(restTemplate.getForEntity(anyString(), eq(String.class))).willReturn(ResponseEntity.ok("// tracker js"));
         given(restTemplate.exchange(anyString(), any(), any(), any(ParameterizedTypeReference.class)))
                 .willReturn(ResponseEntity.ok(Map.of("ok", Boolean.TRUE)));
-        given(txManager.getTransaction(any())).willReturn(txStatus);
-        given(cmsDeployMapper.findNextFileVersion(PAGE_ID)).willReturn(1);
 
         cmsDeployService.push(PAGE_ID, USER_ID);
 
-        then(cmsDeployMapper)
-                .should()
-                .insertSendHistory(eq(INSTANCE_ID), eq(PAGE_ID + "_v1.html"), anyLong(), anyString(), eq(USER_ID));
+        then(restTemplate).should().exchange(anyString(), any(), any(), any(ParameterizedTypeReference.class));
     }
 
     @Test
-    @DisplayName("[배포] cms-tracker.js fetch 실패 시에도 배포를 계속한다")
+    @DisplayName("[배포] CMS push API가 ok=false 응답 시 InternalException을 던진다")
     @SuppressWarnings("unchecked")
-    void push_trackerJsFetchFails_continuesDeployment() {
-        given(cmsDeployMapper.findApprovedPageHtml(PAGE_ID)).willReturn("<html/>");
-        given(cmsDeployMapper.findFirstInstanceId()).willReturn(INSTANCE_ID);
-        given(deployProperties.getTrackerJsUrl()).willReturn("http://tracker/cms-tracker.js");
-        given(deployProperties.getReceiveUrl()).willReturn("http://deploy/api/deploy/receive");
+    void push_cmsPushReturnsError_throwsInternalException() {
+        given(cmsDeployMapper.findApprovedPageHtml(PAGE_ID)).willReturn(HTML);
+        given(deployProperties.getPushUrl()).willReturn("http://cms/api/deploy/push");
         given(deployProperties.getSecret()).willReturn("secret-token");
-        given(restTemplate.getForEntity(anyString(), eq(String.class)))
-                .willThrow(new RuntimeException("connection refused"));
-        given(restTemplate.exchange(anyString(), any(), any(), any(ParameterizedTypeReference.class)))
-                .willReturn(ResponseEntity.ok(Map.of("ok", Boolean.TRUE)));
-        given(txManager.getTransaction(any())).willReturn(txStatus);
-        given(cmsDeployMapper.findNextFileVersion(PAGE_ID)).willReturn(2);
-
-        cmsDeployService.push(PAGE_ID, USER_ID);
-
-        then(cmsDeployMapper)
-                .should()
-                .insertSendHistory(eq(INSTANCE_ID), eq(PAGE_ID + "_v2.html"), anyLong(), anyString(), eq(USER_ID));
-    }
-
-    @Test
-    @DisplayName("[배포] 배포 서버가 ok=false 응답 시 InternalException을 던진다")
-    @SuppressWarnings("unchecked")
-    void push_receiveApiReturnsError_throwsInternalException() {
-        given(cmsDeployMapper.findApprovedPageHtml(PAGE_ID)).willReturn("<html/>");
-        given(cmsDeployMapper.findFirstInstanceId()).willReturn(INSTANCE_ID);
-        given(deployProperties.getTrackerJsUrl()).willReturn("http://tracker/cms-tracker.js");
-        given(deployProperties.getReceiveUrl()).willReturn("http://deploy/api/deploy/receive");
-        given(deployProperties.getSecret()).willReturn("secret-token");
-        given(restTemplate.getForEntity(anyString(), eq(String.class))).willReturn(ResponseEntity.ok(null));
         given(restTemplate.exchange(anyString(), any(), any(), any(ParameterizedTypeReference.class)))
                 .willReturn(ResponseEntity.ok(Map.of("ok", Boolean.FALSE, "error", "배포 실패")));
+
+        assertThatThrownBy(() -> cmsDeployService.push(PAGE_ID, USER_ID)).isInstanceOf(InternalException.class);
+    }
+
+    @Test
+    @DisplayName("[배포] CMS push API 네트워크 오류 시 InternalException을 던진다")
+    @SuppressWarnings("unchecked")
+    void push_cmsPushThrowsException_throwsInternalException() {
+        given(cmsDeployMapper.findApprovedPageHtml(PAGE_ID)).willReturn(HTML);
+        given(deployProperties.getPushUrl()).willReturn("http://cms/api/deploy/push");
+        given(deployProperties.getSecret()).willReturn("secret-token");
+        given(restTemplate.exchange(anyString(), any(), any(), any(ParameterizedTypeReference.class)))
+                .willThrow(new RuntimeException("connection refused"));
 
         assertThatThrownBy(() -> cmsDeployService.push(PAGE_ID, USER_ID)).isInstanceOf(InternalException.class);
     }
@@ -198,15 +168,6 @@ class CmsDeployServiceTest {
         given(cmsDeployMapper.findApprovedPageHtml(PAGE_ID)).willReturn(null);
 
         assertThatThrownBy(() -> cmsDeployService.push(PAGE_ID, USER_ID)).isInstanceOf(NotFoundException.class);
-    }
-
-    @Test
-    @DisplayName("[배포] 서버 인스턴스가 없으면 InternalException을 던진다")
-    void push_instanceNotFound_throwsInternalException() {
-        given(cmsDeployMapper.findApprovedPageHtml(PAGE_ID)).willReturn("<html/>");
-        given(cmsDeployMapper.findFirstInstanceId()).willReturn(null);
-
-        assertThatThrownBy(() -> cmsDeployService.push(PAGE_ID, USER_ID)).isInstanceOf(InternalException.class);
     }
 
     // ─── 헬퍼 ─────────────────────────────────────────────────────────
@@ -222,7 +183,7 @@ class CmsDeployServiceTest {
 
     private CmsDeployHistoryResponse buildHistoryResponse() {
         return CmsDeployHistoryResponse.builder()
-                .instanceId(INSTANCE_ID)
+                .instanceId("INST-001")
                 .instanceName("배포서버-1")
                 .instanceIp("133.186.135.23")
                 .instancePort("3001")
