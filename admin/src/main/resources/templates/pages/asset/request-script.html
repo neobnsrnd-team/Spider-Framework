@@ -259,7 +259,12 @@
 
         _bindDropzone: function() {
             const $dz = $('#assetUploadDropzone');
-            $dz.off('click.assetUpload').on('click.assetUpload', () => $('#assetUploadFileInput').trigger('click'));
+            // jQuery .trigger('click') 은 synthetic event 라 일부 브라우저에서 파일 다이얼로그를 못 연다.
+            // 네이티브 HTMLInputElement.click() 을 사용해야 사용자 제스처 맥락이 유지된다.
+            $dz.off('click.assetUpload').on('click.assetUpload', () => {
+                const input = document.getElementById('assetUploadFileInput');
+                if (input) input.click();
+            });
             $dz.off('dragover.assetUpload').on('dragover.assetUpload', (e) => {
                 e.preventDefault();
                 e.stopPropagation();
