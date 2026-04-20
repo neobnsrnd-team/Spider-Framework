@@ -1,5 +1,7 @@
 package com.example.reactplatform.domain.reactgenerate.ai.prompt;
 
+import com.example.reactplatform.domain.reactgenerate.enums.BrandType;
+import com.example.reactplatform.domain.reactgenerate.enums.DomainType;
 import com.example.reactplatform.domain.reactgenerate.figma.FigmaDesignContext;
 import com.example.reactplatform.domain.reactgenerate.figma.FigmaNodeSummary;
 import java.util.List;
@@ -51,14 +53,27 @@ public class PromptBuilder {
      * <p>Figma URL 텍스트 대신 {@link FigmaDesignContext}의 구조화된 정보(크기, 레이아웃,
      * 색상, 텍스트)를 ASCII 트리 형태로 포함하여 Claude의 코드 생성 정확도를 높인다.
      *
-     * @param context      Figma API에서 추출한 디자인 컨텍스트
-     * @param requirements 추가 요구사항 (빈 문자열 허용)
+     * <p>brand·domain은 프롬프트 앞단에 명시하여 Claude가 globals.css의
+     * 올바른 [data-brand]/[data-domain] 토큰 블록을 선택하도록 안내한다.
+     *
+     * @param context Figma API에서 추출한 디자인 컨텍스트
+     * @param brand   적용할 금융 브랜드
+     * @param domain  적용할 금융 도메인
      * @return user prompt 문자열
      */
-    public String buildUserPrompt(FigmaDesignContext context, String requirements) {
+    public String buildUserPrompt(FigmaDesignContext context, BrandType brand, DomainType domain) {
         StringBuilder sb = new StringBuilder();
 
         sb.append("Generate a React component from the following Figma design.\n\n");
+
+        // 브랜드·도메인 토큰 지시 — Claude가 globals.css의 정확한 블록을 참조하도록 선행 주입
+        String brandKey = brand.name().toLowerCase();
+        String domainKey = domain.name().toLowerCase();
+        sb.append("## Design Token Selection\n");
+        sb.append("Brand: ").append(brandKey)
+                .append(" → [data-brand=\"").append(brandKey).append("\"] 토큰을 사용할 것\n");
+        sb.append("Domain: ").append(domainKey)
+                .append(" → [data-domain=\"").append(domainKey).append("\"] 토큰을 사용할 것\n\n");
 
         // Figma 디자인 컨텍스트 섹션
         sb.append("## Figma Design Context\n");
@@ -91,11 +106,6 @@ public class PromptBuilder {
                             null))
                     .append("\n");
             formatNodes(sb, context.getChildren(), "");
-        }
-
-        // 추가 요구사항 섹션
-        if (requirements != null && !requirements.isBlank()) {
-            sb.append("\n## Additional Requirements\n").append(requirements).append("\n");
         }
 
         sb.append("\n## Rules\n");

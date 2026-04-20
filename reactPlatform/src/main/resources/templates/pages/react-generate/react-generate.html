@@ -22,14 +22,33 @@
                        placeholder="https://www.figma.com/design/..."
                        autocomplete="off">
             </div>
-            <div class="mb-3">
-                <label for="requirementsInput" class="form-label fw-semibold">
-                    요구사항 <span class="text-muted fw-normal small">(선택)</span>
-                </label>
-                <textarea id="requirementsInput"
-                          class="form-control"
-                          rows="3"
-                          placeholder="예: 이체 화면의 계좌 선택 카드를 생성해줘. primary 버튼만 사용할 것."></textarea>
+            <div class="row mb-3">
+                <div class="col-md-6">
+                    <label for="brandSelect" class="form-label fw-semibold">
+                        브랜드 <span class="text-danger">*</span>
+                    </label>
+                    <select id="brandSelect" class="form-select">
+                        <option value="">-- 브랜드 선택 --</option>
+                        <option value="HANA">하나</option>
+                        <option value="SHINHAN">신한</option>
+                        <option value="KB">KB</option>
+                        <option value="NH">NH</option>
+                        <option value="IBK">IBK</option>
+                        <option value="WOORI">우리</option>
+                    </select>
+                </div>
+                <div class="col-md-6">
+                    <label for="domainSelect" class="form-label fw-semibold">
+                        도메인 <span class="text-muted fw-normal small">(선택, 미선택 시 banking 적용)</span>
+                    </label>
+                    <select id="domainSelect" class="form-select">
+                        <option value="">-- 도메인 선택 --</option>
+                        <option value="BANKING">뱅킹</option>
+                        <option value="CARD">카드</option>
+                        <option value="GIRO">지로</option>
+                        <option value="INSURANCE">보험</option>
+                    </select>
+                </div>
             </div>
             <div class="d-flex justify-content-end gap-2">
                 <button type="button" class="btn btn-outline-secondary" id="btnReset">
