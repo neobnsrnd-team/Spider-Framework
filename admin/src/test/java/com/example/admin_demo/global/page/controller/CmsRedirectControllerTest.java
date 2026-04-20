@@ -19,10 +19,7 @@ import org.springframework.test.web.servlet.MockMvc;
 
 @WebMvcTest(CmsRedirectController.class)
 @TestPropertySource(
-        properties = {
-            "cms.app-base-url=http://localhost:9000/cms",
-            "cms.user-url=http://133.186.135.23:3001/"
-        })
+        properties = {"cms.app-base-url=http://localhost:9000/cms", "cms.user-url=http://133.186.135.23:3001/"})
 @DisplayName("CMS root redirect")
 class CmsRedirectControllerTest {
 
