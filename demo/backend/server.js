@@ -40,6 +40,10 @@ const {
 } = require("./utils/sseManager");
 const { getBillingPeriod } = require("./utils/billingPeriod");
 const { getBillingSummaryByMonth } = require("./utils/billingByMonth");
+// Admin TCP 클라이언트로부터 긴급공지 커맨드를 수신하는 TCP 서버 모듈
+const { startTcpServer } = require("./tcp/tcpServer");
+// Admin TcpClient.sendJson 대상 포트 (기본 9997). Admin `tcp.demo-backend.port`와 일치해야 함.
+const TCP_PORT = parseInt(process.env.TCP_PORT || "9997", 10);
 
 const JWT_SECRET = process.env.JWT_SECRET || "dev-secret";
 // Access Token: 짧은 TTL — 만료 시 Refresh Token으로 재발급
@@ -1314,6 +1318,30 @@ async function start() {
   try {
     await initPool(); // ① 커넥션 풀 먼저 생성
     await restoreNoticeState(); // ② 재기동 시 배포 상태 복구
+
+    // TCP 서버 기동 (HTTP REST 서버와 독립적으로 시작, 병행 운영)
+    // Admin의 DemoBackendAdapter가 4바이트 길이 프리픽스 + UTF-8 JSON으로 커맨드를 전송한다.
+    // onSync/onEnd는 기존 POST /api/notices/sync, /api/notices/end와 동일한 비즈니스 로직을 수행한다.
+    startTcpServer(
+      {
+        onSync: (payload) => {
+          currentNotice = {
+            notices:     payload.notices     || [],
+            displayType: payload.displayType || "N",
+            closeableYn: payload.closeableYn ?? "Y",
+            hideTodayYn: payload.hideTodayYn ?? "Y",
+          };
+          broadcastNotice(currentNotice);
+          console.log(`[TcpServer] 긴급공지 TCP 동기화: displayType=${payload.displayType}`);
+        },
+        onEnd: () => {
+          currentNotice = null;
+          broadcastNotice(null);
+          console.log("[TcpServer] 긴급공지 TCP 배포 종료");
+        },
+      },
+      TCP_PORT,
+    );
 
     app.listen(PORT, () => {
       // ③ 풀 준비 완료 후 서버 오픈

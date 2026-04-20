@@ -1,0 +1,77 @@
+package com.example.admin_demo.infra.tcp.adapter;
+
+import com.example.admin_demo.domain.wasinstance.dto.WasInstanceResponse;
+import com.example.admin_demo.domain.wasinstance.mapper.WasInstanceMapper;
+import com.example.admin_demo.infra.tcp.client.TcpClient;
+import com.example.admin_demo.infra.tcp.model.ManagementContext;
+import java.io.IOException;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Component;
+
+/**
+ * Admin ↔ batch-was 간 TCP 통신 어댑터.
+ *
+ * <p>레퍼런스(spiderlink_Admin SocketManagementAdapter) 방식으로
+ * isLocal() 분기를 통해 로컬/원격 실행을 결정한다.</p>
+ *
+ * <p>원격 실행: ManagementContext를 Java ObjectStream 바이너리로 직렬화하여 전송한다.</p>
+ */
+@Slf4j
+@Component
+@RequiredArgsConstructor
+public class BatchManagementAdapter implements ManagementAdapter {
+
+    private final TcpClient tcpClient;
+    private final WasInstanceMapper wasInstanceMapper;
+
+    /** batch-was TCP 서버 포트 (기본값 9998) */
+    @Value("${tcp.batch-was.port:9998}")
+    private int batchWasTcpPort;
+
+    /**
+     * Admin과 batch-was는 항상 별도 프로세스.
+     * 로컬 직접 실행 경로는 미사용 ( TODO 추후 통합 배포 시 활용 가능).
+     */
+    @Override
+    public boolean isLocal() {
+        return false;
+    }
+
+    /**
+     * batch-was TCP 서버에 ManagementContext를 전송한다.
+     *
+     * @param command 실행 커맨드 (BATCH_EXEC, PING 등)
+     * @param payload ManagementContext 인스턴스
+     * @return 응답 ManagementContext, 실패 시 예외 정보가 담긴 ManagementContext
+     */
+    @Override
+    public Object doProcess(String command, Object payload) {
+        ManagementContext ctx = (ManagementContext) payload;
+
+        WasInstanceResponse instance = wasInstanceMapper.selectResponseById(ctx.getInstanceId());
+        if (instance == null || instance.getIp() == null || instance.getIp().isBlank()) {
+            log.warn("[BatchManagementAdapter] WAS 인스턴스 정보 없음: instanceId={}", ctx.getInstanceId());
+            return ManagementContext.builder()
+                    .command(command)
+                    .instanceId(ctx.getInstanceId())
+                    .resultCode("ERROR")
+                    .build();
+        }
+
+        try {
+            log.info("[BatchManagementAdapter] TCP 전송: host={}, port={}, command={}",
+                    instance.getIp(), batchWasTcpPort, command);
+            return tcpClient.sendObject(instance.getIp(), batchWasTcpPort, ctx);
+        } catch (IOException e) {
+            log.warn("[BatchManagementAdapter] TCP 전송 실패: instanceId={}, error={}",
+                    ctx.getInstanceId(), e.getMessage());
+            return ManagementContext.builder()
+                    .command(command)
+                    .instanceId(ctx.getInstanceId())
+                    .resultCode("ERROR")
+                    .build();
+        }
+    }
+}

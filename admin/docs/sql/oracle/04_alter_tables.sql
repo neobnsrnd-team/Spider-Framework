@@ -22,12 +22,4 @@ SET DEPLOY_STATUS = 'DRAFT'
 WHERE PROPERTY_GROUP_ID = 'notice'
   AND PROPERTY_ID = 'USE_YN';
 
-
--- =============================================================
--- 긴급공지 관리 (emergency-notice-manage)
--- POC_카드사용내역
--- =============================================================
-
-
-
 COMMIT;

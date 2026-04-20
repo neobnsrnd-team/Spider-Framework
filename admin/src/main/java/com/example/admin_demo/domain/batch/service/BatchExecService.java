@@ -11,23 +11,22 @@ import com.example.admin_demo.domain.wasinstance.mapper.WasInstanceMapper;
 import com.example.admin_demo.global.exception.InvalidInputException;
 import com.example.admin_demo.global.exception.NotFoundException;
 import com.example.admin_demo.global.util.AuditUtil;
+import com.example.admin_demo.infra.tcp.adapter.BatchManagementAdapter;
+import com.example.admin_demo.infra.tcp.model.ManagementContext;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.client.RestClientException;
-import org.springframework.web.client.RestTemplate;
 
 /**
  * 배치 수동 실행 Service.
  *
- * <p>WAS 인스턴스에 HTTP 요청으로 배치 실행을 위임한다.
+ * <p>WAS 인스턴스에 TCP 통신(ObjectStream)으로 배치 실행을 위임한다.
  * FWK_BATCH_HIS의 INSERT/UPDATE는 WAS에서 직접 처리한다.</p>
+ *
+ * <p>기존 HTTP 전송 방식은 주석으로 보존되어 있다 (롤백 대비).</p>
  */
 @Slf4j
 @Service
@@ -38,9 +37,19 @@ public class BatchExecService {
     private final BatchAppMapper batchAppMapper;
     private final BatchHisMapper batchHisMapper;
     private final WasInstanceMapper wasInstanceMapper;
-    private final RestTemplate restTemplate;
 
-    private static final String BATCH_EXEC_ENDPOINT = "/api/batch/execute";
+    /** Admin ↔ batch-was 간 TCP 통신 어댑터 (ObjectStream 방식) */
+    private final BatchManagementAdapter batchManagementAdapter;
+
+    // 기존 HTTP 전송 방식(레거시) — TCP 전환 이후 미사용
+    // private final RestTemplate restTemplate;
+    // private static final String BATCH_EXEC_ENDPOINT = "/api/batch/execute";
+
+    /** TCP 커맨드 상수 — batch-was와 약속된 식별자 */
+    private static final String CMD_BATCH_EXEC = "BATCH_EXEC";
+
+    /** 배치 실행 성공을 의미하는 결과 코드 (FWK_BATCH_HIS.RES_RT_CODE SUCCESS) */
+    private static final String RES_RT_SUCCESS = "1";
 
     @Transactional
     public List<BatchHisResponse> executeManualBatch(BatchExecRequest requestDTO) {
@@ -75,10 +84,10 @@ public class BatchExecService {
     }
 
     /**
-     * WAS 인스턴스에 배치 실행 HTTP 요청을 전송한다.
+     * WAS 인스턴스에 배치 실행 요청을 TCP(ObjectStream)로 전송한다.
      * FWK_BATCH_HIS INSERT(STARTED) → Job 실행 → UPDATE(결과)는 WAS가 전담한다.
      *
-     * @return true: 요청 전송 성공 (2xx), false: 전송 실패
+     * @return true: 배치가 성공적으로 완료됨, false: 실패 또는 전송 불가
      */
     private boolean sendBatchExecRequest(String instanceId, BatchExecRequest requestDTO, String userId) {
 
@@ -89,45 +98,88 @@ public class BatchExecService {
         }
 
         String ip = instance.getIp();
-        String port = instance.getPort();
-        if (ip == null || ip.isBlank() || port == null || port.isBlank()) {
-            log.warn("배치 실행 요청 실패: IP/PORT 정보 없음. instanceId={}", instanceId);
+        if (ip == null || ip.isBlank()) {
+            log.warn("배치 실행 요청 실패: IP 정보 없음. instanceId={}", instanceId);
             return false;
         }
 
-        String url = String.format("http://%s:%s%s", ip, port, BATCH_EXEC_ENDPOINT);
+        // TCP 전송을 위한 ManagementContext 구성
+        ManagementContext ctx = ManagementContext.builder()
+                .command(CMD_BATCH_EXEC)
+                .instanceId(instanceId)
+                .batchAppId(requestDTO.getBatchAppId())
+                .batchDate(requestDTO.getBatchDate())
+                .userId(userId)
+                .parameters(
+                        (requestDTO.getParameters() != null && !requestDTO.getParameters().isBlank())
+                                ? requestDTO.getParameters() : null)
+                .build();
 
-        try {
-            HttpHeaders headers = new HttpHeaders();
-            headers.setContentType(MediaType.APPLICATION_JSON);
+        log.info("배치 실행 TCP 요청: instanceId={}, host={}, batchAppId={}",
+                instanceId, ip, requestDTO.getBatchAppId());
 
-            Map<String, String> body = new HashMap<>();
-            body.put("batchAppId", requestDTO.getBatchAppId());
-            body.put("batchDate", requestDTO.getBatchDate());
-            body.put("userId", userId);
-            if (requestDTO.getParameters() != null
-                    && !requestDTO.getParameters().isBlank()) {
-                body.put("parameters", requestDTO.getParameters());
-            }
+        // BatchManagementAdapter가 내부적으로 TcpClient.sendObject(ObjectStream)를 호출한다.
+        // 실패 시 resultCode="ERROR" ManagementContext를 반환한다 (예외를 던지지 않음).
+        ManagementContext response = (ManagementContext) batchManagementAdapter.doProcess(CMD_BATCH_EXEC, ctx);
 
-            HttpEntity<Map<String, String>> httpEntity = new HttpEntity<>(body, headers);
-
-            log.info("배치 실행 요청: instanceId={}, url={}, batchAppId={}", instanceId, url, requestDTO.getBatchAppId());
-
-            ResponseEntity<String> response = restTemplate.exchange(url, HttpMethod.POST, httpEntity, String.class);
-
-            if (response.getStatusCode().is2xxSuccessful()) {
-                log.info("배치 실행 완료: instanceId={}", instanceId);
-                return true;
-            } else {
-                log.warn("배치 실행 실패 응답: instanceId={}, status={}", instanceId, response.getStatusCode());
-                return false;
-            }
-        } catch (RestClientException e) {
-            // HttpServerErrorException(500) 포함 — WAS 배치 ABNORMAL 종료 또는 네트워크 오류
-            log.warn("배치 실행 실패: instanceId={}, url={}, error={}", instanceId, url, e.getMessage());
+        if (response == null) {
+            log.warn("배치 실행 응답 없음: instanceId={}", instanceId);
             return false;
         }
+
+        if ("ERROR".equals(response.getResultCode()) || response.getException() != null) {
+            log.warn("배치 실행 실패: instanceId={}, resultCode={}, error={}",
+                    instanceId, response.getResultCode(),
+                    response.getException() != null ? response.getException().getMessage() : null);
+            return false;
+        }
+
+        // resRtCode='1' (SUCCESS) 인 경우에만 성공 처리
+        boolean success = RES_RT_SUCCESS.equals(response.getResultCode());
+        if (success) {
+            log.info("배치 실행 완료: instanceId={}, resultCode={}", instanceId, response.getResultCode());
+        } else {
+            log.warn("배치 비정상 종료: instanceId={}, resultCode={}", instanceId, response.getResultCode());
+        }
+        return success;
+
+        /* --------------------------------------------------------------------
+         * [LEGACY] HTTP 전송 방식 (TCP 전환 이전) — 롤백 대비 주석으로 보존
+         *
+         * String port = instance.getPort();
+         * if (port == null || port.isBlank()) {
+         *     log.warn("배치 실행 요청 실패: PORT 정보 없음. instanceId={}", instanceId);
+         *     return false;
+         * }
+         * String url = String.format("http://%s:%s%s", ip, port, BATCH_EXEC_ENDPOINT);
+         * try {
+         *     HttpHeaders headers = new HttpHeaders();
+         *     headers.setContentType(MediaType.APPLICATION_JSON);
+         *
+         *     Map<String, String> body = new HashMap<>();
+         *     body.put("batchAppId", requestDTO.getBatchAppId());
+         *     body.put("batchDate", requestDTO.getBatchDate());
+         *     body.put("userId", userId);
+         *     if (requestDTO.getParameters() != null && !requestDTO.getParameters().isBlank()) {
+         *         body.put("parameters", requestDTO.getParameters());
+         *     }
+         *
+         *     HttpEntity<Map<String, String>> httpEntity = new HttpEntity<>(body, headers);
+         *     log.info("배치 실행 요청: instanceId={}, url={}, batchAppId={}", instanceId, url, requestDTO.getBatchAppId());
+         *     ResponseEntity<String> response = restTemplate.exchange(url, HttpMethod.POST, httpEntity, String.class);
+         *
+         *     if (response.getStatusCode().is2xxSuccessful()) {
+         *         log.info("배치 실행 완료: instanceId={}", instanceId);
+         *         return true;
+         *     } else {
+         *         log.warn("배치 실행 실패 응답: instanceId={}, status={}", instanceId, response.getStatusCode());
+         *         return false;
+         *     }
+         * } catch (RestClientException e) {
+         *     log.warn("배치 실행 실패: instanceId={}, url={}, error={}", instanceId, url, e.getMessage());
+         *     return false;
+         * }
+         * -------------------------------------------------------------------- */
     }
 
     /**
