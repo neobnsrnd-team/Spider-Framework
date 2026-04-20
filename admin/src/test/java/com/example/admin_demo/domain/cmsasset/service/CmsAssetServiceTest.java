@@ -9,7 +9,9 @@ import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
 import static org.mockito.BDDMockito.willThrow;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 
 import com.example.admin_demo.domain.cmsasset.dto.CmsAssetApprovalListRequest;
 import com.example.admin_demo.domain.cmsasset.dto.CmsAssetDetailResponse;
@@ -24,6 +26,8 @@ import com.example.admin_demo.global.exception.InvalidStateException;
 import com.example.admin_demo.global.exception.NotFoundException;
 import com.example.admin_demo.global.exception.base.BaseException;
 import java.util.List;
+import java.util.function.Consumer;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -45,8 +49,29 @@ class CmsAssetServiceTest {
     @Mock
     private com.example.admin_demo.domain.cmsasset.validator.AssetUploadValidator assetUploadValidator;
 
+    @Mock
+    private org.springframework.transaction.support.TransactionTemplate transactionTemplate;
+
     @InjectMocks
     private CmsAssetService cmsAssetService;
+
+    /**
+     * TransactionTemplate mock 이 받은 callback 을 동기 실행하도록 설정.
+     * 실제 트랜잭션 경계는 단위 테스트 범위 밖이며, 여기서는 approve() 내부에서
+     * UPDATE → CMS → (보상 UPDATE) 흐름이 호출되는지만 검증한다.
+     */
+    @BeforeEach
+    void setUpTransactionTemplate() {
+        // lenient — approve 외 테스트는 TransactionTemplate 를 사용하지 않아 strict stubbing 에 걸리는 것을 방지.
+        lenient()
+                .doAnswer(inv -> {
+                    Consumer<org.springframework.transaction.TransactionStatus> cb = inv.getArgument(0);
+                    cb.accept(null);
+                    return null;
+                })
+                .when(transactionTemplate)
+                .executeWithoutResult(any());
+    }
 
     private static final String ASSET_ID = "ASSET-001";
     private static final String USER_ID = "cmsUser01";
@@ -179,8 +204,8 @@ class CmsAssetServiceTest {
     }
 
     @Test
-    @DisplayName("[승인] CMS 배포 실패 시 BaseException 전파 (TX 롤백 유도)")
-    void approve_cmsDeployFails_propagatesExceptionForRollback() {
+    @DisplayName("[승인] CMS 배포 실패 시 보상 UPDATE(APPROVED→PENDING) 후 BaseException 재전파")
+    void approve_cmsDeployFails_compensatesAndRethrows() {
         given(cmsAssetMapper.findAssetStateById(ASSET_ID)).willReturn("PENDING");
         given(cmsAssetMapper.updateState(any(), any(), any(), any(), any(), any()))
                 .willReturn(1);
@@ -191,8 +216,11 @@ class CmsAssetServiceTest {
         assertThatThrownBy(() -> cmsAssetService.approve(ASSET_ID, USER_ID, USER_NAME))
                 .isInstanceOfSatisfying(BaseException.class, ex -> assertThat(ex.getErrorType())
                         .isEqualTo(ErrorType.EXTERNAL_SERVICE_ERROR));
-        // updateState 는 호출됐음 (Spring TX 가 예외로 자동 롤백 — 단위 테스트 범위 밖)
-        then(cmsAssetMapper).should().updateState(any(), any(), any(), any(), any(), any());
+
+        // 메인 UPDATE(PENDING→APPROVED) + 보상 UPDATE(APPROVED→PENDING) 두 번 호출됐어야 한다.
+        then(cmsAssetMapper).should().updateState(ASSET_ID, "PENDING", "APPROVED", null, USER_ID, USER_NAME);
+        then(cmsAssetMapper).should().updateState(ASSET_ID, "APPROVED", "PENDING", null, USER_ID, USER_NAME);
+        then(cmsAssetMapper).should(times(2)).updateState(any(), any(), any(), any(), any(), any());
     }
 
     // ─── reject ────────────────────────────────────────────────────────
