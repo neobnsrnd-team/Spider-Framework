@@ -18,7 +18,7 @@ import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
 
 @WebMvcTest(CmsRedirectController.class)
-@TestPropertySource(properties = "cms.app-base-url=http://localhost:3000/cms")
+@TestPropertySource(properties = "cms.app-base-url=http://localhost:9000/cms")
 @DisplayName("CMS root redirect")
 class CmsRedirectControllerTest {
 
@@ -46,7 +46,7 @@ class CmsRedirectControllerTest {
     void cmsRoot_cmsUserRole_redirectsDashboard() throws Exception {
         mockMvc.perform(get("/cms").with(user(userDetails("worker", "cms_user", "CMS:R"))))
                 .andExpect(status().is3xxRedirection())
-                .andExpect(redirectedUrl("http://localhost:3000/cms/dashboard"));
+                .andExpect(redirectedUrl("http://localhost:9000/cms/dashboard"));
     }
 
     @Test
