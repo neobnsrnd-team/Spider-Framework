@@ -1,3 +1,9 @@
+/*
+ * globals.css
+ * 멀티 도메인 화이트라벨 테마 엔진 — 컴포넌트 라이브러리 전역 디자인 토큰 파일.
+ * themeGenerator.ts가 자동으로 생성하며, 직접 편집하지 않습니다.
+ * JSON 토큰 수정 후 npm run build:css-all을 실행해 재생성합니다.
+ */
 /* ================================================================
    MULTI-DOMAIN WHITE-LABEL THEME ENGINE
    Tailwind CSS v4 · Source of Truth: packages/shared/styles/themes/

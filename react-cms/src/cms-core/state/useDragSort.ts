@@ -1,5 +1,12 @@
-// 드래그&드롭 정렬 훅 (dnd-kit 기반)
-// 블록 순서 변경만 지원합니다 (중첩 구조 없음).
+/**
+ * @file useDragSort.ts
+ * @description dnd-kit 기반 드래그&드롭 정렬 훅.
+ * 블록 순서 변경(단일 레벨 평탄 목록)에만 사용하며, 중첩 구조는 지원하지 않습니다.
+ *
+ * @param options.onReorder 정렬 완료 시 호출할 콜백 (oldIndex, newIndex)
+ * @param options.ids 정렬 대상 아이템 id 배열 (순서 계산에 사용)
+ * @returns handleDragEnd dnd-kit DragEndEvent 핸들러
+ */
 import type { DragEndEvent } from "@dnd-kit/core";
 
 interface UseDragSortOptions {

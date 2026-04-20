@@ -1,4 +1,15 @@
-// CMS 페이지 데이터 모델 타입 + 블록 메타데이터 타입
+/**
+ * @file types.ts
+ * @description CMS 페이지 데이터 모델 타입 및 블록 메타데이터 타입 정의.
+ * 외부 프로젝트가 CMSApp/CMSRuntimeProvider에 블록·레이아웃·오버레이를 제공할 때 사용합니다.
+ *
+ * 주요 타입:
+ * - PropField: CMS 인스펙터에서 편집 가능한 prop 필드 스키마
+ * - BlockDefinition: 팔레트에 등록할 블록 메타데이터 + 컴포넌트
+ * - LayoutTemplate: 레이아웃 크롬(header/footer) 템플릿
+ * - OverlayTemplate: 바텀시트·모달 등 오버레이 템플릿
+ * - CMSPage: 저장·불러오기 포맷 (blocks + overlays + layoutType)
+ */
 import type React from "react";
 
 // ─── PropField 타입 ────────────────────────────────────────────
@@ -110,7 +121,7 @@ export interface OverlayRendererProps {
   open: boolean;
   onClose: () => void;
   children?: React.ReactNode;
-  container: HTMLDivElement | null;
+  container: HTMLElement | null;
   props?: Record<string, unknown>;
 }
 

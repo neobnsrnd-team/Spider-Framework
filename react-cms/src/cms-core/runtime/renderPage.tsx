@@ -11,6 +11,12 @@ import { OverlayProvider, useOverlayStore } from "../state/overlayStore";
 
 // ─── Action Handler ──────────────────────────────────────────────────────────
 
+/**
+ * @description 블록 인터랙션 Action을 실제 동작으로 연결하는 훅.
+ * OverlayStore(open/close)와 react-router-dom navigate를 결합해
+ * openOverlay / closeOverlay / navigate 세 가지 액션을 처리합니다.
+ * @returns handleAction(action?: Action) — 이벤트 핸들러에서 직접 호출하는 함수
+ */
 function useActionHandler() {
   const { open, close } = useOverlayStore();
   const navigate = useNavigate();

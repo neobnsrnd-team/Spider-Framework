@@ -1,3 +1,13 @@
+/**
+ * @file SavePageModal.tsx
+ * @description 페이지 저장 모달.
+ * 컴포넌트명(PascalCase)과 라우트 경로(/)를 입력받아 onSave 핸들러를 호출합니다.
+ * 저장 성공 시 성공 상태를 표시하고, 실패 시 오류 메시지를 인라인으로 표시합니다.
+ *
+ * @param page 저장할 CMSPage 데이터
+ * @param onClose 모달 닫기 핸들러
+ * @param onSave 저장 핸들러. 생략 시 저장 버튼 비활성
+ */
 import { useState } from "react";
 import type { CMSPage } from "./types";
 
@@ -58,7 +68,7 @@ export default function SavePageModal({ page, onClose, onSave }: SavePageModalPr
       onClick={onClose}
     >
       <div
-        className="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6 flex flex-col gap-4"
+        className="bg-white rounded-2xl shadow-2xl w-full max-w-[24rem] p-6 flex flex-col gap-4"
         onClick={(e) => e.stopPropagation()}
       >
         <h2 className="text-sm font-bold text-gray-900">페이지 저장</h2>

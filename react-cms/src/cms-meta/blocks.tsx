@@ -557,7 +557,8 @@ const CardVisualDefinition: BlockDefinition = {
   component: (p) => <CardVisual {...(p as any)} />,
 };
 
-// LoanMenuBar의 icon은 ReactNode라 CMS prop으로 직접 편집 불가 — 기본 항목을 고정 주입
+// LoanMenuBar의 items[].icon은 ReactNode 타입이라 CMS propSchema로 직접 편집 불가.
+// 빌더 미리보기를 위해 대표 아이콘 3개(단기·장기·리볼빙)를 고정값으로 주입한다.
 const DEFAULT_LOAN_ITEMS = [
   { id: "short", icon: <CreditCard className="size-5" />, label: "단기카드대출", onClick: () => {} },
   { id: "long",  icon: <Wallet className="size-5" />,     label: "장기카드대출", onClick: () => {} },
@@ -575,7 +576,8 @@ const LoanMenuBarDefinition: BlockDefinition = {
   component: (_p) => <LoanMenuBar items={DEFAULT_LOAN_ITEMS} />,
 };
 
-// PaymentAccountCard의 icon은 ReactNode — CMS prop으로 편집 불가, 고정 아이콘 주입
+// PaymentAccountCard의 icon은 ReactNode 타입이라 CMS propSchema로 편집 불가.
+// 빌더 미리보기용으로 Landmark(은행/금융 아이콘) 고정 주입한다.
 const PaymentAccountCardDefinition: BlockDefinition = {
   meta: {
     name: "PaymentAccountCard",
@@ -1156,7 +1158,8 @@ const AmountInputDefinition: BlockDefinition = {
   component: (p) => <AmountInput {...(p as any)} />,
 };
 
-// digits는 셔플된 숫자 배열 필수 — CMS 미리보기용 고정값 주입
+// NumberKeypad의 digits는 외부에서 셔플된 숫자 배열을 필수로 받는 구조.
+// CMS 빌더 미리보기에서는 실제 셔플 없이 순서대로 고정 주입한다.
 const DEFAULT_KEYPAD_DIGITS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 0];
 
 const NumberKeypadDefinition: BlockDefinition = {
@@ -1229,7 +1232,8 @@ const TransactionListDefinition: BlockDefinition = {
   component: (p) => <TransactionList {...(p as any)} />,
 };
 
-// TransactionSearchFilter의 value는 필수 — CMS 미리보기용 기본값 주입
+// TransactionSearchFilter는 controlled 컴포넌트로 value가 필수.
+// CMS 빌더 미리보기에서는 오늘 기준 30일 범위를 기본값으로 주입한다.
 const DEFAULT_SEARCH_PARAMS = {
   startDate: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10),
   endDate: new Date().toISOString().slice(0, 10),

@@ -26,7 +26,11 @@ interface LeftSidebarProps {
 
 type SidebarTab = "blocks" | "overlays";
 
-export default function LeftSidebar({
+/**
+ * 블록 팔레트 + 오버레이 탭 좌측 사이드바.
+ * React.memo로 감싸 관련 props가 바뀌지 않으면 리렌더링을 건너뜁니다.
+ */
+const LeftSidebar = React.memo(function LeftSidebar({
   onAdd,
   blockMeta,
   blockRegistry,
@@ -108,7 +112,9 @@ export default function LeftSidebar({
       </div>
     </aside>
   );
-}
+});
+
+export default LeftSidebar;
 
 // ── 탭 버튼 ────────────────────────────────────────────────────────────────────
 

@@ -1,6 +1,19 @@
-// Props 에디터 (inspector 버전)
-// group / array / icon-picker / event 포함한 완전판 props 편집 UI
-import { useEffect, useState } from "react";
+/**
+ * @file PropsEditor.tsx
+ * @description 블록 props 편집기 (인스펙터 버전).
+ * group / array / leaf / icon-picker / event 타입을 모두 지원하는 완전판 props 편집 UI.
+ * 선택된 블록의 prop 스키마(propSchema)를 기반으로 동적 폼을 생성합니다.
+ * 이벤트 prop(type: "event")은 인터랙션 섹션에서 Action 바인딩으로 처리됩니다.
+ * 패딩 편집 섹션이 항상 하단에 표시됩니다.
+ *
+ * @param block 편집 대상 CMSBlock
+ * @param onChange props 변경 핸들러
+ * @param onPaddingChange 패딩 변경 핸들러
+ * @param blockMeta 블록 메타 정보 맵 (propSchema 조회에 사용)
+ * @param overlays 현재 페이지 오버레이 목록 (openOverlay 액션 바인딩에 사용)
+ * @param onInteractionChange 이벤트 인터랙션 변경 핸들러
+ */
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { ChevronDown, Plus, Trash2 } from "lucide-react";
 import type { Action, BlockInteraction, BlockPadding, CMSBlock, CMSOverlay } from "../types";
 import type { BlockMeta, LeafPropField, PropField } from "../types";
@@ -19,7 +32,12 @@ const inputCls =
   "w-full h-8 px-3 rounded-lg border border-input-border bg-surface text-xs text-input-text outline-none focus:border-input-border-focus transition-colors";
 
 // ── 단일 리프 필드 컨트롤 ──────────────────────────────────────────────────────
-function FieldControl({
+/**
+ * onChange는 매 렌더마다 새 참조가 생성될 수 있으므로 커스텀 비교 함수로 제외.
+ * value / field / fieldKey 가 동일하면 리렌더링을 건너뜁니다.
+ * set 함수는 항상 최신 props를 propsRef를 통해 읽으므로 stale closure 걱정 없음.
+ */
+const FieldControl = React.memo(function FieldControl({
   fieldKey,
   field,
   value,
@@ -121,14 +139,21 @@ function FieldControl({
       )}
     </div>
   );
-}
+}, (prev, next) =>
+  // onChange는 stale closure 없이 항상 최신 set을 호출하므로 비교에서 제외
+  prev.fieldKey === next.fieldKey &&
+  prev.value === next.value &&
+  Object.is(prev.field, next.field),
+);
 
 // ── 이벤트 필드 (인터랙션 바인딩) ─────────────────────────────────────────────
 
 /**
  * @description 단일 이벤트 prop에 대한 Action 바인딩 UI.
+ * action/overlays가 바뀌지 않으면 리렌더링을 건너뜁니다.
+ * onChange/onClear는 항상 최신 interactionRef를 통해 동작하므로 비교에서 제외합니다.
  */
-function EventField({
+const EventField = React.memo(function EventField({
   eventKey,
   label,
   action,
@@ -140,8 +165,10 @@ function EventField({
   label: string;
   action?: Action;
   overlays: CMSOverlay[];
-  onChange: (action: Action) => void;
-  onClear: () => void;
+  /** eventKey를 첫 번째 인자로 받아 부모에서 직접 전달 가능 */
+  onChange: (key: string, action: Action) => void;
+  /** eventKey를 인자로 받아 부모에서 직접 전달 가능 */
+  onClear: (key: string) => void;
 }) {
   const actionType = action?.type ?? "none";
 
@@ -152,15 +179,15 @@ function EventField({
       overlays.length > 0 &&
       !overlays.some((o) => o.id === action.target)
     ) {
-      onChange({ type: "openOverlay", target: overlays[0].id });
+      onChange(eventKey, { type: "openOverlay", target: overlays[0].id });
     }
-  }, [action, overlays, onChange]);
+  }, [action, overlays, onChange, eventKey]);
 
   function handleTypeChange(type: string) {
-    if (type === "none") { onClear(); return; }
-    if (type === "openOverlay") onChange({ type: "openOverlay", target: overlays[0]?.id ?? "" });
-    else if (type === "closeOverlay") onChange({ type: "closeOverlay" });
-    else onChange({ type: "navigate", path: "/" });
+    if (type === "none") { onClear(eventKey); return; }
+    if (type === "openOverlay") onChange(eventKey, { type: "openOverlay", target: overlays[0]?.id ?? "" });
+    else if (type === "closeOverlay") onChange(eventKey, { type: "closeOverlay" });
+    else onChange(eventKey, { type: "navigate", path: "/" });
   }
 
   return (
@@ -169,7 +196,7 @@ function EventField({
         <label className="text-xs font-semibold text-text-secondary font-mono">{label !== eventKey ? `${eventKey} (${label})` : eventKey}</label>
         {action && (
           <button
-            onClick={onClear}
+            onClick={() => onClear(eventKey)}
             className="text-xs text-text-muted hover:text-red-400 transition-colors"
           >
             해제
@@ -195,7 +222,7 @@ function EventField({
           <select
             className={inputCls}
             value={(action as Extract<Action, { type: "openOverlay" }>).target}
-            onChange={(e) => onChange({ type: "openOverlay", target: e.target.value })}
+            onChange={(e) => onChange(eventKey, { type: "openOverlay", target: e.target.value })}
           >
             {overlays.map((o) => (
               <option key={o.id} value={o.id}>{o.type}: {o.id}</option>
@@ -210,12 +237,17 @@ function EventField({
           className={inputCls}
           placeholder="/accounts"
           value={(action as Extract<Action, { type: "navigate" }>).path}
-          onChange={(e) => onChange({ type: "navigate", path: e.target.value })}
+          onChange={(e) => onChange(eventKey, { type: "navigate", path: e.target.value })}
         />
       )}
     </div>
   );
-}
+}, (prev, next) =>
+  prev.eventKey === next.eventKey &&
+  prev.label === next.label &&
+  Object.is(prev.action, next.action) &&
+  Object.is(prev.overlays, next.overlays),
+);
 
 // ── 메인 PropsEditor ───────────────────────────────────────────────────────────
 export default function PropsEditor({
@@ -231,13 +263,55 @@ export default function PropsEditor({
   const padding = block.padding ?? { top: 0, right: 0, bottom: 0, left: 0 };
   const interaction = block.interaction ?? {};
 
-  function set(key: string, value: unknown) {
-    onChange({ ...props, [key]: value });
-  }
+  // ref로 최신 값을 항상 유지 — useCallback deps 없이도 stale closure 방지
+  const propsRef = useRef(props);
+  propsRef.current = props;
+  const paddingRef = useRef(padding);
+  paddingRef.current = padding;
+  const interactionRef = useRef(interaction);
+  interactionRef.current = interaction;
 
-  function setPadding(side: keyof BlockPadding, value: number) {
-    onPaddingChange({ ...padding, [side]: Math.max(0, value) });
-  }
+  // onChange(props 부모 콜백)이 stable하면 set도 stable → FieldControl 불필요한 리렌더 방지
+  const set = useCallback((key: string, value: unknown) => {
+    onChange({ ...propsRef.current, [key]: value });
+  }, [onChange]);
+
+  // 그룹 필드: propsRef에서 최신 그룹 값을 읽어 stale 덮어쓰기 방지
+  const setGroupField = useCallback((groupKey: string, subKey: string, value: unknown) => {
+    const latestGroup = (propsRef.current[groupKey] as Record<string, unknown>) ?? {};
+    onChange({ ...propsRef.current, [groupKey]: { ...latestGroup, [subKey]: value } });
+  }, [onChange]);
+
+  // 배열 필드 아이템 수정
+  const setArrayItem = useCallback((arrKey: string, idx: number, subKey: string, value: unknown) => {
+    const latestArr = (propsRef.current[arrKey] as Record<string, unknown>[]) ?? [];
+    onChange({ ...propsRef.current, [arrKey]: latestArr.map((it, i) => i === idx ? { ...it, [subKey]: value } : it) });
+  }, [onChange]);
+
+  // 배열 아이템 추가/삭제
+  const addArrayItem = useCallback((arrKey: string, newItem: Record<string, unknown>) => {
+    const latestArr = (propsRef.current[arrKey] as Record<string, unknown>[]) ?? [];
+    onChange({ ...propsRef.current, [arrKey]: [...latestArr, newItem] });
+  }, [onChange]);
+
+  const removeArrayItem = useCallback((arrKey: string, idx: number) => {
+    const latestArr = (propsRef.current[arrKey] as Record<string, unknown>[]) ?? [];
+    onChange({ ...propsRef.current, [arrKey]: latestArr.filter((_, i) => i !== idx) });
+  }, [onChange]);
+
+  const setPadding = useCallback((side: keyof BlockPadding, value: number) => {
+    onPaddingChange({ ...paddingRef.current, [side]: Math.max(0, value) });
+  }, [onPaddingChange]);
+
+  // 이벤트 콜백: interactionRef로 최신 interaction 읽기
+  const handleEventChange = useCallback((key: string, action: Action) => {
+    onInteractionChange?.({ ...interactionRef.current, [key]: action });
+  }, [onInteractionChange]);
+
+  const handleEventClear = useCallback((key: string) => {
+    const { [key]: _removed, ...rest } = interactionRef.current;
+    onInteractionChange?.(rest);
+  }, [onInteractionChange]);
 
   const schema = meta?.propSchema ?? {};
   // event 타입은 별도 이벤트 섹션에서 처리
@@ -272,7 +346,8 @@ export default function PropsEditor({
                         fieldKey={subKey}
                         field={subField}
                         value={groupVal[subKey] ?? subField.default}
-                        onChange={(val) => set(key, { ...groupVal, [subKey]: val })}
+                        // setGroupField는 stable — FieldControl 커스텀 memo comparator로 리렌더 스킵
+                        onChange={(val) => setGroupField(key, subKey, val)}
                       />
                     ))}
                   </div>
@@ -297,7 +372,7 @@ export default function PropsEditor({
                     <span className="text-xs text-text-muted mr-1">{arrVal.length}개</span>
                     <button
                       type="button"
-                      onClick={() => set(key, [...arrVal, newItem])}
+                      onClick={() => addArrayItem(key, newItem)}
                       className="flex items-center gap-0.5 text-xs text-primary font-semibold hover:opacity-70 bg-transparent border-none"
                     >
                       <Plus className="w-3 h-3" />
@@ -317,7 +392,7 @@ export default function PropsEditor({
                           <span className="text-xs font-semibold text-text-muted">#{idx + 1}</span>
                           <button
                             type="button"
-                            onClick={() => set(key, arrVal.filter((_, i) => i !== idx))}
+                            onClick={() => removeArrayItem(key, idx)}
                             className="flex items-center gap-0.5 text-xs text-error hover:opacity-70 bg-transparent border-none"
                           >
                             <Trash2 className="w-3 h-3" />
@@ -330,14 +405,8 @@ export default function PropsEditor({
                             fieldKey={subKey}
                             field={subField}
                             value={(item[subKey] ?? subField.default) as unknown}
-                            onChange={(val) =>
-                              set(
-                                key,
-                                arrVal.map((it, i) =>
-                                  i === idx ? { ...it, [subKey]: val } : it,
-                                ),
-                              )
-                            }
+                            // setArrayItem은 stable — propsRef로 최신 배열 읽어 stale 방지
+                            onChange={(val) => setArrayItem(key, idx, subKey, val)}
                           />
                         ))}
                       </div>
@@ -379,13 +448,9 @@ export default function PropsEditor({
                 label={label}
                 action={interaction[key]}
                 overlays={overlays}
-                onChange={(action) => {
-                  onInteractionChange({ ...interaction, [key]: action });
-                }}
-                onClear={() => {
-                  const { [key]: _removed, ...rest } = interaction;
-                  onInteractionChange(rest);
-                }}
+                // handleEventChange/handleEventClear가 (key, ...) 시그니처와 일치 — 직접 전달
+                onChange={handleEventChange}
+                onClear={handleEventClear}
               />
             );
           })}
@@ -405,6 +470,7 @@ export default function PropsEditor({
                 type="number"
                 min={0}
                 value={padding[side]}
+                // side는 루프 내 상수 — setPadding은 stable useCallback
                 onChange={(e) => setPadding(side, Number(e.target.value))}
                 className={inputCls}
               />

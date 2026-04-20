@@ -1,10 +1,15 @@
+/**
+ * @file main.tsx
+ * @description React CMS 빌더 앱의 진입점.
+ * CMSApp을 루트 DOM 요소(#root)에 마운트합니다.
+ * blocks / overlays / layouts는 cms.config.ts에서, 스타일은 user-scope.css?inline으로 주입합니다.
+ *
+ * 개발 시 주의사항:
+ * - onSave는 현재 주석 처리됨 (defaultSave 사용). 페이지 저장 커스터마이징이 필요하면 savePage.ts 참고.
+ * - stylesheetContent에 user-scope.css를 인라인으로 전달해 캔버스 영역에만 외부 스타일을 격리합니다.
+ */
 import { StrictMode } from "react"
 import { createRoot } from "react-dom/client"
-// Tailwind 유틸리티 전역 주입 — 빌더 셸(모달·사이드바 등)에 bg-primary 등 커스텀 클래스 적용
-// user-scope.css?inline 은 @scope 로 스코프되어 모달 등 빌더 UI에 적용되지 않으므로 별도 전역 import 필요
-import "./globals.css"
-// 컴포넌트 라이브러리 전역 테마 — 디자인 토큰 + Tailwind preflight/utilities
-// CMS 빌더 셸 전용 추가 변수 (툴바 높이, 캔버스 패딩 등)
 import "./index.css"
 import { CMSApp } from "@cms-core"
 import { blocks, overlays, layouts } from "./cms.config"

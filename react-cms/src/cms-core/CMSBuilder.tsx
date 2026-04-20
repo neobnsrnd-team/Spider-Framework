@@ -1,7 +1,22 @@
-// <CMSBuilder /> — 외부 프로젝트에 임베드 가능한 CMS 빌더 컴포넌트
-// CMSPage.tsx의 하드코딩된 의존성을 props로 교체합니다.
+/**
+ * @file CMSBuilder.tsx
+ * @description 외부 프로젝트에 임베드 가능한 CMS 빌더 컴포넌트.
+ * dnd-kit DndContext 위에 좌측 팔레트(LeftSidebar), 중앙 캔버스(Canvas),
+ * 우측 인스펙터(RightSidebar)를 배치합니다.
+ *
+ * 주요 기능:
+ * - 블록/오버레이 드래그·추가·삭제·정렬
+ * - 레이아웃 타입 및 props 편집
+ * - JSON 가져오기/내보내기
+ * - JSX 코드 보기 및 페이지 저장 모달
+ * - 새 탭 미리보기 (localStorage → PreviewPage)
+ *
+ * @param onSave 페이지 저장 핸들러. 생략 시 defaultSave 사용
+ * @param initialPage 초기 페이지 데이터 (불러오기용)
+ */
 
-import { useState, useRef, useMemo } from "react";
+import { useState, useRef, useMemo, useCallback } from "react";
+import { createPortal } from "react-dom";
 import {
   DndContext,
   PointerSensor,
@@ -52,14 +67,81 @@ export function CMSBuilder({ onSave, initialPage }: CMSBuilderProps) {
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
   );
 
-  const selectedBlock = builder.activeBlocks.find((b) => b.id === builder.selectedBlockId) ?? null;
-  const editingOverlay: CMSOverlay | undefined = builder.editingOverlayId
-    ? builder.overlays.find((o) => o.id === builder.editingOverlayId)
-    : undefined;
+  // activeBlocks/overlays는 builderStore에서 이미 useMemo로 관리되므로 여기서 find만 메모이제이션
+  const selectedBlock = useMemo(
+    () => builder.activeBlocks.find((b) => b.id === builder.selectedBlockId) ?? null,
+    [builder.activeBlocks, builder.selectedBlockId],
+  );
+  const editingOverlay = useMemo<CMSOverlay | undefined>(
+    () =>
+      builder.editingOverlayId
+        ? builder.overlays.find((o) => o.id === builder.editingOverlayId)
+        : undefined,
+    [builder.editingOverlayId, builder.overlays],
+  );
 
   const activePaletteType = activeDragId?.startsWith("palette::")
     ? activeDragId.replace("palette::", "")
     : null;
+
+  // ── 안정화된 핸들러 ─────────────────────────────────────────────────────────
+  // builder 액션들은 builderStore에서 useCallback으로 안정화되어 있으므로
+  // 여기서 복합 동작만 useCallback으로 감쌈
+
+  // ref로 최신 id만 유지 — 객체 전체를 deps에 넣지 않아도 stale 없음
+  const selectedBlockIdRef = useRef<string | null>(null);
+  selectedBlockIdRef.current = builder.selectedBlockId;
+  const editingOverlayIdRef = useRef<string | undefined>(undefined);
+  editingOverlayIdRef.current = editingOverlay?.id;
+
+  const handleSelectBlock = useCallback(
+    (id: string) => { builder.selectBlock(id); setRightTab("props"); },
+    [builder.selectBlock],
+  );
+
+  const handleDeselect = useCallback(
+    () => builder.selectBlock(null),
+    [builder.selectBlock],
+  );
+
+  const handleEnterOverlay = useCallback(
+    (id: string) => { builder.enterOverlay(id); setRightTab("layout"); },
+    [builder.enterOverlay],
+  );
+
+  // selectedBlock 객체 대신 ref로 id만 읽어 props 수정 중 핸들러 재생성 방지
+  const handlePropsChange = useCallback(
+    (newProps: Record<string, unknown>) => {
+      const id = selectedBlockIdRef.current;
+      if (id) builder.updateBlockProps(id, newProps);
+    },
+    [builder.updateBlockProps],
+  );
+
+  const handlePaddingChange = useCallback(
+    (padding: Parameters<typeof builder.updateBlockPadding>[1]) => {
+      const id = selectedBlockIdRef.current;
+      if (id) builder.updateBlockPadding(id, padding);
+    },
+    [builder.updateBlockPadding],
+  );
+
+  const handleInteractionChange = useCallback(
+    (interaction: Parameters<typeof builder.updateBlockInteraction>[1]) => {
+      const id = selectedBlockIdRef.current;
+      if (id) builder.updateBlockInteraction(id, interaction);
+    },
+    [builder.updateBlockInteraction],
+  );
+
+  // editingOverlay 객체 대신 ref로 id만 읽어 오버레이 편집 중 핸들러 재생성 방지
+  const handleOverlayPropsChange = useCallback(
+    (props: Record<string, unknown>) => {
+      const id = editingOverlayIdRef.current;
+      if (id) builder.updateOverlayProps(id, props);
+    },
+    [builder.updateOverlayProps],
+  );
 
   function handleDragStart(event: DragStartEvent) {
     setActiveDragId(event.active.id as string);
@@ -115,6 +197,12 @@ export function CMSBuilder({ onSave, initialPage }: CMSBuilderProps) {
 
   const page = builder.getPage();
 
+  // page 선언 이후에 위치해야 TDZ 에러가 발생하지 않음
+  const handlePreview = useCallback(() => {
+    localStorage.setItem("cms_preview", JSON.stringify(page));
+    window.open("/preview", "_blank");
+  }, [page]);
+
   // Context 정보(layouts, codegenConfig, overlayTemplates)를 포함해 코드를 생성한 뒤
   // SavePageParams.code에 주입하여 저장 함수가 올바른 코드를 받도록 래핑
   const wrappedOnSave = useMemo(() => {
@@ -139,10 +227,7 @@ export function CMSBuilder({ onSave, initialPage }: CMSBuilderProps) {
           onExport={() => downloadPageJson(page)}
           onViewCode={() => setCodeOpen(true)}
           onSavePage={() => setSaveOpen(true)}
-          onPreview={() => {
-            localStorage.setItem("cms_preview", JSON.stringify(page));
-            window.open("/preview", "_blank");
-          }}
+          onPreview={handlePreview}
           onClear={builder.clearBlocks}
         />
 
@@ -158,7 +243,7 @@ export function CMSBuilder({ onSave, initialPage }: CMSBuilderProps) {
             onAddOverlayFromTemplate={builder.addOverlayFromTemplate}
             onRemoveOverlay={builder.removeOverlay}
             onRenameOverlay={builder.renameOverlay}
-            onEnterOverlay={(id) => { builder.enterOverlay(id); setRightTab("layout"); }}
+            onEnterOverlay={handleEnterOverlay}
             onExitOverlay={builder.exitOverlay}
           />
 
@@ -171,9 +256,9 @@ export function CMSBuilder({ onSave, initialPage }: CMSBuilderProps) {
             editingOverlay={editingOverlay}
             blockMeta={blockMeta}
             blockRegistry={blockRegistry}
-            onSelectBlock={(id) => { builder.selectBlock(id); setRightTab("props"); }}
+            onSelectBlock={handleSelectBlock}
             onRemoveBlock={builder.removeBlock}
-            onDeselect={() => builder.selectBlock(null)}
+            onDeselect={handleDeselect}
           />
 
           {/* ── 우측: 속성 / 레이아웃 / JSON ── */}
@@ -189,10 +274,10 @@ export function CMSBuilder({ onSave, initialPage }: CMSBuilderProps) {
             isEditingOverlay={!!editingOverlay}
             blockMeta={blockMeta}
             onTabChange={setRightTab}
-            onPropsChange={(newProps) => selectedBlock && builder.updateBlockProps(selectedBlock.id, newProps)}
-            onPaddingChange={(padding) => selectedBlock && builder.updateBlockPadding(selectedBlock.id, padding)}
-            onInteractionChange={(interaction) => selectedBlock && builder.updateBlockInteraction(selectedBlock.id, interaction)}
-            onOverlayPropsChange={(props) => editingOverlay && builder.updateOverlayProps(editingOverlay.id, props)}
+            onPropsChange={handlePropsChange}
+            onPaddingChange={handlePaddingChange}
+            onInteractionChange={handleInteractionChange}
+            onOverlayPropsChange={handleOverlayPropsChange}
             onLayoutTypeChange={builder.updateLayoutType}
             onLayoutPropsChange={builder.updateLayoutProps}
           />
@@ -200,14 +285,19 @@ export function CMSBuilder({ onSave, initialPage }: CMSBuilderProps) {
 
         <input ref={fileInputRef} type="file" accept=".json" className="hidden" onChange={handleFileChange} />
 
-        {codeOpen && <CodeModal code={generateJSX(page, layouts, codegenConfig, overlayTemplates)} onClose={() => setCodeOpen(false)} />}
+        {/* createPortal로 document.body에 직접 마운트 — overflow/flex 컨테이너의 fixed 포지셔닝 제약을 우회 */}
+        {codeOpen && createPortal(
+          <CodeModal code={generateJSX(page, layouts, codegenConfig, overlayTemplates)} onClose={() => setCodeOpen(false)} />,
+          document.body,
+        )}
 
-        {saveOpen && (
+        {saveOpen && createPortal(
           <SavePageModal
             page={page}
             onSave={wrappedOnSave}
             onClose={() => setSaveOpen(false)}
-          />
+          />,
+          document.body,
         )}
       </div>
 
@@ -338,7 +428,7 @@ function CodeModal({ code, onClose }: { code: string; onClose: () => void }) {
       onClick={onClose}
     >
       <div
-        className="relative bg-gray-900 rounded-2xl shadow-2xl w-full max-w-2xl max-h-[80vh] flex flex-col overflow-hidden"
+        className="relative bg-gray-900 rounded-2xl shadow-2xl w-full max-w-[42rem] max-h-[80vh] flex flex-col overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between px-4 py-2.5 border-b border-gray-700 flex-shrink-0">

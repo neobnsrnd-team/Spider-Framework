@@ -1,5 +1,12 @@
-// JSON 내보내기
-// CMSPage를 JSON 파일로 다운로드하거나 문자열로 직렬화합니다.
+/**
+ * @file exportJson.ts
+ * @description CMSPage JSON 직렬화 및 파일 다운로드 유틸리티.
+ * CMS의 저장 포맷은 항상 JSON이며, 이 모듈은 내보내기/가져오기 기능을 제공합니다.
+ *
+ * - pageToJson: CMSPage → JSON 문자열
+ * - downloadPageJson: CMSPage → 브라우저 파일 다운로드 (page.json)
+ * - parsePageJson: JSON 문자열 → CMSPage (가져오기용)
+ */
 import type { CMSPage } from "../types";
 
 export function pageToJson(page: CMSPage): string {

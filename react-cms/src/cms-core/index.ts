@@ -1,3 +1,17 @@
+/**
+ * @file index.ts
+ * @description cms-core 공개 API 진입점.
+ * 외부 프로젝트는 이 파일에서 CMS 타입, 컴포넌트, 훅을 import 합니다.
+ *
+ * 주요 카테고리:
+ * - 블록/페이지 데이터 모델 타입: CMSBlock, CMSPage, CMSOverlay 등
+ * - 블록 메타데이터 타입: BlockDefinition, PropField, BlockMeta 등
+ * - 레이아웃/오버레이 주입 타입: LayoutTemplate, OverlayTemplate 등
+ * - CMS Runtime: CMSRuntimeProvider, PageRenderer
+ * - CMS Builder: CMSBuilder
+ * - CMS App: CMSApp (빌더 UI 전체 포함)
+ * - 스타일 격리: UserScopeWrapper
+ */
 // ── 블록/페이지 데이터 모델 타입 ──────────────────────────────────────────────
 export type {
   CMSBlock,
