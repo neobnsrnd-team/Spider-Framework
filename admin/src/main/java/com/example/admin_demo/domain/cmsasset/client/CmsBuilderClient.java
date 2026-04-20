@@ -4,9 +4,9 @@ import com.example.admin_demo.domain.cmsasset.client.dto.CmsBuilderUploadApiResp
 import com.example.admin_demo.domain.cmsasset.config.CmsBuilderProperties;
 import com.example.admin_demo.global.exception.ErrorType;
 import com.example.admin_demo.global.exception.base.BaseException;
-import java.io.IOException;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.core.io.ByteArrayResource;
+import org.springframework.core.io.Resource;
+import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
@@ -109,27 +109,17 @@ public class CmsBuilderClient {
     /**
      * MultipartFile 을 RestClient 전송 가능한 HttpEntity(Resource) 로 변환.
      *
-     * <p>파일명을 보존하려면 {@link ByteArrayResource#getFilename()} 를 오버라이드해야 한다.
+     * <p>{@link MultipartFile#getResource()} 는 내부 저장소(임시 파일·InputStream)를 직접 참조하는
+     * Resource 를 반환하므로 전체 바이트를 힙에 복사하지 않는다. 20MB 다건 업로드 시 OOM·GC 압박을 피하기 위함.
+     * 반환되는 {@code MultipartFileResource} 는 원본 파일명을 그대로 노출한다.
      */
-    private org.springframework.http.HttpEntity<ByteArrayResource> toFilePart(MultipartFile file) {
-        byte[] bytes;
-        try {
-            bytes = file.getBytes();
-        } catch (IOException e) {
-            throw new BaseException(ErrorType.INTERNAL_ERROR, "파일을 읽는 중 오류가 발생했습니다.", e);
-        }
-        ByteArrayResource resource = new ByteArrayResource(bytes) {
-            @Override
-            public String getFilename() {
-                return file.getOriginalFilename();
-            }
-        };
+    private HttpEntity<Resource> toFilePart(MultipartFile file) {
         HttpHeaders partHeaders = new HttpHeaders();
         if (file.getContentType() != null) {
             partHeaders.setContentType(MediaType.parseMediaType(file.getContentType()));
         } else {
             partHeaders.setContentType(MediaType.APPLICATION_OCTET_STREAM);
         }
-        return new org.springframework.http.HttpEntity<>(resource, partHeaders);
+        return new HttpEntity<>(file.getResource(), partHeaders);
     }
 }

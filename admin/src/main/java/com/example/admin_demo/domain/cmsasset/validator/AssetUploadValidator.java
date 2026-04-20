@@ -2,6 +2,7 @@ package com.example.admin_demo.domain.cmsasset.validator;
 
 import com.example.admin_demo.global.exception.InvalidInputException;
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
@@ -81,9 +82,10 @@ public class AssetUploadValidator {
 
     /** 파일 헤더의 첫 N 바이트를 읽어 반환. IO 오류 시 InvalidInputException. */
     private byte[] readHeaderBytes(MultipartFile file) {
-        try {
+        // try-with-resources 로 스트림을 명시적으로 닫아 리소스 누수를 방지한다.
+        try (InputStream is = file.getInputStream()) {
             byte[] buf = new byte[MAGIC_BYTE_READ_SIZE];
-            int read = file.getInputStream().readNBytes(buf, 0, MAGIC_BYTE_READ_SIZE);
+            int read = is.readNBytes(buf, 0, MAGIC_BYTE_READ_SIZE);
             if (read < 3) {
                 throw new InvalidInputException("파일을 읽을 수 없습니다.");
             }
