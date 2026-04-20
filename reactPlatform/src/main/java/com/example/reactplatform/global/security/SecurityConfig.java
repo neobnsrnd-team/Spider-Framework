@@ -17,7 +17,7 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.context.SecurityContextHolderFilter;
-import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
+import org.springframework.security.web.csrf.CsrfTokenRequestAttributeHandler;
 
 @Configuration
 @EnableWebSecurity
@@ -56,9 +56,10 @@ public class SecurityConfig {
                 // ContentCachingFilter를 Security Filter 앞에 추가
                 .addFilterBefore(new ContentCachingFilter(), SecurityContextHolderFilter.class)
 
-                // CSRF 설정 — CookieCsrfTokenRepository로 클라이언트가 XSRF-TOKEN 쿠키를 읽어 X-XSRF-TOKEN 헤더로 전송
+                // CSRF 설정 — CsrfTokenRequestAttributeHandler로 XOR 마스킹 비활성화
+                // Spring Security 6 기본값(XorCsrfTokenRequestAttributeHandler)은 Thymeleaf ${_csrf.token} 렌더링을 깨뜨림
                 .csrf(csrf -> csrf
-                        .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
+                        .csrfTokenRequestHandler(new CsrfTokenRequestAttributeHandler())
                         .ignoringRequestMatchers("/h2-console/**"))
 
                 // Headers 설정 (H2 Console iframe 허용)
