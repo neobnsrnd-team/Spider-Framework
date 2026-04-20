@@ -655,6 +655,18 @@
             if (modal) modal.classList.toggle('flow-zoom');
         },
 
+        generateSource() {
+            if (!this.currentTrxId) {
+                alert('거래 정보가 없습니다.');
+                return;
+            }
+            const orgId = this.currentOrgId || '';
+            const url = API_BASE_URL + '/code-templates/generate?trxId='
+                + encodeURIComponent(this.currentTrxId)
+                + (orgId ? '&orgId=' + encodeURIComponent(orgId) : '');
+            window.location.href = url;
+        },
+
         createTrx() {
             const trxId = document.getElementById('trxDetailTrxId').value.trim();
             if (!trxId) {

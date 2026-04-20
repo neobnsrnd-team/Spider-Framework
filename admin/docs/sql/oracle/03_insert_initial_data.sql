@@ -79,6 +79,9 @@ VALUES ('v3_proxy_testdata', 'v3_msg_manage', 11, '당발 대응답', '/proxy-re
 INSERT INTO FWK_MENU (MENU_ID, PRIOR_MENU_ID, SORT_ORDER, MENU_NAME, MENU_URL, DISPLAY_YN, USE_YN, LAST_UPDATE_DTIME, LAST_UPDATE_USER_ID)
 VALUES ('v3_trx_validator', 'v3_msg_manage', 12, '거래 validator', '/validators', 'Y', 'Y', TO_CHAR(SYSDATE, 'YYYYMMDDHH24MISS'), 'system');
 
+INSERT INTO FWK_MENU (MENU_ID, PRIOR_MENU_ID, SORT_ORDER, MENU_NAME, MENU_URL, DISPLAY_YN, USE_YN, LAST_UPDATE_DTIME, LAST_UPDATE_USER_ID)
+VALUES ('v3_code_template_manage', 'v3_msg_manage', 13, '코드 템플릿', '/code-templates', 'Y', 'Y', TO_CHAR(SYSDATE, 'YYYYMMDDHH24MISS'), 'system');
+
 -- 2. Interface 관리
 INSERT INTO FWK_MENU (MENU_ID, PRIOR_MENU_ID, SORT_ORDER, MENU_NAME, MENU_URL, DISPLAY_YN, USE_YN, LAST_UPDATE_DTIME, LAST_UPDATE_USER_ID)
 VALUES ('v3_interface_manage', 'v3_acl_manage', 2, 'Interface 관리', NULL, 'Y', 'Y', TO_CHAR(SYSDATE, 'YYYYMMDDHH24MISS'), 'system');
@@ -244,6 +247,7 @@ INSERT INTO FWK_USER_MENU (USER_ID, MENU_ID, AUTH_CODE, LAST_UPDATE_DTIME, LAST_
 INSERT INTO FWK_USER_MENU (USER_ID, MENU_ID, AUTH_CODE, LAST_UPDATE_DTIME, LAST_UPDATE_USER_ID) VALUES ('admin', 'v3_req_message_test', 'W', TO_CHAR(SYSDATE, 'YYYYMMDDHH24MISS'), 'system');
 INSERT INTO FWK_USER_MENU (USER_ID, MENU_ID, AUTH_CODE, LAST_UPDATE_DTIME, LAST_UPDATE_USER_ID) VALUES ('admin', 'v3_proxy_testdata', 'W', TO_CHAR(SYSDATE, 'YYYYMMDDHH24MISS'), 'system');
 INSERT INTO FWK_USER_MENU (USER_ID, MENU_ID, AUTH_CODE, LAST_UPDATE_DTIME, LAST_UPDATE_USER_ID) VALUES ('admin', 'v3_trx_validator', 'W', TO_CHAR(SYSDATE, 'YYYYMMDDHH24MISS'), 'system');
+INSERT INTO FWK_USER_MENU (USER_ID, MENU_ID, AUTH_CODE, LAST_UPDATE_DTIME, LAST_UPDATE_USER_ID) VALUES ('admin', 'v3_code_template_manage', 'W', TO_CHAR(SYSDATE, 'YYYYMMDDHH24MISS'), 'system');
 INSERT INTO FWK_USER_MENU (USER_ID, MENU_ID, AUTH_CODE, LAST_UPDATE_DTIME, LAST_UPDATE_USER_ID) VALUES ('admin', 'v3_interface_manage', 'W', TO_CHAR(SYSDATE, 'YYYYMMDDHH24MISS'), 'system');
 INSERT INTO FWK_USER_MENU (USER_ID, MENU_ID, AUTH_CODE, LAST_UPDATE_DTIME, LAST_UPDATE_USER_ID) VALUES ('admin', 'v3_connect_org_manage', 'W', TO_CHAR(SYSDATE, 'YYYYMMDDHH24MISS'), 'system');
 INSERT INTO FWK_USER_MENU (USER_ID, MENU_ID, AUTH_CODE, LAST_UPDATE_DTIME, LAST_UPDATE_USER_ID) VALUES ('admin', 'v3_gw_manage', 'W', TO_CHAR(SYSDATE, 'YYYYMMDDHH24MISS'), 'system');
@@ -311,6 +315,7 @@ INSERT INTO FWK_ROLE_MENU (ROLE_ID, MENU_ID, AUTH_CODE) VALUES ('ADMIN', 'v3_trx
 INSERT INTO FWK_ROLE_MENU (ROLE_ID, MENU_ID, AUTH_CODE) VALUES ('ADMIN', 'v3_req_message_test', 'W');
 INSERT INTO FWK_ROLE_MENU (ROLE_ID, MENU_ID, AUTH_CODE) VALUES ('ADMIN', 'v3_proxy_testdata', 'W');
 INSERT INTO FWK_ROLE_MENU (ROLE_ID, MENU_ID, AUTH_CODE) VALUES ('ADMIN', 'v3_trx_validator', 'W');
+INSERT INTO FWK_ROLE_MENU (ROLE_ID, MENU_ID, AUTH_CODE) VALUES ('ADMIN', 'v3_code_template_manage', 'W');
 INSERT INTO FWK_ROLE_MENU (ROLE_ID, MENU_ID, AUTH_CODE) VALUES ('ADMIN', 'v3_interface_manage', 'W');
 INSERT INTO FWK_ROLE_MENU (ROLE_ID, MENU_ID, AUTH_CODE) VALUES ('ADMIN', 'v3_connect_org_manage', 'W');
 INSERT INTO FWK_ROLE_MENU (ROLE_ID, MENU_ID, AUTH_CODE) VALUES ('ADMIN', 'v3_gw_manage', 'W');
@@ -424,6 +429,132 @@ VALUES ('notice', 'CLOSEABLE_YN', '닫기 버튼', '공지 모달 닫기 버튼 
 -- 오늘 하루 보지 않기 체크박스 노출 여부 (Y: 표시 / N: 숨김)
 INSERT INTO FWK_PROPERTY (PROPERTY_GROUP_ID, PROPERTY_ID, PROPERTY_NAME, PROPERTY_DESC, DATA_TYPE, VALID_DATA, DEFAULT_VALUE, LAST_UPDATE_USER_ID, LAST_UPDATE_DTIME)
 VALUES ('notice', 'HIDE_TODAY_YN', '오늘 하루 보지 않기', '오늘 하루 보지 않기 체크박스 노출 여부', 'C', 'Y,N', 'Y', 'system', TO_CHAR(SYSDATE, 'YYYYMMDDHH24MISS'));
+
+-- =============================================================
+-- 코드 템플릿 기본 데이터 (FWK_CODE_TEMPLATE)
+-- =============================================================
+
+INSERT INTO FWK_CODE_TEMPLATE (TEMPLATE_ID, TEMPLATE_NAME, TEMPLATE_TYPE, TEMPLATE_BODY, DESCRIPTION, USE_YN, SORT_ORDER, LAST_UPDATE_USER_ID)
+VALUES (
+    'PRE_HANDLER',
+    'PreHandler',
+    'JAVA',
+    'package ${packageName};
+
+import spider.spiderlink.context.MessageContext;
+import spider.spiderlink.engine.adapter.tcp.BaseOrgInHandler;
+import spider.common.util.DataMap;
+
+/**
+ * ${trxName} 거래 전처리 핸들러
+ * 거래 ID : ${trxId}
+ */
+public class ${className}PreHandler extends BaseOrgInHandler {
+
+    @Override
+    protected DataMap doPreProcess(MessageContext messageContext, DataMap dataMap) throws Exception {
+        // TODO: 전처리 로직 구현
+        return dataMap;
+    }
+}',
+    '거래 전처리 핸들러 템플릿 (BaseOrgInHandler 상속)',
+    'Y',
+    1,
+    'system'
+);
+
+INSERT INTO FWK_CODE_TEMPLATE (TEMPLATE_ID, TEMPLATE_NAME, TEMPLATE_TYPE, TEMPLATE_BODY, DESCRIPTION, USE_YN, SORT_ORDER, LAST_UPDATE_USER_ID)
+VALUES (
+    'SERVICE',
+    'Service',
+    'JAVA',
+    'package ${packageName};
+
+import spider.service.engine.BaseServiceHandler;
+import spider.spiderlink.context.MessageContext;
+import spider.common.util.DataMap;
+
+/**
+ * ${trxName} 거래 서비스
+ * 거래 ID : ${trxId}
+ */
+public class ${className}Service extends BaseServiceHandler {
+
+    @Override
+    public DataMap doProcess(MessageContext messageContext, DataMap dataMap) throws Exception {
+        // TODO: 비즈니스 로직 구현
+        return dataMap;
+    }
+}',
+    '거래 서비스 핸들러 템플릿 (BaseServiceHandler 상속)',
+    'Y',
+    2,
+    'system'
+);
+
+INSERT INTO FWK_CODE_TEMPLATE (TEMPLATE_ID, TEMPLATE_NAME, TEMPLATE_TYPE, TEMPLATE_BODY, DESCRIPTION, USE_YN, SORT_ORDER, LAST_UPDATE_USER_ID)
+VALUES (
+    'POST_HANDLER',
+    'PostHandler',
+    'JAVA',
+    'package ${packageName};
+
+import spider.spiderlink.context.MessageContext;
+import spider.spiderlink.engine.adapter.tcp.BaseOrgHandler;
+import spider.common.util.DataMap;
+
+/**
+ * ${trxName} 거래 후처리 핸들러
+ * 거래 ID : ${trxId}
+ */
+public class ${className}PostHandler extends BaseOrgHandler {
+
+    @Override
+    protected DataMap doPostProcess(MessageContext messageContext, DataMap dataMap) throws Exception {
+        // TODO: 후처리 로직 구현
+        return dataMap;
+    }
+}',
+    '거래 후처리 핸들러 템플릿 (BaseOrgHandler 상속)',
+    'Y',
+    3,
+    'system'
+);
+
+INSERT INTO FWK_CODE_TEMPLATE (TEMPLATE_ID, TEMPLATE_NAME, TEMPLATE_TYPE, TEMPLATE_BODY, DESCRIPTION, USE_YN, SORT_ORDER, LAST_UPDATE_USER_ID)
+VALUES (
+    'DTO',
+    'DTO',
+    'JAVA',
+    'package ${packageName};
+
+<#if needsBigDecimal>import java.math.BigDecimal;
+</#if><#if needsList>import java.util.List;
+</#if>
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+/**
+ * 전문 ID : ${messageId}
+ * 전문명 : ${messageName}
+ *
+ * <p>⚠ 자동 생성된 코드입니다. 패키지명은 실제 환경에 맞게 수정하세요.
+ */
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
+public class ${className}Dto {
+
+${fieldDeclarations}
+}',
+    '전문 필드 기반 Java DTO 템플릿 (Lombok 사용)',
+    'Y',
+    4,
+    'system'
+);
 
 -- CMS extension menus (sort_order 13 to avoid conflict with emergency_notice at 12)
 INSERT INTO FWK_MENU (MENU_ID, PRIOR_MENU_ID, SORT_ORDER, MENU_NAME, MENU_URL, DISPLAY_YN, USE_YN, LAST_UPDATE_DTIME, LAST_UPDATE_USER_ID)
