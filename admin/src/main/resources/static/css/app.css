@@ -3222,5 +3222,27 @@ tr.sp-modified-row { background-color: var(--sp-warning-subtle); }
 }
 
 /* ========================================
+   LoadingOverlay — 공용 dim + 스피너 (#55)
+   z-index 2000 으로 Bootstrap modal(1055) 위에서도 동작.
+   ======================================== */
+.loading-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.35);
+    z-index: 2000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.loading-overlay__panel {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+    color: #fff;
+}
+.loading-overlay__msg { font-size: 0.9rem; }
+
+/* ========================================
    End of Unified Stylesheet
    ======================================== */

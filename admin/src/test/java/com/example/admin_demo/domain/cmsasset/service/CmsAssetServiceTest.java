@@ -8,6 +8,8 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
+import static org.mockito.BDDMockito.willThrow;
+import static org.mockito.Mockito.never;
 
 import com.example.admin_demo.domain.cmsasset.dto.CmsAssetApprovalListRequest;
 import com.example.admin_demo.domain.cmsasset.dto.CmsAssetDetailResponse;
@@ -16,9 +18,11 @@ import com.example.admin_demo.domain.cmsasset.dto.CmsAssetRequestListRequest;
 import com.example.admin_demo.domain.cmsasset.mapper.CmsAssetMapper;
 import com.example.admin_demo.global.dto.PageRequest;
 import com.example.admin_demo.global.dto.PageResponse;
+import com.example.admin_demo.global.exception.ErrorType;
 import com.example.admin_demo.global.exception.InvalidInputException;
 import com.example.admin_demo.global.exception.InvalidStateException;
 import com.example.admin_demo.global.exception.NotFoundException;
+import com.example.admin_demo.global.exception.base.BaseException;
 import java.util.List;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -152,8 +156,8 @@ class CmsAssetServiceTest {
     // ─── approve ───────────────────────────────────────────────────────
 
     @Test
-    @DisplayName("[승인] PENDING → APPROVED 정상 전이")
-    void approve_fromPending_succeeds() {
+    @DisplayName("[승인] PENDING → APPROVED 전이 + CMS 배포 호출까지 성공")
+    void approve_fromPending_succeedsAndDeploys() {
         given(cmsAssetMapper.findAssetStateById(ASSET_ID)).willReturn("PENDING");
         given(cmsAssetMapper.updateState(any(), any(), any(), any(), any(), any()))
                 .willReturn(1);
@@ -161,15 +165,34 @@ class CmsAssetServiceTest {
         cmsAssetService.approve(ASSET_ID, USER_ID, USER_NAME);
 
         then(cmsAssetMapper).should().updateState(ASSET_ID, "PENDING", "APPROVED", null, USER_ID, USER_NAME);
+        then(cmsBuilderClient).should().deployAsset(ASSET_ID);
     }
 
     @Test
-    @DisplayName("[승인] WORK 상태에서 승인 시 InvalidStateException")
+    @DisplayName("[승인] WORK 상태에서 승인 시 InvalidStateException, CMS 배포 호출 없음")
     void approve_fromWork_throwsInvalidState() {
         given(cmsAssetMapper.findAssetStateById(ASSET_ID)).willReturn("WORK");
 
         assertThatThrownBy(() -> cmsAssetService.approve(ASSET_ID, USER_ID, USER_NAME))
                 .isInstanceOf(InvalidStateException.class);
+        then(cmsBuilderClient).should(never()).deployAsset(any());
+    }
+
+    @Test
+    @DisplayName("[승인] CMS 배포 실패 시 BaseException 전파 (TX 롤백 유도)")
+    void approve_cmsDeployFails_propagatesExceptionForRollback() {
+        given(cmsAssetMapper.findAssetStateById(ASSET_ID)).willReturn("PENDING");
+        given(cmsAssetMapper.updateState(any(), any(), any(), any(), any(), any()))
+                .willReturn(1);
+        willThrow(new BaseException(ErrorType.EXTERNAL_SERVICE_ERROR, "CMS 통신 오류"))
+                .given(cmsBuilderClient)
+                .deployAsset(ASSET_ID);
+
+        assertThatThrownBy(() -> cmsAssetService.approve(ASSET_ID, USER_ID, USER_NAME))
+                .isInstanceOfSatisfying(BaseException.class, ex -> assertThat(ex.getErrorType())
+                        .isEqualTo(ErrorType.EXTERNAL_SERVICE_ERROR));
+        // updateState 는 호출됐음 (Spring TX 가 예외로 자동 롤백 — 단위 테스트 범위 밖)
+        then(cmsAssetMapper).should().updateState(any(), any(), any(), any(), any(), any());
     }
 
     // ─── reject ────────────────────────────────────────────────────────

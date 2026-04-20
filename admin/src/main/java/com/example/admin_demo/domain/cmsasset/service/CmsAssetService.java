@@ -107,7 +107,16 @@ public class CmsAssetService {
         log.info("CMS 이미지 승인 요청: assetId={}, modifierId={}", assetId, modifierId);
     }
 
-    /** 승인 — PENDING → APPROVED (결재자) */
+    /**
+     * 승인 — PENDING → APPROVED (결재자) + CMS 파일 배포 (Issue #55).
+     *
+     * <p>DB 상태 전이 후 CMS 배포 API 를 호출해 파일을 운영 경로로 이동시킨다.
+     * 배포 실패 시 {@link BaseException} 이 전파되어 {@code @Transactional} 기본 정책에 따라
+     * DB 도 자동 롤백되므로, 승인 DB 상태와 파일 상태의 일관성이 보장된다.
+     *
+     * <p>트랜잭션 순서: 선검증 → UPDATE → CMS 배포 호출 → (정상 종료 시) 커밋. CMS 성공 후 커밋 실패의
+     * 극단적 엣지(파일은 배포됐으나 DB PENDING) 는 수동 재배포로 복구한다.
+     */
     @Transactional
     public void approve(String assetId, String modifierId, String modifierName) {
         assertTransition(assetId, STATE_PENDING, STATE_APPROVED);
@@ -116,7 +125,11 @@ public class CmsAssetService {
         if (updated != 1) {
             throw new InvalidStateException("이미 처리된 이미지입니다. assetId=" + assetId);
         }
-        log.info("CMS 이미지 승인 완료: assetId={}, modifierId={}", assetId, modifierId);
+
+        // CMS 파일 배포 — 실패 시 BaseException 전파 → @Transactional 기본 정책으로 DB 롤백.
+        cmsBuilderClient.deployAsset(assetId);
+
+        log.info("CMS 이미지 승인 + 파일 배포 완료: assetId={}, modifierId={}", assetId, modifierId);
     }
 
     /**
