@@ -153,3 +153,14 @@ scheduling:
     cron: "0 0 2 * * ?"     # 매일 새벽 2시 실행
     retention-days: 90       # 보관 기간 (일)
     strategy: DELETE         # DELETE 또는 DROP_PARTITION (파티셔닝 적용 시)
+
+# TCP 통신 설정
+# Admin TCP 서버(9999), batch-was TCP 서버(9998), demo/backend TCP 서버(9997)
+tcp:
+  server:
+    port: ${TCP_SERVER_PORT:9999}
+  batch-was:
+    port: ${BATCH_WAS_TCP_PORT:9998}
+  demo-backend:
+    host: ${DEMO_BACKEND_TCP_HOST:localhost}
+    port: ${DEMO_BACKEND_TCP_PORT:9997}

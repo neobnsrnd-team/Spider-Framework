@@ -19,3 +19,5 @@ server:
 batch:
   was:
     instance-id: BT01
+  tcp:
+    port: ${BATCH_TCP_PORT:9998}

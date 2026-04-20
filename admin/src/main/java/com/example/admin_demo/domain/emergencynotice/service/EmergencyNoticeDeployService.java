@@ -8,33 +8,34 @@ import com.example.admin_demo.domain.emergencynotice.mapper.EmergencyNoticeMappe
 import com.example.admin_demo.global.exception.InvalidInputException;
 import com.example.admin_demo.global.exception.NotFoundException;
 import com.example.admin_demo.global.util.AuditUtil;
+import com.example.admin_demo.infra.tcp.adapter.DemoBackendAdapter;
+import com.example.admin_demo.infra.tcp.model.JsonCommandRequest;
+import com.example.admin_demo.infra.tcp.model.JsonCommandResponse;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.HttpEntity;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
-import org.springframework.web.client.RestTemplate;
 
 /**
  * 긴급공지 배포 관리 서비스
  *
  * <p>배포 라이프사이클(DRAFT → DEPLOYED → ENDED)을 관리하고,
- * Demo Backend에 SSE Push를 통해 배포 상태를 동기화한다.
+ * Demo Backend에 TCP 통신을 통해 배포 상태를 동기화한다.
  *
  * <p>흐름:
  * <ol>
  *   <li>쓰기 트랜잭션 진입 시 DEPLOY_STATUS 행을 SELECT FOR UPDATE로 잠금 (TOCTOU 방지)</li>
  *   <li>Admin DB 업데이트 (FWK_PROPERTY DEPLOY_STATUS 변경) + 이력 스냅샷 삽입</li>
- *   <li>트랜잭션 커밋 후 Demo Backend REST 호출 (비치명적 — 실패 시 재기동 후 복구됨)</li>
+ *   <li>트랜잭션 커밋 후 Demo Backend TCP 호출 (비치명적 — 실패 시 재기동 후 복구됨)</li>
  * </ol>
+ *
+ * <p>기존 HTTP REST 전송 방식은 주석으로 보존되어 있다 (롤백 대비).</p>
  */
 @Slf4j
 @Service
@@ -47,23 +48,27 @@ public class EmergencyNoticeDeployService {
 
     private static final String STATUS_ENDED = "ENDED";
 
-    /** Demo Backend 동기화 엔드포인트 */
-    private static final String SYNC_PATH = "/api/notices/sync";
+    /** TCP 커맨드 상수 — demo/backend와 약속된 식별자 */
+    private static final String CMD_NOTICE_SYNC = "NOTICE_SYNC";
+    private static final String CMD_NOTICE_END = "NOTICE_END";
 
-    private static final String END_PATH = "/api/notices/end";
-
-    /** Demo Backend를 호출할 때 실어 보내는 관리자 식별 헤더 */
-    private static final String ADMIN_SECRET_HEADER = "X-Admin-Secret";
+    // 기존 HTTP REST 전송 경로(레거시) — TCP 전환 이후 미사용
+    // private static final String SYNC_PATH = "/api/notices/sync";
+    // private static final String END_PATH = "/api/notices/end";
+    // private static final String ADMIN_SECRET_HEADER = "X-Admin-Secret";
 
     private final EmergencyNoticeDeployMapper emergencyNoticeDeployMapper;
     private final EmergencyNoticeMapper emergencyNoticeMapper;
-    private final RestTemplate restTemplate;
 
-    @Value("${demo.backend.url:http://localhost:3001}")
-    private String demoBackendUrl;
+    /** Admin ↔ demo/backend 간 TCP 통신 어댑터 (JSON 프로토콜) */
+    private final DemoBackendAdapter demoBackendAdapter;
 
-    @Value("${demo.backend.admin-secret:admin-secret}")
-    private String adminSecret;
+    // 기존 HTTP 호출 설정(레거시) — TCP 전환 이후 미사용
+    // private final RestTemplate restTemplate;
+    // @Value("${demo.backend.url:http://localhost:3001}")
+    // private String demoBackendUrl;
+    // @Value("${demo.backend.admin-secret:admin-secret}")
+    // private String adminSecret;
 
     /**
      * 현재 배포 상태, 노출 설정, 이력(페이징·필터 적용)을 함께 반환한다.
@@ -98,7 +103,7 @@ public class EmergencyNoticeDeployService {
      *   <li>DEPLOY_STATUS 행을 SELECT FOR UPDATE로 잠금 — 동시 배포 요청 직렬화</li>
      *   <li>DEPLOY_STATUS='DEPLOYED', START_DTIME=now, END_DTIME=NULL 행 업데이트</li>
      *   <li>배포 이력 스냅샷 삽입</li>
-     *   <li>커밋 완료 후 Demo Backend {@code POST /api/notices/sync} 호출</li>
+     *   <li>커밋 완료 후 Demo Backend에 TCP NOTICE_SYNC 커맨드 전송</li>
      * </ol>
      */
     @Transactional
@@ -116,7 +121,7 @@ public class EmergencyNoticeDeployService {
 
         log.info("긴급공지 배포 완료: userId={}, startDtime={}", userId, now);
 
-        // 트랜잭션 내에서 페이로드를 조회한 뒤, 커밋 완료 후에 REST 호출
+        // 트랜잭션 내에서 페이로드를 조회한 뒤, 커밋 완료 후에 TCP 호출
         // → DB 커밋 전에 Demo Backend가 호출되는 순서 역전 문제 방지
         Map<String, Object> payload = buildSyncPayload();
         registerAfterCommit(() -> doSyncToDemoBackend(payload));
@@ -129,7 +134,7 @@ public class EmergencyNoticeDeployService {
      *   <li>DEPLOY_STATUS 행을 SELECT FOR UPDATE로 잠금</li>
      *   <li>DEPLOY_STATUS='ENDED', END_DTIME=now 행 업데이트</li>
      *   <li>배포 종료 이력 스냅샷 삽입</li>
-     *   <li>커밋 완료 후 Demo Backend {@code POST /api/notices/end} 호출</li>
+     *   <li>커밋 완료 후 Demo Backend에 TCP NOTICE_END 커맨드 전송</li>
      * </ol>
      */
     @Transactional
@@ -214,7 +219,7 @@ public class EmergencyNoticeDeployService {
     /**
      * 현재 트랜잭션이 커밋된 후 실행할 작업을 등록한다.
      * DB 커밋이 완료된 시점에 외부 시스템(Demo Backend)을 호출하여
-     * "커밋 전 REST 호출 → Demo Backend가 구 상태를 전달받는" 순서 역전을 방지한다.
+     * "커밋 전 호출 → Demo Backend가 구 상태를 전달받는" 순서 역전을 방지한다.
      */
     private void registerAfterCommit(Runnable task) {
         TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
@@ -257,39 +262,91 @@ public class EmergencyNoticeDeployService {
     }
 
     /**
-     * 구성된 페이로드를 Demo Backend에 전송한다. 커밋 후 {@link #registerAfterCommit}에서 호출된다.
-     * Demo Backend 비가용 시 경고 로그만 출력하고 진행한다 (재기동 시 {@code restoreNoticeState()}로 복구).
+     * 구성된 페이로드를 Demo Backend에 TCP(JSON 프로토콜)로 전송한다.
+     * 커밋 후 {@link #registerAfterCommit}에서 호출된다.
+     * Demo Backend 비가용 시 경고 로그만 출력하고 진행한다
+     * (재기동 시 demo/backend의 restoreNoticeState()로 복구).
      */
     private void doSyncToDemoBackend(Map<String, Object> body) {
         try {
-            HttpHeaders headers = new HttpHeaders();
-            headers.setContentType(MediaType.APPLICATION_JSON);
-            headers.set(ADMIN_SECRET_HEADER, adminSecret);
+            JsonCommandRequest request = JsonCommandRequest.builder()
+                    .command(CMD_NOTICE_SYNC)
+                    .requestId(UUID.randomUUID().toString())
+                    .payload(body)
+                    .build();
 
-            restTemplate.postForObject(demoBackendUrl + SYNC_PATH, new HttpEntity<>(body, headers), Void.class);
+            // DemoBackendAdapter가 내부적으로 TcpClient.sendJson(4바이트 prefix + UTF-8 JSON)을 호출한다.
+            // 예외를 던지지 않고 실패 시 success=false인 JsonCommandResponse를 반환한다.
+            JsonCommandResponse response = demoBackendAdapter.doProcess(CMD_NOTICE_SYNC, request);
 
-            log.info("Demo Backend 긴급공지 동기화 완료: url={}", demoBackendUrl + SYNC_PATH);
+            if (response != null && response.isSuccess()) {
+                log.info("Demo Backend 긴급공지 TCP 동기화 완료: message={}", response.getMessage());
+            } else {
+                // 비치명적: Admin DB는 이미 커밋됨 — Demo Backend 재기동 시 restoreNoticeState()로 자동 복구
+                log.warn("Demo Backend TCP 동기화 실패 (비치명적, 재기동 시 자동 복구): error={}",
+                        response != null ? response.getError() : "응답 없음");
+            }
         } catch (Exception e) {
-            // Admin DB는 이미 커밋됨 — Demo Backend 재기동 시 restoreNoticeState()로 자동 복구
-            log.warn("Demo Backend 동기화 실패 (비치명적, 재기동 시 자동 복구): {}", e.getMessage());
+            log.warn("Demo Backend TCP 동기화 실패 (비치명적, 재기동 시 자동 복구): {}", e.getMessage());
         }
+
+        /* --------------------------------------------------------------------
+         * [LEGACY] HTTP REST 전송 방식 (TCP 전환 이전) — 롤백 대비 주석으로 보존
+         *
+         * try {
+         *     HttpHeaders headers = new HttpHeaders();
+         *     headers.setContentType(MediaType.APPLICATION_JSON);
+         *     headers.set(ADMIN_SECRET_HEADER, adminSecret);
+         *
+         *     restTemplate.postForObject(demoBackendUrl + SYNC_PATH, new HttpEntity<>(body, headers), Void.class);
+         *
+         *     log.info("Demo Backend 긴급공지 동기화 완료: url={}", demoBackendUrl + SYNC_PATH);
+         * } catch (Exception e) {
+         *     log.warn("Demo Backend 동기화 실패 (비치명적, 재기동 시 자동 복구): {}", e.getMessage());
+         * }
+         * -------------------------------------------------------------------- */
     }
 
     /**
-     * Demo Backend에 배포 종료 신호를 전송한다. 커밋 후 {@link #registerAfterCommit}에서 호출된다.
+     * Demo Backend에 TCP로 배포 종료 신호를 전송한다.
+     * 커밋 후 {@link #registerAfterCommit}에서 호출된다.
      * 실패 시 경고 로그만 출력하고 진행한다.
      */
     private void doEndDemoBackendNotice() {
         try {
-            HttpHeaders headers = new HttpHeaders();
-            headers.setContentType(MediaType.APPLICATION_JSON);
-            headers.set(ADMIN_SECRET_HEADER, adminSecret);
+            JsonCommandRequest request = JsonCommandRequest.builder()
+                    .command(CMD_NOTICE_END)
+                    .requestId(UUID.randomUUID().toString())
+                    // NOTICE_END는 별도 페이로드가 없으므로 빈 Map 전달 (null 방어)
+                    .payload(new HashMap<>())
+                    .build();
 
-            restTemplate.postForObject(demoBackendUrl + END_PATH, new HttpEntity<>(null, headers), Void.class);
+            JsonCommandResponse response = demoBackendAdapter.doProcess(CMD_NOTICE_END, request);
 
-            log.info("Demo Backend 긴급공지 종료 완료: url={}", demoBackendUrl + END_PATH);
+            if (response != null && response.isSuccess()) {
+                log.info("Demo Backend 긴급공지 TCP 종료 완료: message={}", response.getMessage());
+            } else {
+                log.warn("Demo Backend TCP 종료 신호 전송 실패 (비치명적): error={}",
+                        response != null ? response.getError() : "응답 없음");
+            }
         } catch (Exception e) {
-            log.warn("Demo Backend 종료 신호 전송 실패 (비치명적): {}", e.getMessage());
+            log.warn("Demo Backend TCP 종료 신호 전송 실패 (비치명적): {}", e.getMessage());
         }
+
+        /* --------------------------------------------------------------------
+         * [LEGACY] HTTP REST 전송 방식 (TCP 전환 이전) — 롤백 대비 주석으로 보존
+         *
+         * try {
+         *     HttpHeaders headers = new HttpHeaders();
+         *     headers.setContentType(MediaType.APPLICATION_JSON);
+         *     headers.set(ADMIN_SECRET_HEADER, adminSecret);
+         *
+         *     restTemplate.postForObject(demoBackendUrl + END_PATH, new HttpEntity<>(null, headers), Void.class);
+         *
+         *     log.info("Demo Backend 긴급공지 종료 완료: url={}", demoBackendUrl + END_PATH);
+         * } catch (Exception e) {
+         *     log.warn("Demo Backend 종료 신호 전송 실패 (비치명적): {}", e.getMessage());
+         * }
+         * -------------------------------------------------------------------- */
     }
 }

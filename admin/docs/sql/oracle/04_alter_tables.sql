@@ -27,12 +27,4 @@ VALUES ('notice', 'START_DTIME', '배포시작일시', '배포 시작 일시 (yy
 INSERT INTO FWK_PROPERTY (PROPERTY_GROUP_ID, PROPERTY_ID, PROPERTY_NAME, PROPERTY_DESC, DEFAULT_VALUE, LAST_UPDATE_USER_ID, LAST_UPDATE_DTIME)
 VALUES ('notice', 'END_DTIME', '배포종료일시', '배포 종료 일시 (yyyyMMddHHmmss)', NULL, 'Admin', TO_CHAR(SYSDATE, 'YYYYMMDDHH24MISS'));
 
-
--- =============================================================
--- 긴급공지 관리 (emergency-notice-manage)
--- POC_카드사용내역
--- =============================================================
-
-
-
 COMMIT;
