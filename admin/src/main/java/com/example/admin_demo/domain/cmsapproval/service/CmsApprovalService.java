@@ -120,11 +120,11 @@ public class CmsApprovalService {
      */
     private void validateDisplayPeriod(String beginningDate, String expiredDate) {
         boolean hasBeginning = beginningDate != null && !beginningDate.isBlank();
-        boolean hasExpired   = expiredDate   != null && !expiredDate.isBlank();
+        boolean hasExpired = expiredDate != null && !expiredDate.isBlank();
 
         if (hasBeginning && hasExpired) {
             LocalDate beginning = parseDate(beginningDate, "노출 시작일");
-            LocalDate expired   = parseDate(expiredDate,   "노출 종료일");
+            LocalDate expired = parseDate(expiredDate, "노출 종료일");
             if (expired.isBefore(beginning)) {
                 throw new InvalidInputException("노출 종료일은 시작일보다 빠를 수 없습니다.");
             }
