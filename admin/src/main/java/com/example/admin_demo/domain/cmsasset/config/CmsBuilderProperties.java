@@ -15,7 +15,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 @ConfigurationProperties(prefix = "cms.builder")
 public class CmsBuilderProperties {
 
-    /** CMS Builder 서버 기본 URL (예: http://133.186.135.23:3000) */
+    /** CMS Builder 서버 기본 URL (예: http://133.186.135.23) — nginx 80 → Next.js 3000 업스트림 프록시 */
     private String baseUrl;
 
     /** 업로드 엔드포인트 경로 (예: /cms/api/builder/upload) */
