@@ -50,14 +50,25 @@ public class TransferItemWriter implements ItemWriter<CardUsage> {
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.APPLICATION_JSON);
             HttpEntity<Map<String, Object>> entity = new HttpEntity<>(body, headers);
-            ResponseEntity<Map> response = restTemplate.postForEntity(transferUrl, entity, Map.class);
-
-            if (!response.getStatusCode().is2xxSuccessful()) {
-                // 2xx 아닌 응답이면 예외 → 이 Chunk 롤백
-                throw new RuntimeException(
+            try {
+                ResponseEntity<Map> response = restTemplate.postForEntity(transferUrl, entity, Map.class);
+                // RestTemplate은 비-2xx 응답에서 HttpStatusCodeException을 throw하므로
+                // 이 분기는 안전망 역할(커스텀 ErrorHandler 사용 시 도달 가능)
+                if (!response.getStatusCode().is2xxSuccessful()) {
+                    throw new ExternalTransferException(
+                            "외부 전문 연계 비정상 응답: userId=" + usage.getUserId()
+                            + ", cardNo=" + usage.getCardNo()
+                            + ", status=" + response.getStatusCode());
+                }
+            } catch (ExternalTransferException e) {
+                throw e;
+            } catch (Exception e) {
+                // 네트워크 오류·비-2xx HttpStatusCodeException 모두 ExternalTransferException으로 통일
+                // → Db2ForeignJob Step의 skip 대상으로만 처리
+                throw new ExternalTransferException(
                         "외부 전문 연계 실패: userId=" + usage.getUserId()
                         + ", cardNo=" + usage.getCardNo()
-                        + ", status=" + response.getStatusCode());
+                        + " — " + e.getMessage(), e);
             }
         }
         log.info("외부 전문 전송 완료: {}건", chunk.size());

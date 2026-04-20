@@ -1,6 +1,7 @@
 package com.example.batchwas.domain.batch.dto;
 
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Pattern;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -23,6 +24,7 @@ public class BatchExecuteRequest {
 
     /** 배치 기준일 (YYYYMMDD) */
     @NotBlank(message = "기준일은 필수입니다")
+    @Pattern(regexp = "^\\d{8}$", message = "기준일은 YYYYMMDD 8자리 숫자여야 합니다")
     private String batchDate;
 
     /** 실행 요청 사용자 ID */

@@ -44,8 +44,11 @@ public class BatchExecuteController {
 
         BatchExecuteResponse response = batchExecuteService.execute(request);
 
-        // Admin은 2xx = SUCCESS, 5xx = ABNORMAL_TERMINATION 으로 판단하므로
-        // 배치 결과 코드가 ABNORMAL일 때도 응답 자체는 200으로 반환 (이력은 WAS가 기록)
+        // ABNORMAL 시 500 반환 → Admin의 RestTemplate이 RestClientException으로 처리해 실패로 인식
+        // SUCCESS 시 200 반환 — FWK_BATCH_HIS 이력 업데이트는 WAS가 직접 처리
+        if (BatchConstants.RES_RT_ABNORMAL.equals(response.getResRtCode())) {
+            return ResponseEntity.internalServerError().body(response);
+        }
         return ResponseEntity.ok(response);
     }
 }

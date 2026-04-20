@@ -128,40 +128,57 @@ public class BatchExecuteService {
             BatchExecuteRequest request, int seq, String userId, JobExecution jobExecution) {
 
         String batchEndDtime = LocalDateTime.now().format(BatchConstants.END_DATE_TIME_FORMATTER);
+
+        // readCount: 실제 읽은 건수(전체 처리 대상)
+        // writeCount: DB/외부 시스템에 실제 쓴 건수(성공)
+        // skipCount: read + process + write skip 합산 — processSkipCount 만 집계하면 누락 발생
+        long readCount = jobExecution.getStepExecutions().stream()
+                .mapToLong(s -> s.getReadCount())
+                .sum();
         long writeCount = jobExecution.getStepExecutions().stream()
                 .mapToLong(s -> s.getWriteCount())
                 .sum();
         long skipCount = jobExecution.getStepExecutions().stream()
-                .mapToLong(s -> s.getProcessSkipCount() + s.getWriteSkipCount())
+                .mapToLong(s -> s.getReadSkipCount() + s.getProcessSkipCount() + s.getWriteSkipCount())
                 .sum();
 
         if (jobExecution.getStatus() == BatchStatus.COMPLETED) {
-            log.info("배치 실행 완료: batchAppId={}, seq={}, writeCount={}",
-                    request.getBatchAppId(), seq, writeCount);
+            log.info("배치 실행 완료: batchAppId={}, seq={}, read={}, write={}, skip={}",
+                    request.getBatchAppId(), seq, readCount, writeCount, skipCount);
 
-            batchHisMapper.updateBatchHisResult(
+            // EXECUTE_COUNT=읽은건수, SUCCESS_COUNT=쓴건수, FAIL_COUNT=스킵건수
+            int updated = batchHisMapper.updateBatchHisResult(
                     request.getBatchAppId(), instanceId, request.getBatchDate(), seq,
                     BatchConstants.RES_RT_SUCCESS, batchEndDtime,
-                    null, writeCount, writeCount, 0L, userId);
+                    null, readCount, writeCount, skipCount, userId);
+            if (updated == 0) {
+                log.error("[CRITICAL] FWK_BATCH_HIS UPDATE 0건 — 이력 고착 위험: batchAppId={}, seq={}",
+                        request.getBatchAppId(), seq);
+            }
 
             return BatchExecuteResponse.builder()
                     .batchAppId(request.getBatchAppId())
                     .batchExecuteSeq(seq)
                     .resRtCode(BatchConstants.RES_RT_SUCCESS)
                     .batchEndDtime(batchEndDtime)
-                    .executeCount(writeCount)
+                    .executeCount(readCount)
                     .build();
 
         } else {
             // FAILED, STOPPED, UNKNOWN 등 비정상 종료
             String errorReason = collectErrorReason(jobExecution);
-            log.warn("배치 비정상 종료: batchAppId={}, seq={}, status={}, reason={}",
-                    request.getBatchAppId(), seq, jobExecution.getStatus(), errorReason);
+            log.warn("배치 비정상 종료: batchAppId={}, seq={}, status={}, read={}, write={}, skip={}, reason={}",
+                    request.getBatchAppId(), seq, jobExecution.getStatus(),
+                    readCount, writeCount, skipCount, errorReason);
 
-            batchHisMapper.updateBatchHisResult(
+            int updated = batchHisMapper.updateBatchHisResult(
                     request.getBatchAppId(), instanceId, request.getBatchDate(), seq,
                     BatchConstants.RES_RT_ABNORMAL, batchEndDtime,
-                    errorReason, writeCount, writeCount - skipCount, skipCount, userId);
+                    errorReason, readCount, writeCount, skipCount, userId);
+            if (updated == 0) {
+                log.error("[CRITICAL] FWK_BATCH_HIS UPDATE 0건 — 이력 고착 위험: batchAppId={}, seq={}",
+                        request.getBatchAppId(), seq);
+            }
 
             return BatchExecuteResponse.builder()
                     .batchAppId(request.getBatchAppId())
@@ -169,7 +186,7 @@ public class BatchExecuteService {
                     .resRtCode(BatchConstants.RES_RT_ABNORMAL)
                     .batchEndDtime(batchEndDtime)
                     .errorReason(errorReason)
-                    .executeCount(writeCount)
+                    .executeCount(readCount)
                     .build();
         }
     }
@@ -181,10 +198,14 @@ public class BatchExecuteService {
             String batchAppId, String batchDate, int seq, String userId, String errorReason) {
 
         String batchEndDtime = LocalDateTime.now().format(BatchConstants.END_DATE_TIME_FORMATTER);
-        batchHisMapper.updateBatchHisResult(
+        int updated = batchHisMapper.updateBatchHisResult(
                 batchAppId, instanceId, batchDate, seq,
                 BatchConstants.RES_RT_ABNORMAL, batchEndDtime,
                 errorReason, 0L, 0L, 0L, userId);
+        if (updated == 0) {
+            log.error("[CRITICAL] FWK_BATCH_HIS UPDATE 0건 — 이력 고착 위험: batchAppId={}, seq={}",
+                    batchAppId, seq);
+        }
 
         return BatchExecuteResponse.builder()
                 .batchAppId(batchAppId)

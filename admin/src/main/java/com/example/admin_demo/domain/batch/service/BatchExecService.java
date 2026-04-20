@@ -1,6 +1,5 @@
 package com.example.admin_demo.domain.batch.service;
 
-import com.example.admin_demo.domain.batch.constant.BatchConstants;
 import com.example.admin_demo.domain.batch.dto.BatchAppResponse;
 import com.example.admin_demo.domain.batch.dto.BatchExecRequest;
 import com.example.admin_demo.domain.batch.dto.BatchHisResponse;
@@ -81,8 +80,7 @@ public class BatchExecService {
      *
      * @return true: 요청 전송 성공 (2xx), false: 전송 실패
      */
-    private boolean sendBatchExecRequest(
-            String instanceId, BatchExecRequest requestDTO, String userId) {
+    private boolean sendBatchExecRequest(String instanceId, BatchExecRequest requestDTO, String userId) {
 
         WasInstanceResponse instance = wasInstanceMapper.selectResponseById(instanceId);
         if (instance == null) {
@@ -107,7 +105,8 @@ public class BatchExecService {
             body.put("batchAppId", requestDTO.getBatchAppId());
             body.put("batchDate", requestDTO.getBatchDate());
             body.put("userId", userId);
-            if (requestDTO.getParameters() != null && !requestDTO.getParameters().isBlank()) {
+            if (requestDTO.getParameters() != null
+                    && !requestDTO.getParameters().isBlank()) {
                 body.put("parameters", requestDTO.getParameters());
             }
 
@@ -125,7 +124,8 @@ public class BatchExecService {
                 return false;
             }
         } catch (RestClientException e) {
-            log.warn("배치 실행 통신 오류: instanceId={}, url={}, error={}", instanceId, url, e.getMessage());
+            // HttpServerErrorException(500) 포함 — WAS 배치 ABNORMAL 종료 또는 네트워크 오류
+            log.warn("배치 실행 실패: instanceId={}, url={}, error={}", instanceId, url, e.getMessage());
             return false;
         }
     }

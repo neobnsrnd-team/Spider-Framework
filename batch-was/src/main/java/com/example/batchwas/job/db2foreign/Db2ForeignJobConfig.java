@@ -67,7 +67,10 @@ public class Db2ForeignJobConfig {
                 .reader(db2ForeignReader())
                 .writer(transferItemWriter())
                 .faultTolerant()
-                .skip(RuntimeException.class)
+                // ExternalTransferException만 skip — 그 외 RuntimeException은 즉시 Step 실패
+                // RuntimeException.class를 skip 대상으로 두면 NullPointer 등 프로그래밍 오류도 삼킴
+                .skip(ExternalTransferException.class)
+                .noSkip(RuntimeException.class)
                 .skipLimit(5)
                 .build();
     }

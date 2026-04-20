@@ -227,6 +227,9 @@ public class Db2DbJobConfig {
                         )
                         """)
                 .beanMapped()
+                // MERGE INTO는 기존 행 UPDATE 시 1, 신규 INSERT 시 0을 반환하므로
+                // assertUpdates(true, 기본값)면 INSERT 행에 대해 예외 발생 → false로 억제
+                .assertUpdates(false)
                 .build();
     }
 }

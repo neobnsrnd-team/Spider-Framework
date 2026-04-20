@@ -57,7 +57,8 @@ public interface BatchHisMapper {
      * @param failCount        실패 건수
      * @param lastUpdateUserId 실행자 ID
      */
-    void updateBatchHisResult(
+    /** UPDATE 성공 시 1, 일치하는 PK가 없으면 0 반환 */
+    int updateBatchHisResult(
             @Param("batchAppId") String batchAppId,
             @Param("instanceId") String instanceId,
             @Param("batchDate") String batchDate,
