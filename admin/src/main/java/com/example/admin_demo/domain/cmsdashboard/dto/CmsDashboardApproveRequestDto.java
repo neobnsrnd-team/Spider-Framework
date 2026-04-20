@@ -12,11 +12,8 @@ import lombok.Setter;
 @NoArgsConstructor
 public class CmsDashboardApproveRequestDto {
 
-    /** 승인자 ID (APPROVER_ID) */
+    /** 승인자 ID (APPROVER_ID) — 이름은 서버에서 DB 조회하여 결정 (위변조 방지) */
     private String approverId;
-
-    /** 승인자명 (APPROVER_NAME) */
-    private String approverName;
 
     /** 노출 시작일 (YYYY-MM-DD, 선택) */
     private String beginningDate;

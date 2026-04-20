@@ -286,20 +286,19 @@
         },
 
         _submitApproveRequest: function() {
-            const pageId      = $('#approveRequestPageId').val();
-            const $approver   = $('#approveRequestApproverId');
-            const approverId  = $approver.val();
-            const approverName = $approver.find('option:selected').data('name') || '';
+            const pageId     = $('#approveRequestPageId').val();
+            const approverId = $('#approveRequestApproverId').val();
 
             if (!approverId) { Toast.warning('승인자를 선택하세요.'); return; }
 
             const beginningDate = $('#approveRequestBeginningDate').val();
             const expiredDate   = $('#approveRequestExpiredDate').val();
 
+            // approverName은 서버에서 DB 조회 — 클라이언트에서 전달하지 않음 (위변조 방지)
             fetch(`/api/cms-dashboard/pages/${pageId}/approve-request`, {
                 method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ approverId, approverName, beginningDate, expiredDate }),
+                body: JSON.stringify({ approverId, beginningDate, expiredDate }),
             })
                 .then(r => r.json())
                 .then(res => {

@@ -130,8 +130,9 @@
 
     <update id="deleteSoft">
         UPDATE SPW_CMS_PAGE
-        SET USE_YN           = 'N',
-            LAST_MODIFIER_ID = #{userId}
+        SET USE_YN              = 'N',
+            LAST_MODIFIER_ID    = #{userId},
+            LAST_MODIFIED_DTIME = SYSTIMESTAMP
         WHERE PAGE_ID        = #{pageId}
           AND CREATE_USER_ID = #{userId}
     </update>
@@ -145,25 +146,35 @@
           AND USE_YN         = 'Y'
     </delete>
 
+    <!-- ==================== 승인자 이름 조회 — 클라이언트 값 신뢰 대신 서버에서 직접 조회 ==================== -->
+
+    <select id="findApproverNameById" resultType="string">
+        SELECT USER_NAME
+        FROM FWK_USER
+        WHERE USER_ID = #{approverId}
+          AND USER_STATE_CODE = '0'
+    </select>
+
     <!-- ==================== 승인 요청 — PENDING 전환 ==================== -->
 
     <update id="requestApproval">
         UPDATE SPW_CMS_PAGE
-        SET APPROVE_STATE    = 'PENDING',
-            APPROVER_ID      = #{approverId},
-            APPROVER_NAME    = #{approverName},
-            <!-- beginningDate / expiredDate는 선택값: 입력 시 반영, 미입력 시 기존 값 유지 -->
-            BEGINNING_DATE   = CASE
-                                   WHEN #{beginningDate} IS NOT NULL AND #{beginningDate} != ''
-                                   THEN TO_DATE(#{beginningDate}, 'YYYY-MM-DD')
-                                   ELSE BEGINNING_DATE
-                               END,
-            EXPIRED_DATE     = CASE
-                                   WHEN #{expiredDate} IS NOT NULL AND #{expiredDate} != ''
-                                   THEN TO_DATE(#{expiredDate}, 'YYYY-MM-DD')
-                                   ELSE EXPIRED_DATE
-                               END,
-            LAST_MODIFIER_ID = #{userId}
+        SET APPROVE_STATE       = 'PENDING',
+            APPROVER_ID         = #{approverId},
+            APPROVER_NAME       = #{approverName},
+            <!-- beginningDate / expiredDate가 빈 문자열이면 NULL로 클리어 (사용자가 날짜를 지울 수 있어야 함) -->
+            BEGINNING_DATE      = CASE
+                                      WHEN #{beginningDate} IS NOT NULL AND #{beginningDate} != ''
+                                      THEN TO_DATE(#{beginningDate}, 'YYYY-MM-DD')
+                                      ELSE NULL
+                                  END,
+            EXPIRED_DATE        = CASE
+                                      WHEN #{expiredDate} IS NOT NULL AND #{expiredDate} != ''
+                                      THEN TO_DATE(#{expiredDate}, 'YYYY-MM-DD')
+                                      ELSE NULL
+                                  END,
+            LAST_MODIFIER_ID    = #{userId},
+            LAST_MODIFIED_DTIME = SYSTIMESTAMP
         WHERE PAGE_ID        = #{pageId}
           AND CREATE_USER_ID = #{userId}
           AND USE_YN         = 'Y'

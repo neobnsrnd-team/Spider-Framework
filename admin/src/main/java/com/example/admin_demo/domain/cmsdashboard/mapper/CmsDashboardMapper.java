@@ -42,6 +42,13 @@ public interface CmsDashboardMapper {
     /** 하드 삭제 — 물리 행 삭제 (이력 없는 페이지) */
     void deleteHard(@Param("pageId") String pageId, @Param("userId") String userId);
 
+    /**
+     * 승인자 이름 조회 — 클라이언트 전달값 대신 서버에서 직접 조회하여 위변조 방지
+     *
+     * @return 승인자 USER_NAME, 없으면 null
+     */
+    String findApproverNameById(@Param("approverId") String approverId);
+
     /** 승인 요청 — APPROVE_STATE = 'PENDING', 승인자 정보 저장 */
     void requestApproval(
             @Param("pageId") String pageId,

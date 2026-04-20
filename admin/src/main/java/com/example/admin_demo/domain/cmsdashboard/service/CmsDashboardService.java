@@ -7,6 +7,7 @@ import com.example.admin_demo.domain.cmsdashboard.dto.CmsDashboardPageResponse;
 import com.example.admin_demo.domain.cmsdashboard.mapper.CmsDashboardMapper;
 import com.example.admin_demo.global.dto.PageRequest;
 import com.example.admin_demo.global.dto.PageResponse;
+import com.example.admin_demo.global.exception.InvalidInputException;
 import com.example.admin_demo.global.exception.NotFoundException;
 import java.util.List;
 import java.util.UUID;
@@ -85,10 +86,17 @@ public class CmsDashboardService {
     @Transactional
     public void requestApproval(String pageId, CmsDashboardApproveRequestDto req, String userId) {
         checkPageOwner(pageId, userId);
+
+        // 클라이언트 전달값 대신 DB에서 직접 승인자 이름 조회 — 위변조 방지
+        String approverName = cmsDashboardMapper.findApproverNameById(req.getApproverId());
+        if (approverName == null) {
+            throw new InvalidInputException("유효하지 않은 승인자입니다. approverId=" + req.getApproverId());
+        }
+
         cmsDashboardMapper.requestApproval(
                 pageId,
                 req.getApproverId(),
-                req.getApproverName(),
+                approverName,
                 req.getBeginningDate(),
                 req.getExpiredDate(),
                 userId);
