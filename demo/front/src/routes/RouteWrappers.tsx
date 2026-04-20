@@ -96,6 +96,7 @@ export function LoginRoute() {
   const [sessionMessage, setSessionMessage] = useState(
     () => sessionStorage.getItem("sessionExpiredMessage") ?? "",
   );
+  const { notice } = useEmergencyNotice(); // 로그인 전에도 긴급공지 표시
 
   const handleLogin = async () => {
     setHasError(false);
@@ -142,6 +143,7 @@ export function LoginRoute() {
         saveId={saveId}
         onSaveIdChange={setSaveId}
       />
+      {notice && <EmergencyNoticeBanner data={notice} />}
       <Modal
         open={!!sessionMessage}
         onClose={() => {
