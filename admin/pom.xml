@@ -123,6 +123,12 @@
 			<artifactId>spring-boot-starter-thymeleaf</artifactId>
 		</dependency>
 
+		<!-- Freemarker (코드 템플릿 생성용) -->
+		<dependency>
+			<groupId>org.freemarker</groupId>
+			<artifactId>freemarker</artifactId>
+		</dependency>
+
 		<!-- Spring AOP -->
 		<dependency>
 			<groupId>org.springframework.boot</groupId>

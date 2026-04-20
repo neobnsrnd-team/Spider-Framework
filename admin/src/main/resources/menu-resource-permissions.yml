@@ -72,6 +72,9 @@ menu-resource:
     v3_message_manage:
       R: MESSAGE:R
       W: MESSAGE:W
+    v3_code_template_manage:
+      R: CODE_TEMPLATE:R
+      W: CODE_TEMPLATE:W
     v3_db_log:
       R: MESSAGE_INSTANCE:R
       W: MESSAGE_INSTANCE:W
