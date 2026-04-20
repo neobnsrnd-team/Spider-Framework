@@ -139,6 +139,35 @@ public class CmsAssetService {
                 .build();
     }
 
+    /**
+     * 이미지 자산 삭제 — Issue #88.
+     *
+     * <p>WORK 또는 REJECTED 상태에서만 허용한다 (PENDING/APPROVED 는 삭제 금지).
+     * Admin 은 DB 를 직접 건드리지 않고 CMS 의 DELETE API 로 위임한다.
+     * CMS 가 물리 파일과 {@code SPW_CMS_ASSET} 행을 모두 제거하므로 Admin 측 DB 조작은 없다.
+     *
+     * <p>참고: 소유자 검증은 본 이슈 범위 외 (후속 이슈). 현재는 목록 API 가 본인 항목만 내려주는 점에
+     * 의존하며, 악의적 직접 호출 차단은 후속 작업에서 서버측 소유자 검증을 추가한다.
+     *
+     * @param assetId 삭제 대상 자산 ID
+     * @param userId  삭제 수행자 ID (로그·CMS 감사용)
+     * @throws NotFoundException     존재하지 않는 자산
+     * @throws InvalidStateException 삭제 불가 상태 (PENDING/APPROVED)
+     */
+    public void deleteMyAsset(String assetId, String userId) {
+        String currentState = cmsAssetMapper.findAssetStateById(assetId);
+        if (currentState == null) {
+            throw new NotFoundException("이미지를 찾을 수 없습니다. assetId=" + assetId);
+        }
+        if (!STATE_WORK.equals(currentState) && !STATE_REJECTED.equals(currentState)) {
+            throw new InvalidStateException(
+                    String.format("현재 상태(%s)에서는 삭제할 수 없습니다. 허용 상태=WORK 또는 REJECTED", currentState));
+        }
+
+        cmsBuilderClient.delete(assetId, userId);
+        log.info("CMS 이미지 삭제 요청 완료: assetId={}, prevState={}, userId={}", assetId, currentState, userId);
+    }
+
     /** 반려 — PENDING → REJECTED (결재자). 반려 사유는 선택 */
     @Transactional
     public void reject(String assetId, String rejectedReason, String modifierId, String modifierName) {

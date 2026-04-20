@@ -1,5 +1,6 @@
 package com.example.admin_demo.domain.cmsasset.client;
 
+import com.example.admin_demo.domain.cmsasset.client.dto.CmsBuilderDeleteApiResponse;
 import com.example.admin_demo.domain.cmsasset.client.dto.CmsBuilderUploadApiResponse;
 import com.example.admin_demo.domain.cmsasset.config.CmsBuilderProperties;
 import com.example.admin_demo.global.exception.ErrorType;
@@ -28,6 +29,12 @@ import org.springframework.web.multipart.MultipartFile;
 @Slf4j
 @Component
 public class CmsBuilderClient {
+
+    /**
+     * CMS 자산 삭제 엔드포인트 경로 템플릿.
+     * RESTful 고정 경로라 외부 설정화 이점이 크지 않아 상수로 둔다. 필요 시 baseUrl 과 함께 프로퍼티로 이동.
+     */
+    private static final String DELETE_PATH_TEMPLATE = "/cms/api/assets/{assetId}";
 
     private final RestClient cmsBuilderRestClient;
     private final CmsBuilderProperties properties;
@@ -81,6 +88,40 @@ public class CmsBuilderClient {
 
         } catch (RestClientException e) {
             log.error("CMS Builder 호출 중 오류 발생: userId={}", userId, e);
+            throw new BaseException(ErrorType.EXTERNAL_SERVICE_ERROR, "CMS 서버와 통신할 수 없습니다. 잠시 후 다시 시도하세요.", e);
+        }
+    }
+
+    /**
+     * CMS Builder 에 이미지 자산 삭제를 요청한다 — Issue #88.
+     *
+     * <p>업로드 API 와 동일 규약을 가정한다: CMS 가 실패 시에도 HTTP 200 + {@code ok:false} 로
+     * 응답할 수 있으므로 body 의 {@code ok} 필드로 최종 성공 여부를 판정한다.
+     * 네트워크 오류 / 비정상 응답은 {@link BaseException} (HTTP 502) 로 래핑한다.
+     *
+     * @param assetId 삭제 대상 자산 식별자 (CMS 가 발급한 UUID)
+     * @param userId  삭제 수행자 ID (CMS 감사 로그용. 현재 CMS 가 무시해도 미래 호환을 위해 전달)
+     * @throws BaseException 삭제 실패 시 (HTTP 502)
+     */
+    public void delete(String assetId, String userId) {
+        try {
+            CmsBuilderDeleteApiResponse response = cmsBuilderRestClient
+                    .delete()
+                    .uri(DELETE_PATH_TEMPLATE, assetId)
+                    .retrieve()
+                    .body(CmsBuilderDeleteApiResponse.class);
+
+            // 2xx + body null → 빈 성공 응답으로 간주 (일부 CMS 가 204-style 로 동작할 수 있음)
+            if (response != null && !response.isSuccess()) {
+                String errMsg = response.getError() != null ? response.getError() : "CMS 삭제 실패";
+                log.warn("CMS Builder 삭제 실패 응답: ok={}, error={}, assetId={}", response.getOk(), errMsg, assetId);
+                throw new BaseException(ErrorType.EXTERNAL_SERVICE_ERROR, errMsg);
+            }
+
+            log.info("CMS Builder 삭제 성공: assetId={}, userId={}", assetId, userId);
+
+        } catch (RestClientException e) {
+            log.error("CMS Builder 삭제 호출 중 오류 발생: assetId={}, userId={}", assetId, userId, e);
             throw new BaseException(ErrorType.EXTERNAL_SERVICE_ERROR, "CMS 서버와 통신할 수 없습니다. 잠시 후 다시 시도하세요.", e);
         }
     }
