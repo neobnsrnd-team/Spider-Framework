@@ -71,14 +71,25 @@ class CmsAssetDeleteControllerTest {
     }
 
     @Test
-    @DisplayName("[삭제] 삭제 불가 상태(PENDING/APPROVED) → 400")
-    void delete_invalidState_returns400() throws Exception {
+    @DisplayName("[삭제] 삭제 불가 상태(PENDING/APPROVED) → 409 Conflict")
+    void delete_invalidState_returns409() throws Exception {
         willThrow(new InvalidStateException("현재 상태에서는 삭제할 수 없습니다."))
                 .given(cmsAssetService)
                 .deleteMyAsset(any(), any());
 
         mockMvc.perform(delete(BASE_URL + ASSET_ID).with(csrf()).with(user(customUserDetails("cmsUser01", "CMS:W"))))
-                .andExpect(status().isBadRequest());
+                .andExpect(status().isConflict());
+    }
+
+    @Test
+    @DisplayName("[삭제] 소유자가 아닌 요청 → 403 Forbidden")
+    void delete_notOwner_returns403() throws Exception {
+        willThrow(new BaseException(ErrorType.FORBIDDEN, "본인이 업로드한 이미지만 삭제할 수 있습니다."))
+                .given(cmsAssetService)
+                .deleteMyAsset(any(), any());
+
+        mockMvc.perform(delete(BASE_URL + ASSET_ID).with(csrf()).with(user(customUserDetails("cmsUser01", "CMS:W"))))
+                .andExpect(status().isForbidden());
     }
 
     @Test

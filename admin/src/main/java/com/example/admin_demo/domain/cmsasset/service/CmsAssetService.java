@@ -11,9 +11,11 @@ import com.example.admin_demo.domain.cmsasset.mapper.CmsAssetMapper;
 import com.example.admin_demo.domain.cmsasset.validator.AssetUploadValidator;
 import com.example.admin_demo.global.dto.PageRequest;
 import com.example.admin_demo.global.dto.PageResponse;
+import com.example.admin_demo.global.exception.ErrorType;
 import com.example.admin_demo.global.exception.InvalidInputException;
 import com.example.admin_demo.global.exception.InvalidStateException;
 import com.example.admin_demo.global.exception.NotFoundException;
+import com.example.admin_demo.global.exception.base.BaseException;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
@@ -142,23 +144,38 @@ public class CmsAssetService {
     /**
      * 이미지 자산 삭제 — Issue #88.
      *
-     * <p>WORK 또는 REJECTED 상태에서만 허용한다 (PENDING/APPROVED 는 삭제 금지).
-     * Admin 은 DB 를 직접 건드리지 않고 CMS 의 DELETE API 로 위임한다.
+     * <p>다음 3단계 검증을 수행한다:
+     * <ol>
+     *   <li>존재 확인 — 미존재 시 {@link NotFoundException}</li>
+     *   <li>소유자 확인 — 업로더가 아닌 경우 {@link BaseException} (HTTP 403 FORBIDDEN).
+     *       악의적 직접 호출로 타인 자산을 삭제하는 IDOR 공격 차단.</li>
+     *   <li>상태 가드 — {@code WORK}/{@code REJECTED} 만 허용, 그 외는 {@link InvalidStateException}</li>
+     * </ol>
+     *
+     * <p>Admin 은 DB 를 직접 건드리지 않고 CMS 의 DELETE API 로 위임한다.
      * CMS 가 물리 파일과 {@code SPW_CMS_ASSET} 행을 모두 제거하므로 Admin 측 DB 조작은 없다.
      *
-     * <p>참고: 소유자 검증은 본 이슈 범위 외 (후속 이슈). 현재는 목록 API 가 본인 항목만 내려주는 점에
-     * 의존하며, 악의적 직접 호출 차단은 후속 작업에서 서버측 소유자 검증을 추가한다.
+     * <p>관리자(결재자) 우회 삭제 권한은 본 이슈 범위 외 (후속 이슈). 현재 권한 체계상
+     * {@code CMS:W} 만으로는 현업·결재자를 구분할 수 없어, 별도 권한 체계 도입과 함께 다룬다.
      *
      * @param assetId 삭제 대상 자산 ID
-     * @param userId  삭제 수행자 ID (로그·CMS 감사용)
+     * @param userId  삭제 수행자 ID (로그용 + 소유자 검증용)
      * @throws NotFoundException     존재하지 않는 자산
-     * @throws InvalidStateException 삭제 불가 상태 (PENDING/APPROVED)
+     * @throws BaseException         소유자가 아닌 경우 (FORBIDDEN → 403)
+     * @throws InvalidStateException 삭제 불가 상태 (PENDING/APPROVED → 409)
      */
     public void deleteMyAsset(String assetId, String userId) {
-        String currentState = cmsAssetMapper.findAssetStateById(assetId);
-        if (currentState == null) {
+        String createUserId = cmsAssetMapper.findCreateUserIdByAssetId(assetId);
+        if (createUserId == null) {
             throw new NotFoundException("이미지를 찾을 수 없습니다. assetId=" + assetId);
         }
+        if (!createUserId.equals(userId)) {
+            // 로그에는 실제 시도자 ID 를 남기되, 예외 메시지에는 소유자 정보를 노출하지 않는다 (정보 누출 방지).
+            log.warn("CMS 이미지 삭제 권한 없음 — 소유자 불일치. assetId={}, owner={}, requester={}", assetId, createUserId, userId);
+            throw new BaseException(ErrorType.FORBIDDEN, "본인이 업로드한 이미지만 삭제할 수 있습니다.");
+        }
+
+        String currentState = cmsAssetMapper.findAssetStateById(assetId);
         if (!STATE_WORK.equals(currentState) && !STATE_REJECTED.equals(currentState)) {
             throw new InvalidStateException(
                     String.format("현재 상태(%s)에서는 삭제할 수 없습니다. 허용 상태=WORK 또는 REJECTED", currentState));
