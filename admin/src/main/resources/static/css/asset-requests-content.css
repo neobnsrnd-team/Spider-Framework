@@ -1,2 +1,20 @@
-/* CMS 이미지 승인 요청 페이지 전용 스타일 (현재 비어있음).
-   home.html이 페이지 경로 기반으로 자동 로드하는 규약 때문에 빈 stub 을 유지한다. */
+/* CMS 이미지 승인 요청 페이지 전용 스타일. */
+
+/* 업로드 모달 드롭존 */
+.asset-upload-dropzone {
+    border: 2px dashed #ced4da;
+    border-radius: 8px;
+    background-color: #f8f9fa;
+    cursor: pointer;
+    transition: border-color 0.2s, background-color 0.2s;
+}
+
+.asset-upload-dropzone:hover {
+    border-color: #0d6efd;
+    background-color: #f1f7ff;
+}
+
+.asset-upload-dropzone.is-dragover {
+    border-color: #0d6efd;
+    background-color: #e7f1ff;
+}

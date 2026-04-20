@@ -230,7 +230,156 @@
             CmsAssetRequestPage.itemsPerPage = parseInt($(this).val()) || 10;
             CmsAssetRequestPage.load(1);
         });
+
+        if (window.HAS_CMS_WRITE) {
+            CmsAssetUploadModal.init();
+        }
     });
+
+    // ==================== CmsAssetUploadModal (Issue #65) ====================
+    // 이미지 업로드 모달 — 파일 선택·드래그앤드롭, 클라이언트 검증, FormData POST.
+
+    window.CmsAssetUploadModal = {
+        MAX_FILE_SIZE: 20 * 1024 * 1024,
+        ALLOWED_MIME: ['image/png', 'image/jpeg', 'image/gif', 'image/webp'],
+        selectedFile: null,
+
+        init: function() {
+            this._bindOpenButton();
+            this._bindDropzone();
+            this._bindFileInput();
+            this._bindSubmit();
+            this._bindClear();
+        },
+
+        _bindOpenButton: function() {
+            $(document).off('click.assetUploadOpen', '#btnOpenAssetUpload')
+                .on('click.assetUploadOpen', '#btnOpenAssetUpload', () => this.open());
+        },
+
+        _bindDropzone: function() {
+            const $dz = $('#assetUploadDropzone');
+            // jQuery .trigger('click') 은 synthetic event 라 일부 브라우저에서 파일 다이얼로그를 못 연다.
+            // 네이티브 HTMLInputElement.click() 을 사용해야 사용자 제스처 맥락이 유지된다.
+            $dz.off('click.assetUpload').on('click.assetUpload', () => {
+                const input = document.getElementById('assetUploadFileInput');
+                if (input) input.click();
+            });
+            $dz.off('dragover.assetUpload').on('dragover.assetUpload', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                $dz.addClass('is-dragover');
+            });
+            $dz.off('dragleave.assetUpload').on('dragleave.assetUpload', () => $dz.removeClass('is-dragover'));
+            $dz.off('drop.assetUpload').on('drop.assetUpload', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                $dz.removeClass('is-dragover');
+                const files = e.originalEvent.dataTransfer && e.originalEvent.dataTransfer.files;
+                if (files && files.length > 0) {
+                    this._onFileSelected(files[0]);
+                }
+            });
+        },
+
+        _bindFileInput: function() {
+            $('#assetUploadFileInput').off('change.assetUpload').on('change.assetUpload', (e) => {
+                if (e.target.files && e.target.files.length > 0) {
+                    this._onFileSelected(e.target.files[0]);
+                }
+            });
+        },
+
+        _bindSubmit: function() {
+            $('#btnAssetUploadSubmit').off('click.assetUpload').on('click.assetUpload', () => this._submit());
+        },
+
+        _bindClear: function() {
+            $('#btnAssetUploadClear').off('click.assetUpload').on('click.assetUpload', () => this._clearFile());
+        },
+
+        open: function() {
+            this._clearFile();
+            $('#assetUploadCategory').val('');
+            $('#assetUploadDesc').val('');
+            new bootstrap.Modal('#assetUploadModal').show();
+        },
+
+        _onFileSelected: function(file) {
+            // 클라이언트측 1차 검증 — 서버가 최종 결정권자지만 UX 측면에서 즉시 피드백
+            if (!this.ALLOWED_MIME.includes(file.type)) {
+                Toast.error('지원하지 않는 파일 형식입니다. (PNG, JPG, JPEG, GIF, WebP 만 허용)');
+                return;
+            }
+            if (file.size > this.MAX_FILE_SIZE) {
+                Toast.error('파일 크기는 20MB 이하로 업로드하세요.');
+                return;
+            }
+
+            this.selectedFile = file;
+            $('#assetUploadPreviewWrap').removeClass('d-none');
+            $('#assetUploadPreviewName').text(file.name);
+            $('#assetUploadPreviewSize').text(this._formatSize(file.size));
+            $('#assetUploadPreviewType').text(file.type);
+
+            const reader = new FileReader();
+            reader.onload = (ev) => $('#assetUploadPreview').attr('src', ev.target.result);
+            reader.readAsDataURL(file);
+
+            $('#btnAssetUploadSubmit').prop('disabled', false);
+        },
+
+        _clearFile: function() {
+            this.selectedFile = null;
+            $('#assetUploadFileInput').val('');
+            $('#assetUploadPreviewWrap').addClass('d-none');
+            $('#assetUploadPreview').attr('src', '');
+            $('#btnAssetUploadSubmit').prop('disabled', true);
+        },
+
+        _submit: function() {
+            if (!this.selectedFile) {
+                Toast.warning('업로드할 파일을 선택하세요.');
+                return;
+            }
+            const fd = new FormData();
+            fd.append('file', this.selectedFile);
+            const category = $('#assetUploadCategory').val().trim();
+            const desc = $('#assetUploadDesc').val().trim();
+            if (category) fd.append('businessCategory', category);
+            if (desc) fd.append('assetDesc', desc);
+
+            this._setSubmitting(true);
+
+            fetch('/api/cms-admin/asset-uploads', {
+                method: 'POST',
+                body: fd,
+            })
+                .then(r => r.json().then(body => ({ status: r.status, body })))
+                .then(({ status, body }) => {
+                    if (status >= 200 && status < 300 && body.success) {
+                        Toast.success(body.message || '업로드가 완료되었습니다.');
+                        bootstrap.Modal.getInstance('#assetUploadModal').hide();
+                        CmsAssetRequestPage.load(1);
+                    } else {
+                        Toast.error(body.message || '업로드 처리 중 오류가 발생했습니다.');
+                    }
+                })
+                .catch(() => Toast.error('업로드 처리 중 오류가 발생했습니다.'))
+                .finally(() => this._setSubmitting(false));
+        },
+
+        _setSubmitting: function(submitting) {
+            $('#btnAssetUploadSubmit').prop('disabled', submitting || !this.selectedFile);
+            $('#assetUploadSpinner').toggleClass('d-none', !submitting);
+        },
+
+        _formatSize: function(bytes) {
+            if (bytes < 1024) return bytes + ' B';
+            if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+            return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+        },
+    };
 </script>
 </th:block>
 </body>
