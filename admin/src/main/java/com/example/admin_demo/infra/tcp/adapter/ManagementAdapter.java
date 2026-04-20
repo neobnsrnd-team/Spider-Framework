@@ -5,8 +5,11 @@ package com.example.admin_demo.infra.tcp.adapter;
  *
  * <p>레퍼런스(spiderlink_Admin SocketManagementAdapter) 구조를 참고한다.
  * 로컬/원격 분기(isLocal)와 실행(doProcess)을 추상화한다.</p>
+ *
+ * @param <REQ> 요청 페이로드 타입
+ * @param <RES> 응답 타입
  */
-public interface ManagementAdapter {
+public interface ManagementAdapter<REQ, RES> {
 
     /**
      * 대상 서버에 커맨드를 전송하고 결과를 반환한다.
@@ -16,7 +19,7 @@ public interface ManagementAdapter {
      * @param payload 커맨드 페이로드
      * @return 실행 결과
      */
-    Object doProcess(String command, Object payload);
+    RES doProcess(String command, REQ payload);
 
     /**
      * 대상이 현재 프로세스와 동일한 JVM 내 로컬 인스턴스인지 판단한다.

@@ -43,7 +43,11 @@ public class TcpClientHandler implements Runnable {
             Object result;
             try {
                 result = commandDispatcher.dispatch(request.getCommand(), request);
-            } catch (IllegalArgumentException e) {
+            } catch (Exception e) {
+                // IllegalArgumentException뿐 아니라 일반 RuntimeException까지 포괄한다.
+                // 하나의 커맨드 처리 실패가 전체 서버 루프를 망가뜨리지 않도록 응답으로 변환한다.
+                log.warn("[TcpClientHandler] 커맨드 처리 중 예외: command={}, error={}",
+                        request.getCommand(), e.getMessage(), e);
                 result = JsonCommandResponse.builder()
                         .command(request.getCommand())
                         .success(false)

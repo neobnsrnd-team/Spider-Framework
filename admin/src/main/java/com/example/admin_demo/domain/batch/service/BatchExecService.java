@@ -6,8 +6,6 @@ import com.example.admin_demo.domain.batch.dto.BatchHisResponse;
 import com.example.admin_demo.domain.batch.enums.BatchResRtCode;
 import com.example.admin_demo.domain.batch.mapper.BatchAppMapper;
 import com.example.admin_demo.domain.batch.mapper.BatchHisMapper;
-import com.example.admin_demo.domain.wasinstance.dto.WasInstanceResponse;
-import com.example.admin_demo.domain.wasinstance.mapper.WasInstanceMapper;
 import com.example.admin_demo.global.exception.InvalidInputException;
 import com.example.admin_demo.global.exception.NotFoundException;
 import com.example.admin_demo.global.util.AuditUtil;
@@ -36,7 +34,6 @@ public class BatchExecService {
 
     private final BatchAppMapper batchAppMapper;
     private final BatchHisMapper batchHisMapper;
-    private final WasInstanceMapper wasInstanceMapper;
 
     /** Admin ↔ batch-was 간 TCP 통신 어댑터 (ObjectStream 방식) */
     private final BatchManagementAdapter batchManagementAdapter;
@@ -91,17 +88,7 @@ public class BatchExecService {
      */
     private boolean sendBatchExecRequest(String instanceId, BatchExecRequest requestDTO, String userId) {
 
-        WasInstanceResponse instance = wasInstanceMapper.selectResponseById(instanceId);
-        if (instance == null) {
-            log.warn("배치 실행 요청 실패: 인스턴스를 찾을 수 없습니다. instanceId={}", instanceId);
-            return false;
-        }
-
-        String ip = instance.getIp();
-        if (ip == null || ip.isBlank()) {
-            log.warn("배치 실행 요청 실패: IP 정보 없음. instanceId={}", instanceId);
-            return false;
-        }
+        // WAS 인스턴스 조회는 BatchManagementAdapter가 전담하므로 Service에서 중복 조회하지 않는다.
 
         // TCP 전송을 위한 ManagementContext 구성
         ManagementContext ctx = ManagementContext.builder()
@@ -115,22 +102,21 @@ public class BatchExecService {
                                 ? requestDTO.getParameters() : null)
                 .build();
 
-        log.info("배치 실행 TCP 요청: instanceId={}, host={}, batchAppId={}",
-                instanceId, ip, requestDTO.getBatchAppId());
+        log.info("배치 실행 TCP 요청: instanceId={}, batchAppId={}", instanceId, requestDTO.getBatchAppId());
 
         // BatchManagementAdapter가 내부적으로 TcpClient.sendObject(ObjectStream)를 호출한다.
         // 실패 시 resultCode="ERROR" ManagementContext를 반환한다 (예외를 던지지 않음).
-        ManagementContext response = (ManagementContext) batchManagementAdapter.doProcess(CMD_BATCH_EXEC, ctx);
+        ManagementContext response = batchManagementAdapter.doProcess(CMD_BATCH_EXEC, ctx);
 
         if (response == null) {
             log.warn("배치 실행 응답 없음: instanceId={}", instanceId);
             return false;
         }
 
-        if ("ERROR".equals(response.getResultCode()) || response.getException() != null) {
+        if ("ERROR".equals(response.getResultCode())
+                || (response.getErrorMessage() != null && !response.getErrorMessage().isBlank())) {
             log.warn("배치 실행 실패: instanceId={}, resultCode={}, error={}",
-                    instanceId, response.getResultCode(),
-                    response.getException() != null ? response.getException().getMessage() : null);
+                    instanceId, response.getResultCode(), response.getErrorMessage());
             return false;
         }
 

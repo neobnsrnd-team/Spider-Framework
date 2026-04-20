@@ -21,7 +21,7 @@ import org.springframework.stereotype.Component;
 @Slf4j
 @Component
 @RequiredArgsConstructor
-public class BatchManagementAdapter implements ManagementAdapter {
+public class BatchManagementAdapter implements ManagementAdapter<ManagementContext, ManagementContext> {
 
     private final TcpClient tcpClient;
     private final WasInstanceMapper wasInstanceMapper;
@@ -47,9 +47,7 @@ public class BatchManagementAdapter implements ManagementAdapter {
      * @return 응답 ManagementContext, 실패 시 예외 정보가 담긴 ManagementContext
      */
     @Override
-    public Object doProcess(String command, Object payload) {
-        ManagementContext ctx = (ManagementContext) payload;
-
+    public ManagementContext doProcess(String command, ManagementContext ctx) {
         WasInstanceResponse instance = wasInstanceMapper.selectResponseById(ctx.getInstanceId());
         if (instance == null || instance.getIp() == null || instance.getIp().isBlank()) {
             log.warn("[BatchManagementAdapter] WAS 인스턴스 정보 없음: instanceId={}", ctx.getInstanceId());

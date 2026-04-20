@@ -45,17 +45,17 @@ public class BatchExecCommandHandler implements CommandHandler {
                         ? String.valueOf(payload.get("parameters")) : null)
                 .build();
 
-        ManagementContext result = (ManagementContext) batchManagementAdapter.doProcess(command, ctx);
+        ManagementContext result = batchManagementAdapter.doProcess(command, ctx);
 
+        // 성공 조건: 결과가 존재하고, resultCode가 ERROR가 아니며, errorMessage가 비어 있음
         boolean success = result != null && !"ERROR".equals(result.getResultCode())
-                && result.getException() == null;
+                && (result.getErrorMessage() == null || result.getErrorMessage().isBlank());
 
         return JsonCommandResponse.builder()
                 .command(command)
                 .success(success)
                 .message(result != null ? result.getResultCode() : null)
-                .error(result != null && result.getException() != null
-                        ? result.getException().getMessage() : null)
+                .error(result != null ? result.getErrorMessage() : null)
                 .build();
     }
 }

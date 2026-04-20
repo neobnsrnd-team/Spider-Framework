@@ -46,6 +46,6 @@ public class ManagementContext implements Serializable {
     /** 배치 실행 시퀀스 (응답 시 채워짐) */
     private Integer executeSeq;
 
-    /** 오류 정보 (실패 시 채워짐, 직렬화 전달 가능) */
-    private Exception exception;
+    /** 오류 메시지 (실패 시 채워짐, 예외 클래스명 + 메시지 포맷 권장) */
+    private String errorMessage;
 }

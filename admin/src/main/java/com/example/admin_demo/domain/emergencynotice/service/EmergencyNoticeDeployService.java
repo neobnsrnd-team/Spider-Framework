@@ -277,7 +277,7 @@ public class EmergencyNoticeDeployService {
 
             // DemoBackendAdapter가 내부적으로 TcpClient.sendJson(4바이트 prefix + UTF-8 JSON)을 호출한다.
             // 예외를 던지지 않고 실패 시 success=false인 JsonCommandResponse를 반환한다.
-            JsonCommandResponse response = (JsonCommandResponse) demoBackendAdapter.doProcess(CMD_NOTICE_SYNC, request);
+            JsonCommandResponse response = demoBackendAdapter.doProcess(CMD_NOTICE_SYNC, request);
 
             if (response != null && response.isSuccess()) {
                 log.info("Demo Backend 긴급공지 TCP 동기화 완료: message={}", response.getMessage());
@@ -321,7 +321,7 @@ public class EmergencyNoticeDeployService {
                     .payload(new HashMap<>())
                     .build();
 
-            JsonCommandResponse response = (JsonCommandResponse) demoBackendAdapter.doProcess(CMD_NOTICE_END, request);
+            JsonCommandResponse response = demoBackendAdapter.doProcess(CMD_NOTICE_END, request);
 
             if (response != null && response.isSuccess()) {
                 log.info("Demo Backend 긴급공지 TCP 종료 완료: message={}", response.getMessage());

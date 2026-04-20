@@ -16,7 +16,7 @@ import org.springframework.stereotype.Component;
  * 애플리케이션 기동 시 TCP 연결 샘플 동작 확인용 Runner.
  *
  * <p>dev 프로파일에서만 활성화된다.
- * batch-was(9998)와 demo/backend(9997)에 PING을 전송하여 연결 상태를 확인한다.</p>
+ * demo/backend(9997)에 PING을 전송하여 연결 상태를 확인한다.</p>
  */
 @Slf4j
 @Component

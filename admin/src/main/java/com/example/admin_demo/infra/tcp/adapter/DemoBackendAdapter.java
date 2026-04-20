@@ -18,7 +18,7 @@ import org.springframework.stereotype.Component;
 @Slf4j
 @Component
 @RequiredArgsConstructor
-public class DemoBackendAdapter implements ManagementAdapter {
+public class DemoBackendAdapter implements ManagementAdapter<JsonCommandRequest, JsonCommandResponse> {
 
     private final TcpClient tcpClient;
 
@@ -42,9 +42,7 @@ public class DemoBackendAdapter implements ManagementAdapter {
      * @return 응답 JsonCommandResponse
      */
     @Override
-    public Object doProcess(String command, Object payload) {
-        JsonCommandRequest req = (JsonCommandRequest) payload;
-
+    public JsonCommandResponse doProcess(String command, JsonCommandRequest req) {
         try {
             log.info("[DemoBackendAdapter] JSON TCP 전송: host={}, port={}, command={}",
                     demoBackendHost, demoBackendPort, command);

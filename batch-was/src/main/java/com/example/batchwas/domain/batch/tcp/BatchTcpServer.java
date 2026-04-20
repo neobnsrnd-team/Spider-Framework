@@ -4,7 +4,9 @@ import com.example.admin_demo.infra.tcp.model.ManagementContext;
 import com.example.batchwas.domain.batch.dto.BatchExecuteRequest;
 import com.example.batchwas.domain.batch.dto.BatchExecuteResponse;
 import com.example.batchwas.domain.batch.service.BatchExecuteService;
+import jakarta.annotation.PreDestroy;
 import java.io.IOException;
+import java.io.ObjectInputFilter;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.net.ServerSocket;
@@ -33,27 +35,71 @@ public class BatchTcpServer implements ApplicationRunner {
 
     private final BatchExecuteService batchExecuteService;
 
+    /** accept 루프를 깨우기 위해 @PreDestroy에서 닫을 ServerSocket 참조 */
+    private volatile ServerSocket serverSocket;
+
+    /**
+     * ObjectInputStream 역직렬화 허용 화이트리스트.
+     * ManagementContext, String, java.util.** 이외의 클래스는 거부한다 (역직렬화 공격 방어).
+     */
+    private static final String DESERIALIZATION_FILTER_PATTERN =
+            "com.example.admin_demo.infra.tcp.model.ManagementContext;java.lang.String;java.util.**;!*";
+
     @Override
     public void run(ApplicationArguments args) {
         Thread serverThread = new Thread(this::startServer, "batch-tcp-server");
+        // 서버 accept 루프 스레드는 daemon 유지 (shutdown은 @PreDestroy에서 socket close로 처리)
         serverThread.setDaemon(true);
         serverThread.start();
         log.info("[BatchTcpServer] batch-was TCP 서버 스레드 시작 (port={})", tcpPort);
     }
 
     private void startServer() {
-        try (ServerSocket serverSocket = new ServerSocket(tcpPort)) {
+        try {
+            serverSocket = new ServerSocket(tcpPort);
             log.info("[BatchTcpServer] 포트 {} 에서 대기 중", tcpPort);
-            while (!Thread.currentThread().isInterrupted()) {
+            while (!Thread.currentThread().isInterrupted() && !serverSocket.isClosed()) {
                 Socket clientSocket = serverSocket.accept();
-                Thread handlerThread = new Thread(
-                        () -> handleClient(clientSocket),
-                        "batch-tcp-handler-" + clientSocket.getPort());
-                handlerThread.setDaemon(true);
-                handlerThread.start();
+                try {
+                    Thread handlerThread = new Thread(
+                            () -> handleClient(clientSocket),
+                            "batch-tcp-handler-" + clientSocket.getPort());
+                    // 핸들러 스레드는 non-daemon — JVM 종료 시 진행 중인 요청이 완료될 때까지 대기
+                    handlerThread.setDaemon(false);
+                    handlerThread.start();
+                } catch (Exception e) {
+                    // 스레드 생성 실패 시 소켓이 누수되지 않도록 즉시 close
+                    log.error("[BatchTcpServer] 핸들러 스레드 생성 실패, 소켓 닫음: {}", e.getMessage());
+                    try {
+                        clientSocket.close();
+                    } catch (IOException ignored) {
+                        // close 실패는 무시 (리소스 정리 단계)
+                    }
+                }
             }
         } catch (IOException e) {
-            log.error("[BatchTcpServer] 서버 소켓 오류: {}", e.getMessage(), e);
+            // serverSocket.close()로 accept()가 SocketException을 던지는 경우는 정상 종료로 처리
+            if (serverSocket != null && serverSocket.isClosed()) {
+                log.info("[BatchTcpServer] ServerSocket 종료됨 (정상 shutdown)");
+            } else {
+                log.error("[BatchTcpServer] 서버 소켓 오류: {}", e.getMessage(), e);
+            }
+        }
+    }
+
+    /**
+     * Spring 종료 시 ServerSocket을 닫아 accept 루프를 빠져나오게 한다.
+     * 진행 중이던 handler 스레드는 non-daemon이므로 JVM이 해당 스레드 완료를 기다린다.
+     */
+    @PreDestroy
+    public void shutdown() {
+        if (serverSocket != null && !serverSocket.isClosed()) {
+            try {
+                serverSocket.close();
+            } catch (IOException ignored) {
+                // close 실패는 무시 (이미 종료 단계)
+            }
+            log.info("[BatchTcpServer] TCP 서버 소켓 닫음 (shutdown)");
         }
     }
 
@@ -69,6 +115,8 @@ public class BatchTcpServer implements ApplicationRunner {
             socket.setSoTimeout(60_000);
 
             ObjectInputStream ois = new ObjectInputStream(socket.getInputStream());
+            // 역직렬화 공격 방어: 허용된 클래스만 읽도록 화이트리스트 필터 적용
+            ois.setObjectInputFilter(ObjectInputFilter.Config.createFilter(DESERIALIZATION_FILTER_PATTERN));
             ManagementContext ctx = (ManagementContext) ois.readObject();
             log.info("[BatchTcpServer] 수신: command={}, instanceId={}, batchAppId={}",
                     ctx.getCommand(), ctx.getInstanceId(), ctx.getBatchAppId());
@@ -104,7 +152,7 @@ public class BatchTcpServer implements ApplicationRunner {
         return ManagementContext.builder()
                 .command(ctx.getCommand())
                 .resultCode("ERROR")
-                .exception(new IllegalArgumentException("지원하지 않는 커맨드: " + ctx.getCommand()))
+                .errorMessage("지원하지 않는 커맨드: " + ctx.getCommand())
                 .build();
     }
 
@@ -140,7 +188,8 @@ public class BatchTcpServer implements ApplicationRunner {
                     .instanceId(ctx.getInstanceId())
                     .batchAppId(ctx.getBatchAppId())
                     .resultCode("ERROR")
-                    .exception(e)
+                    // Exception 직렬화 대신 클래스명 + 메시지를 문자열로 전달 (ObjectStream 호환성/보안)
+                    .errorMessage(e.getClass().getName() + ": " + e.getMessage())
                     .build();
         }
     }

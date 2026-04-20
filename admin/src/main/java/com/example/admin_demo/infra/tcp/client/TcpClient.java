@@ -55,14 +55,17 @@ public class TcpClient {
      */
     public ManagementContext sendObject(String host, int port, ManagementContext ctx) throws IOException {
         log.debug("[TcpClient] ObjectStream 전송: host={}, port={}, command={}", host, port, ctx.getCommand());
-        try (Socket socket = createSocket(host, port);
-             ObjectOutputStream oos = new ObjectOutputStream(socket.getOutputStream())) {
+        // OOS를 flush하여 스트림 헤더가 상대방에 전달된 후에 OIS를 여는 것이 중요하다.
+        // (OIS 생성 시 스트림 헤더를 읽어들이기 때문에 순서가 뒤바뀌면 데드락이 발생할 수 있다.)
+        try (Socket socket = createSocket(host, port)) {
+            ObjectOutputStream oos = new ObjectOutputStream(socket.getOutputStream());
             oos.writeObject(ctx);
             oos.flush();
-            ObjectInputStream ois = new ObjectInputStream(socket.getInputStream());
-            ManagementContext response = (ManagementContext) ois.readObject();
-            log.debug("[TcpClient] ObjectStream 응답 수신: resultCode={}", response.getResultCode());
-            return response;
+            try (ObjectInputStream ois = new ObjectInputStream(socket.getInputStream())) {
+                ManagementContext response = (ManagementContext) ois.readObject();
+                log.debug("[TcpClient] ObjectStream 응답 수신: resultCode={}", response.getResultCode());
+                return response;
+            }
         } catch (ClassNotFoundException e) {
             throw new IOException("ManagementContext 역직렬화 실패: " + e.getMessage(), e);
         }
@@ -80,13 +83,14 @@ public class TcpClient {
     public JsonCommandResponse sendJson(String host, int port, JsonCommandRequest req) throws IOException {
         log.debug("[TcpClient] JSON 전송: host={}, port={}, command={}", host, port, req.getCommand());
         byte[] requestBytes = objectMapper.writeValueAsBytes(req);
-        try (Socket socket = createSocket(host, port)) {
-            DataOutputStream dos = new DataOutputStream(socket.getOutputStream());
+        // DataOutputStream / DataInputStream을 try-with-resources로 열어 명시적으로 close 보장
+        try (Socket socket = createSocket(host, port);
+                DataOutputStream dos = new DataOutputStream(socket.getOutputStream());
+                DataInputStream dis = new DataInputStream(socket.getInputStream())) {
             dos.writeInt(requestBytes.length);
             dos.write(requestBytes);
             dos.flush();
 
-            DataInputStream dis = new DataInputStream(socket.getInputStream());
             int len = dis.readInt();
             byte[] responseBytes = new byte[len];
             dis.readFully(responseBytes);

@@ -128,6 +128,7 @@ function sendResponse(socket, response) {
     console.log(`[TcpServer] 응답 전송: command=${response.command}, success=${response.success}`);
   } catch (err) {
     console.error("[TcpServer] 응답 전송 실패:", err.message);
+    socket.destroy();
   }
 }
 

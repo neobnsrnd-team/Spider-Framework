@@ -2,7 +2,6 @@ package com.example.admin_demo.infra.tcp.handler;
 
 import com.example.admin_demo.infra.tcp.adapter.DemoBackendAdapter;
 import com.example.admin_demo.infra.tcp.model.JsonCommandRequest;
-import com.example.admin_demo.infra.tcp.model.JsonCommandResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -27,7 +26,6 @@ public class EmergencyNoticeSyncCommandHandler implements CommandHandler {
 
     @Override
     public Object handle(String command, JsonCommandRequest request) {
-        JsonCommandResponse result = (JsonCommandResponse) demoBackendAdapter.doProcess(command, request);
-        return result;
+        return demoBackendAdapter.doProcess(command, request);
     }
 }
