@@ -5,6 +5,7 @@ import com.example.admin_demo.domain.cmsasset.config.CmsBuilderProperties;
 import com.example.admin_demo.global.exception.ErrorType;
 import com.example.admin_demo.global.exception.base.BaseException;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.core.io.Resource;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
@@ -35,11 +36,25 @@ public class CmsBuilderClient {
      */
     private static final String DELETE_PATH_TEMPLATE = "/cms/api/assets/{assetId}";
 
+    /** CMS 자산 배포(승인 후 파일 이동) 엔드포인트 경로 템플릿. */
+    private static final String DEPLOY_PATH_TEMPLATE = "/cms/api/assets/{assetId}/deploy";
+
     private final RestClient cmsBuilderRestClient;
+
+    /**
+     * 배포(deploy) 전용 RestClient — 업로드보다 훨씬 짧은 read-timeout 적용.
+     * deploy 실패 시 saga 보상 UPDATE 도 있어 HTTP 대기를 짧게 끊어주는 것이 전체 응답성에 중요.
+     */
+    private final RestClient cmsBuilderDeployRestClient;
+
     private final CmsBuilderProperties properties;
 
-    public CmsBuilderClient(RestClient cmsBuilderRestClient, CmsBuilderProperties properties) {
+    public CmsBuilderClient(
+            @Qualifier("cmsBuilderRestClient") RestClient cmsBuilderRestClient,
+            @Qualifier("cmsBuilderDeployRestClient") RestClient cmsBuilderDeployRestClient,
+            CmsBuilderProperties properties) {
         this.cmsBuilderRestClient = cmsBuilderRestClient;
+        this.cmsBuilderDeployRestClient = cmsBuilderDeployRestClient;
         this.properties = properties;
     }
 
@@ -114,6 +129,35 @@ public class CmsBuilderClient {
 
         } catch (RestClientException e) {
             log.error("CMS Builder 삭제 호출 중 오류 발생: assetId={}, userId={}", assetId, userId, e);
+            throw new BaseException(ErrorType.EXTERNAL_SERVICE_ERROR, "CMS 서버와 통신할 수 없습니다. 잠시 후 다시 시도하세요.", e);
+        }
+    }
+
+    /**
+     * CMS Builder 에 이미지 승인 후 파일 배포(운영 경로로 이동)를 요청한다 — Issue #55.
+     *
+     * <p>Admin 의 승인 트랜잭션 내부에서 호출된다. 실패 시 {@link BaseException}(502) 을 던져
+     * 호출자(@Transactional Service) 의 DB 커밋을 롤백시키는 구조이므로, 삭제와 마찬가지로
+     * body 파싱은 생략하고 HTTP status 기반으로 판정한다.
+     *
+     * <p>성공 응답은 {@code {"ok":true,"data":{"url":...}}} 이나 Admin 은 반환 URL 을 사용하지 않는다
+     * (CMS 가 {@code SPW_CMS_ASSET.ASSET_URL} 을 직접 갱신).
+     *
+     * @param assetId 배포 대상 자산 식별자
+     * @throws BaseException 배포 실패 시 (HTTP 502)
+     */
+    public void deployAsset(String assetId) {
+        try {
+            cmsBuilderDeployRestClient
+                    .post()
+                    .uri(DEPLOY_PATH_TEMPLATE, assetId)
+                    .retrieve()
+                    .toBodilessEntity();
+
+            log.info("CMS Builder 파일 배포 성공: assetId={}", assetId);
+
+        } catch (RestClientException e) {
+            log.error("CMS Builder 파일 배포 호출 중 오류 발생: assetId={}", assetId, e);
             throw new BaseException(ErrorType.EXTERNAL_SERVICE_ERROR, "CMS 서버와 통신할 수 없습니다. 잠시 후 다시 시도하세요.", e);
         }
     }

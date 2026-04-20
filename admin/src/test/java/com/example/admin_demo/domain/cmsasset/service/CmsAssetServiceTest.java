@@ -8,6 +8,10 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
+import static org.mockito.BDDMockito.willThrow;
+import static org.mockito.Mockito.lenient;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 
 import com.example.admin_demo.domain.cmsasset.dto.CmsAssetApprovalListRequest;
 import com.example.admin_demo.domain.cmsasset.dto.CmsAssetDetailResponse;
@@ -16,10 +20,14 @@ import com.example.admin_demo.domain.cmsasset.dto.CmsAssetRequestListRequest;
 import com.example.admin_demo.domain.cmsasset.mapper.CmsAssetMapper;
 import com.example.admin_demo.global.dto.PageRequest;
 import com.example.admin_demo.global.dto.PageResponse;
+import com.example.admin_demo.global.exception.ErrorType;
 import com.example.admin_demo.global.exception.InvalidInputException;
 import com.example.admin_demo.global.exception.InvalidStateException;
 import com.example.admin_demo.global.exception.NotFoundException;
+import com.example.admin_demo.global.exception.base.BaseException;
 import java.util.List;
+import java.util.function.Consumer;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -41,8 +49,29 @@ class CmsAssetServiceTest {
     @Mock
     private com.example.admin_demo.domain.cmsasset.validator.AssetUploadValidator assetUploadValidator;
 
+    @Mock
+    private org.springframework.transaction.support.TransactionTemplate transactionTemplate;
+
     @InjectMocks
     private CmsAssetService cmsAssetService;
+
+    /**
+     * TransactionTemplate mock 이 받은 callback 을 동기 실행하도록 설정.
+     * 실제 트랜잭션 경계는 단위 테스트 범위 밖이며, 여기서는 approve() 내부에서
+     * UPDATE → CMS → (보상 UPDATE) 흐름이 호출되는지만 검증한다.
+     */
+    @BeforeEach
+    void setUpTransactionTemplate() {
+        // lenient — approve 외 테스트는 TransactionTemplate 를 사용하지 않아 strict stubbing 에 걸리는 것을 방지.
+        lenient()
+                .doAnswer(inv -> {
+                    Consumer<org.springframework.transaction.TransactionStatus> cb = inv.getArgument(0);
+                    cb.accept(null);
+                    return null;
+                })
+                .when(transactionTemplate)
+                .executeWithoutResult(any());
+    }
 
     private static final String ASSET_ID = "ASSET-001";
     private static final String USER_ID = "cmsUser01";
@@ -152,8 +181,8 @@ class CmsAssetServiceTest {
     // ─── approve ───────────────────────────────────────────────────────
 
     @Test
-    @DisplayName("[승인] PENDING → APPROVED 정상 전이")
-    void approve_fromPending_succeeds() {
+    @DisplayName("[승인] PENDING → APPROVED 전이 + CMS 배포 호출까지 성공")
+    void approve_fromPending_succeedsAndDeploys() {
         given(cmsAssetMapper.findAssetStateById(ASSET_ID)).willReturn("PENDING");
         given(cmsAssetMapper.updateState(any(), any(), any(), any(), any(), any()))
                 .willReturn(1);
@@ -161,15 +190,37 @@ class CmsAssetServiceTest {
         cmsAssetService.approve(ASSET_ID, USER_ID, USER_NAME);
 
         then(cmsAssetMapper).should().updateState(ASSET_ID, "PENDING", "APPROVED", null, USER_ID, USER_NAME);
+        then(cmsBuilderClient).should().deployAsset(ASSET_ID);
     }
 
     @Test
-    @DisplayName("[승인] WORK 상태에서 승인 시 InvalidStateException")
+    @DisplayName("[승인] WORK 상태에서 승인 시 InvalidStateException, CMS 배포 호출 없음")
     void approve_fromWork_throwsInvalidState() {
         given(cmsAssetMapper.findAssetStateById(ASSET_ID)).willReturn("WORK");
 
         assertThatThrownBy(() -> cmsAssetService.approve(ASSET_ID, USER_ID, USER_NAME))
                 .isInstanceOf(InvalidStateException.class);
+        then(cmsBuilderClient).should(never()).deployAsset(any());
+    }
+
+    @Test
+    @DisplayName("[승인] CMS 배포 실패 시 보상 UPDATE(APPROVED→PENDING) 후 BaseException 재전파")
+    void approve_cmsDeployFails_compensatesAndRethrows() {
+        given(cmsAssetMapper.findAssetStateById(ASSET_ID)).willReturn("PENDING");
+        given(cmsAssetMapper.updateState(any(), any(), any(), any(), any(), any()))
+                .willReturn(1);
+        willThrow(new BaseException(ErrorType.EXTERNAL_SERVICE_ERROR, "CMS 통신 오류"))
+                .given(cmsBuilderClient)
+                .deployAsset(ASSET_ID);
+
+        assertThatThrownBy(() -> cmsAssetService.approve(ASSET_ID, USER_ID, USER_NAME))
+                .isInstanceOfSatisfying(BaseException.class, ex -> assertThat(ex.getErrorType())
+                        .isEqualTo(ErrorType.EXTERNAL_SERVICE_ERROR));
+
+        // 메인 UPDATE(PENDING→APPROVED) + 보상 UPDATE(APPROVED→PENDING) 두 번 호출됐어야 한다.
+        then(cmsAssetMapper).should().updateState(ASSET_ID, "PENDING", "APPROVED", null, USER_ID, USER_NAME);
+        then(cmsAssetMapper).should().updateState(ASSET_ID, "APPROVED", "PENDING", null, USER_ID, USER_NAME);
+        then(cmsAssetMapper).should(times(2)).updateState(any(), any(), any(), any(), any(), any());
     }
 
     // ─── reject ────────────────────────────────────────────────────────

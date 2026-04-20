@@ -22,6 +22,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.web.multipart.MultipartFile;
 
 /**
@@ -37,7 +38,6 @@ import org.springframework.web.multipart.MultipartFile;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-@Transactional(readOnly = true)
 public class CmsAssetService {
 
     private static final String STATE_WORK = "WORK";
@@ -59,10 +59,18 @@ public class CmsAssetService {
     private final AssetUploadValidator assetUploadValidator;
 
     /**
+     * 승인 saga 용 — 상태 UPDATE 를 CMS 호출 전에 독립적으로 커밋하기 위한 TransactionTemplate.
+     * CMS 가 DB 의 {@code APPROVED} 상태를 읽어 검증하므로 Admin 의 UPDATE 가 READ_COMMITTED 관점에서
+     * CMS 에 가시화되어야 한다.
+     */
+    private final TransactionTemplate transactionTemplate;
+
+    /**
      * 현업 본인 업로드 이미지 목록 조회.
      *
      * <p>클라이언트가 보낸 {@code createUserId}는 신뢰하지 않고 인증 주체의 ID로 덮어쓴다.
      */
+    @Transactional(readOnly = true)
     public PageResponse<CmsAssetListResponse> findMyRequestList(
             String currentUserId, CmsAssetRequestListRequest req, PageRequest pageRequest) {
 
@@ -76,6 +84,7 @@ public class CmsAssetService {
     }
 
     /** 결재자 승인 관리 목록 조회 (기본 PENDING 필터는 Mapper XML에서 처리) */
+    @Transactional(readOnly = true)
     public PageResponse<CmsAssetListResponse> findApprovalList(
             CmsAssetApprovalListRequest req, PageRequest pageRequest) {
 
@@ -87,6 +96,7 @@ public class CmsAssetService {
     }
 
     /** 이미지 상세 조회 (모달 프리뷰) */
+    @Transactional(readOnly = true)
     public CmsAssetDetailResponse findById(String assetId) {
         CmsAssetDetailResponse detail = cmsAssetMapper.findDetailById(assetId);
         if (detail == null) {
@@ -107,16 +117,56 @@ public class CmsAssetService {
         log.info("CMS 이미지 승인 요청: assetId={}, modifierId={}", assetId, modifierId);
     }
 
-    /** 승인 — PENDING → APPROVED (결재자) */
-    @Transactional
+    /**
+     * 승인 — PENDING → APPROVED (결재자) + CMS 파일 배포 (Issue #55).
+     *
+     * <p>Saga 패턴으로 DB 와 CMS 를 조율한다. CMS 배포 API 가 호출 시점에 DB 의 {@code ASSET_STATE}
+     * 가 이미 {@code APPROVED} 여야 하므로, 단일 {@code @Transactional} 로 감싸면 CMS 가 커밋 전
+     * PENDING 만 보게 되어 항상 거절된다.
+     *
+     * <h4>흐름</h4>
+     * <ol>
+     *   <li>선검증 + UPDATE(PENDING→APPROVED) — {@code TransactionTemplate} 으로 독립 TX 커밋.</li>
+     *   <li>{@link CmsBuilderClient#deployAsset(String)} 호출.</li>
+     *   <li>성공 → 정상 종료.</li>
+     *   <li>실패 → 보상 UPDATE(APPROVED→PENDING) 을 또 다른 독립 TX 로 커밋 후, 원 {@link BaseException}
+     *       을 그대로 재던져 502 를 전파. 사용자 관점에서는 "둘 다 실패" 로 보인다.</li>
+     * </ol>
+     *
+     * <h4>한계</h4>
+     * <ul>
+     *   <li>메인 TX 커밋과 CMS 호출 사이의 짧은 윈도우에 다른 결재자 화면은 {@code APPROVED} 를 볼 수 있다.</li>
+     *   <li>보상 UPDATE 자체가 실패하는 초희귀 케이스는 error 로그만 남기고 수동 복구 대상으로 삼는다.</li>
+     * </ul>
+     */
     public void approve(String assetId, String modifierId, String modifierName) {
-        assertTransition(assetId, STATE_PENDING, STATE_APPROVED);
-        int updated =
-                cmsAssetMapper.updateState(assetId, STATE_PENDING, STATE_APPROVED, null, modifierId, modifierName);
-        if (updated != 1) {
-            throw new InvalidStateException("이미 처리된 이미지입니다. assetId=" + assetId);
+        // Step 1: 선검증 + 상태 UPDATE 를 독립 TX 로 커밋. CMS 가 APPROVED 를 읽어야 deploy 가 성공한다.
+        transactionTemplate.executeWithoutResult(status -> {
+            assertTransition(assetId, STATE_PENDING, STATE_APPROVED);
+            int updated =
+                    cmsAssetMapper.updateState(assetId, STATE_PENDING, STATE_APPROVED, null, modifierId, modifierName);
+            if (updated != 1) {
+                // 선검증 통과 후 race 실패 — 예외 던지면 TransactionTemplate 이 롤백.
+                throw new InvalidStateException("이미 처리된 이미지입니다. assetId=" + assetId);
+            }
+        });
+
+        // Step 2: CMS 파일 배포 시도.
+        try {
+            cmsBuilderClient.deployAsset(assetId);
+            log.info("CMS 이미지 승인 + 파일 배포 완료: assetId={}, modifierId={}", assetId, modifierId);
+        } catch (BaseException deployEx) {
+            // Step 3: 배포 실패 — 승인 상태를 PENDING 으로 보상 롤백.
+            log.error("CMS 배포 실패 — 승인 상태 보상 롤백 시도. assetId={}, modifierId={}", assetId, modifierId, deployEx);
+            try {
+                transactionTemplate.executeWithoutResult(status -> cmsAssetMapper.updateState(
+                        assetId, STATE_APPROVED, STATE_PENDING, null, modifierId, modifierName));
+            } catch (RuntimeException revertEx) {
+                // 보상 실패는 데이터-파일 불일치 상태를 남기므로 수동 복구 알림 차원의 error 로깅.
+                log.error("보상 롤백 실패 — 수동 확인 필요. assetId={}", assetId, revertEx);
+            }
+            throw deployEx;
         }
-        log.info("CMS 이미지 승인 완료: assetId={}, modifierId={}", assetId, modifierId);
     }
 
     /**
