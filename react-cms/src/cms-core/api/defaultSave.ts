@@ -13,13 +13,18 @@ import { generateJSX } from "../codegen/exportCode";
 import type { CMSPage } from "../types";
 import type { SavePageParams } from "../SavePageModal";
 
+// BASE_URL 기준 /__cms/ 접두사 생성.
+// 프록시 모드(BASE_URL=/react-cms/): '/react-cms/__cms' → nginx가 Vite로 라우팅
+// 단독 모드(BASE_URL=/):             '/__cms'           → Vite 직접 처리
+const cmsBase = `${import.meta.env.BASE_URL.replace(/\/$/, "")}/__cms`;
+
 export async function defaultSave(page: CMSPage, params: SavePageParams): Promise<void> {
   const { pageName, uri } = params;
   // CMSBuilder에서 layouts/codegenConfig/overlayTemplates Context를 포함해 사전 생성한 코드 우선 사용.
   // params.code가 없는 경우(직접 호출 시) generateJSX로 폴백 — Context 정보 미포함 주의.
   const code = params.code ?? generateJSX(page);
 
-  const res = await fetch("/__cms/create-page", {
+  const res = await fetch(`${cmsBase}/create-page`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ uri, code, pageName }),
