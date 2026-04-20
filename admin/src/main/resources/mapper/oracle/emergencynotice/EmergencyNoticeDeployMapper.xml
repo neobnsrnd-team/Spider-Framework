@@ -5,21 +5,26 @@
 <mapper namespace="com.example.admin_demo.domain.emergencynotice.mapper.EmergencyNoticeDeployMapper">
 
     <!--
-        배포 상태 컬럼은 FWK_PROPERTY 'notice'.USE_YN 행에만 관리한다.
-        DEPLOY_STATUS: DRAFT(미배포) / DEPLOYED(배포 중) / ENDED(배포 종료)
-        START_DTIME:   배포 시작 일시 (yyyyMMddHHmmss)
-        END_DTIME:     배포 종료 일시 (yyyyMMddHHmmss)
+        배포 상태는 FWK_PROPERTY 'notice' 그룹의 별도 행으로 관리한다. (key-value 방식)
+        PROPERTY_ID='DEPLOY_STATUS': DRAFT(미배포) / DEPLOYED(배포 중) / ENDED(배포 종료)
+        PROPERTY_ID='START_DTIME':   배포 시작 일시 (yyyyMMddHHmmss)
+        PROPERTY_ID='END_DTIME':     배포 종료 일시 (yyyyMMddHHmmss)
     -->
 
     <!--
         현재 배포 상태 조회.
-        USE_YN 행에서 배포 상태를 읽고, CLOSEABLE_YN·HIDE_TODAY_YN 행에서
-        노출 설정을 스칼라 서브쿼리로 함께 조회한다.
+        DEPLOY_STATUS 행을 기준으로 START_DTIME·END_DTIME·CLOSEABLE_YN·HIDE_TODAY_YN 행을
+        스칼라 서브쿼리로 함께 조회한다.
+        DEPLOY_STATUS 행이 없으면 null을 반환하여 초기 데이터 미실행을 감지할 수 있다.
     -->
     <select id="selectDeployStatus" resultType="com.example.admin_demo.domain.emergencynotice.dto.EmergencyNoticeDeployStatusResponse">
-        SELECT p.DEPLOY_STATUS AS deployStatus,
-               p.START_DTIME   AS startDtime,
-               p.END_DTIME     AS endDtime,
+        SELECT p.DEFAULT_VALUE AS deployStatus,
+               (SELECT q.DEFAULT_VALUE FROM FWK_PROPERTY q
+                WHERE  q.PROPERTY_GROUP_ID = 'notice'
+                AND    q.PROPERTY_ID       = 'START_DTIME')   AS startDtime,
+               (SELECT q.DEFAULT_VALUE FROM FWK_PROPERTY q
+                WHERE  q.PROPERTY_GROUP_ID = 'notice'
+                AND    q.PROPERTY_ID       = 'END_DTIME')     AS endDtime,
                (SELECT q.DEFAULT_VALUE FROM FWK_PROPERTY q
                 WHERE  q.PROPERTY_GROUP_ID = 'notice'
                 AND    q.PROPERTY_ID       = 'CLOSEABLE_YN')  AS closeableYn,
@@ -28,7 +33,7 @@
                 AND    q.PROPERTY_ID       = 'HIDE_TODAY_YN') AS hideTodayYn
         FROM   FWK_PROPERTY p
         WHERE  p.PROPERTY_GROUP_ID = 'notice'
-        AND    p.PROPERTY_ID       = 'USE_YN'
+        AND    p.PROPERTY_ID       = 'DEPLOY_STATUS'
     </select>
 
     <!--
@@ -96,13 +101,17 @@
 
     <!--
         쓰기 작업 전 행 잠금용 배포 상태 조회 (SELECT FOR UPDATE).
-        동시 요청이 같은 상태를 읽고 중복 배포·종료하는 TOCTOU 경쟁을 방지한다.
+        DEPLOY_STATUS 행을 잠가 동시 요청이 같은 상태를 읽고 중복 배포·종료하는 TOCTOU 경쟁을 방지한다.
         반드시 쓰기(@Transactional) 트랜잭션 내에서만 호출해야 한다.
     -->
     <select id="selectDeployStatusForUpdate" resultType="com.example.admin_demo.domain.emergencynotice.dto.EmergencyNoticeDeployStatusResponse">
-        SELECT p.DEPLOY_STATUS AS deployStatus,
-               p.START_DTIME   AS startDtime,
-               p.END_DTIME     AS endDtime,
+        SELECT p.DEFAULT_VALUE AS deployStatus,
+               (SELECT q.DEFAULT_VALUE FROM FWK_PROPERTY q
+                WHERE  q.PROPERTY_GROUP_ID = 'notice'
+                AND    q.PROPERTY_ID       = 'START_DTIME')   AS startDtime,
+               (SELECT q.DEFAULT_VALUE FROM FWK_PROPERTY q
+                WHERE  q.PROPERTY_GROUP_ID = 'notice'
+                AND    q.PROPERTY_ID       = 'END_DTIME')     AS endDtime,
                (SELECT q.DEFAULT_VALUE FROM FWK_PROPERTY q
                 WHERE  q.PROPERTY_GROUP_ID = 'notice'
                 AND    q.PROPERTY_ID       = 'CLOSEABLE_YN')  AS closeableYn,
@@ -111,20 +120,38 @@
                 AND    q.PROPERTY_ID       = 'HIDE_TODAY_YN') AS hideTodayYn
         FROM   FWK_PROPERTY p
         WHERE  p.PROPERTY_GROUP_ID = 'notice'
-        AND    p.PROPERTY_ID       = 'USE_YN'
+        AND    p.PROPERTY_ID       = 'DEPLOY_STATUS'
         FOR UPDATE
     </select>
 
-    <!-- 배포 시작: DEPLOY_STATUS='DEPLOYED', START_DTIME=now, END_DTIME=NULL -->
-    <update id="updateDeployStart">
+    <!-- DEPLOY_STATUS 행의 DEFAULT_VALUE 업데이트 -->
+    <update id="updateDeployStatusValue">
         UPDATE FWK_PROPERTY
-        SET    DEPLOY_STATUS       = 'DEPLOYED',
-               START_DTIME         = #{startDtime},
-               END_DTIME           = NULL,
+        SET    DEFAULT_VALUE       = #{value},
                LAST_UPDATE_DTIME   = #{lastUpdateDtime},
                LAST_UPDATE_USER_ID = #{lastUpdateUserId}
         WHERE  PROPERTY_GROUP_ID = 'notice'
-        AND    PROPERTY_ID       = 'USE_YN'
+        AND    PROPERTY_ID       = 'DEPLOY_STATUS'
+    </update>
+
+    <!-- START_DTIME 행의 DEFAULT_VALUE 업데이트 -->
+    <update id="updateStartDtimeValue">
+        UPDATE FWK_PROPERTY
+        SET    DEFAULT_VALUE       = #{value, jdbcType=VARCHAR},
+               LAST_UPDATE_DTIME   = #{lastUpdateDtime},
+               LAST_UPDATE_USER_ID = #{lastUpdateUserId}
+        WHERE  PROPERTY_GROUP_ID = 'notice'
+        AND    PROPERTY_ID       = 'START_DTIME'
+    </update>
+
+    <!-- END_DTIME 행의 DEFAULT_VALUE 업데이트 -->
+    <update id="updateEndDtimeValue">
+        UPDATE FWK_PROPERTY
+        SET    DEFAULT_VALUE       = #{value, jdbcType=VARCHAR},
+               LAST_UPDATE_DTIME   = #{lastUpdateDtime},
+               LAST_UPDATE_USER_ID = #{lastUpdateUserId}
+        WHERE  PROPERTY_GROUP_ID = 'notice'
+        AND    PROPERTY_ID       = 'END_DTIME'
     </update>
 
     <!-- 닫기 버튼 노출 여부 업데이트 (CLOSEABLE_YN 행의 DEFAULT_VALUE 변경) -->
@@ -147,19 +174,9 @@
         AND    PROPERTY_ID       = 'HIDE_TODAY_YN'
     </update>
 
-    <!-- 배포 종료: DEPLOY_STATUS='ENDED', END_DTIME=now -->
-    <update id="updateDeployEnd">
-        UPDATE FWK_PROPERTY
-        SET    DEPLOY_STATUS       = 'ENDED',
-               END_DTIME           = #{endDtime},
-               LAST_UPDATE_DTIME   = #{lastUpdateDtime},
-               LAST_UPDATE_USER_ID = #{lastUpdateUserId}
-        WHERE  PROPERTY_GROUP_ID = 'notice'
-        AND    PROPERTY_ID       = 'USE_YN'
-    </update>
-
     <!--
-        배포 이력 스냅샷 삽입 — 'notice' 그룹 3행 전체를 FWK_PROPERTY_HISTORY에 복사
+        배포 이력 스냅샷 삽입 — 'notice' 그룹 전체 행을 FWK_PROPERTY_HISTORY에 복사
+        DEPLOY_STATUS·START_DTIME·END_DTIME 행도 포함되어 자동으로 스냅샷에 기록된다.
         VERSION은 각 PROPERTY_ID별 기존 최대 VERSION + 1로 자동 계산 (NVL로 최초=1 처리)
     -->
     <insert id="insertHistorySnapshot">
