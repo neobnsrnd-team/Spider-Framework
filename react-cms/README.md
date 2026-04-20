@@ -1,0 +1,575 @@
+# react-cms
+
+React 기반 비주얼 CMS 빌더 및 런타임 렌더링 엔진.
+
+블록 팔레트에서 컴포넌트를 드래그&드롭하여 페이지를 구성하고, 저장 시 React JSX 코드와 라우트를 자동 생성한다.
+
+---
+
+## 목차
+
+- [주요 기능](#주요-기능)
+- [디렉토리 구조](#디렉토리-구조)
+- [아키텍처 개요](#아키텍처-개요)
+- [개발 환경 실행](#개발-환경-실행)
+- [핵심 개념](#핵심-개념)
+  - [BlockDefinition](#blockdefinition)
+  - [LayoutTemplate](#layouttemplate)
+  - [OverlayTemplate](#overlaytemplate)
+  - [PropField](#propfield)
+  - [Action / BlockInteraction](#action--blockinteraction)
+- [빌더 사용법](#빌더-사용법)
+  - [CMSApp](#cmsapp)
+  - [CMSBuilder](#cmsbuilder)
+- [런타임 사용법](#런타임-사용법)
+  - [CMSRuntimeProvider](#cmsruntimeprovider)
+  - [PageRenderer](#pagerenderer)
+- [코드 생성](#코드-생성)
+- [Vite 플러그인 (cmsBankPlugin)](#vite-플러그인-cmsbankplugin)
+- [CSS 격리 (UserScopeWrapper)](#css-격리-userscopewrapper)
+- [타입 레퍼런스](#타입-레퍼런스)
+
+---
+
+## 주요 기능
+
+| 기능 | 설명 |
+|---|---|
+| 비주얼 에디터 | 드래그&드롭으로 블록을 배치하고 실시간으로 속성 편집 |
+| 레이아웃 시스템 | 헤더/푸터 크롬을 레이아웃 템플릿으로 분리하여 관리 |
+| 오버레이 관리 | 바텀시트·모달 등 오버레이를 페이지 단위로 구성 |
+| 상호작용 바인딩 | 블록 이벤트에 `openOverlay` / `navigate` / `closeOverlay` 액션 연결 |
+| JSX 코드 생성 | 편집 결과를 독립 실행 가능한 React 컴포넌트 파일로 자동 생성 |
+| 라우트 자동 등록 | 저장 시 Vite 플러그인이 라우터 파일에 import와 route를 자동 추가 |
+| CSS 격리 | `@scope` 기반으로 외부 스타일과 CMS 스타일을 격리 |
+| 런타임 렌더링 | 저장된 CMSPage JSON을 빌더 없이 앱에서 렌더링 |
+
+---
+
+## 디렉토리 구조
+
+```
+react-cms/
+├── src/
+│   ├── cms-core/                  # CMS 엔진 핵심 (외부 export 대상)
+│   │   ├── index.ts               # 공개 API 진입점
+│   │   ├── types.ts               # 전체 타입 정의
+│   │   ├── CMSApp.tsx             # 빌더 앱 루트 (Router + Provider 포함)
+│   │   ├── CMSBuilder.tsx         # 에디터 UI (팔레트 · 캔버스 · 속성 패널)
+│   │   ├── CMSRuntimeProvider.tsx # 런타임 전용 경량 Provider
+│   │   ├── SavePageModal.tsx      # 페이지 저장 모달 (pageName · uri 입력)
+│   │   ├── UserScopeWrapper.tsx   # @scope 기반 CSS 격리 래퍼
+│   │   ├── context.ts             # React Context 정의
+│   │   ├── useCMSContextValues.ts # Context 값 파생 훅
+│   │   ├── api/
+│   │   │   └── defaultSave.ts     # 기본 저장 핸들러 (/__cms/create-page 호출)
+│   │   ├── canvas/
+│   │   │   ├── LayoutCanvas.tsx   # 메인 편집 캔버스
+│   │   │   ├── OverlayCanvas.tsx  # 오버레이 편집 캔버스
+│   │   │   └── BlockControls.tsx  # 블록 선택·이동·삭제 컨트롤
+│   │   ├── codegen/
+│   │   │   ├── exportCode.ts      # CMSPage → JSX 코드 생성
+│   │   │   └── exportJson.ts      # CMSPage → JSON 직렬화
+│   │   ├── inspector/
+│   │   │   ├── RightSidebar.tsx   # 우측 속성 패널
+│   │   │   ├── PropsEditor.tsx    # 블록 props 편집기
+│   │   │   ├── LayoutEditor.tsx   # 레이아웃 props 편집기
+│   │   │   ├── OverlayEditor.tsx  # 오버레이 편집기
+│   │   │   └── IconPicker.tsx     # 아이콘 선택기
+│   │   ├── palette/
+│   │   │   ├── LeftSidebar.tsx    # 좌측 팔레트 패널
+│   │   │   ├── BlockPalette.tsx   # 블록 목록
+│   │   │   └── OverlayPalette.tsx # 오버레이 목록
+│   │   ├── preview/
+│   │   │   └── PreviewPage.tsx    # 전체 화면 미리보기
+│   │   ├── runtime/
+│   │   │   └── renderPage.tsx     # CMSPage 런타임 렌더러
+│   │   └── state/
+│   │       ├── builderStore.ts    # 빌더 상태 (블록 · 레이아웃 · 오버레이)
+│   │       ├── overlayStore.tsx   # 런타임 오버레이 열기/닫기 상태
+│   │       └── useDragSort.ts     # @dnd-kit 기반 드래그 정렬 훅
+│   ├── cms-meta/                  # 프로젝트별 CMS 설정 (커스터마이징 대상)
+│   │   ├── index.ts
+│   │   ├── blocks.tsx             # 사용 가능한 블록 목록
+│   │   ├── layouts.tsx            # 레이아웃 템플릿 + 렌더러
+│   │   └── overlays.tsx           # 오버레이 템플릿
+│   ├── shared/
+│   │   └── icons/                 # 아이콘 레지스트리
+│   ├── vite-plugin/
+│   │   └── cmsBankPlugin.ts       # 페이지 파일 생성 Vite 플러그인
+│   ├── cms.config.ts              # CMS 앱 설정 진입점
+│   ├── main.tsx                   # Vite dev 앱 진입점
+│   └── savePage.ts                # 외부 사용 가능한 저장 함수
+├── vite.config.ts
+└── package.json
+```
+
+---
+
+## 아키텍처 개요
+
+react-cms는 **빌더**와 **런타임** 두 가지 모드로 동작한다.
+
+```
+┌─────────────────────────────────────────────────────┐
+│                    CMSApp (빌더)                      │
+│                                                     │
+│  LeftSidebar     LayoutCanvas      RightSidebar     │
+│  (블록 팔레트)  ←  드래그&드롭  →  (속성 편집)        │
+│                                                     │
+│  저장 → generateJSX → defaultSave → cmsBankPlugin   │
+│                  ↓                       ↓          │
+│            JSX 코드 문자열         demo/front 파일   │
+└─────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────┐
+│              CMSRuntimeProvider (런타임)              │
+│                                                     │
+│  CMSPage JSON → PageRenderer → 블록 컴포넌트 렌더링  │
+│                             → 오버레이 열기/닫기      │
+│                             → 레이아웃 크롬 렌더링    │
+└─────────────────────────────────────────────────────┘
+```
+
+### 저장 흐름
+
+```
+SavePageModal (pageName, uri 입력)
+  → generateJSX(CMSPage) → JSX 코드 문자열
+  → defaultSave → POST /__cms/create-page
+  → cmsBankPlugin (Vite dev 미들웨어)
+      ├── demo/front/src/pages/cms/{PageName}.tsx 생성
+      └── demo/front/src/routes/index.tsx 에 import + route 추가
+```
+
+---
+
+## 개발 환경 실행
+
+```bash
+cd react-cms
+npm install
+npm run dev
+```
+
+빌더 UI는 `http://localhost:5173/builder` 에서 접근한다.
+
+> `cmsBankPlugin`이 `react-cms` Vite 서버에 `/__cms/create-page` 엔드포인트를 등록하므로,
+> 저장 기능을 사용하려면 `demo/front`가 실행 중일 필요 없이 `react-cms` dev 서버만 실행하면 된다.
+> 단, 생성된 파일이 반영되려면 `demo/front` dev 서버도 함께 실행해야 한다.
+
+---
+
+## 핵심 개념
+
+### BlockDefinition
+
+팔레트에 등록할 블록 하나를 정의한다.
+
+```typescript
+interface BlockDefinition {
+  meta: BlockMeta;
+  component: React.ComponentType<Record<string, unknown>>;
+}
+
+interface BlockMeta {
+  name: string;                              // 블록 식별자 (고유)
+  category: BlockCategory;                   // "core" | "biz" | ...
+  domain?: BlockDomain;                      // 도메인 그룹핑용 레이블
+  defaultProps: Record<string, unknown>;     // 캔버스 추가 시 초기값
+  propSchema: Record<string, PropField>;     // 우측 패널 편집 폼 스키마
+}
+```
+
+**예시**
+
+```typescript
+// src/cms-meta/blocks.tsx
+export const blocks: BlockDefinition[] = [
+  {
+    meta: {
+      name: "Button",
+      category: "core",
+      defaultProps: { label: "버튼", variant: "primary" },
+      propSchema: {
+        label:   { type: "string",  label: "텍스트", default: "버튼" },
+        variant: { type: "select",  label: "스타일", options: ["primary", "ghost"], default: "primary" },
+      },
+    },
+    component: ({ label, variant, ...rest }) => (
+      <Button variant={variant as any} {...rest}>{label as string}</Button>
+    ),
+  },
+];
+```
+
+---
+
+### LayoutTemplate
+
+페이지의 헤더/푸터 크롬을 정의한다. `renderer` 함수가 `{ header?, footer? }` 슬롯을 반환한다.
+
+```typescript
+interface LayoutTemplate {
+  id: string;
+  label: string;
+  description?: string;
+  componentName?: string;                              // JSX 생성 시 사용할 컴포넌트명
+  defaultProps?: Record<string, unknown>;              // 레이아웃 props 초기값
+  propSchema?: Record<string, PropField>;              // 우측 패널 레이아웃 편집 폼
+  renderer?: (layoutProps: Record<string, unknown>) => LayoutSlots;
+}
+
+interface LayoutSlots {
+  header?: React.ReactNode;
+  footer?: React.ReactNode;
+}
+```
+
+**예시**
+
+```typescript
+// src/cms-meta/layouts.tsx
+export const layouts: LayoutTemplate[] = [
+  {
+    id: "home",
+    label: "Home Page Layout",
+    componentName: "HomePageLayout",
+    defaultProps: { title: "홈", withBottomNav: true, activeId: "home" },
+    propSchema: {
+      title:         { type: "string",  label: "타이틀", default: "홈" },
+      withBottomNav: { type: "boolean", label: "하단 탭", default: true },
+      activeId:      { type: "select",  label: "활성 탭", options: ["home", "asset"], default: "home" },
+    },
+    renderer: (p) => ({
+      header: <HomeHeader title={p.title as string} />,
+      footer: (p.withBottomNav as boolean)
+        ? <HomeFooter activeId={p.activeId as string} />
+        : undefined,
+    }),
+  },
+];
+```
+
+---
+
+### OverlayTemplate
+
+바텀시트·모달 등 오버레이 컴포넌트를 정의한다. 블록을 내부에 배치할 수 있다.
+
+```typescript
+interface OverlayTemplate {
+  id: string;
+  label: string;
+  type: string;                                        // CMSOverlay.type과 매칭
+  defaultId: string;                                   // 생성 시 기본 overlay id
+  blocks: CMSBlock[];                                  // 오버레이 내 초기 블록
+  props?: Record<string, unknown>;
+  propSchema?: Record<string, PropField>;
+  componentName?: string;
+  renderer?: React.ComponentType<OverlayRendererProps>;
+}
+```
+
+---
+
+### PropField
+
+블록·레이아웃의 속성 편집 폼을 스키마로 정의한다. 타입에 따라 우측 패널에 다른 UI가 렌더링된다.
+
+| type | UI | 설명 |
+|---|---|---|
+| `"string"` | 텍스트 입력 | 단순 문자열 |
+| `"number"` | 숫자 입력 | 숫자 값 |
+| `"boolean"` | 토글 | 참/거짓 |
+| `"select"` | 드롭다운 | `options` 배열 중 선택 |
+| `"icon-picker"` | 아이콘 선택기 | lucide-react 아이콘명 |
+| `"group"` | 섹션 그룹 | 중첩 객체, `fields`로 하위 정의 |
+| `"array"` | 동적 목록 | `itemFields`로 항목 구조 정의 |
+| `"event"` | 액션 선택기 | 클릭 이벤트에 Action 바인딩 |
+
+```typescript
+// group 예시
+propSchema: {
+  label: {
+    type: "group",
+    label: "레이블",
+    default: { text: "제목", size: "md" },
+    fields: {
+      text: { type: "string", label: "텍스트", default: "제목" },
+      size: { type: "select", label: "크기", options: ["sm", "md", "lg"], default: "md" },
+    },
+  },
+}
+
+// array 예시
+propSchema: {
+  items: {
+    type: "array",
+    label: "항목",
+    default: [{ label: "항목 1", value: "1" }],
+    itemFields: {
+      label: { type: "string", label: "레이블", default: "" },
+      value: { type: "string", label: "값",     default: "" },
+    },
+  },
+}
+```
+
+---
+
+### Action / BlockInteraction
+
+블록 이벤트(`onClick` 등)에 연결할 수 있는 액션을 정의한다.
+
+```typescript
+type Action =
+  | { type: "openOverlay";  target: string }   // 특정 오버레이 열기
+  | { type: "closeOverlay"                  }  // 현재 오버레이 닫기
+  | { type: "navigate";     path: string    }; // 페이지 이동
+
+// 이벤트명 → Action 매핑
+type BlockInteraction = Record<string, Action>;
+```
+
+블록 propSchema에 `type: "event"` 필드가 있으면 우측 패널에서 액션을 선택할 수 있다.
+
+---
+
+## 빌더 사용법
+
+### CMSApp
+
+빌더 UI 전체를 포함하는 루트 컴포넌트. React Router(`/builder`, `/preview`)를 내부에서 설정한다.
+
+```typescript
+interface CMSAppProps {
+  blocks: BlockDefinition[];
+  overlays?: OverlayTemplate[];
+  layouts?: LayoutTemplate[];
+  onSave?: (page: CMSPage, params: SavePageParams) => void | Promise<void>;
+  basename?: string;
+  stylesheetContent?: string;               // 인라인 CSS 문자열
+  stylesheet?: string;                      // 외부 CSS URL
+  stylesheetScope?: Record<string, string>; // data 속성으로 주입할 CSS 변수
+  codegenConfig?: CMSCodegenConfig;
+}
+```
+
+```typescript
+// src/cms.config.ts
+import { CMSApp } from "@cms-core";
+import { blocks } from "./cms-meta/blocks";
+import { overlays } from "./cms-meta/overlays";
+import { layouts } from "./cms-meta/layouts";
+
+export function App() {
+  return (
+    <CMSApp
+      blocks={blocks}
+      overlays={overlays}
+      layouts={layouts}
+      codegenConfig={{ blockImportFrom: "@cl" }}
+    />
+  );
+}
+```
+
+### CMSBuilder
+
+빌더 UI만 단독으로 사용할 때 쓴다. Provider는 외부에서 직접 설정해야 한다.
+
+```typescript
+interface CMSBuilderProps {
+  onSave?: (page: CMSPage, params: SavePageParams) => void | Promise<void>;
+  initialPage?: CMSPage;
+}
+```
+
+---
+
+## 런타임 사용법
+
+### CMSRuntimeProvider
+
+빌더 없이 CMS 페이지를 렌더링만 할 때 사용하는 경량 Provider.
+외부 앱의 루트에 배치한다.
+
+```typescript
+interface CMSRuntimeProviderProps {
+  blocks: BlockDefinition[];
+  overlays?: OverlayTemplate[];
+  layouts?: LayoutTemplate[];
+  stylesheet?: string;
+  stylesheetScope?: Record<string, string>;
+  children: React.ReactNode;
+}
+```
+
+```typescript
+// 외부 앱 루트
+import { CMSRuntimeProvider } from "@cms-core";
+import { blocks, overlays, layouts } from "@/cms";
+
+<CMSRuntimeProvider blocks={blocks} overlays={overlays} layouts={layouts}>
+  <App />
+</CMSRuntimeProvider>
+```
+
+### PageRenderer
+
+CMSPage JSON을 받아 실제 화면을 렌더링한다. `CMSRuntimeProvider` 하위에서 사용해야 한다.
+
+```typescript
+import { PageRenderer } from "@cms-core";
+
+// cmsPageData: API 또는 로컬 JSON에서 불러온 CMSPage 객체
+<PageRenderer page={cmsPageData} />
+```
+
+---
+
+## 코드 생성
+
+`generateJSX`는 `CMSPage` 객체를 받아 독립 실행 가능한 React 컴포넌트 코드 문자열을 반환한다.
+
+```typescript
+import { generateJSX } from "@cms-core";
+
+const code = generateJSX(page, layouts, codegenConfig, overlayTemplates);
+```
+
+**생성 결과 예시**
+
+```typescript
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { HomePageLayout } from "@cl/layout/HomePageLayout";
+import { Stack, Button, Typography } from "@cl";
+
+export default function MyPage() {
+  const navigate = useNavigate();
+  const [confirmOpen, setConfirmOpen] = useState(false);
+
+  return (
+    <>
+      <HomePageLayout title="홈" withBottomNav activeId="home">
+        <Stack gap="md" className="px-standard">
+          <Typography variant="heading">안녕하세요</Typography>
+          <Button onClick={() => setConfirmOpen(true)}>확인</Button>
+        </Stack>
+      </HomePageLayout>
+      <ConfirmSheet open={confirmOpen} onClose={() => setConfirmOpen(false)} />
+    </>
+  );
+}
+```
+
+**`CMSCodegenConfig`**
+
+```typescript
+interface CMSCodegenConfig {
+  blockImportFrom?: string;    // 블록 컴포넌트 import 경로 (기본: "@neobnsrnd-team/cms-ui")
+  layoutImportFrom?: string;   // 레이아웃 컴포넌트 import 경로 (미지정 시 blockImportFrom 사용)
+}
+```
+
+---
+
+## Vite 플러그인 (cmsBankPlugin)
+
+`/__cms/create-page` POST 요청을 Vite dev 서버에서 수신하여 다음 두 작업을 자동으로 수행한다.
+
+1. 생성된 JSX 코드를 `pagesDir` 경로에 `.tsx` 파일로 저장
+2. `routerPath` 파일의 `pageRoutes` 배열에 import 문과 라우트 항목 추가
+
+```typescript
+// react-cms/vite.config.ts
+import { cmsBankPlugin } from './src/vite-plugin/cmsBankPlugin';
+
+export default defineConfig({
+  plugins: [
+    cmsBankPlugin({
+      // 라우터 파일 경로 (react-cms 루트 기준 상대 경로)
+      routerPath: '../demo/front/src/routes/index.tsx',
+      // 생성 페이지를 저장할 디렉토리 (react-cms 루트 기준 상대 경로)
+      pagesDir:   '../demo/front/src/pages/cms',
+    }),
+  ],
+});
+```
+
+**`CmsBankPluginOptions`**
+
+| 옵션 | 기본값 | 설명 |
+|---|---|---|
+| `routerPath` | `src/routes/index.tsx` | `pageRoutes`와 `modalRoutes`를 export 하는 파일 |
+| `pagesDir` | `src/pages/cms` | 생성된 페이지 파일 저장 디렉토리 |
+
+> `routerPath`가 가리키는 파일은 반드시 `export const pageRoutes` 배열과 `export const modalRoutes` 선언을 포함해야 한다. 플러그인이 이 패턴을 기준으로 import와 route를 삽입한다.
+
+---
+
+## CSS 격리 (UserScopeWrapper)
+
+CMS 캔버스에서 외부 앱 스타일과 CMS 에디터 스타일이 충돌하지 않도록 `@scope` CSS를 적용한다.
+
+```typescript
+interface StylesheetConfig {
+  stylesheet?: string;                      // 외부 CSS URL
+  stylesheetContent?: string;               // 인라인 CSS 문자열 (우선 적용)
+  stylesheetScope?: Record<string, string>; // data 속성으로 주입할 CSS 변수
+}
+```
+
+- `stylesheetContent`가 있으면 URL fetch 없이 인라인으로 주입한다.
+- CSS 내 `:root`는 자동으로 `:scope`로 변환된다.
+- `@import url(...)` 구문은 `<style>` 최상단으로 분리하여 브라우저 파싱 오류를 방지한다.
+
+---
+
+## 타입 레퍼런스
+
+### CMSPage
+
+```typescript
+type CMSPage = {
+  layoutType?: string;
+  layoutProps?: Record<string, unknown>;
+  blocks: CMSBlock[];
+  overlays?: CMSOverlay[];
+};
+```
+
+### CMSBlock
+
+```typescript
+type CMSBlock = {
+  id: string;
+  component: string;               // BlockMeta.name과 매칭
+  props: Record<string, unknown>;
+  padding: BlockPadding;           // { top, right, bottom, left } — "none" | "xs" | "sm" | "md" | "lg" | "xl"
+  interaction?: BlockInteraction;
+};
+```
+
+### CMSOverlay
+
+```typescript
+type CMSOverlay = {
+  id: string;
+  type: string;                    // OverlayTemplate.type과 매칭
+  blocks: CMSBlock[];
+  props?: Record<string, unknown>;
+};
+```
+
+### SavePageParams
+
+```typescript
+interface SavePageParams {
+  pageName: string;   // PascalCase 컴포넌트명 (예: "MyDashboardPage")
+  uri: string;        // URL 경로 (예: "/my-dashboard")
+  code?: string;      // 직접 생성한 코드를 전달할 때 사용 (없으면 generateJSX 호출)
+}
+```

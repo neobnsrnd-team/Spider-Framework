@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<div th:fragment="content">
+    <!-- Include Page Content Layout Styles -->
+
+    <!-- Search Section Header -->
+    <div class="page-header">
+        <h4 class="page-title">
+            <i class="bi bi-exclamation-circle-fill text-danger"></i>
+            검색조건
+        </h4>
+    </div>
+
+    <!-- Search Box -->
+    <div id="searchContainer"></div>
+
+    <!-- List Section Header -->
+    <div class="page-header mt-3">
+        <h4 class="page-title">
+            <i class="bi bi-exclamation-circle-fill text-danger"></i>
+            리스트
+        </h4>
+
+        <!-- Toolbar -->
+        <div th:replace="~{fragments/page-content-layout :: toolbar}"></div>
+    </div>
+
+    <!-- Table -->
+    <div th:replace="~{pages/role-manage/role-manage-table :: table}"></div>
+
+    <!-- Pagination -->
+    <div th:replace="~{fragments/page-content-layout :: pagination}"></div>
+
+    <!-- Bottom Action Buttons -->
+    <div th:replace="~{pages/role-manage/role-manage-buttons :: buttons}"></div>
+
+    <!-- Menu Permission Modal -->
+    <div th:replace="~{pages/role-manage/role-manage-menu-modal :: modal}"></div>
+
+    <!-- Write authority flag for JS -->
+    <script th:inline="javascript">
+        const hasRoleWrite = /*[[${userAuthorities != null and userAuthorities.contains('ROLE:W')}]]*/ false;
+    </script>
+
+    <!-- Role Menu Modal Script -->
+    <th:block th:replace="~{pages/role-manage/role-manage-menu-modal :: script}" />
+
+    <!-- Role Script -->
+    <th:block th:replace="~{pages/role-manage/role-manage-script :: script}" />
+</div>
+</body>
+</html>

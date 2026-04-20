@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<!-- 승인 이력 테이블 Fragment -->
+<div th:fragment="table" class="table-responsive">
+    <table class="table table-sm table-hover sp-data-grid" id="approvalHisTable">
+        <thead class="table-light">
+            <tr>
+                <th class="text-center" style="width:50px;">No</th>
+                <th class="text-center" style="width:110px;">상태</th>
+                <th class="text-center" style="width:100px;">요청자</th>
+                <th class="text-center" style="width:100px;">승인자</th>
+                <th class="text-center" style="width:150px;">승인일시</th>
+                <th class="text-center" style="width:70px;">코드</th>
+            </tr>
+        </thead>
+        <tbody id="approvalHisTableBody">
+            <tr>
+                <td colspan="6" class="text-center py-4 text-body-secondary">
+                    조회 중...
+                </td>
+            </tr>
+        </tbody>
+    </table>
+</div>
+</body>
+</html>

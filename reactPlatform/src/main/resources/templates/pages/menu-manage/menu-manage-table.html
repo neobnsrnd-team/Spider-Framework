@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<!-- Menu Table Fragment -->
+<div th:fragment="table" class="table-responsive">
+    <table class="table table-sm table-hover sp-data-grid" id="menuTable">
+        <thead class="table-light">
+            <tr>
+                <th class="col-w-180" data-sort="menuId">메뉴ID</th>
+                <th class="col-w-200" data-sort="menuName">메뉴명</th>
+                <th class="col-w-300" data-sort="menuUrl">메뉴URL</th>
+                <th class="col-w-120">출력여부</th>
+                <th class="col-w-120">사용여부</th>
+                <th class="col-w-120">하위메뉴</th>
+            </tr>
+        </thead>
+        <tbody id="menuTableBody">
+            <tr>
+                <td colspan="6" class="text-center py-4 text-body-secondary">
+                    조회 버튼을 클릭하여 데이터를 불러오세요.
+                </td>
+            </tr>
+        </tbody>
+    </table>
+</div>
+
+<!-- 하위 메뉴 조회 팝업 -->
+<div th:fragment="childMenuModal" id="childMenuModal" class="d-hidden">
+    <div class="child-modal-content">
+        <div class="child-modal-header">
+            <span class="child-modal-title">메뉴 상세</span>
+            <button type="button" class="child-btn-close" onclick="ChildMenuModal.close()">X</button>
+        </div>
+        <div class="child-modal-body">
+            <div class="child-section-header">
+                <i class="bi bi-square"></i>
+                <span>상세정보</span>
+            </div>
+            <div id="childMenuFormContainer">
+                <!-- 하위 메뉴 폼이 여기에 렌더링됨 -->
+            </div>
+        </div>
+        <div class="modal-footer py-2">
+            <button type="button" class="btn btn-danger btn-sm">
+                <i class="bi bi-trash"></i> 삭제
+            </button>
+            <button type="button" class="btn btn-primary btn-sm">
+                <i class="bi bi-floppy"></i> 저장
+            </button>
+            <button type="button" class="btn btn-secondary btn-sm" onclick="ChildMenuModal.close()">
+                <i class="bi bi-x-lg"></i> 닫기
+            </button>
+        </div>
+    </div>
+</div>
+</body>
+</html>

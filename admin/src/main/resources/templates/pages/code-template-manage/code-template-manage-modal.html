@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<div th:fragment="modal">
+    <div class="modal fade" id="codeTemplateModal" tabindex="-1" aria-labelledby="codeTemplateModalLabel" aria-hidden="true">
+        <div class="modal-dialog sp-modal-xl">
+            <div class="modal-content">
+                <!-- Modal Header -->
+                <div class="modal-header">
+                    <h5 class="modal-title" id="codeTemplateModalLabel">
+                        <i class="bi bi-file-earmark-code"></i> 코드 템플릿
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+
+                <!-- Modal Body -->
+                <div class="modal-body">
+                    <!-- 기본 정보 섹션 -->
+                    <div class="card border p-3 mb-3 bg-body-secondary">
+                        <h6 class="section-title">
+                            <i class="bi bi-stack text-danger"></i> 템플릿 정보
+                        </h6>
+
+                        <div class="d-flex flex-column gap-2">
+                            <div class="row g-2 align-items-center">
+                                <div class="col-auto"><label class="form-label mb-0 small fw-semibold sp-info-label">템플릿ID</label></div>
+                                <div class="col-3"><input type="text" id="modalTemplateId" class="form-control form-control-sm"></div>
+                                <div class="col-auto"><label class="form-label mb-0 small fw-semibold sp-info-label">템플릿명</label></div>
+                                <div class="col"><input type="text" id="modalTemplateName" class="form-control form-control-sm"></div>
+                            </div>
+
+                            <div class="row g-2 align-items-center">
+                                <div class="col-auto"><label class="form-label mb-0 small fw-semibold sp-info-label">타입</label></div>
+                                <div class="col-2">
+                                    <select id="modalTemplateType" class="form-select form-select-sm">
+                                        <option value="JAVA">JAVA</option>
+                                        <option value="XML">XML</option>
+                                    </select>
+                                </div>
+                                <div class="col-auto"><label class="form-label mb-0 small fw-semibold sp-info-label">사용여부</label></div>
+                                <div class="col-2">
+                                    <select id="modalUseYn" class="form-select form-select-sm">
+                                        <option value="Y">Y</option>
+                                        <option value="N">N</option>
+                                    </select>
+                                </div>
+                                <div class="col-auto"><label class="form-label mb-0 small fw-semibold sp-info-label">정렬순서</label></div>
+                                <div class="col-1"><input type="number" id="modalSortOrder" class="form-control form-control-sm" min="0"></div>
+                            </div>
+
+                            <div class="row g-2 align-items-center">
+                                <div class="col-auto"><label class="form-label mb-0 small fw-semibold sp-info-label">설명</label></div>
+                                <div class="col"><textarea id="modalDescription" class="form-control form-control-sm" rows="2"></textarea></div>
+                            </div>
+
+                            <div class="row g-2 align-items-center">
+                                <div class="col-auto"><label class="form-label mb-0 small fw-semibold sp-info-label">최종수정일시</label></div>
+                                <div class="col-3"><input type="text" id="modalLastUpdateDtime" class="form-control form-control-sm" readonly></div>
+                                <div class="col-auto"><label class="form-label mb-0 small fw-semibold sp-info-label">최종수정자</label></div>
+                                <div class="col-3"><input type="text" id="modalLastUpdateUserId" class="form-control form-control-sm" readonly></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 템플릿 내용 섹션 -->
+                    <div class="card border p-3 bg-body-secondary">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <h6 class="section-title mb-0">
+                                <i class="bi bi-code-slash text-danger"></i> 템플릿 내용 (Freemarker)
+                            </h6>
+                            <small class="text-muted">변수 예시: ${trxId}, ${className}, ${messageId}, ${messageName}</small>
+                        </div>
+                        <textarea id="modalTemplateBody"
+                                  class="form-control form-control-sm font-monospace"
+                                  rows="20"
+                                  style="font-size: 0.8rem; resize: vertical;"></textarea>
+                    </div>
+                </div>
+
+                <!-- Modal Footer -->
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-danger btn-sm" id="btnTemplateDelete"
+                            th:if="${userAuthorities != null and userAuthorities.contains('CODE_TEMPLATE:W')}">
+                        <i class="bi bi-trash"></i> 삭제
+                    </button>
+                    <button type="button" class="btn btn-primary btn-sm" id="btnTemplateSave"
+                            th:if="${userAuthorities != null and userAuthorities.contains('CODE_TEMPLATE:W')}">
+                        <i class="bi bi-floppy"></i> 저장
+                    </button>
+                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">
+                        <i class="bi bi-x-lg"></i> 닫기
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<th:block th:fragment="script">
+<script th:inline="javascript">
+window.CodeTemplateModal = (function() {
+    var _mode = 'create'; // 'create' | 'edit'
+    var _templateId = null;
+
+    function _resetForm() {
+        $('#modalTemplateId').val('').prop('readonly', false);
+        $('#modalTemplateName').val('');
+        $('#modalTemplateType').val('JAVA');
+        $('#modalUseYn').val('Y');
+        $('#modalSortOrder').val('0');
+        $('#modalDescription').val('');
+        $('#modalTemplateBody').val('');
+        $('#modalLastUpdateDtime').val('');
+        $('#modalLastUpdateUserId').val('');
+    }
+
+    function _loadTemplate(templateId) {
+        $.ajax({
+            url: API_BASE_URL + '/code-templates/' + encodeURIComponent(templateId),
+            method: 'GET',
+            success: function(response) {
+                if (response.success && response.data) {
+                    var t = response.data;
+                    $('#modalTemplateId').val(t.templateId);
+                    $('#modalTemplateName').val(t.templateName);
+                    $('#modalTemplateType').val(t.templateType);
+                    $('#modalUseYn').val(t.useYn || 'Y');
+                    $('#modalSortOrder').val(t.sortOrder != null ? t.sortOrder : 0);
+                    $('#modalDescription').val(t.description || '');
+                    $('#modalTemplateBody').val(t.templateBody || '');
+                    $('#modalLastUpdateDtime').val(t.lastUpdateDtime || '');
+                    $('#modalLastUpdateUserId').val(t.lastUpdateUserId || '');
+                }
+            },
+            error: function(xhr) {
+                Toast.error('템플릿 정보를 불러오는데 실패했습니다.');
+            }
+        });
+    }
+
+    function _save() {
+        var templateName = $('#modalTemplateName').val().trim();
+        var templateType = $('#modalTemplateType').val();
+        var templateBody = $('#modalTemplateBody').val().trim();
+        var useYn = $('#modalUseYn').val();
+        var sortOrder = parseInt($('#modalSortOrder').val()) || 0;
+        var description = $('#modalDescription').val().trim();
+
+        if (!templateName) { Toast.error('템플릿명은 필수입니다.'); return; }
+        if (!templateType) { Toast.error('템플릿 타입은 필수입니다.'); return; }
+        if (!templateBody) { Toast.error('템플릿 내용은 필수입니다.'); return; }
+
+        if (_mode === 'create') {
+            var templateId = $('#modalTemplateId').val().trim();
+            if (!templateId) { Toast.error('템플릿 ID는 필수입니다.'); return; }
+
+            $.ajax({
+                url: API_BASE_URL + '/code-templates',
+                method: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify({
+                    templateId: templateId,
+                    templateName: templateName,
+                    templateType: templateType,
+                    templateBody: templateBody,
+                    description: description,
+                    useYn: useYn,
+                    sortOrder: sortOrder
+                }),
+                success: function(response) {
+                    if (response.success) {
+                        Toast.success('템플릿이 생성되었습니다.');
+                        $('#codeTemplateModal').modal('hide');
+                        CodeTemplatesPage.load();
+                    }
+                },
+                error: function(xhr) {
+                    var msg = (xhr.responseJSON && xhr.responseJSON.message) ? xhr.responseJSON.message : '저장에 실패했습니다.';
+                    Toast.error(msg);
+                }
+            });
+        } else {
+            $.ajax({
+                url: API_BASE_URL + '/code-templates/' + encodeURIComponent(_templateId),
+                method: 'PUT',
+                contentType: 'application/json',
+                data: JSON.stringify({
+                    templateName: templateName,
+                    templateType: templateType,
+                    templateBody: templateBody,
+                    description: description,
+                    useYn: useYn,
+                    sortOrder: sortOrder
+                }),
+                success: function(response) {
+                    if (response.success) {
+                        Toast.success('템플릿이 수정되었습니다.');
+                        $('#codeTemplateModal').modal('hide');
+                        CodeTemplatesPage.load();
+                    }
+                },
+                error: function(xhr) {
+                    var msg = (xhr.responseJSON && xhr.responseJSON.message) ? xhr.responseJSON.message : '수정에 실패했습니다.';
+                    Toast.error(msg);
+                }
+            });
+        }
+    }
+
+    function _delete() {
+        if (!confirm('템플릿을 삭제하시겠습니까?')) return;
+
+        $.ajax({
+            url: API_BASE_URL + '/code-templates/' + encodeURIComponent(_templateId),
+            method: 'DELETE',
+            success: function(response) {
+                if (response.success) {
+                    Toast.success('템플릿이 삭제되었습니다.');
+                    $('#codeTemplateModal').modal('hide');
+                    CodeTemplatesPage.load();
+                }
+            },
+            error: function(xhr) {
+                var msg = (xhr.responseJSON && xhr.responseJSON.message) ? xhr.responseJSON.message : '삭제에 실패했습니다.';
+                Toast.error(msg);
+            }
+        });
+    }
+
+    // 이벤트 바인딩
+    $(document).ready(function() {
+        $('#btnTemplateSave').off('click').on('click', _save);
+        $('#btnTemplateDelete').off('click').on('click', _delete);
+    });
+
+    return {
+        openForCreate: function() {
+            _mode = 'create';
+            _templateId = null;
+            _resetForm();
+            $('#codeTemplateModalLabel').html('<i class="bi bi-file-earmark-code"></i> 코드 템플릿 등록');
+            $('#btnTemplateDelete').hide();
+            $('#codeTemplateModal').modal('show');
+        },
+
+        openForEdit: function(templateId) {
+            _mode = 'edit';
+            _templateId = templateId;
+            _resetForm();
+            $('#codeTemplateModalLabel').html('<i class="bi bi-file-earmark-code"></i> 코드 템플릿 수정');
+            $('#modalTemplateId').prop('readonly', true);
+            $('#btnTemplateDelete').show();
+            _loadTemplate(templateId);
+            $('#codeTemplateModal').modal('show');
+        }
+    };
+})();
+</script>
+</th:block>
+</body>
+</html>

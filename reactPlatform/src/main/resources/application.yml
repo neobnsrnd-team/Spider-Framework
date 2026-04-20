@@ -1,0 +1,114 @@
+# ============================================
+# Application Base Configuration
+# ============================================
+# Sensitive values are loaded from environment variables.
+# See .env.example for required variables.
+# ============================================
+
+spring:
+  config:
+    import: classpath:menu-resource-permissions.yml
+  profiles:
+    active: oracle
+
+  # H2 Console (로그 조회용)
+  h2:
+    console:
+      enabled: true
+      path: /h2-console
+      settings:
+        web-allow-others: false
+
+  # File Upload Configuration
+  servlet:
+    multipart:
+      enabled: true
+      max-file-size: 50MB
+      max-request-size: 150MB
+
+  # Thymeleaf Configuration
+  thymeleaf:
+    cache: false
+    prefix: classpath:/templates/
+    suffix: .html
+    encoding: UTF-8
+    mode: HTML
+
+# Server Configuration
+server:
+  port: 8082
+  servlet:
+    session:
+      timeout: 30m
+      persistent: false
+  error:
+    include-stacktrace: never
+    include-exception: false
+    include-message: never
+    include-binding-errors: never
+
+# Security Configuration
+app:
+  title: ${APP_TITLE:React Gen}
+  security:
+    remember-me-key: ${REMEMBER_ME_KEY:react-gen-remember-me-key}
+    authority-source: ${AUTHORITY_SOURCE:user-menu}
+
+# Log Destination Toggles
+log:
+  dest:
+    console: ${LOG_DEST_CONSOLE:true}
+    h2: ${LOG_DEST_H2:false}
+    logstash: ${LOG_DEST_LOGSTASH:false}
+    rdb:
+      access: ${LOG_DEST_RDB_ACCESS:true}
+      error: ${LOG_DEST_RDB_ERROR:true}
+
+# Logging Configuration
+logging:
+  level:
+    root: INFO
+    com.example.reactplatform: INFO
+    org.mybatis: INFO
+
+# Menu Configuration
+# 사이드바에서 숨길 메뉴 ID 목록 (DB 미변경, 이 프로젝트에서만 적용)
+# 상위 메뉴 ID를 숨기면 하위 메뉴 전체가 함께 숨겨진다
+menu:
+  hidden-menu-ids:
+    - acl_manage           # Framework 관리메뉴 (asis spider메뉴)
+    - v3_msg_manage        # 거래전문 관리
+    - v3_interface_manage  # Interface 관리
+    - v3_cd_manage         # Code 관리
+    - v3_opt_manage        # 운영 정보 관리
+    - v3_batch_manage      # 배치 관리
+    - v3_error_manage      # 오류 관리
+    - v3_was_manage        # WAS
+    - v3_admin_monitor     # 관리자 모니터링
+    - v3_BOARD             # 게시판
+    - v3_service_manage    # 서비스관리
+    - v3_emergency_notice  # 긴급공지
+    - v3_cms_manage        # HTML CMS
+
+# React 코드 승인 시 .tsx 파일을 저장할 디렉토리
+approval:
+  react:
+    output-dir: ${REACT_APPROVAL_OUTPUT_DIR:./generated}
+
+# Figma API Configuration
+figma:
+  api:
+    url: https://api.figma.com
+    token: ${FIGMA_ACCESS_TOKEN}
+    connect-timeout-seconds: 10
+    read-timeout-seconds: 30
+
+# Claude API Configuration
+claude:
+  api:
+    url: https://api.anthropic.com/v1/messages
+    key: ${CLAUDE_API_KEY}
+    model: claude-sonnet-4-6
+    max-tokens: 8192
+    connect-timeout-seconds: 10
+    read-timeout-seconds: 120

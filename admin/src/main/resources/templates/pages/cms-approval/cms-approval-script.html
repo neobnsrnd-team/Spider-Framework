@@ -210,7 +210,7 @@
         // ── CMS 페이지 미리보기 ──
         openPreview: function(pageId) {
             window.open(
-                '/cms/view?bank=' + encodeURIComponent(pageId) + '&preview=1',
+                'http://133.186.135.23:3000/cms/view?bank=' + encodeURIComponent(pageId) + '&preview=1',
                 'cmsPreview',
                 'width=1280,height=800,scrollbars=yes,resizable=yes'
             );
@@ -309,22 +309,42 @@
                 .then(r => r.json())
                 .then(res => {
                     if (!res.success || !res.data || res.data.length === 0) {
-                        $('#historyTableBody').html('<tr><td colspan="4" class="text-center text-body-secondary">이력이 없습니다.</td></tr>');
+                        $('#historyTableBody').html('<tr><td colspan="5" class="text-center text-body-secondary">이력이 없습니다.</td></tr>');
                         return;
                     }
-                    const html = res.data.map(h => {
+                    const row = this.rowsByPageId[pageId];
+                    // 롤백 가능 조건:
+                    //  1) CMS:W 권한 보유
+                    //  2) 비공개(isPublic=N) 상태가 아닐 것
+                    //  3) APPROVED 이거나, WORK 상태이면서 이전 승인 이력이 존재(hasApproveHistory=1)
+                    const canRollback = HAS_CMS_WRITE
+                        && row
+                        && row.isPublic !== 'N'
+                        && (row.approveState === 'APPROVED'
+                            || (row.approveState === 'WORK' && row.hasApproveHistory === 1));
+
+                    const html = res.data.map((h, index) => {
                         const badge = this.APPROVE_STATE_BADGE[h.approveState] || HtmlUtils.escape(h.approveState);
+                        // index === 0 은 최신 버전 — 이미 현재 상태이므로 롤백 불필요
+                        const isLatest = index === 0;
+                        // PENDING(승인대기) / REJECTED(반려)는 확정된 버전이 아니므로 복원 대상에서 제외
+                        const isRollbackableState = h.approveState === 'APPROVED' || h.approveState === 'WORK';
+                        const rollbackBtn = (canRollback && !isLatest && isRollbackableState)
+                            ? `<button class="btn btn-outline-warning btn-sm"
+                                   onclick="CmsApprovalPage.submitRollback('${pageId}', ${h.version})">롤백</button>`
+                            : '';
                         return `<tr>
                             <td class="text-center">${h.version}</td>
                             <td class="text-center">${badge}</td>
                             <td>${HtmlUtils.escape(h.lastModifierName || '')}</td>
                             <td class="text-center">${HtmlUtils.escape(h.approveDate || '-')}</td>
+                            <td class="text-center">${rollbackBtn}</td>
                         </tr>`;
                     }).join('');
                     $('#historyTableBody').html(html);
                 })
                 .catch(() => {
-                    $('#historyTableBody').html('<tr><td colspan="4" class="text-center text-danger">이력 조회 실패</td></tr>');
+                    $('#historyTableBody').html('<tr><td colspan="5" class="text-center text-danger">이력 조회 실패</td></tr>');
                 });
         },
 

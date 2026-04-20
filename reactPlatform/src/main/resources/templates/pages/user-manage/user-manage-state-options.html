@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+    <body>
+    <!-- 모달용 사용자 상태 옵션 -->
+    <th:block th:fragment="userStateOptions">
+        <option value="">선택</option>
+        <option value="1">정상</option>
+        <option value="2">삭제</option>
+        <option value="3">정지</option>
+    </th:block>
+
+    <!-- 검색 필터용 사용자 상태 옵션 -->
+    <th:block th:fragment="userStateFilterOptions">
+        <option value="">전체</option>
+        <option value="1">정상</option>
+        <option value="2">삭제</option>
+        <option value="3">정지</option>
+    </th:block>
+    </body>
+</html>

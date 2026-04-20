@@ -1,0 +1,37 @@
+{
+  "compilerOptions": {
+    "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.app.tsbuildinfo",
+    "target": "es2023",
+    "lib": ["ES2023", "DOM", "DOM.Iterable"],
+    "module": "esnext",
+    "types": ["vite/client"],
+    "skipLibCheck": true,
+
+    /* Bundler mode */
+    "moduleResolution": "bundler",
+    "allowImportingTsExtensions": true,
+    "verbatimModuleSyntax": true,
+    "moduleDetection": "force",
+    "noEmit": true,
+    "jsx": "react-jsx",
+
+    /* Linting */
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "erasableSyntaxOnly": true,
+    "noFallthroughCasesInSwitch": true,
+
+    "paths": {
+      "@/*": ["./src/*"],
+      "@cms-core": ["./src/cms-core/index.ts"],
+      "@cms-core/*": ["./src/cms-core/*"],
+      "@cms-meta": ["./src/cms-meta/index.ts"],
+      "@cms-meta/*": ["./src/cms-meta/*"],
+      "@cl": ["../reactive-springware/component-library/index.ts"],
+      "@cl/*": ["../reactive-springware/component-library/*"],
+      "@lib/*": ["../reactive-springware/lib/*"]
+    }
+
+  },
+  "include": ["src"]
+}

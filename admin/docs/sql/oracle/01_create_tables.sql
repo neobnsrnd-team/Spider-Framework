@@ -7,7 +7,7 @@
 -- 인덱스: 02_create_indexes.sql 참조
 -- 초기 데이터: 03_insert_initial_data.sql 참조
 -- 파티셔닝: FWK_BATCH_HIS_PARTITION.sql 참조 (Enterprise Edition)
--- 총 테이블: 61개
+-- 총 테이블: 62개
 -- =============================================================
 
 
@@ -1175,7 +1175,26 @@ CREATE TABLE FWK_LOG (
 
 
 -- =============================================================
--- 15. React Generate (1 table)
+-- 15. 코드 템플릿 (1 table)
+-- =============================================================
+
+CREATE TABLE FWK_CODE_TEMPLATE (
+    TEMPLATE_ID                VARCHAR2(50)   NOT NULL,
+    TEMPLATE_NAME              VARCHAR2(100)  NOT NULL,
+    TEMPLATE_TYPE              VARCHAR2(20)   NOT NULL,       -- JAVA, XML 등
+    TEMPLATE_BODY              CLOB           NOT NULL,       -- Freemarker 템플릿 내용
+    DESCRIPTION                VARCHAR2(500),
+    USE_YN                     VARCHAR2(1)    DEFAULT 'Y'    NOT NULL,
+    SORT_ORDER                 NUMBER(5,0)    DEFAULT 0,
+    LAST_UPDATE_DTIME          VARCHAR2(14)   DEFAULT TO_CHAR(SYSDATE, 'YYYYMMDDHH24MISS') NOT NULL,
+    LAST_UPDATE_USER_ID        VARCHAR2(20)   NOT NULL,
+    CONSTRAINT PK_FWK_CODE_TEMPLATE PRIMARY KEY (TEMPLATE_ID),
+    CONSTRAINT CHK_CODE_TEMPLATE_USE_YN CHECK (USE_YN IN ('Y', 'N'))
+);
+
+
+-- =============================================================
+-- 16. React Generate (1 table)
 -- =============================================================
 
 CREATE TABLE FWK_RPS_CODE_HIS (
@@ -1195,9 +1214,26 @@ CREATE TABLE FWK_RPS_CODE_HIS (
     CONSTRAINT CHK_REACT_GEN_STATUS CHECK (STATUS IN ('GENERATED', 'FAILED', 'PENDING_APPROVAL', 'APPROVED', 'REJECTED'))
 );
 
+-- =============================================================
+-- 16. FWK_CODE_TEMPLATE (1 table)
+-- =============================================================
+
+CREATE TABLE D_SPIDERLINK.FWK_CODE_TEMPLATE (
+    TEMPLATE_ID                VARCHAR2(50)   NOT NULL,
+    TEMPLATE_NAME              VARCHAR2(100)  NOT NULL,
+    TEMPLATE_TYPE              VARCHAR2(20)   NOT NULL,
+    TEMPLATE_BODY              CLOB           NOT NULL,
+    DESCRIPTION                VARCHAR2(500),
+    USE_YN                     VARCHAR2(1)    DEFAULT 'Y'    NOT NULL,
+    SORT_ORDER                 NUMBER(5,0)    DEFAULT 0,
+    LAST_UPDATE_DTIME          VARCHAR2(14)   DEFAULT TO_CHAR(SYSDATE, 'YYYYMMDDHH24MISS') NOT NULL,
+    LAST_UPDATE_USER_ID        VARCHAR2(20)   NOT NULL,
+    CONSTRAINT PK_FWK_CODE_TEMPLATE PRIMARY KEY (TEMPLATE_ID),
+    CONSTRAINT CHK_CODE_TEMPLATE_USE_YN CHECK (USE_YN IN ('Y', 'N'))
+);
 
 -- =============================================================
--- 16. CMS 페이지 관리 (3 tables)
+-- 17. CMS 페이지 관리 (3 tables)
 -- =============================================================
 
 CREATE TABLE SPW_CMS_PAGE (

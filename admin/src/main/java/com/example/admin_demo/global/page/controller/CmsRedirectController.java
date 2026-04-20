@@ -17,16 +17,22 @@ public class CmsRedirectController {
     @Value("${cms.app-base-url:/cms}")
     private String cmsAppBaseUrl;
 
+    @Value("${cms.user-url:}")
+    private String cmsUserUrl;
+
     @GetMapping({"/cms", "/cms/"})
     public String redirectCmsRoot(@AuthenticationPrincipal CustomUserDetails userDetails) {
         if (isCmsAdmin(userDetails)) {
             return "redirect:" + CMS_ADMIN_APPROVALS_PATH;
         }
 
-        return "redirect:" + cmsDashboardUrl();
+        return "redirect:" + cmsUserRedirectUrl();
     }
 
-    private String cmsDashboardUrl() {
+    private String cmsUserRedirectUrl() {
+        if (cmsUserUrl != null && !cmsUserUrl.isBlank()) {
+            return cmsUserUrl.trim();
+        }
         String baseUrl = (cmsAppBaseUrl == null || cmsAppBaseUrl.isBlank()) ? "/cms" : cmsAppBaseUrl.trim();
         return baseUrl.replaceAll("/+$", "") + CMS_DASHBOARD_PATH;
     }

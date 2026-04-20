@@ -3200,13 +3200,13 @@
                 var orgId = this.currentOrgId;
                 var messageId = this.currentMessageId;
 
-                // 모달 오픈 전 탭 초기화 및 로딩 상태 설정
+                // 모달 오픈 전 초기화 및 로딩 상태 설정
+                window.CodeGenModal._messageId = messageId;
                 $('#codeGenDtoCode').text('');
-                $('#codeGenMapperCode').text('');
                 $('#codeGenMessageId').text(messageId);
                 $('#codeGenMessageName').text('');
                 $('#codeGenLoading').show();
-                $('#codeGenTab').closest('.modal-body').find('.tab-content').hide();
+                $('#codeGenDtoCode').hide();
 
                 // getOrCreateInstance: 중복 열기 시 기존 인스턴스 재사용
                 var modal = bootstrap.Modal.getOrCreateInstance(document.getElementById('codeGenModal'));
@@ -3221,7 +3221,6 @@
                             $('#codeGenMessageId').text(data.messageId);
                             $('#codeGenMessageName').text(data.messageName || '');
                             $('#codeGenDtoCode').text(data.dtoCode || '');
-                            $('#codeGenMapperCode').text(data.mapperXmlCode || '');
                         } else {
                             Toast.error(response.message || '소스 코드 생성에 실패했습니다.');
                         }
@@ -3231,7 +3230,7 @@
                     },
                     complete: function() {
                         $('#codeGenLoading').hide();
-                        $('#codeGenTab').closest('.modal-body').find('.tab-content').show();
+                        $('#codeGenDtoCode').show();
                     }
                 });
             },
@@ -3513,16 +3512,36 @@
         };
 
         // ==================== CodeGenModal ====================
-        // 소스 코드 생성 모달: 탭(DTO/Mapper XML) 내 코드 클립보드 복사 기능
+        // 소스 코드 생성 모달: DTO 코드 클립보드 복사 및 파일 다운로드 기능
         window.CodeGenModal = {
-            /**
-             * 지정된 탭의 코드를 클립보드에 복사한다.
-             * @param {'dto'|'mapper'} type - 복사할 코드 종류
-             */
-            copy: function(type) {
-                var codeEl = type === 'dto'
-                    ? document.getElementById('codeGenDtoCode')
-                    : document.getElementById('codeGenMapperCode');
+            _messageId: null,
+
+            download: function() {
+                var codeEl = document.getElementById('codeGenDtoCode');
+                if (!codeEl || !codeEl.textContent.trim()) {
+                    Toast.warning('다운로드할 코드가 없습니다.');
+                    return;
+                }
+                // messageId를 PascalCase로 변환하여 파일명 생성 (예: MY_MSG → MyMsgDto.java)
+                var rawId = this._messageId || 'Generated';
+                var className = rawId.split(/[_\-\s]+/)
+                    .map(function(w) { return w.charAt(0).toUpperCase() + w.slice(1).toLowerCase(); })
+                    .join('') + 'Dto';
+                var fileName = className + '.java';
+
+                var blob = new Blob([codeEl.textContent], { type: 'text/plain;charset=utf-8' });
+                var url = URL.createObjectURL(blob);
+                var a = document.createElement('a');
+                a.href = url;
+                a.download = fileName;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+            },
+
+            copy: function() {
+                var codeEl = document.getElementById('codeGenDtoCode');
 
                 if (!codeEl || !codeEl.textContent.trim()) {
                     Toast.warning('복사할 코드가 없습니다.');

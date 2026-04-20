@@ -5,6 +5,9 @@
  * bottomBar prop 전달 시 iOS 스타일 하단 고정 액션 바를 함께 렌더링한다.
  * layoutType: 'page' (계좌 목록·상세, 이체 폼, 이체 완료 화면 등)
  *
+ * CMS 브리지 props (onBack/rightAction/bottomBar 우선, 없으면 스칼라 props로 대체):
+ *   showBack, rightBtnType, bottomBtnCnt, bottomBtn1Label, bottomBtn2Label
+ *
  * @example
  * // 기본 사용
  * <PageLayout title="이체하기" onBack={() => router.back()}>
@@ -26,19 +29,36 @@
  * </PageLayout>
  */
 import React from 'react';
-import { ChevronLeft } from 'lucide-react';
+import { ChevronLeft, X, Menu } from 'lucide-react';
 import { cn } from '@lib/cn';
+import { Button } from '../../core/Button';
 import type { PageLayoutProps } from './types';
+
+const backBtnCls = cn(
+  'flex items-center justify-center size-9 rounded-lg -ml-sm',
+  'text-text-muted hover:bg-surface-raised hover:text-text-heading',
+  'transition-colors duration-150',
+);
 
 export function PageLayout({
   title,
   onBack,
   rightAction,
   bottomBar,
+  showBack,
+  rightBtnType = 'none',
+  bottomBtnCnt = '0',
+  bottomBtn1Label = '확인',
+  bottomBtn2Label = '취소',
   className,
   children,
   ...props
 }: PageLayoutProps) {
+  /* 실제 props 우선, 없으면 CMS 스칼라 props로 대체 */
+  const resolvedOnBack = onBack ?? (showBack ? () => {} : undefined);
+  const resolvedBottomBar = bottomBar ?? buildBottomBar(bottomBtnCnt, bottomBtn1Label, bottomBtn2Label);
+  const resolvedRightAction = rightAction ?? buildRightAction(rightBtnType);
+
   return (
     /* h-dvh: 컨테이너를 정확히 뷰포트 높이로 고정해 스크롤이 body가 아닌
        하위 main 영역 내부에서만 발생하도록 한다. min-h-dvh 사용 시 body가
@@ -48,17 +68,13 @@ export function PageLayout({
       <header className="sticky top-0 z-sticky bg-surface border-b border-border-subtle">
         {/* relative: 타이틀 absolute 포지셔닝의 기준점 */}
         <div className="relative flex items-center h-14 px-standard">
-          {/* 뒤로가기 버튼 — onBack이 전달된 경우만 렌더링 */}
-          {onBack && (
+          {/* 뒤로가기 버튼 — onBack 또는 showBack이 있는 경우 렌더링 */}
+          {resolvedOnBack && (
             <button
               type="button"
-              onClick={onBack}
+              onClick={resolvedOnBack}
               aria-label="이전 페이지로 이동"
-              className={cn(
-                'flex items-center justify-center size-9 rounded-lg -ml-sm',
-                'text-text-muted hover:bg-surface-raised hover:text-text-heading',
-                'transition-colors duration-150',
-              )}
+              className={backBtnCls}
             >
               <ChevronLeft className="size-5" aria-hidden="true" />
             </button>
@@ -72,7 +88,7 @@ export function PageLayout({
           </h1>
 
           {/* 우측 액션 슬롯 (닫기·알림·설정 버튼 등) — ml-auto로 우측 끝에 고정 */}
-          {rightAction && <div className="ml-auto shrink-0">{rightAction}</div>}
+          {resolvedRightAction && <div className="ml-auto shrink-0">{resolvedRightAction}</div>}
         </div>
       </header>
 
@@ -84,19 +100,40 @@ export function PageLayout({
       {/* flex flex-col: 자식 컴포넌트가 flex-1을 사용해 남은 높이를 채울 수 있도록 flex 컨테이너로 설정 */}
       <main className="flex flex-col flex-1 overflow-y-auto overflow-x-hidden py-md [&::-webkit-scrollbar]:hidden" style={{ scrollbarWidth: 'none' }}>
         {children}
-        {/* bottomBar가 있을 때 하단 고정 바 높이만큼 spacer를 추가하여
-            마지막 콘텐츠가 고정 바에 가려지지 않도록 한다 */}
-        {bottomBar && <div aria-hidden="true" className="h-28 shrink-0" />}
       </main>
 
       {/* ── 하단 고정 액션 바 (iOS 스타일) ──────────────
           backdrop-blur: 스크롤 중에도 하단 버튼이 배경에 묻히지 않도록 처리
-          fixed: 화면 하단에 항상 고정 위치 */}
-      {bottomBar && (
-        <div className="fixed bottom-0 left-0 right-0 z-sticky backdrop-blur-sm bg-surface/80 border-t border-border-subtle px-standard pt-standard pb-2xl">
-          {bottomBar}
+          sticky: 화면 하단에 항상 고정 위치 */}
+      {resolvedBottomBar && (
+        <div className="sticky bottom-0 left-0 right-0 z-sticky backdrop-blur-sm bg-surface/80 border-t border-border-subtle px-standard pt-standard pb-2xl">
+          {resolvedBottomBar}
         </div>
       )}
+    </div>
+  );
+}
+
+/** rightBtnType으로 헤더 우측 아이콘 버튼 빌드 */
+function buildRightAction(type: 'close' | 'menu' | 'none'): React.ReactNode | undefined {
+  if (type === 'close') return <X className="size-5" aria-hidden="true" />;
+  if (type === 'menu')  return <Menu className="size-5" aria-hidden="true" />;
+  return undefined;
+}
+
+/** bottomBtnCnt로 하단 버튼 바 빌드 */
+function buildBottomBar(
+  cnt: '0' | '1' | '2',
+  label1: string,
+  label2: string,
+): React.ReactNode | undefined {
+  if (cnt === '0') return undefined;
+  return (
+    <div className="flex gap-sm">
+      {cnt === '2' && (
+        <Button variant="outline" size="lg" fullWidth>{label2}</Button>
+      )}
+      <Button variant="primary" size="lg" fullWidth>{label1}</Button>
     </div>
   );
 }

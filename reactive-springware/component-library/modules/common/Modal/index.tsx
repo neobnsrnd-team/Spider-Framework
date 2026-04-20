@@ -23,8 +23,27 @@ import React, { useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
 import { cn } from '@lib/cn';
+import { Button } from '../../../core/Button';
 import type { ModalProps, ModalSize, ModalTitleAlign } from './types';
 export type { ModalProps, ModalSize, ModalTitleAlign } from './types';
+
+/** footer가 없을 때 bottomBtnCnt 기반으로 footer ReactNode를 빌드한다. */
+function buildFooter(
+  onClose: () => void,
+  cnt: '0' | '1' | '2',
+  label1: string,
+  label2: string,
+): React.ReactNode | undefined {
+  if (cnt === '0') return undefined;
+  return (
+    <div className="flex gap-sm">
+      {cnt === '2' && (
+        <Button variant="outline" size="lg" fullWidth onClick={onClose}>{label2}</Button>
+      )}
+      <Button variant="primary" size="lg" fullWidth onClick={onClose}>{label1}</Button>
+    </div>
+  );
+}
 
 /** 데스크톱(md 이상)에서 적용할 최대 너비 클래스 */
 /**
@@ -52,8 +71,14 @@ export function Modal({
   titleAlign = 'left',
   /* closeable=false: X 버튼 숨김 + ESC 비활성화 (critical 공지 강제 노출 시 사용) */
   closeable = true,
+  container,
+  bottomBtnCnt = '0',
+  bottomBtn1Label = '확인',
+  bottomBtn2Label = '취소',
   className,
 }: ModalProps) {
+  /* footer가 없으면 CMS 브리지 props로 자동 생성 */
+  const resolvedFooter = footer ?? buildFooter(onClose, bottomBtnCnt, bottomBtn1Label, bottomBtn2Label);
   /* ESC 키로 닫기 — closeable=false이면 비활성화 */
   const handleKeyDown = useCallback(
     (e: KeyboardEvent) => {
@@ -75,15 +100,18 @@ export function Modal({
 
   if (!open) return null;
 
+  // container 제공 시 absolute(캔버스 기준), 미제공 시 fixed(뷰포트 기준)
+  const positionClass = container ? 'absolute' : 'fixed';
+
   return createPortal(
     /*
-     * 백드롭: fixed inset-0으로 뷰포트 전체 덮기, bg-black/50으로 dim 처리
+     * 백드롭: container 있으면 absolute inset-0(캔버스 기준), 없으면 fixed inset-0(뷰포트 기준)
      * items-center justify-center → 항상 화면 중앙에 팝업 표시
      */
     <div
       role="presentation"
       onClick={disableBackdropClose ? undefined : onClose}
-      className="fixed inset-0 z-modal flex items-center justify-center bg-black/50 backdrop-blur-sm"
+      className={`${positionClass} inset-0 z-modal flex items-center justify-center bg-black/50 backdrop-blur-sm`}
     >
       <div
         role="dialog"
@@ -174,9 +202,9 @@ export function Modal({
         <div className="flex-1 min-h-0 overflow-y-auto px-xl pb-md">{children}</div>
 
         {/* 푸터 (고정) */}
-        {footer && <div className="shrink-0 px-xl pt-md pb-xl">{footer}</div>}
+        {resolvedFooter && <div className="shrink-0 px-xl pt-md pb-xl">{resolvedFooter}</div>}
       </div>
     </div>,
-    document.body,
+    container ?? document.body,
   );
 }

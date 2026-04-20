@@ -52,6 +52,10 @@ app:
 xml-property:
   directory: ${java.io.tmpdir}/xml-properties-test
 
+# CMS (테스트 환경용 더미 URL — 실제 외부 서버 호출 없음)
+cms:
+  user-url: http://localhost:3001/
+
 # Claude API (테스트 환경에서는 실제 호출 없음 — 0초 타임아웃 방지를 위해 더미 값 설정)
 claude:
   api:

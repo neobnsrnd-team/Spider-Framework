@@ -72,6 +72,9 @@ menu-resource:
     v3_message_manage:
       R: MESSAGE:R
       W: MESSAGE:W
+    v3_code_template_manage:
+      R: CODE_TEMPLATE:R
+      W: CODE_TEMPLATE:W
     v3_db_log:
       R: MESSAGE_INSTANCE:R
       W: MESSAGE_INSTANCE:W
@@ -165,10 +168,19 @@ menu-resource:
     v3_cms_dashboard:
       R: CMS:R
       W: CMS:W
+    v3_cms_user_dashboard:
+      R: CMS:R
+      W: CMS:W
     v3_cms_edit:
       R: CMS:R
       W: CMS:W
     v3_cms_admin_approvals:
+      R: CMS:R
+      W: CMS:W
+    v3_cms_admin_asset_requests:
+      R: CMS:R
+      W: CMS:W
+    v3_cms_admin_asset_approvals:
       R: CMS:R
       W: CMS:W
     v3_cms_admin_ab_tests:

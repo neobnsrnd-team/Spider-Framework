@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- CSRF 토큰 — jQuery AJAX beforeSend에서 자동 포함 -->
+    <meta name="_csrf" th:content="${_csrf.token}"/>
+    <meta name="_csrf_header" th:content="${_csrf.headerName}"/>
+    <title th:text="${pageTitle} ?: 'ReactPlatform System'">ReactPlatform System</title>
+
+    <!-- 1. Bootstrap 5.3.3 -->
+    <link th:href="@{/webjars/bootstrap/5.3.3/css/bootstrap.min.css}" rel="stylesheet">
+    <!-- 2. Bootstrap Icons 1.11.3 -->
+    <link th:href="@{/webjars/bootstrap-icons/1.11.3/font/bootstrap-icons.min.css}" rel="stylesheet">
+    <!-- Design Tokens -->
+    <link rel="stylesheet" th:href="@{/css/design-tokens.css}">
+    <!-- Application CSS (통합 스타일시트) -->
+    <link rel="stylesheet" th:href="@{/css/app.css}">
+
+    <!-- Page Specific Styles -->
+    <style>
+        <th:block layout:fragment="styles"></th:block>
+    </style>
+
+    <!-- Theme Manager (FOUC 방지 — head에서 즉시 실행) -->
+    <script th:src="@{/js/utils/theme-manager.js}"></script>
+
+    <!-- 공통 HTML 이스케이프 유틸리티 (XSS 방지) — 인라인 스크립트보다 먼저 로드 -->
+    <script th:src="@{/js/utils/html-utils.js}"></script>
+
+    <th:block layout:fragment="head-extras"></th:block>
+</head>
+<body>
+    <div class="admin-container">
+        <!-- Sidebar hover trigger (collapsed 시 마우스 진입 영역) -->
+        <div class="sidebar-hover-trigger" id="sidebarHoverTrigger"></div>
+
+        <!-- Left Sidebar -->
+        <div th:replace="~{fragments/sidebar :: sidebar}"></div>
+
+        <!-- Main Area -->
+        <div class="main-area">
+            <!-- Top Bar -->
+            <div th:replace="~{fragments/topbar :: topbar}"></div>
+
+            <!-- Tab Bar -->
+            <div th:replace="~{fragments/tab-system :: tabs}"></div>
+
+            <!-- Content Area -->
+            <div class="content-area">
+                <th:block layout:fragment="content"></th:block>
+            </div>
+        </div>
+    </div>
+
+    <!-- jQuery -->
+    <script th:src="@{/webjars/jquery/3.7.1/jquery.min.js}"></script>
+
+    <!-- Bootstrap JS -->
+    <script th:src="@{/webjars/bootstrap/5.3.3/js/bootstrap.bundle.min.js}"></script>
+
+    <!-- 전역 AJAX 세션/권한 핸들러 (jQuery + Bootstrap 직후, 다른 스크립트보다 먼저 로드) -->
+    <script th:src="@{/js/components/SessionHandler.js}"></script>
+
+    <!-- Common Scripts -->
+    <script th:inline="javascript">
+        const API_BASE_URL = '/api';
+
+        const Utils = {
+            formatDate: function(dateStr) {
+                if (!dateStr || dateStr.length !== 14) return dateStr;
+                return dateStr.substring(0,4) + '/' +
+                       dateStr.substring(4,6) + '/' +
+                       dateStr.substring(6,8) + ' ' +
+                       dateStr.substring(8,10) + ':' +
+                       dateStr.substring(10,12) + ':' +
+                       dateStr.substring(12,14);
+            },
+
+            showAlert: function(message, type) {
+                type = type || 'info';
+                if (type === 'error' || type === 'danger') Toast.error(message);
+                else if (type === 'warning') Toast.warning(message);
+                else if (type === 'success') Toast.success(message);
+                else Toast.info(message);
+            }
+        };
+
+        // Tab System Handler
+        const TabSystem = {
+            openTab: function(title, url) {
+                const tabBar = $('.tab-bar');
+                const existingTab = tabBar.find(`[data-url="${url}"]`);
+
+                if (existingTab.length > 0) {
+                    this.activateTab(existingTab);
+                    return;
+                }
+
+                const tab = $(`
+                    <div class="tab-item" data-url="${url}">
+                        <i class="bi bi-file-earmark-text"></i>
+                        <span>${title}</span>
+                        <span class="tab-close">×</span>
+                    </div>
+                `);
+
+                tabBar.append(tab);
+                this.activateTab(tab);
+
+                tab.find('.tab-close').click((e) => {
+                    e.stopPropagation();
+                    this.closeTab(tab);
+                });
+
+                tab.click(() => {
+                    this.activateTab(tab);
+                });
+            },
+
+            activateTab: function(tab) {
+                $('.tab-item').removeClass('active');
+                tab.addClass('active');
+
+                const url = tab.data('url');
+                if (url && !window.location.pathname.endsWith(url)) {
+                    window.location.href = url;
+                }
+            },
+
+            closeTab: function(tab) {
+                const wasActive = tab.hasClass('active');
+                tab.remove();
+
+                if (wasActive) {
+                    const remaining = $('.tab-item').last();
+                    if (remaining.length > 0) {
+                        this.activateTab(remaining);
+                    } else {
+                        window.location.href = '/';
+                    }
+                }
+            }
+        };
+    </script>
+
+    <!-- Bootstrap 5 중첩 모달 핸들러 (stacked-modal-handler) -->
+    <script>
+        $(document).on('show.bs.modal', '.modal', function () {
+            var openCount = $('.modal.show').length;
+            if (openCount > 0) {
+                var zIndex = 1055 + (openCount * 20);
+                $(this).css('z-index', zIndex);
+            }
+        });
+        $(document).on('shown.bs.modal', '.modal', function () {
+            var modalZ = parseInt($(this).css('z-index')) || 1055;
+            var $backdrops = $('.modal-backdrop');
+            if ($backdrops.length > 1) {
+                $backdrops.last().css('z-index', modalZ - 1);
+            }
+        });
+        $(document).on('hidden.bs.modal', '.modal', function () {
+            var $openModals = $('.modal.show');
+            if ($openModals.length > 0) {
+                document.body.classList.add('modal-open');
+                document.body.style.overflow = 'hidden';
+                var extraBackdrops = $('.modal-backdrop').length - $openModals.length;
+                while (extraBackdrops > 0) {
+                    $('.modal-backdrop').last().remove();
+                    extraBackdrops--;
+                }
+            }
+        });
+    </script>
+
+    <th:block layout:fragment="scripts"></th:block>
+
+    <!-- 모든 jQuery AJAX 요청에 CSRF 토큰 자동 포함 (SessionHandler.js 이후에 실행되어야 함) -->
+    <script>
+        (function () {
+            var csrfToken = $('meta[name="_csrf"]').attr('content');
+            var csrfHeader = $('meta[name="_csrf_header"]').attr('content');
+            if (csrfToken && csrfHeader) {
+                $.ajaxSetup({
+                    beforeSend: function (xhr) {
+                        xhr.setRequestHeader(csrfHeader, csrfToken);
+                    }
+                });
+            }
+        })();
+    </script>
+</body>
+</html>

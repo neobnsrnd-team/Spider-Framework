@@ -31,6 +31,9 @@ public class PageController {
     @Value("${demo.frontend.url:http://localhost:5173}")
     private String demoFrontendUrl;
 
+    @Value("${cms.user-url}")
+    private String cmsUserUrl;
+
     private final BoardService boardService;
 
     @ModelAttribute
@@ -192,7 +195,12 @@ public class PageController {
     }
 
     // ── 거래/전문 관리 ── msg_trx_manage, message_manage, trx_validator, trx, req_message_test,
-    //                       proxy_testdata, db_log
+    //                       proxy_testdata, db_log, code_template_manage
+
+    @GetMapping("/code-templates")
+    public String codeTemplates(HttpServletRequest request, Model model) {
+        return resolveView(request, "pages/code-template-manage/code-template-manage :: content", model);
+    }
 
     @GetMapping("/transactions")
     public String transactions(HttpServletRequest request, Model model) {
@@ -387,6 +395,15 @@ public class PageController {
         return resolveView(request, "pages/datasource-manage/datasource-manage :: content", model);
     }
 
+    // ── CMS 사용자 대시보드 ── v3_cms_user_dashboard
+
+    @GetMapping("/cms/dashboard")
+    public String cmsDashboard(HttpServletRequest request, Model model) {
+        // CMS 에디터 이동 URL을 JS에서 사용할 수 있도록 모델에 추가
+        model.addAttribute("cmsUserUrl", cmsUserUrl);
+        return resolveView(request, "pages/cms-dashboard/cms-dashboard :: content", model);
+    }
+
     // ── CMS 관리 ── v3_cms_admin_pages, v3_cms_admin_approvals, v3_cms_admin_files,
     //                 v3_cms_admin_ab_tests, v3_cms_admin_deployments,
     //                 v3_cms_admin_statistics, v3_cms_admin_components
@@ -404,6 +421,16 @@ public class PageController {
     @GetMapping("/cms-admin/files")
     public String cmsAdminFiles() {
         return "redirect:/cms-admin/approvals";
+    }
+
+    @GetMapping("/cms-admin/asset-requests")
+    public String cmsAdminAssetRequests(HttpServletRequest request, Model model) {
+        return resolveView(request, "pages/asset/request :: content", model);
+    }
+
+    @GetMapping("/cms-admin/asset-approvals")
+    public String cmsAdminAssetApprovals(HttpServletRequest request, Model model) {
+        return resolveView(request, "pages/asset/approval :: content", model);
     }
 
     @GetMapping("/cms-admin/ab-tests")

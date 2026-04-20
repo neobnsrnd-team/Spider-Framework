@@ -56,7 +56,6 @@ import {
 } from "lucide-react";
 
 import { HomePageLayout } from "@cl/layout/HomePageLayout";
-import { BottomNav } from "@cl/layout/BottomNav";
 import { Button } from "@cl/core/Button";
 import { SectionHeader } from "@cl/modules/common/SectionHeader";
 import { StatementHeroCard } from "@cl/biz/card/StatementHeroCard";
@@ -235,6 +234,8 @@ export function CardDashboardPage({
           </div>
         }
         withBottomNav
+        activeId={activeBottomTab}
+        bottomNavItems={BOTTOM_NAV_ITEMS(handleBottomNavChange)}
       >
         {/* ── 인사말 ────────────────────────────────────── */}
         {userName && (
@@ -381,11 +382,6 @@ export function CardDashboardPage({
         </div>
       </HomePageLayout>
 
-      {/* ── 하단 고정 탭바 ──────────────────────────────── */}
-      <BottomNav
-        items={BOTTOM_NAV_ITEMS(handleBottomNavChange)}
-        activeId={activeBottomTab}
-      />
     </div>
   );
 }
