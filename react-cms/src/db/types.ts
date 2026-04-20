@@ -8,7 +8,8 @@
  */
 
 export type ApproveState = 'WORK' | 'PENDING' | 'APPROVED' | 'REJECTED';
-export type ViewMode = 'PC' | 'MOBILE' | 'RESPONSIVE';
+// DB CHECK 제약 CHK_SPW_PAGE_VIEW_MODE 에 맞춰 소문자로 정의
+export type ViewMode = 'mobile' | 'web' | 'responsive';
 
 /** SPW_CMS_PAGE 레코드 (실제 테이블 컬럼 기준) */
 export interface CmsPage {

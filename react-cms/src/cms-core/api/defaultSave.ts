@@ -1,10 +1,14 @@
 /**
  * @file defaultSave.ts
- * @description CMSApp의 기본 페이지 저장 핸들러.
+ * @description CMSApp의 기본 페이지 저장 핸들러 (파일 시스템 저장 전용).
  * cmsBankPlugin이 등록한 `/__cms/create-page` Vite dev 서버 엔드포인트에 POST 요청을 보냅니다.
  * CMSBuilder가 이미 Context 정보를 포함한 코드를 params.code에 주입하므로,
  * 이 함수는 별도 코드 생성 없이 params.code를 그대로 사용합니다.
  * params.code가 없는 경우(직접 호출)에는 generateJSX로 기본 코드를 생성합니다.
+ *
+ * ※ admin 연동 모드(npm run dev:proxy)에서는 사용되지 않습니다.
+ *    main.tsx에서 onSave={savePage}를 주입하므로 CMSApp의 fallback인 이 함수는 호출되지 않습니다.
+ *    admin 연동 모드의 저장 로직은 src/savePage.ts를 참고하세요.
  *
  * @param page 저장할 CMSPage 데이터
  * @param params pageName(PascalCase), uri(라우트 경로), code(JSX 코드 문자열)

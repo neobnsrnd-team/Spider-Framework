@@ -111,7 +111,9 @@ export async function withTransaction<T>(
     await conn.commit();
     return result;
   } catch (err) {
-    await conn.rollback();
+    // rollback 자체가 실패해도 원본 에러를 덮어씌우지 않도록 별도 catch
+    try { await conn.rollback(); }
+    catch (rbErr) { console.error('[react-cms] rollback 실패:', rbErr); }
     throw err;
   } finally {
     await conn.close();

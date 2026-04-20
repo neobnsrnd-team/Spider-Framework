@@ -17,7 +17,8 @@ import type { CmsPage, ViewMode } from '../types';
 
 const OBJ = { outFormat: oracledb.OUT_FORMAT_OBJECT };
 
-// 인증 구현 전 임시값 — 로그인 연동 시 실제 사용자 ID로 교체
+// TODO: 인증 구현 후 로그인 사용자 ID/NAME으로 교체
+// 현재는 admin 로그인 세션 연동이 없으므로 시스템 계정으로 고정
 const SYSTEM_USER_ID   = 'CMS_BUILDER';
 const SYSTEM_USER_NAME = 'CMS Builder';
 
@@ -134,14 +135,13 @@ export async function listPages(
 
   const conn = await getConnection();
   try {
-    const [listResult, countResult] = await Promise.all([
-      conn.execute<CmsPage>(SQL_SELECT_LIST, binds, OBJ),
-      conn.execute<{ TOTAL_COUNT: number }>(
-        SQL_COUNT,
-        { search: binds.search, approveState: binds.approveState },
-        OBJ,
-      ),
-    ]);
+    // 동일 커넥션에서 Promise.all은 실제로 병렬 실행되지 않으므로 순차 실행으로 명시
+    const listResult  = await conn.execute<CmsPage>(SQL_SELECT_LIST, binds, OBJ);
+    const countResult = await conn.execute<{ TOTAL_COUNT: number }>(
+      SQL_COUNT,
+      { search: binds.search, approveState: binds.approveState },
+      OBJ,
+    );
 
     return {
       list:       listResult.rows  ?? [],

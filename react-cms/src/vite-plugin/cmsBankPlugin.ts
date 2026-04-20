@@ -23,19 +23,19 @@ import fs from "node:fs";
 import path from "node:path";
 import { v4 as uuidv4 } from "uuid";
 
-// DB 모듈은 동적 require로 지연 로드합니다.
+// DB 모듈은 dynamic import로 지연 로드합니다.
 // Vite는 vite.config.ts 평가 단계(서버 초기화 전)에 플러그인을 로드하므로,
 // 이 시점에는 .env가 아직 process.env에 반영되지 않을 수 있습니다.
-// 첫 요청이 들어올 때 require하면 .env가 반영된 이후이므로 안전합니다.
+// 첫 요청이 들어올 때 import하면 .env가 반영된 이후이므로 안전합니다.
+// Promise를 캐싱하여 중복 import 방지 (module system이 캐싱하지만 명시적으로도 보장).
 type PageRepository = typeof import("../db/repository/page.repository");
 
-let _repo: PageRepository | null = null;
-function getRepo(): PageRepository {
-  if (!_repo) {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    _repo = require("../db/repository/page.repository") as PageRepository;
+let _repoPromise: Promise<PageRepository> | null = null;
+async function getRepo(): Promise<PageRepository> {
+  if (!_repoPromise) {
+    _repoPromise = import("../db/repository/page.repository") as Promise<PageRepository>;
   }
-  return _repo;
+  return _repoPromise;
 }
 
 // ── 유틸 ────────────────────────────────────────────────────────
@@ -171,6 +171,15 @@ export function cmsBankPlugin(options: CmsBankPluginOptions = {}): Plugin {
             try {
               const payload: CreatePagePayload = JSON.parse(body);
 
+              // PascalCase 영숫자만 허용 — 경로 조작(../ 등) 방지
+              const NAME_REGEX = /^[A-Z][a-zA-Z0-9]*$/;
+              if (!NAME_REGEX.test(payload.pageName)) {
+                res.statusCode = 400;
+                res.setHeader("Content-Type", "application/json");
+                res.end(JSON.stringify({ error: "pageName은 PascalCase 영숫자만 허용됩니다." }));
+                return;
+              }
+
               const routerFile = path.join(root, options.routerPath ?? "src/routes/index.tsx");
               const pagesDir   = path.join(root, options.pagesDir   ?? "src/pages/cms");
 
@@ -210,7 +219,7 @@ export function cmsBankPlugin(options: CmsBankPluginOptions = {}): Plugin {
               pageCode: string;
             };
 
-            const repo = getRepo();
+            const repo = await getRepo();
             let pageId = body.pageId ?? null;
 
             if (pageId) {
@@ -240,7 +249,7 @@ export function cmsBankPlugin(options: CmsBankPluginOptions = {}): Plugin {
         if (urlPath === "/__cms/api/load" && req.method === "POST") {
           try {
             const body = await readBody(req) as { pageId: string };
-            const page = await getRepo().getPageById(body.pageId);
+            const page = await (await getRepo()).getPageById(body.pageId);
             jsonResponse(res, 200, { page });
           } catch (err) {
             console.error("[react-cms] DB load error:", err);
@@ -261,7 +270,7 @@ export function cmsBankPlugin(options: CmsBankPluginOptions = {}): Plugin {
             const page         = parseInt(url.searchParams.get("page")     ?? "1",  10);
             const pageSize     = parseInt(url.searchParams.get("pageSize") ?? "10", 10);
 
-            const result = await getRepo().listPages({
+            const result = await (await getRepo()).listPages({
               search,
               sortBy: sortBy === "name" ? "name" : "date",
               approveState,
@@ -289,7 +298,7 @@ export function cmsBankPlugin(options: CmsBankPluginOptions = {}): Plugin {
               return;
             }
 
-            await getRepo().deletePage(pageId);
+            await (await getRepo()).deletePage(pageId);
             jsonResponse(res, 200, { success: true });
           } catch (err) {
             console.error("[react-cms] DB delete error:", err);
