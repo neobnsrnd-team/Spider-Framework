@@ -162,14 +162,14 @@
         SET APPROVE_STATE       = 'PENDING',
             APPROVER_ID         = #{approverId},
             APPROVER_NAME       = #{approverName},
-            <!-- beginningDate / expiredDate가 빈 문자열이면 NULL로 클리어 (사용자가 날짜를 지울 수 있어야 함) -->
+            <!-- Oracle에서 '' = NULL이므로 != '' 비교는 항상 UNKNOWN → IS NOT NULL만으로 충분 -->
             BEGINNING_DATE      = CASE
-                                      WHEN #{beginningDate} IS NOT NULL AND #{beginningDate} != ''
+                                      WHEN #{beginningDate} IS NOT NULL
                                       THEN TO_DATE(#{beginningDate}, 'YYYY-MM-DD')
                                       ELSE NULL
                                   END,
             EXPIRED_DATE        = CASE
-                                      WHEN #{expiredDate} IS NOT NULL AND #{expiredDate} != ''
+                                      WHEN #{expiredDate} IS NOT NULL
                                       THEN TO_DATE(#{expiredDate}, 'YYYY-MM-DD')
                                       ELSE NULL
                                   END,
