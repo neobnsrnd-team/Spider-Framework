@@ -26,4 +26,17 @@ public class CmsBuilderProperties {
 
     /** 읽기 타임아웃 (초). 대용량 이미지 업로드를 고려해 넉넉히 잡는다. */
     private int readTimeoutSeconds = 60;
+
+    /**
+     * 배포(deploy) 호출 전용 연결 타임아웃 (초).
+     * 업로드처럼 대용량 전송이 없어 짧게 잡는다 (Issue #55).
+     */
+    private int deployConnectTimeoutSeconds = 5;
+
+    /**
+     * 배포(deploy) 호출 전용 읽기 타임아웃 (초).
+     * 파일 이동은 CMS 내부 디스크 I/O 로 수 초 내 완료되어야 한다. 60초는 너무 길어
+     * Admin HTTP 스레드·사용자 UI 대기 시간을 과다하게 잡기 때문에 짧게 둔다 (Issue #55, Gemini 리뷰 반영).
+     */
+    private int deployReadTimeoutSeconds = 10;
 }

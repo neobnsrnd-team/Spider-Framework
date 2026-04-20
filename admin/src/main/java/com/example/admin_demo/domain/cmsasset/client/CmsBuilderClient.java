@@ -5,6 +5,7 @@ import com.example.admin_demo.domain.cmsasset.config.CmsBuilderProperties;
 import com.example.admin_demo.global.exception.ErrorType;
 import com.example.admin_demo.global.exception.base.BaseException;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.core.io.Resource;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
@@ -39,10 +40,21 @@ public class CmsBuilderClient {
     private static final String DEPLOY_PATH_TEMPLATE = "/cms/api/assets/{assetId}/deploy";
 
     private final RestClient cmsBuilderRestClient;
+
+    /**
+     * 배포(deploy) 전용 RestClient — 업로드보다 훨씬 짧은 read-timeout 적용.
+     * deploy 실패 시 saga 보상 UPDATE 도 있어 HTTP 대기를 짧게 끊어주는 것이 전체 응답성에 중요.
+     */
+    private final RestClient cmsBuilderDeployRestClient;
+
     private final CmsBuilderProperties properties;
 
-    public CmsBuilderClient(RestClient cmsBuilderRestClient, CmsBuilderProperties properties) {
+    public CmsBuilderClient(
+            @Qualifier("cmsBuilderRestClient") RestClient cmsBuilderRestClient,
+            @Qualifier("cmsBuilderDeployRestClient") RestClient cmsBuilderDeployRestClient,
+            CmsBuilderProperties properties) {
         this.cmsBuilderRestClient = cmsBuilderRestClient;
+        this.cmsBuilderDeployRestClient = cmsBuilderDeployRestClient;
         this.properties = properties;
     }
 
@@ -136,7 +148,7 @@ public class CmsBuilderClient {
      */
     public void deployAsset(String assetId) {
         try {
-            cmsBuilderRestClient
+            cmsBuilderDeployRestClient
                     .post()
                     .uri(DEPLOY_PATH_TEMPLATE, assetId)
                     .retrieve()

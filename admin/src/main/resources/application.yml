@@ -142,6 +142,9 @@ cms:
     upload-path: ${CMS_BUILDER_UPLOAD_PATH:/cms/api/builder/upload}
     connect-timeout-seconds: ${CMS_BUILDER_CONNECT_TIMEOUT:5}
     read-timeout-seconds: ${CMS_BUILDER_READ_TIMEOUT:60}
+    # 배포(deploy) 전용 — 파일 이동은 CMS 내부 I/O 라 수초 내 완료 기대, 짧게 둔다 (#55)
+    deploy-connect-timeout-seconds: ${CMS_BUILDER_DEPLOY_CONNECT_TIMEOUT:5}
+    deploy-read-timeout-seconds: ${CMS_BUILDER_DEPLOY_READ_TIMEOUT:10}
 
 # Scheduling Configuration (배치 이력 정리 스케줄러)
 scheduling:
