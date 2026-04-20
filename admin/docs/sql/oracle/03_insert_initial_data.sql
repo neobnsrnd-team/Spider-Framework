@@ -466,12 +466,20 @@ VALUES ('v3_cms_admin_components', 'v3_cms_manage', 16, 'CMS 컴포넌트 관리
 INSERT INTO FWK_MENU (MENU_ID, PRIOR_MENU_ID, SORT_ORDER, MENU_NAME, MENU_URL, DISPLAY_YN, USE_YN, LAST_UPDATE_DTIME, LAST_UPDATE_USER_ID)
 VALUES ('v3_cms_user_dashboard', 'v3_cms_manage', 5, 'CMS 사용자 대시보드', '/cms/dashboard', 'Y', 'Y', TO_CHAR(SYSDATE, 'YYYYMMDDHH24MISS'), 'system');
 
+INSERT INTO FWK_MENU (MENU_ID, PRIOR_MENU_ID, SORT_ORDER, MENU_NAME, MENU_URL, DISPLAY_YN, USE_YN, LAST_UPDATE_DTIME, LAST_UPDATE_USER_ID)
+VALUES ('v3_cms_admin_asset_requests', 'v3_cms_manage', 17, 'CMS 이미지 승인 요청', '/cms-admin/asset-requests', 'Y', 'Y', TO_CHAR(SYSDATE, 'YYYYMMDDHH24MISS'), 'system');
+
+INSERT INTO FWK_MENU (MENU_ID, PRIOR_MENU_ID, SORT_ORDER, MENU_NAME, MENU_URL, DISPLAY_YN, USE_YN, LAST_UPDATE_DTIME, LAST_UPDATE_USER_ID)
+VALUES ('v3_cms_admin_asset_approvals', 'v3_cms_manage', 18, 'CMS 이미지 승인 관리', '/cms-admin/asset-approvals', 'Y', 'Y', TO_CHAR(SYSDATE, 'YYYYMMDDHH24MISS'), 'system');
+
 INSERT INTO FWK_ROLE_MENU (ROLE_ID, MENU_ID, AUTH_CODE) VALUES ('ADMIN', 'v3_cms_manage', 'W');
 INSERT INTO FWK_ROLE_MENU (ROLE_ID, MENU_ID, AUTH_CODE) VALUES ('ADMIN', 'v3_cms_admin_approvals', 'W');
 INSERT INTO FWK_ROLE_MENU (ROLE_ID, MENU_ID, AUTH_CODE) VALUES ('ADMIN', 'v3_cms_admin_ab_tests', 'W');
 INSERT INTO FWK_ROLE_MENU (ROLE_ID, MENU_ID, AUTH_CODE) VALUES ('ADMIN', 'v3_cms_admin_deployments', 'W');
 INSERT INTO FWK_ROLE_MENU (ROLE_ID, MENU_ID, AUTH_CODE) VALUES ('ADMIN', 'v3_cms_admin_statistics', 'W');
 INSERT INTO FWK_ROLE_MENU (ROLE_ID, MENU_ID, AUTH_CODE) VALUES ('ADMIN', 'v3_cms_admin_components', 'W');
+INSERT INTO FWK_ROLE_MENU (ROLE_ID, MENU_ID, AUTH_CODE) VALUES ('ADMIN', 'v3_cms_admin_asset_requests', 'W');
+INSERT INTO FWK_ROLE_MENU (ROLE_ID, MENU_ID, AUTH_CODE) VALUES ('ADMIN', 'v3_cms_admin_asset_approvals', 'W');
 INSERT INTO FWK_ROLE_MENU (ROLE_ID, MENU_ID, AUTH_CODE) VALUES ('itdev', 'v3_cms_manage', 'W');
 INSERT INTO FWK_ROLE_MENU (ROLE_ID, MENU_ID, AUTH_CODE) VALUES ('itdev', 'v3_cms_dashboard', 'W');
 INSERT INTO FWK_ROLE_MENU (ROLE_ID, MENU_ID, AUTH_CODE) VALUES ('itdev', 'v3_cms_edit', 'W');
@@ -482,6 +490,8 @@ INSERT INTO FWK_USER_MENU (USER_ID, MENU_ID, AUTH_CODE, LAST_UPDATE_DTIME, LAST_
 INSERT INTO FWK_USER_MENU (USER_ID, MENU_ID, AUTH_CODE, LAST_UPDATE_DTIME, LAST_UPDATE_USER_ID) VALUES ('admin', 'v3_cms_admin_deployments', 'W', TO_CHAR(SYSDATE, 'YYYYMMDDHH24MISS'), 'system');
 INSERT INTO FWK_USER_MENU (USER_ID, MENU_ID, AUTH_CODE, LAST_UPDATE_DTIME, LAST_UPDATE_USER_ID) VALUES ('admin', 'v3_cms_admin_statistics', 'W', TO_CHAR(SYSDATE, 'YYYYMMDDHH24MISS'), 'system');
 INSERT INTO FWK_USER_MENU (USER_ID, MENU_ID, AUTH_CODE, LAST_UPDATE_DTIME, LAST_UPDATE_USER_ID) VALUES ('admin', 'v3_cms_admin_components', 'W', TO_CHAR(SYSDATE, 'YYYYMMDDHH24MISS'), 'system');
+INSERT INTO FWK_USER_MENU (USER_ID, MENU_ID, AUTH_CODE, LAST_UPDATE_DTIME, LAST_UPDATE_USER_ID) VALUES ('admin', 'v3_cms_admin_asset_requests', 'W', TO_CHAR(SYSDATE, 'YYYYMMDDHH24MISS'), 'system');
+INSERT INTO FWK_USER_MENU (USER_ID, MENU_ID, AUTH_CODE, LAST_UPDATE_DTIME, LAST_UPDATE_USER_ID) VALUES ('admin', 'v3_cms_admin_asset_approvals', 'W', TO_CHAR(SYSDATE, 'YYYYMMDDHH24MISS'), 'system');
 INSERT INTO FWK_USER_MENU (USER_ID, MENU_ID, AUTH_CODE, LAST_UPDATE_DTIME, LAST_UPDATE_USER_ID) VALUES ('cmsAdmin01', 'v3_acl_manage', 'W', TO_CHAR(SYSDATE, 'YYYYMMDDHH24MISS'), 'system');
 INSERT INTO FWK_USER_MENU (USER_ID, MENU_ID, AUTH_CODE, LAST_UPDATE_DTIME, LAST_UPDATE_USER_ID) VALUES ('cmsAdmin01', 'v3_cms_manage', 'W', TO_CHAR(SYSDATE, 'YYYYMMDDHH24MISS'), 'system');
 INSERT INTO FWK_USER_MENU (USER_ID, MENU_ID, AUTH_CODE, LAST_UPDATE_DTIME, LAST_UPDATE_USER_ID) VALUES ('cmsAdmin01', 'v3_cms_admin_approvals', 'W', TO_CHAR(SYSDATE, 'YYYYMMDDHH24MISS'), 'system');
@@ -489,35 +499,36 @@ INSERT INTO FWK_USER_MENU (USER_ID, MENU_ID, AUTH_CODE, LAST_UPDATE_DTIME, LAST_
 INSERT INTO FWK_USER_MENU (USER_ID, MENU_ID, AUTH_CODE, LAST_UPDATE_DTIME, LAST_UPDATE_USER_ID) VALUES ('cmsAdmin01', 'v3_cms_admin_deployments', 'W', TO_CHAR(SYSDATE, 'YYYYMMDDHH24MISS'), 'system');
 INSERT INTO FWK_USER_MENU (USER_ID, MENU_ID, AUTH_CODE, LAST_UPDATE_DTIME, LAST_UPDATE_USER_ID) VALUES ('cmsAdmin01', 'v3_cms_admin_statistics', 'W', TO_CHAR(SYSDATE, 'YYYYMMDDHH24MISS'), 'system');
 INSERT INTO FWK_USER_MENU (USER_ID, MENU_ID, AUTH_CODE, LAST_UPDATE_DTIME, LAST_UPDATE_USER_ID) VALUES ('cmsAdmin01', 'v3_cms_admin_components', 'W', TO_CHAR(SYSDATE, 'YYYYMMDDHH24MISS'), 'system');
+INSERT INTO FWK_USER_MENU (USER_ID, MENU_ID, AUTH_CODE, LAST_UPDATE_DTIME, LAST_UPDATE_USER_ID) VALUES ('cmsAdmin01', 'v3_cms_admin_asset_approvals', 'W', TO_CHAR(SYSDATE, 'YYYYMMDDHH24MISS'), 'system');
 INSERT INTO FWK_USER_MENU (USER_ID, MENU_ID, AUTH_CODE, LAST_UPDATE_DTIME, LAST_UPDATE_USER_ID) VALUES ('cmsUser01', 'v3_cms_manage', 'W', TO_CHAR(SYSDATE, 'YYYYMMDDHH24MISS'), 'system');
 INSERT INTO FWK_USER_MENU (USER_ID, MENU_ID, AUTH_CODE, LAST_UPDATE_DTIME, LAST_UPDATE_USER_ID) VALUES ('cmsUser01', 'v3_cms_dashboard', 'W', TO_CHAR(SYSDATE, 'YYYYMMDDHH24MISS'), 'system');
 INSERT INTO FWK_USER_MENU (USER_ID, MENU_ID, AUTH_CODE, LAST_UPDATE_DTIME, LAST_UPDATE_USER_ID) VALUES ('cmsUser01', 'v3_cms_user_dashboard', 'W', TO_CHAR(SYSDATE, 'YYYYMMDDHH24MISS'), 'system');
 INSERT INTO FWK_USER_MENU (USER_ID, MENU_ID, AUTH_CODE, LAST_UPDATE_DTIME, LAST_UPDATE_USER_ID) VALUES ('cmsUser01', 'v3_cms_edit', 'W', TO_CHAR(SYSDATE, 'YYYYMMDDHH24MISS'), 'system');
+INSERT INTO FWK_USER_MENU (USER_ID, MENU_ID, AUTH_CODE, LAST_UPDATE_DTIME, LAST_UPDATE_USER_ID) VALUES ('cmsUser01', 'v3_cms_admin_asset_requests', 'W', TO_CHAR(SYSDATE, 'YYYYMMDDHH24MISS'), 'system');
 
 -- ============================================================
--- React 플랫폼 메뉴 (sort_order 14: CMS가 13을 사용하므로 14로 배치)
+-- React 플랫폼 (/reactPlatform 서버에서 동작, sort_order 0: 독립 최상위 메뉴)
 -- ============================================================
 
--- 1depth: React 플랫폼 (v3_acl_manage 하위, MENU_URL=NULL → 클릭 시 2depth 토글 펼침)
+-- 1depth: React 플랫폼 (최상위, MENU_URL=NULL → 클릭 시 2depth 토글 펼침)
 INSERT INTO FWK_MENU (MENU_ID, PRIOR_MENU_ID, SORT_ORDER, MENU_NAME, MENU_URL, DISPLAY_YN, USE_YN, LAST_UPDATE_DTIME, LAST_UPDATE_USER_ID)
-VALUES ('v3_react', 'v3_acl_manage', 14, 'React 플랫폼', NULL, 'Y', 'Y', TO_CHAR(SYSDATE, 'YYYYMMDDHH24MISS'), 'system');
+VALUES ('v3_react_platform', '*', 0, 'React 플랫폼', NULL, 'Y', 'Y', TO_CHAR(SYSDATE, 'YYYYMMDDHH24MISS'), 'system');
 
 -- 2depth: React 코드 생성
 INSERT INTO FWK_MENU (MENU_ID, PRIOR_MENU_ID, SORT_ORDER, MENU_NAME, MENU_URL, DISPLAY_YN, USE_YN, LAST_UPDATE_DTIME, LAST_UPDATE_USER_ID)
-VALUES ('v3_react_generate', 'v3_react', 1, 'React 코드 생성', '/react-generate', 'Y', 'Y', TO_CHAR(SYSDATE, 'YYYYMMDDHH24MISS'), 'system');
+VALUES ('v3_react_generate', 'v3_react_platform', 1, 'React 코드 생성', '/react-generate', 'Y', 'Y', TO_CHAR(SYSDATE, 'YYYYMMDDHH24MISS'), 'system');
 
 -- 2depth: React 코드 생성 이력
 INSERT INTO FWK_MENU (MENU_ID, PRIOR_MENU_ID, SORT_ORDER, MENU_NAME, MENU_URL, DISPLAY_YN, USE_YN, LAST_UPDATE_DTIME, LAST_UPDATE_USER_ID)
-VALUES ('v3_react_generate_his', 'v3_react', 2, 'React 코드 생성 이력', '/react-generate-his', 'Y', 'Y', TO_CHAR(SYSDATE, 'YYYYMMDDHH24MISS'), 'system');
+VALUES ('v3_react_generate_his', 'v3_react_platform', 2, 'React 코드 생성 이력', '/react-generate-his', 'Y', 'Y', TO_CHAR(SYSDATE, 'YYYYMMDDHH24MISS'), 'system');
 
 -- 2depth: React 코드 승인 관리
 INSERT INTO FWK_MENU (MENU_ID, PRIOR_MENU_ID, SORT_ORDER, MENU_NAME, MENU_URL, DISPLAY_YN, USE_YN, LAST_UPDATE_DTIME, LAST_UPDATE_USER_ID)
-VALUES ('v3_react_approval', 'v3_react', 3, 'React 코드 승인 관리', '/react-approval', 'Y', 'Y', TO_CHAR(SYSDATE, 'YYYYMMDDHH24MISS'), 'system');
+VALUES ('v3_react_approval', 'v3_react_platform', 3, 'React 코드 승인 관리', '/react-approval', 'Y', 'Y', TO_CHAR(SYSDATE, 'YYYYMMDDHH24MISS'), 'system');
 
 -- ADMIN 역할 권한 등록
-INSERT INTO FWK_ROLE_MENU (ROLE_ID, MENU_ID, AUTH_CODE) VALUES ('ADMIN', 'v3_react', 'W');
+INSERT INTO FWK_ROLE_MENU (ROLE_ID, MENU_ID, AUTH_CODE) VALUES ('ADMIN', 'v3_react_platform', 'W');
 INSERT INTO FWK_ROLE_MENU (ROLE_ID, MENU_ID, AUTH_CODE) VALUES ('ADMIN', 'v3_react_generate', 'W');
 INSERT INTO FWK_ROLE_MENU (ROLE_ID, MENU_ID, AUTH_CODE) VALUES ('ADMIN', 'v3_react_generate_his', 'W');
 INSERT INTO FWK_ROLE_MENU (ROLE_ID, MENU_ID, AUTH_CODE) VALUES ('ADMIN', 'v3_react_approval', 'W');
-
 COMMIT;

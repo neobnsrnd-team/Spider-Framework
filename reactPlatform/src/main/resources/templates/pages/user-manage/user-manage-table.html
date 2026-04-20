@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<!-- User Table Fragment -->
+<div th:fragment="table" class="table-responsive">
+    <table class="table table-sm table-hover sp-data-grid min-w-1350" id="userTable">
+        <thead class="table-light">
+            <tr>
+                <th class="col-w-100" data-sort="userId">사용자ID</th>
+                <th class="col-w-120" data-sort="userName">사용자명</th>
+                <th class="col-w-80" data-sort="className">직급</th>
+                <th class="col-w-100" data-sort="userSsn">직번</th>
+                <th class="col-w-120" data-sort="roleName">권한명</th>
+                <th class="col-w-100" data-sort="positionName">소속</th>
+                <th class="col-w-150" data-sort="userStateCode">사용자<br>상태</th>
+                <th class="col-w-100" data-sort="lastUpdateDtime">수정일시</th>
+                <th class="col-w-140" data-sort="">메뉴초기화</th>
+                <th class="col-w-100" data-sort="">메뉴권한</th>
+                <th class="col-w-100" data-sort="">상태 (오류횟수)</th>
+                <th class="col-w-100" data-sort="">로그인하기</th>
+            </tr>
+        </thead>
+        <tbody id="userTableBody">
+            <tr>
+                <td colspan="12" class="text-center py-4 text-body-secondary">
+                    조회 버튼을 클릭하여 데이터를 불러오세요.
+                </td>
+            </tr>
+        </tbody>
+    </table>
+</div>
+</body>
+</html>

@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<!--
+    th:block 으로 카드와 반려 모달을 하나의 fragment로 묶는다.
+    th:replace 는 선택된 fragment 요소만 가져오므로, 카드(div)만 fragment로 지정하면
+    형제 요소인 rejectReasonModal 이 DOM에 포함되지 않는다.
+    th:block 은 실제 HTML 태그를 렌더링하지 않으므로 레이아웃에 영향이 없다.
+-->
+<th:block th:fragment="pending">
+
+<!-- React 코드 승인 대기 목록 -->
+<div class="card">
+    <div class="card-header">
+        <div class="d-flex align-items-center gap-2">
+            <span class="fw-semibold">승인 대기 목록</span>
+            <span class="badge bg-secondary" id="pendingCountBadge">0건</span>
+        </div>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-sm table-hover sp-data-grid mb-0" id="pendingTable">
+                <thead class="table-light">
+                    <tr>
+                        <th class="text-center" style="width:50px;">No</th>
+                        <th class="text-center" style="width:150px;">요청자</th>
+                        <th class="text-center" style="width:150px;">요청일시</th>
+                        <th class="text-center" style="width:120px;"
+                            th:if="${userAuthorities != null and userAuthorities.contains('REACT_APPROVAL:W')}">
+                            액션
+                        </th>
+                        <th class="text-center" style="width:70px;">코드</th>
+                    </tr>
+                </thead>
+                <tbody id="pendingTableBody">
+                    <tr>
+                        <td colspan="5" class="text-center py-4 text-body-secondary">
+                            조회 중...
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+    <!-- 이력 섹션의 pagination-container 레이아웃과 동일: 왼쪽 페이지 버튼, 오른쪽 건수+새로고침 -->
+    <div class="card-footer pagination-container mb-0">
+        <nav aria-label="승인 대기 페이지네이션">
+            <ul class="pagination pagination-sm mb-0" id="pendingPagination"></ul>
+        </nav>
+        <div class="pagination-info">
+            <span id="pendingPageInfo">0 - 0 of 0 items</span>
+            <button type="button" class="btn btn-outline-secondary btn-sm" id="btnPendingRefresh"
+                    title="새로고침">
+                <i class="bi bi-arrow-clockwise"></i>
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- 반려 사유 입력 모달 — th:block 안에 포함되어야 fragment로 함께 렌더링됨 -->
+<div class="modal fade" id="rejectReasonModal" tabindex="-1"
+     aria-labelledby="rejectReasonModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="rejectReasonModalLabel">
+                    <i class="bi bi-x-circle text-danger me-1"></i>반려 사유 입력
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="닫기"></button>
+            </div>
+            <div class="modal-body">
+                <label for="rejectReasonInput" class="form-label">
+                    반려 사유 <span class="text-danger">*</span>
+                </label>
+                <textarea id="rejectReasonInput" class="form-control" rows="3"
+                          maxlength="500" placeholder="반려 사유를 입력하세요."></textarea>
+                <div class="form-text text-end">
+                    <span id="rejectReasonCount">0</span>/500
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">취소</button>
+                <button type="button" class="btn btn-danger" id="btnConfirmReject">반려 확인</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+</th:block>
+</body>
+</html>

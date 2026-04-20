@@ -1,0 +1,12 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<!-- Menu Bottom Actions Fragment -->
+<div th:fragment="buttons" class="bottom-actions">
+    <button th:if="${userAuthorities != null and userAuthorities.contains('MENU:W')}"
+            class="btn btn-primary btn-sm" onclick="Menus.openAddModal()">
+        + 등록
+    </button>
+</div>
+</body>
+</html>

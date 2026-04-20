@@ -19,5 +19,26 @@ export interface PageLayoutProps extends React.HTMLAttributes<HTMLDivElement> {
    * 마지막 콘텐츠가 고정 바에 가려지지 않는다.
    */
   bottomBar?:    React.ReactNode;
+  /**
+   * CMS 브리지 전용: onBack이 없을 때 뒤로가기 버튼 표시 여부 (noop 핸들러).
+   * onBack이 있으면 무시된다.
+   */
+  showBack?: boolean;
+  /**
+   * CMS 브리지 전용: rightAction이 없을 때 헤더 우측 버튼 종류.
+   * rightAction이 있으면 무시된다.
+   * @default "none"
+   */
+  rightBtnType?: 'close' | 'menu' | 'none';
+  /**
+   * CMS 브리지 전용: bottomBar가 없을 때 하단 버튼 수로 bottomBar를 자동 생성.
+   * bottomBar가 있으면 무시된다.
+   * @default "0"
+   */
+  bottomBtnCnt?: '0' | '1' | '2';
+  /** CMS 브리지 전용: 자동 생성 bottomBar의 첫 번째(primary) 버튼 텍스트. @default "확인" */
+  bottomBtn1Label?: string;
+  /** CMS 브리지 전용: 자동 생성 bottomBar의 두 번째(secondary) 버튼 텍스트. @default "취소" */
+  bottomBtn2Label?: string;
   className?:    string;
 }

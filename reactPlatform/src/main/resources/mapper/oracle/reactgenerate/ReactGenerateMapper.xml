@@ -1,0 +1,267 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<!--
+    ReactGenerate Mapper (FWK_RPS_CODE_HIS)
+    - React 코드 생성 이력 INSERT / SELECT / UPDATE
+-->
+<mapper namespace="com.example.reactplatform.domain.reactgenerate.mapper.ReactGenerateMapper">
+
+    <!-- ==================== INSERT ==================== -->
+
+    <insert id="insert">
+        INSERT INTO FWK_RPS_CODE_HIS (
+            CODE_ID,
+            FIGMA_URL,
+            REQUIREMENTS,
+            SYSTEM_PROMPT,
+            USER_PROMPT,
+            REACT_CODE,
+            FAIL_REASON,
+            STATUS,
+            CREATE_USER_ID,
+            CREATE_DTIME
+        ) VALUES (
+            #{codeId,jdbcType=VARCHAR},
+            #{figmaUrl,jdbcType=VARCHAR},
+            #{requirements,jdbcType=CLOB},
+            #{systemPrompt,jdbcType=CLOB},
+            #{userPrompt,jdbcType=CLOB},
+            #{reactCode,jdbcType=CLOB},
+            #{failReason,jdbcType=CLOB},
+            #{status,jdbcType=VARCHAR},
+            #{createUserId,jdbcType=VARCHAR},
+            #{createDtime,jdbcType=VARCHAR}
+        )
+    </insert>
+
+    <!-- ==================== SELECT ==================== -->
+
+    <sql id="selectColumns">
+        CODE_ID          AS codeId,
+        FIGMA_URL        AS figmaUrl,
+        REACT_CODE       AS reactCode,
+        FAIL_REASON      AS failReason,
+        STATUS           AS status,
+        CREATE_USER_ID   AS createUserId,
+        CREATE_DTIME     AS createDtime,
+        APPROVAL_USER_ID AS approvalUserId,
+        APPROVAL_DTIME   AS approvalDtime
+    </sql>
+
+    <!-- 목록 조회에 사용하는 WHERE 조건 Fragment (selectList/selectCount 공유) -->
+    <sql id="historyWhereConditions">
+        <where>
+            <if test="req.status != null and req.status != ''">
+                AND STATUS = #{req.status}
+            </if>
+            <if test="req.createUserId != null and req.createUserId != ''">
+                <!-- 부분 일치 검색. ESCAPE '\' 절로 와일드카드(%, _) 문자를 리터럴로 처리 -->
+                AND CREATE_USER_ID LIKE '%' || #{req.createUserId} || '%' ESCAPE '\'
+            </if>
+            <if test="req.fromDtime != null">
+                <!-- Java에서 yyyyMMdd → yyyyMMddHHmmss 변환 후 전달 (fromDate + '000000') -->
+                AND CREATE_DTIME &gt;= #{req.fromDtime}
+            </if>
+            <if test="req.toDtime != null">
+                <!-- Java에서 yyyyMMdd → yyyyMMddHHmmss 변환 후 전달 (toDate + '235959') -->
+                AND CREATE_DTIME &lt;= #{req.toDtime}
+            </if>
+        </where>
+    </sql>
+
+    <select id="selectById" resultType="com.example.reactplatform.domain.reactgenerate.dto.ReactGenerateResponse">
+        SELECT
+            <include refid="selectColumns"/>
+        FROM FWK_RPS_CODE_HIS
+        WHERE CODE_ID = #{codeId,jdbcType=VARCHAR}
+    </select>
+
+    <!-- ==================== SELECT LIST ==================== -->
+
+    <!--
+        ROWNUM 이중 서브쿼리 페이지네이션 (프로젝트 전체 표준 방식).
+        - 내부 INNER_QRY: 정렬 후 endRow까지 ROWNUM 필터링
+        - 외부 쿼리: offset(0-based) 이후 행만 반환
+    -->
+    <select id="selectList" resultType="com.example.reactplatform.domain.reactgenerate.dto.ReactGenerateHistoryResponse">
+        SELECT *
+        FROM (
+            SELECT INNER_QRY.*, ROWNUM AS RNUM
+            FROM (
+                SELECT
+                    CODE_ID          AS codeId,
+                    FIGMA_URL        AS figmaUrl,
+                    STATUS           AS status,
+                    CREATE_USER_ID   AS createUserId,
+                    CREATE_DTIME     AS createDtime,
+                    APPROVAL_USER_ID AS approvalUserId,
+                    APPROVAL_DTIME   AS approvalDtime
+                FROM FWK_RPS_CODE_HIS
+                <include refid="historyWhereConditions"/>
+                ORDER BY CREATE_DTIME DESC
+            ) INNER_QRY
+            WHERE ROWNUM <![CDATA[<=]]> #{req.endRow}
+        )
+        WHERE RNUM <![CDATA[>]]> #{req.offset}
+    </select>
+
+    <select id="selectCount" resultType="int">
+        SELECT COUNT(*)
+        FROM FWK_RPS_CODE_HIS
+        <include refid="historyWhereConditions"/>
+    </select>
+
+    <!-- 엑셀 내보내기용 전체 조회 (페이지네이션 없음) -->
+    <select id="selectAllForExport" resultType="com.example.reactplatform.domain.reactgenerate.dto.ReactGenerateHistoryResponse">
+        SELECT
+            CODE_ID          AS codeId,
+            FIGMA_URL        AS figmaUrl,
+            STATUS           AS status,
+            CREATE_USER_ID   AS createUserId,
+            CREATE_DTIME     AS createDtime,
+            APPROVAL_USER_ID AS approvalUserId,
+            APPROVAL_DTIME   AS approvalDtime
+        FROM FWK_RPS_CODE_HIS
+        <include refid="historyWhereConditions"/>
+        ORDER BY CREATE_DTIME DESC
+    </select>
+
+    <!-- ==================== SELECT PENDING ==================== -->
+
+    <!--
+        승인 관리 메뉴 전용: PENDING_APPROVAL 상태 목록 조회.
+        오래된 요청부터 처리할 수 있도록 CREATE_DTIME ASC 정렬.
+        CLOB 컬럼(REACT_CODE 등)은 목록에서 제외.
+    -->
+    <select id="selectPendingList" resultType="com.example.reactplatform.domain.reactgenerate.dto.ReactApprovalResponse">
+        SELECT *
+        FROM (
+            SELECT INNER_QRY.*, ROWNUM AS RNUM
+            FROM (
+                SELECT
+                    CODE_ID        AS codeId,
+                    FIGMA_URL      AS figmaUrl,
+                    STATUS         AS status,
+                    CREATE_USER_ID AS createUserId,
+                    CREATE_DTIME   AS createDtime
+                FROM FWK_RPS_CODE_HIS
+                WHERE STATUS = 'PENDING_APPROVAL'
+                ORDER BY CREATE_DTIME ASC
+            ) INNER_QRY
+            WHERE ROWNUM <![CDATA[<=]]> #{endRow}
+        )
+        WHERE RNUM <![CDATA[>]]> #{offset}
+    </select>
+
+    <!-- 승인 대기(PENDING_APPROVAL) 전체 건수 조회 (페이지네이션용) -->
+    <select id="selectPendingCount" resultType="int">
+        SELECT COUNT(*)
+        FROM FWK_RPS_CODE_HIS
+        WHERE STATUS = 'PENDING_APPROVAL'
+    </select>
+
+    <!-- ==================== SELECT APPROVAL HISTORY ==================== -->
+
+    <!--
+        승인 이력 조회: APPROVED / REJECTED 상태 코드 목록.
+        status, approvalUserId, createUserId, fromDate, toDate 조건으로 필터링 가능.
+        처리일시(APPROVAL_DTIME) 내림차순 정렬.
+    -->
+    <sql id="approvalHistoryWhereConditions">
+        <where>
+            <choose>
+                <!-- 특정 상태 필터가 있으면 해당 상태만, 없으면 APPROVED/REJECTED 전체 조회 -->
+                <when test="status != null and status != ''">
+                    STATUS = #{status}
+                </when>
+                <otherwise>
+                    STATUS IN ('APPROVED', 'REJECTED')
+                </otherwise>
+            </choose>
+            <if test="approvalUserId != null and approvalUserId != ''">
+                AND APPROVAL_USER_ID LIKE '%' || #{approvalUserId} || '%' ESCAPE '\'
+            </if>
+            <if test="createUserId != null and createUserId != ''">
+                AND CREATE_USER_ID LIKE '%' || #{createUserId} || '%' ESCAPE '\'
+            </if>
+            <if test="fromDate != null and fromDate != ''">
+                <!-- fromDate: yyyyMMdd → yyyyMMdd000000 으로 비교 -->
+                AND APPROVAL_DTIME &gt;= #{fromDate} || '000000'
+            </if>
+            <if test="toDate != null and toDate != ''">
+                <!-- toDate: yyyyMMdd → yyyyMMdd235959 으로 비교 -->
+                AND APPROVAL_DTIME &lt;= #{toDate} || '235959'
+            </if>
+        </where>
+    </sql>
+
+    <select id="selectApprovalHistory"
+            resultType="com.example.reactplatform.domain.reactgenerate.dto.ReactGenerateHistoryResponse">
+        SELECT *
+        FROM (
+            SELECT INNER_QRY.*, ROWNUM AS RNUM
+            FROM (
+                SELECT
+                    CODE_ID          AS codeId,
+                    FIGMA_URL        AS figmaUrl,
+                    STATUS           AS status,
+                    CREATE_USER_ID   AS createUserId,
+                    CREATE_DTIME     AS createDtime,
+                    APPROVAL_USER_ID AS approvalUserId,
+                    APPROVAL_DTIME   AS approvalDtime
+                FROM FWK_RPS_CODE_HIS
+                <include refid="approvalHistoryWhereConditions"/>
+                ORDER BY APPROVAL_DTIME DESC
+            ) INNER_QRY
+            WHERE ROWNUM <![CDATA[<=]]> #{endRow}
+        )
+        WHERE RNUM <![CDATA[>]]> #{offset}
+    </select>
+
+    <!-- 승인 이력 전체 건수 조회 (페이지네이션용) -->
+    <select id="selectApprovalHistoryCount" resultType="int">
+        SELECT COUNT(*)
+        FROM FWK_RPS_CODE_HIS
+        <include refid="approvalHistoryWhereConditions"/>
+    </select>
+
+    <!-- ==================== UPDATE ==================== -->
+
+    <update id="updateStatus">
+        UPDATE FWK_RPS_CODE_HIS
+        SET
+            STATUS           = #{status,jdbcType=VARCHAR},
+            APPROVAL_USER_ID = #{approvalUserId,jdbcType=VARCHAR},
+            APPROVAL_DTIME   = #{approvalDtime,jdbcType=VARCHAR},
+            <!-- 반려 시 사유 저장, 승인 시 null 전달하여 기존 값 초기화 -->
+            FAIL_REASON      = #{failReason,jdbcType=CLOB}
+        WHERE CODE_ID = #{codeId,jdbcType=VARCHAR}
+    </update>
+
+    <!--
+        Race condition 방지용 조건부 UPDATE.
+        WHERE 절에 requiredStatus 조건을 추가하여, 현재 STATUS가 예상 상태가 아니면
+        UPDATE가 발생하지 않아 0을 반환한다. 반환값으로 선점 여부를 판단한다.
+    -->
+    <update id="updateStatusConditional">
+        UPDATE FWK_RPS_CODE_HIS
+        SET
+            STATUS           = #{status,jdbcType=VARCHAR},
+            APPROVAL_USER_ID = #{approvalUserId,jdbcType=VARCHAR},
+            APPROVAL_DTIME   = #{approvalDtime,jdbcType=VARCHAR},
+            FAIL_REASON      = #{failReason,jdbcType=CLOB}
+        WHERE CODE_ID = #{codeId,jdbcType=VARCHAR}
+          AND STATUS  = #{requiredStatus,jdbcType=VARCHAR}
+    </update>
+
+    <update id="updateToFailed">
+        UPDATE FWK_RPS_CODE_HIS
+        SET
+            STATUS      = 'FAILED',
+            FAIL_REASON = #{failReason,jdbcType=CLOB}
+        WHERE CODE_ID = #{codeId,jdbcType=VARCHAR}
+    </update>
+
+</mapper>
