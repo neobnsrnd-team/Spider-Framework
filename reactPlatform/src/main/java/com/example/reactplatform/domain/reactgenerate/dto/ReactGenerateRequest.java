@@ -25,8 +25,8 @@ public class ReactGenerateRequest {
     /** 유효한 Figma design/file URL. node-id 쿼리 파라미터를 포함해야 한다. */
     @NotBlank(message = "Figma URL을 입력해주세요.")
     @Pattern(
-            regexp = "https://www\\.figma\\.com/(design|file)/[A-Za-z0-9]+/.*",
-            message = "유효하지 않은 Figma URL 형식입니다. (예: https://www.figma.com/design/...)")
+            regexp = "https://www\\.figma\\.com/(design|file)/[A-Za-z0-9]+/.+[?&]node-id=[^&]+.*",
+            message = "유효하지 않은 Figma URL 형식입니다. (예: https://www.figma.com/design/...?node-id=1-2)")
     private String figmaUrl;
 
     /** 적용할 금융 브랜드. globals.css의 [data-brand] 토큰 블록 선택에 사용된다. */

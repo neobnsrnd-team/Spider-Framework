@@ -38,8 +38,8 @@
             Toast.warning('Figma URL을 입력해주세요.');
             return;
         }
-        if (!/^https:\/\/www\.figma\.com\/(design|file)\/[A-Za-z0-9]+\//.test(figmaUrl)) {
-            Toast.warning('올바른 Figma URL 형식이 아닙니다. (예: https://www.figma.com/design/...)');
+        if (!/^https:\/\/www\.figma\.com\/(design|file)\/[A-Za-z0-9]+\/.+[?&]node-id=[^&]+/.test(figmaUrl)) {
+            Toast.warning('올바른 Figma URL 형식이 아닙니다. (예: https://www.figma.com/design/...?node-id=1-2)');
             return;
         }
         if (!brand) {

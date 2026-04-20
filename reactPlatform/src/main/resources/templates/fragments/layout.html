@@ -177,18 +177,21 @@
 
     <th:block layout:fragment="scripts"></th:block>
 
-    <!-- 모든 jQuery AJAX 요청에 CSRF 토큰 자동 포함 (SessionHandler.js 이후에 실행되어야 함) -->
+    <!-- 모든 jQuery AJAX 요청에 CSRF 토큰 자동 포함 — CookieCsrfTokenRepository: XSRF-TOKEN 쿠키 → X-XSRF-TOKEN 헤더 -->
     <script>
         (function () {
-            var csrfToken = $('meta[name="_csrf"]').attr('content');
-            var csrfHeader = $('meta[name="_csrf_header"]').attr('content');
-            if (csrfToken && csrfHeader) {
-                $.ajaxSetup({
-                    beforeSend: function (xhr) {
-                        xhr.setRequestHeader(csrfHeader, csrfToken);
-                    }
-                });
+            function getCsrfTokenFromCookie() {
+                var match = document.cookie.match(/(?:^|;\s*)XSRF-TOKEN=([^;]*)/);
+                return match ? decodeURIComponent(match[1]) : null;
             }
+            $.ajaxSetup({
+                beforeSend: function (xhr) {
+                    var token = getCsrfTokenFromCookie();
+                    if (token) {
+                        xhr.setRequestHeader('X-XSRF-TOKEN', token);
+                    }
+                }
+            });
         })();
     </script>
 </body>

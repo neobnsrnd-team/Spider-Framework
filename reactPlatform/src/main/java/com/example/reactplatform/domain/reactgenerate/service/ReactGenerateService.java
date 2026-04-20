@@ -25,6 +25,8 @@ import com.example.reactplatform.global.log.event.ErrorLogEvent;
 import com.example.reactplatform.global.util.ExcelColumnDefinition;
 import com.example.reactplatform.global.util.ExcelExportUtil;
 import com.example.reactplatform.global.util.TraceIdUtil;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -51,6 +53,7 @@ public class ReactGenerateService {
     private final FigmaDesignExtractor figmaDesignExtractor;
     private final CodeValidator codeValidator;
     private final ApplicationEventPublisher eventPublisher;
+    private final ObjectMapper objectMapper;
 
     private static final DateTimeFormatter FORMATTER = DateTimeFormatter.ofPattern("yyyyMMddHHmmss");
 
@@ -73,8 +76,14 @@ public class ReactGenerateService {
         String now = LocalDateTime.now().format(FORMATTER);
 
         // brand·domain은 requirements 컬럼에 JSON으로 저장 (DB 스키마 변경 없이 유지)
-        String requirementsJson = String.format("{\"brand\":\"%s\",\"domain\":\"%s\"}",
-                request.getBrand().name().toLowerCase(), effectiveDomain.name().toLowerCase());
+        String requirementsJson;
+        try {
+            requirementsJson = objectMapper.writeValueAsString(
+                    Map.of("brand", request.getBrand().name().toLowerCase(),
+                           "domain", effectiveDomain.name().toLowerCase()));
+        } catch (JsonProcessingException e) {
+            throw new InternalException("brand/domain JSON 직렬화 실패", e);
+        }
 
         // 어느 단계에서 실패해도 그 시점까지 수집된 값을 실패 이력에 기록하기 위해 바깥에 선언
         String systemPrompt = null;
