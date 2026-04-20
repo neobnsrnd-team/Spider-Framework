@@ -101,8 +101,9 @@ public class CodeTemplateController {
         String fileName = trxId + "_source.zip";
 
         HttpHeaders headers = new HttpHeaders();
-        headers.setContentDisposition(
-                ContentDisposition.attachment().filename(fileName, StandardCharsets.UTF_8).build());
+        headers.setContentDisposition(ContentDisposition.attachment()
+                .filename(fileName, StandardCharsets.UTF_8)
+                .build());
         headers.setContentType(MediaType.APPLICATION_OCTET_STREAM);
 
         return ResponseEntity.ok().headers(headers).body(zipBytes);
