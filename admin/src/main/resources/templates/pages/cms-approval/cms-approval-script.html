@@ -233,9 +233,11 @@
             const beginningDate = $('#approveBeginningDate').val();
             const expiredDate   = $('#approveExpiredDate').val();
 
-            if (!beginningDate) { Toast.warning('노출 시작일을 입력하세요.'); return; }
-            if (!expiredDate) { Toast.warning('노출 종료일을 입력하세요.'); return; }
-            if (expiredDate < beginningDate) { Toast.warning('노출 종료일은 시작일보다 빠를 수 없습니다.'); return; }
+            // 날짜는 readonly — 승인 요청 시 미지정이면 빈 값으로 승인 허용
+            // 둘 다 입력된 경우에만 순서 유효성 검사
+            if (beginningDate && expiredDate && expiredDate < beginningDate) {
+                Toast.warning('노출 종료일은 시작일보다 빠를 수 없습니다.'); return;
+            }
 
             fetch(`/api/cms-admin/pages/${pageId}/approval/approve`, {
                 method: 'POST',

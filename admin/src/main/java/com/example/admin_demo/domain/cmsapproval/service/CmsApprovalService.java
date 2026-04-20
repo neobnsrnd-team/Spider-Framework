@@ -112,18 +112,22 @@ public class CmsApprovalService {
         }
     }
 
+    /**
+     * 노출 기간 유효성 검사 — 날짜는 선택값
+     *
+     * <p>승인 요청 시 날짜를 지정하지 않을 수 있으므로 null/blank는 허용한다.
+     * 두 날짜가 모두 입력된 경우에만 순서(종료일 >= 시작일)를 검사한다.
+     */
     private void validateDisplayPeriod(String beginningDate, String expiredDate) {
-        if (beginningDate == null || beginningDate.isBlank()) {
-            throw new InvalidInputException("노출 시작일을 입력하세요.");
-        }
-        if (expiredDate == null || expiredDate.isBlank()) {
-            throw new InvalidInputException("노출 종료일을 입력하세요.");
-        }
+        boolean hasBeginning = beginningDate != null && !beginningDate.isBlank();
+        boolean hasExpired   = expiredDate   != null && !expiredDate.isBlank();
 
-        LocalDate beginning = parseDate(beginningDate, "노출 시작일");
-        LocalDate expired = parseDate(expiredDate, "노출 종료일");
-        if (expired.isBefore(beginning)) {
-            throw new InvalidInputException("노출 종료일은 시작일보다 빠를 수 없습니다.");
+        if (hasBeginning && hasExpired) {
+            LocalDate beginning = parseDate(beginningDate, "노출 시작일");
+            LocalDate expired   = parseDate(expiredDate,   "노출 종료일");
+            if (expired.isBefore(beginning)) {
+                throw new InvalidInputException("노출 종료일은 시작일보다 빠를 수 없습니다.");
+            }
         }
     }
 
