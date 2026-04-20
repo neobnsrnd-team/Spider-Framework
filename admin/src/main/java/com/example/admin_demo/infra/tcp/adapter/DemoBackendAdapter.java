@@ -44,8 +44,11 @@ public class DemoBackendAdapter implements ManagementAdapter<JsonCommandRequest,
     @Override
     public JsonCommandResponse doProcess(String command, JsonCommandRequest req) {
         try {
-            log.info("[DemoBackendAdapter] JSON TCP 전송: host={}, port={}, command={}",
-                    demoBackendHost, demoBackendPort, command);
+            log.info(
+                    "[DemoBackendAdapter] JSON TCP 전송: host={}, port={}, command={}",
+                    demoBackendHost,
+                    demoBackendPort,
+                    command);
             return tcpClient.sendJson(demoBackendHost, demoBackendPort, req);
         } catch (IOException e) {
             log.warn("[DemoBackendAdapter] TCP 전송 실패 (비치명적): command={}, error={}", command, e.getMessage());

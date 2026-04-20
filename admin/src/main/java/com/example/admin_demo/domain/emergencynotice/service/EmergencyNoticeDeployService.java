@@ -50,6 +50,7 @@ public class EmergencyNoticeDeployService {
 
     /** TCP 커맨드 상수 — demo/backend와 약속된 식별자 */
     private static final String CMD_NOTICE_SYNC = "NOTICE_SYNC";
+
     private static final String CMD_NOTICE_END = "NOTICE_END";
 
     // 기존 HTTP REST 전송 경로(레거시) — TCP 전환 이후 미사용
@@ -283,7 +284,8 @@ public class EmergencyNoticeDeployService {
                 log.info("Demo Backend 긴급공지 TCP 동기화 완료: message={}", response.getMessage());
             } else {
                 // 비치명적: Admin DB는 이미 커밋됨 — Demo Backend 재기동 시 restoreNoticeState()로 자동 복구
-                log.warn("Demo Backend TCP 동기화 실패 (비치명적, 재기동 시 자동 복구): error={}",
+                log.warn(
+                        "Demo Backend TCP 동기화 실패 (비치명적, 재기동 시 자동 복구): error={}",
                         response != null ? response.getError() : "응답 없음");
             }
         } catch (Exception e) {
@@ -326,7 +328,8 @@ public class EmergencyNoticeDeployService {
             if (response != null && response.isSuccess()) {
                 log.info("Demo Backend 긴급공지 TCP 종료 완료: message={}", response.getMessage());
             } else {
-                log.warn("Demo Backend TCP 종료 신호 전송 실패 (비치명적): error={}",
+                log.warn(
+                        "Demo Backend TCP 종료 신호 전송 실패 (비치명적): error={}",
                         response != null ? response.getError() : "응답 없음");
             }
         } catch (Exception e) {

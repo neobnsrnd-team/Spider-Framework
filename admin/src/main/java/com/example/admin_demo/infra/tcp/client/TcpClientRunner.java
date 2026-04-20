@@ -35,7 +35,11 @@ public class TcpClientRunner implements ApplicationRunner {
     @Override
     public void run(ApplicationArguments args) {
         // 서버가 완전히 기동될 때까지 잠시 대기
-        try { Thread.sleep(1000); } catch (InterruptedException ignored) { Thread.currentThread().interrupt(); }
+        try {
+            Thread.sleep(1000);
+        } catch (InterruptedException ignored) {
+            Thread.currentThread().interrupt();
+        }
 
         JsonCommandRequest ping = JsonCommandRequest.builder()
                 .command("PING")
@@ -45,7 +49,10 @@ public class TcpClientRunner implements ApplicationRunner {
 
         try {
             JsonCommandResponse resp = tcpClient.sendJson(demoHost, demoPort, ping);
-            log.info("[TcpClientRunner] demo/backend PING 응답: success={}, message={}", resp.isSuccess(), resp.getMessage());
+            log.info(
+                    "[TcpClientRunner] demo/backend PING 응답: success={}, message={}",
+                    resp.isSuccess(),
+                    resp.getMessage());
         } catch (Exception e) {
             log.warn("[TcpClientRunner] demo/backend PING 실패 (비치명적): {}", e.getMessage());
         }
