@@ -17,6 +17,9 @@
 
 const net = require("net");
 
+/** 수신 메시지 최대 허용 크기 (1 MB) — 초과 시 비정상 요청으로 간주하여 연결 종료 */
+const MAX_MSG_LEN = 1024 * 1024;
+
 /**
  * TCP 서버를 생성하고 시작한다.
  *
@@ -30,18 +33,34 @@ function startTcpServer(handlers, port) {
     socket.setNoDelay(true);
     socket.setTimeout(60000);
 
-    let buffer = Buffer.alloc(0);
+    // chunks 배열로 수신 데이터를 누적하여 data 이벤트마다 발생하는 불필요한 Buffer 복사 최소화
+    let chunks = [];
+    let totalLength = 0;
 
     socket.on("data", (chunk) => {
-      buffer = Buffer.concat([buffer, chunk]);
+      chunks.push(chunk);
+      totalLength += chunk.length;
 
       // 4바이트 길이 프리픽스 파싱 루프 (한 번에 여러 메시지 수신 가능)
-      while (buffer.length >= 4) {
+      while (totalLength >= 4) {
+        // 파싱이 필요한 시점에만 flatten — 불필요한 메모리 할당 방지
+        const buffer = Buffer.concat(chunks);
         const msgLen = buffer.readInt32BE(0);
+
+        // 음수 또는 허용 최대 크기 초과 시 비정상 요청으로 즉시 연결 종료
+        if (msgLen < 0 || msgLen > MAX_MSG_LEN) {
+          console.error(`[TcpServer] 허용 범위를 초과한 메시지 길이: ${msgLen}`);
+          socket.destroy();
+          return;
+        }
+
         if (buffer.length < 4 + msgLen) break;
 
         const msgBuf = buffer.slice(4, 4 + msgLen);
-        buffer = buffer.slice(4 + msgLen);
+        const remaining = buffer.slice(4 + msgLen);
+        // 처리된 데이터를 제외한 나머지만 chunks에 보존
+        chunks = remaining.length > 0 ? [remaining] : [];
+        totalLength = remaining.length;
 
         let request;
         try {

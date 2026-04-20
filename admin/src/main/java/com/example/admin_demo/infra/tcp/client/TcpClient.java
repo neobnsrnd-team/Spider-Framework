@@ -9,6 +9,7 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
+import java.io.ObjectStreamClass;
 import java.net.InetSocketAddress;
 import java.net.Socket;
 import lombok.RequiredArgsConstructor;
@@ -37,11 +38,14 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 public class TcpClient {
 
-    /** 연결 타임아웃: 레퍼런스(spiderlink_Admin) 기준 2초 */
+    /** 연결 타임아웃:F 레퍼런스(spiderlink_Admin) 기준 2초 */
     private static final int CONNECT_TIMEOUT_MS = 2_000;
 
     /** 읽기 타임아웃: 레퍼런스(spiderlink_Admin) 기준 60초 (배치 실행 대기 포함) */
     private static final int READ_TIMEOUT_MS = 60_000;
+
+    /** JSON 응답 최대 허용 크기 (1 MB) — 초과 시 OutOfMemoryError 방지를 위해 즉시 예외 발생 */
+    private static final int MAX_MSG_LEN = 1024 * 1024;
 
     private final ObjectMapper objectMapper;
 
@@ -61,7 +65,20 @@ public class TcpClient {
             ObjectOutputStream oos = new ObjectOutputStream(socket.getOutputStream());
             oos.writeObject(ctx);
             oos.flush();
-            try (ObjectInputStream ois = new ObjectInputStream(socket.getInputStream())) {
+            // resolveClass 오버라이드로 허용된 패키지 외 클래스의 역직렬화 차단 (RCE 방어)
+            try (ObjectInputStream ois = new ObjectInputStream(socket.getInputStream()) {
+                @Override
+                protected Class<?> resolveClass(ObjectStreamClass desc) throws IOException, ClassNotFoundException {
+                    String name = desc.getName();
+                    if (!name.startsWith("com.example.admin_demo.")
+                            && !name.startsWith("java.lang.")
+                            && !name.startsWith("java.util.")
+                            && !name.startsWith("[")) {
+                        throw new IOException("역직렬화 차단: 허용되지 않은 클래스 " + name);
+                    }
+                    return super.resolveClass(desc);
+                }
+            }) {
                 ManagementContext response = (ManagementContext) ois.readObject();
                 log.debug("[TcpClient] ObjectStream 응답 수신: resultCode={}", response.getResultCode());
                 return response;
@@ -92,6 +109,10 @@ public class TcpClient {
             dos.flush();
 
             int len = dis.readInt();
+            // 음수 또는 허용 최대 크기(1 MB) 초과 시 비정상 요청으로 간주하여 즉시 예외 발생
+            if (len < 0 || len > MAX_MSG_LEN) {
+                throw new IOException("수신된 메시지 길이가 허용 범위를 초과합니다: " + len);
+            }
             byte[] responseBytes = new byte[len];
             dis.readFully(responseBytes);
             JsonCommandResponse response = objectMapper.readValue(responseBytes, JsonCommandResponse.class);

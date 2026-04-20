@@ -31,8 +31,11 @@ public class BatchExecCommandHandler implements CommandHandler {
     public Object handle(String command, JsonCommandRequest request) {
         Map<String, Object> payload = request.getPayload();
         if (payload == null) {
-            return JsonCommandResponse.builder().command(command).success(false)
-                    .error("payload 없음").build();
+            return JsonCommandResponse.builder()
+                    .command(command)
+                    .success(false)
+                    .error("payload 없음")
+                    .build();
         }
 
         ManagementContext ctx = ManagementContext.builder()
@@ -41,14 +44,14 @@ public class BatchExecCommandHandler implements CommandHandler {
                 .batchAppId(String.valueOf(payload.getOrDefault("batchAppId", "")))
                 .batchDate(String.valueOf(payload.getOrDefault("batchDate", "")))
                 .userId(String.valueOf(payload.getOrDefault("userId", "SYSTEM")))
-                .parameters(payload.containsKey("parameters")
-                        ? String.valueOf(payload.get("parameters")) : null)
+                .parameters(payload.containsKey("parameters") ? String.valueOf(payload.get("parameters")) : null)
                 .build();
 
         ManagementContext result = batchManagementAdapter.doProcess(command, ctx);
 
         // 성공 조건: 결과가 존재하고, resultCode가 ERROR가 아니며, errorMessage가 비어 있음
-        boolean success = result != null && !"ERROR".equals(result.getResultCode())
+        boolean success = result != null
+                && !"ERROR".equals(result.getResultCode())
                 && (result.getErrorMessage() == null || result.getErrorMessage().isBlank());
 
         return JsonCommandResponse.builder()

@@ -45,9 +45,6 @@ public class BatchExecService {
     /** TCP 커맨드 상수 — batch-was와 약속된 식별자 */
     private static final String CMD_BATCH_EXEC = "BATCH_EXEC";
 
-    /** 배치 실행 성공을 의미하는 결과 코드 (FWK_BATCH_HIS.RES_RT_CODE SUCCESS) */
-    private static final String RES_RT_SUCCESS = "1";
-
     @Transactional
     public List<BatchHisResponse> executeManualBatch(BatchExecRequest requestDTO) {
         // 중복 실행 방지: 이미 실행중(STARTED)인 배치가 있으면 차단
@@ -67,13 +64,13 @@ public class BatchExecService {
         for (String instanceId : requestDTO.getInstanceIds()) {
             boolean sent = sendBatchExecRequest(instanceId, requestDTO, userId);
 
-            // WAS에 요청 전송 결과를 응답에 포함 (실제 이력은 WAS가 기록)
+            // WAS 응답 결과를 그대로 반영 (실제 이력은 WAS가 기록)
             results.add(BatchHisResponse.builder()
                     .batchAppId(requestDTO.getBatchAppId())
                     .instanceId(instanceId)
                     .batchDate(requestDTO.getBatchDate())
                     .lastUpdateUserId(userId)
-                    .resRtCode(sent ? BatchResRtCode.STARTED.getCode() : BatchResRtCode.ABNORMAL_TERMINATION.getCode())
+                    .resRtCode(sent ? BatchResRtCode.SUCCESS.getCode() : BatchResRtCode.ABNORMAL_TERMINATION.getCode())
                     .build());
         }
 
@@ -98,8 +95,10 @@ public class BatchExecService {
                 .batchDate(requestDTO.getBatchDate())
                 .userId(userId)
                 .parameters(
-                        (requestDTO.getParameters() != null && !requestDTO.getParameters().isBlank())
-                                ? requestDTO.getParameters() : null)
+                        (requestDTO.getParameters() != null
+                                        && !requestDTO.getParameters().isBlank())
+                                ? requestDTO.getParameters()
+                                : null)
                 .build();
 
         log.info("배치 실행 TCP 요청: instanceId={}, batchAppId={}", instanceId, requestDTO.getBatchAppId());
@@ -114,14 +113,18 @@ public class BatchExecService {
         }
 
         if ("ERROR".equals(response.getResultCode())
-                || (response.getErrorMessage() != null && !response.getErrorMessage().isBlank())) {
-            log.warn("배치 실행 실패: instanceId={}, resultCode={}, error={}",
-                    instanceId, response.getResultCode(), response.getErrorMessage());
+                || (response.getErrorMessage() != null
+                        && !response.getErrorMessage().isBlank())) {
+            log.warn(
+                    "배치 실행 실패: instanceId={}, resultCode={}, error={}",
+                    instanceId,
+                    response.getResultCode(),
+                    response.getErrorMessage());
             return false;
         }
 
-        // resRtCode='1' (SUCCESS) 인 경우에만 성공 처리
-        boolean success = RES_RT_SUCCESS.equals(response.getResultCode());
+        // BatchResRtCode.SUCCESS("1") 인 경우에만 성공 처리
+        boolean success = BatchResRtCode.SUCCESS.getCode().equals(response.getResultCode());
         if (success) {
             log.info("배치 실행 완료: instanceId={}, resultCode={}", instanceId, response.getResultCode());
         } else {
@@ -130,7 +133,7 @@ public class BatchExecService {
         return success;
 
         /* --------------------------------------------------------------------
-         * [LEGACY] HTTP 전송 방식 (TCP 전환 이전) — 롤백 대비 주석으로 보존
+         * [LEGACY] HTTP 전송 방식 (TCP 전환 이전) — 다양한 통신 방식을 구현했음을 보여주기 위해 주석으로 보존
          *
          * String port = instance.getPort();
          * if (port == null || port.isBlank()) {
