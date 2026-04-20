@@ -165,6 +165,13 @@
           AND USE_YN   = 'Y'
     </select>
 
+    <select id="findCreateUserIdByAssetId" resultType="string">
+        SELECT CREATE_USER_ID
+        FROM SPW_CMS_ASSET
+        WHERE ASSET_ID = #{assetId}
+          AND USE_YN   = 'Y'
+    </select>
+
     <!-- ==================== 상세 (모달 프리뷰) ==================== -->
 
     <select id="findDetailById" resultType="com.example.admin_demo.domain.cmsasset.dto.CmsAssetDetailResponse">

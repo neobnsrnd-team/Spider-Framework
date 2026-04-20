@@ -1,21 +1,28 @@
 package com.example.admin_demo.domain.cmsasset.service;
 
+import com.example.admin_demo.domain.cmsasset.client.CmsBuilderClient;
+import com.example.admin_demo.domain.cmsasset.client.dto.CmsBuilderUploadApiResponse;
 import com.example.admin_demo.domain.cmsasset.dto.CmsAssetApprovalListRequest;
 import com.example.admin_demo.domain.cmsasset.dto.CmsAssetDetailResponse;
 import com.example.admin_demo.domain.cmsasset.dto.CmsAssetListResponse;
 import com.example.admin_demo.domain.cmsasset.dto.CmsAssetRequestListRequest;
+import com.example.admin_demo.domain.cmsasset.dto.CmsAssetUploadResponse;
 import com.example.admin_demo.domain.cmsasset.mapper.CmsAssetMapper;
+import com.example.admin_demo.domain.cmsasset.validator.AssetUploadValidator;
 import com.example.admin_demo.global.dto.PageRequest;
 import com.example.admin_demo.global.dto.PageResponse;
+import com.example.admin_demo.global.exception.ErrorType;
 import com.example.admin_demo.global.exception.InvalidInputException;
 import com.example.admin_demo.global.exception.InvalidStateException;
 import com.example.admin_demo.global.exception.NotFoundException;
+import com.example.admin_demo.global.exception.base.BaseException;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
 /**
  * CMS 이미지(에셋) 승인 관리 서비스.
@@ -48,6 +55,8 @@ public class CmsAssetService {
     private static final int REJECTED_REASON_MAX_BYTES = 1000;
 
     private final CmsAssetMapper cmsAssetMapper;
+    private final CmsBuilderClient cmsBuilderClient;
+    private final AssetUploadValidator assetUploadValidator;
 
     /**
      * 현업 본인 업로드 이미지 목록 조회.
@@ -108,6 +117,72 @@ public class CmsAssetService {
             throw new InvalidStateException("이미 처리된 이미지입니다. assetId=" + assetId);
         }
         log.info("CMS 이미지 승인 완료: assetId={}, modifierId={}", assetId, modifierId);
+    }
+
+    /**
+     * 이미지 업로드 — Issue #65.
+     *
+     * <p>Admin 은 파일을 저장하지 않고 CMS Builder 로 포워딩한다.
+     * CMS 가 파일 저장 + {@code SPW_CMS_ASSET} INSERT (ASSET_STATE='WORK') 까지 수행하며,
+     * Admin 은 응답만 그대로 전달한다.
+     *
+     * <p>업로더 정보({@code uploaderId/Name})는 {@code @AuthenticationPrincipal} 에서 추출된 값이어야 하며,
+     * 클라이언트가 보낸 값은 신뢰하지 않는다 (컨트롤러에서 강제).
+     */
+    public CmsAssetUploadResponse uploadAsset(
+            MultipartFile file, String businessCategory, String assetDesc, String uploaderId, String uploaderName) {
+
+        assetUploadValidator.validate(file);
+        CmsBuilderUploadApiResponse cmsResponse =
+                cmsBuilderClient.upload(file, uploaderId, uploaderName, businessCategory, assetDesc);
+        return CmsAssetUploadResponse.builder()
+                .assetId(cmsResponse.getAssetId())
+                .url(cmsResponse.getUrl())
+                .build();
+    }
+
+    /**
+     * 이미지 자산 삭제 — Issue #88.
+     *
+     * <p>다음 3단계 검증을 수행한다:
+     * <ol>
+     *   <li>존재 확인 — 미존재 시 {@link NotFoundException}</li>
+     *   <li>소유자 확인 — 업로더가 아닌 경우 {@link BaseException} (HTTP 403 FORBIDDEN).
+     *       악의적 직접 호출로 타인 자산을 삭제하는 IDOR 공격 차단.</li>
+     *   <li>상태 가드 — {@code WORK}/{@code REJECTED} 만 허용, 그 외는 {@link InvalidStateException}</li>
+     * </ol>
+     *
+     * <p>Admin 은 DB 를 직접 건드리지 않고 CMS 의 DELETE API 로 위임한다.
+     * CMS 가 물리 파일과 {@code SPW_CMS_ASSET} 행을 모두 제거하므로 Admin 측 DB 조작은 없다.
+     *
+     * <p>관리자(결재자) 우회 삭제 권한은 본 이슈 범위 외 (후속 이슈). 현재 권한 체계상
+     * {@code CMS:W} 만으로는 현업·결재자를 구분할 수 없어, 별도 권한 체계 도입과 함께 다룬다.
+     *
+     * @param assetId 삭제 대상 자산 ID
+     * @param userId  삭제 수행자 ID (로그용 + 소유자 검증용)
+     * @throws NotFoundException     존재하지 않는 자산
+     * @throws BaseException         소유자가 아닌 경우 (FORBIDDEN → 403)
+     * @throws InvalidStateException 삭제 불가 상태 (PENDING/APPROVED → 409)
+     */
+    public void deleteMyAsset(String assetId, String userId) {
+        String createUserId = cmsAssetMapper.findCreateUserIdByAssetId(assetId);
+        if (createUserId == null) {
+            throw new NotFoundException("이미지를 찾을 수 없습니다. assetId=" + assetId);
+        }
+        if (!createUserId.equals(userId)) {
+            // 로그에는 실제 시도자 ID 를 남기되, 예외 메시지에는 소유자 정보를 노출하지 않는다 (정보 누출 방지).
+            log.warn("CMS 이미지 삭제 권한 없음 — 소유자 불일치. assetId={}, owner={}, requester={}", assetId, createUserId, userId);
+            throw new BaseException(ErrorType.FORBIDDEN, "본인이 업로드한 이미지만 삭제할 수 있습니다.");
+        }
+
+        String currentState = cmsAssetMapper.findAssetStateById(assetId);
+        if (!STATE_WORK.equals(currentState) && !STATE_REJECTED.equals(currentState)) {
+            throw new InvalidStateException(
+                    String.format("현재 상태(%s)에서는 삭제할 수 없습니다. 허용 상태=WORK 또는 REJECTED", currentState));
+        }
+
+        cmsBuilderClient.delete(assetId, userId);
+        log.info("CMS 이미지 삭제 요청 완료: assetId={}, prevState={}, userId={}", assetId, currentState, userId);
     }
 
     /** 반려 — PENDING → REJECTED (결재자). 반려 사유는 선택 */

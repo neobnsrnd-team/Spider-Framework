@@ -12,16 +12,29 @@ public class CmsRedirectController {
     private static final String ADMIN_ROLE = "ADMIN";
     private static final String CMS_ADMIN_ROLE = "cms_admin";
     private static final String CMS_ADMIN_APPROVALS_PATH = "/cms-admin/approvals";
+    private static final String CMS_DASHBOARD_PATH = "/dashboard";
 
-    /** cmsUser 역할 사용자가 이동할 외부 CMS 서버 URL (환경변수 CMS_USER_URL로 오버라이드 가능) */
-    @Value("${cms.user-url}")
+    @Value("${cms.app-base-url:/cms}")
+    private String cmsAppBaseUrl;
+
+    @Value("${cms.user-url:}")
     private String cmsUserUrl;
 
     @GetMapping({"/cms", "/cms/"})
     public String redirectCmsRoot(@AuthenticationPrincipal CustomUserDetails userDetails) {
-        // cms_admin·ADMIN은 승인 관리 페이지, 그 외(cmsUser)는 외부 CMS 서버로 이동
-        String targetPath = isCmsAdmin(userDetails) ? CMS_ADMIN_APPROVALS_PATH : cmsUserUrl;
-        return "redirect:" + targetPath;
+        if (isCmsAdmin(userDetails)) {
+            return "redirect:" + CMS_ADMIN_APPROVALS_PATH;
+        }
+
+        return "redirect:" + cmsUserRedirectUrl();
+    }
+
+    private String cmsUserRedirectUrl() {
+        if (cmsUserUrl != null && !cmsUserUrl.isBlank()) {
+            return cmsUserUrl.trim();
+        }
+        String baseUrl = (cmsAppBaseUrl == null || cmsAppBaseUrl.isBlank()) ? "/cms" : cmsAppBaseUrl.trim();
+        return baseUrl.replaceAll("/+$", "") + CMS_DASHBOARD_PATH;
     }
 
     private boolean isCmsAdmin(CustomUserDetails userDetails) {

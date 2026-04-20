@@ -1,0 +1,29 @@
+package com.example.admin_demo.domain.cmsasset.config;
+
+import lombok.Getter;
+import lombok.Setter;
+import org.springframework.boot.context.properties.ConfigurationProperties;
+
+/**
+ * CMS Builder(미승인 이미지 업로드) 호출 설정 — Issue #65.
+ *
+ * <p>Spider Admin 은 파일을 직접 저장하지 않고 CMS Builder 서버로 포워딩한다.
+ * 내부망 서버-투-서버 호출 전제이며, 인증 토큰은 현재 없음.
+ */
+@Getter
+@Setter
+@ConfigurationProperties(prefix = "cms.builder")
+public class CmsBuilderProperties {
+
+    /** CMS Builder 서버 기본 URL (예: http://133.186.135.23) — nginx 80 → Next.js 3000 업스트림 프록시 */
+    private String baseUrl;
+
+    /** 업로드 엔드포인트 경로 (예: /cms/api/builder/upload) */
+    private String uploadPath;
+
+    /** 연결 타임아웃 (초) */
+    private int connectTimeoutSeconds = 5;
+
+    /** 읽기 타임아웃 (초). 대용량 이미지 업로드를 고려해 넉넉히 잡는다. */
+    private int readTimeoutSeconds = 60;
+}

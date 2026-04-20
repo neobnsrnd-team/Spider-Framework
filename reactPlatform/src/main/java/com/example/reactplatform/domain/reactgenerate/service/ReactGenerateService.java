@@ -7,6 +7,7 @@ import com.example.reactplatform.domain.reactgenerate.dto.ReactGenerateHistoryRe
 import com.example.reactplatform.domain.reactgenerate.dto.ReactGenerateRequest;
 import com.example.reactplatform.domain.reactgenerate.dto.ReactGenerateResponse;
 import com.example.reactplatform.domain.reactgenerate.dto.ReactGenerateSearchRequest;
+import com.example.reactplatform.domain.reactgenerate.enums.DomainType;
 import com.example.reactplatform.domain.reactgenerate.enums.ReactGenerateStatus;
 import com.example.reactplatform.domain.reactgenerate.figma.FigmaDesignContext;
 import com.example.reactplatform.domain.reactgenerate.figma.FigmaDesignExtractor;
@@ -24,6 +25,8 @@ import com.example.reactplatform.global.log.event.ErrorLogEvent;
 import com.example.reactplatform.global.util.ExcelColumnDefinition;
 import com.example.reactplatform.global.util.ExcelExportUtil;
 import com.example.reactplatform.global.util.TraceIdUtil;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -50,22 +53,37 @@ public class ReactGenerateService {
     private final FigmaDesignExtractor figmaDesignExtractor;
     private final CodeValidator codeValidator;
     private final ApplicationEventPublisher eventPublisher;
+    private final ObjectMapper objectMapper;
 
     private static final DateTimeFormatter FORMATTER = DateTimeFormatter.ofPattern("yyyyMMddHHmmss");
 
     /**
-     * Figma URL과 요구사항을 받아 Claude API로 React 코드를 생성하고 DB에 저장한다.
+     * Figma URL과 brand·domain을 받아 Claude API로 React 코드를 생성하고 DB에 저장한다.
      *
-     * @param request figmaUrl, requirements
+     * @param request   figmaUrl, brand, domain
      * @param createdBy 생성 요청자 ID (로그인 사용자)
      * @return 생성된 코드와 메타 정보
      */
     public ReactGenerateResponse generate(ReactGenerateRequest request, String createdBy) {
-        log.info("React 코드 생성 요청 — figmaUrl: {}, userId: {}", request.getFigmaUrl(), createdBy);
+        // domain 미입력 시 banking 기본값 적용
+        DomainType effectiveDomain = request.getDomain() != null ? request.getDomain() : DomainType.BANKING;
+
+        log.info("React 코드 생성 요청 — figmaUrl: {}, brand: {}, domain: {}, userId: {}",
+                request.getFigmaUrl(), request.getBrand(), effectiveDomain, createdBy);
 
         // 실패 이력 저장에 필요하므로 try 바깥에서 미리 생성
         String id = UUID.randomUUID().toString();
         String now = LocalDateTime.now().format(FORMATTER);
+
+        // brand·domain은 requirements 컬럼에 JSON으로 저장 (DB 스키마 변경 없이 유지)
+        String requirementsJson;
+        try {
+            requirementsJson = objectMapper.writeValueAsString(
+                    Map.of("brand", request.getBrand().name().toLowerCase(),
+                           "domain", effectiveDomain.name().toLowerCase()));
+        } catch (JsonProcessingException e) {
+            throw new InternalException("brand/domain JSON 직렬화 실패", e);
+        }
 
         // 어느 단계에서 실패해도 그 시점까지 수집된 값을 실패 이력에 기록하기 위해 바깥에 선언
         String systemPrompt = null;
@@ -90,9 +108,9 @@ public class ReactGenerateService {
                     designContext.getWidth(),
                     designContext.getHeight());
 
-            // 4. system / user prompt 조립 (Figma 디자인 컨텍스트 포함)
+            // 4. system / user prompt 조립 (Figma 디자인 컨텍스트 + brand/domain 포함)
             systemPrompt = promptBuilder.buildSystemPrompt();
-            userPrompt = promptBuilder.buildUserPrompt(designContext, request.getRequirements());
+            userPrompt = promptBuilder.buildUserPrompt(designContext, request.getBrand(), effectiveDomain);
 
             // 5. Claude API 호출하여 React 코드 생성
             // TODO : 현재 Claude API 는 코드만 구현한 상태 (Claude API 확정 후, 위의 주석 제거 후 테스트 필요)
@@ -245,7 +263,7 @@ public class ReactGenerateService {
             reactGenerateMapper.insert(
                     id,
                     request.getFigmaUrl(),
-                    request.getRequirements(),
+                    requirementsJson,
                     systemPrompt,
                     userPrompt,
                     reactCode,
@@ -276,11 +294,12 @@ public class ReactGenerateService {
                     ? be.getDetailMessage()
                     : e.getMessage();
 
-            log.error("React 코드 생성 실패 — codeId: {}, error: {}", id, failReason);
+            log.error("React 코드 생성 실패 — codeId: {}, brand: {}, domain: {}, error: {}",
+                    id, request.getBrand(), effectiveDomain, failReason);
             reactGenerateMapper.insert(
                     id,
                     request.getFigmaUrl(),
-                    request.getRequirements(),
+                    requirementsJson,
                     systemPrompt,
                     userPrompt,
                     reactCode,

@@ -78,10 +78,14 @@ class CmsStatisticsControllerTest {
     }
 
     @Test
-    @WithMockUser(authorities = "CMS:W")
-    @DisplayName("[인가] CMS:W 권한으로 통계 목록 조회 시 403을 반환한다")
-    void findStatList_withCmsW_returns403() throws Exception {
-        mockMvc.perform(get(LIST_URL)).andExpect(status().isForbidden());
+    @WithMockUser(authorities = {"CMS:R", "CMS:W"})
+    @DisplayName("[인가] 파생된 CMS:W 권한으로 통계 목록 조회 시 200을 반환한다")
+    void findStatList_withDerivedCmsW_returns200() throws Exception {
+        given(cmsStatisticsService.findStatList(any(), any())).willReturn(PageResponse.of(List.of(), 0L, 0, 10));
+
+        mockMvc.perform(get(LIST_URL))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true));
     }
 
     // ─── GET /api/cms-admin/statistics/detail ────────────────

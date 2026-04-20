@@ -35,9 +35,12 @@ build/
 .vscode/*
 
 ### Environment Configuration ###
-admin/.env
+.env
+**/.env
+**/.env.*
+!.env.example
+!**/.env.example
 src/main/resources/application-local.yaml
-demo/backend/.env
 
 ### Claude temp files ###
 tmpclaude-*

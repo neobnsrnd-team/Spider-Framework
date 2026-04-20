@@ -19,7 +19,7 @@ export default defineConfig({
   // Spring Boot가 /preview-app/** 경로로 정적 파일을 서빙
   base: '/preview-app/',
   build: {
-    outDir: '../admin/src/main/resources/static/preview-app',
+    outDir: '../reactPlatform/src/main/resources/static/preview-app',
     emptyOutDir: true,
   },
   resolve: {
