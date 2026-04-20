@@ -192,7 +192,12 @@ public class PageController {
     }
 
     // ── 거래/전문 관리 ── msg_trx_manage, message_manage, trx_validator, trx, req_message_test,
-    //                       proxy_testdata, db_log
+    //                       proxy_testdata, db_log, code_template_manage
+
+    @GetMapping("/code-templates")
+    public String codeTemplates(HttpServletRequest request, Model model) {
+        return resolveView(request, "pages/code-template-manage/code-template-manage :: content", model);
+    }
 
     @GetMapping("/transactions")
     public String transactions(HttpServletRequest request, Model model) {

@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<div th:fragment="content">
+
+    <!-- Search Section Header -->
+    <div class="page-header">
+        <h4 class="page-title">
+            <i class="bi bi-exclamation-circle-fill text-danger"></i>
+            검색조건
+        </h4>
+    </div>
+
+    <!-- Search Container (동적 생성) -->
+    <div id="searchContainer"></div>
+
+    <!-- List Section Header -->
+    <div class="page-header mt-3">
+        <h4 class="page-title">
+            <i class="bi bi-exclamation-circle-fill text-danger"></i>
+            리스트
+        </h4>
+    </div>
+
+    <!-- Toolbar -->
+    <th:block th:replace="~{fragments/page-content-layout :: toolbar}" />
+
+    <!-- Table Container (동적 생성) -->
+    <div id="tableContainer"></div>
+
+    <!-- Pagination -->
+    <th:block th:replace="~{fragments/page-content-layout :: pagination}" />
+
+    <!-- Bottom Action Buttons -->
+    <div class="bottom-actions">
+        <button class="btn btn-primary btn-sm" id="btnAdd"
+                th:if="${userAuthorities != null and userAuthorities.contains('CODE_TEMPLATE:W')}">
+            + 추가
+        </button>
+    </div>
+
+    <!-- Code Template Modal -->
+    <div th:replace="~{pages/code-template-manage/code-template-manage-modal :: modal}"></div>
+    <th:block th:replace="~{pages/code-template-manage/code-template-manage-modal :: script}" />
+
+    <!-- Page Script -->
+    <script th:inline="javascript">
+        var PAGE_CONFIG = {
+            pageId: 'codeTemplates',
+            apiEndpoint: API_BASE_URL + '/code-templates/page',
+
+            search: {
+                fields: [
+                    {
+                        type: 'select',
+                        id: 'searchField',
+                        width: '120px',
+                        options: [
+                            { value: 'templateName', label: '템플릿명' },
+                            { value: 'templateId', label: '템플릿ID' },
+                            { value: 'templateType', label: '타입' }
+                        ]
+                    },
+                    {
+                        type: 'text',
+                        id: 'searchValue',
+                        placeholder: '검색어 입력',
+                        width: '180px'
+                    }
+                ],
+                limit: { default: 10, showLarge: true }
+            },
+
+            table: {
+                id: 'codeTemplateTable',
+                columns: [
+                    { key: 'templateId', label: '템플릿ID', width: '150px', sortable: true },
+                    { key: 'templateName', label: '템플릿명', width: '200px', sortable: true, align: 'left' },
+                    { key: 'templateType', label: '타입', width: '80px', sortable: true },
+                    { key: 'description', label: '설명', width: '350px', align: 'left' },
+                    { key: 'useYn', label: '사용여부', width: '80px' },
+                    { key: 'sortOrder', label: '정렬순서', width: '80px', sortable: true },
+                    { key: 'lastUpdateDtime', label: '최종수정일시', width: '150px' }
+                ],
+                emptyMessage: '데이터를 불러오는 중입니다...',
+                noDataMessage: '조회된 데이터가 없습니다.'
+            },
+
+            containers: {
+                search: '#searchContainer',
+                table: '#tableContainer',
+                pagination: '#pagination',
+                pageInfo: '#pageInfo'
+            },
+
+            autoLoad: true
+        };
+
+        window.CodeTemplatesPage = {
+            currentPage: 1,
+            totalItems: 0,
+            itemsPerPage: 10,
+            sortBy: null,
+            sortDirection: null,
+
+            init: function() {
+                SearchForm.render('#searchContainer', PAGE_CONFIG.search, () => {
+                    this.currentPage = 1;
+                    this.load();
+                });
+
+                const tableConfig = {
+                    ...PAGE_CONFIG.table,
+                    onSort: (sortBy, sortDirection) => {
+                        this.sortBy = sortBy;
+                        this.sortDirection = sortDirection;
+                        this.currentPage = 1;
+                        this.load();
+                    }
+                };
+
+                DataTable.render('#tableContainer', tableConfig, (row) => {
+                    if (typeof CodeTemplateModal !== 'undefined') {
+                        CodeTemplateModal.openForEdit(row.templateId);
+                    }
+                });
+
+                Pagination.init('#pagination', '#pageInfo', (page) => {
+                    this.currentPage = page;
+                    this.load();
+                });
+
+                $('#btnAdd').off('click').on('click', () => {
+                    if (typeof CodeTemplateModal !== 'undefined') {
+                        CodeTemplateModal.openForCreate();
+                    }
+                });
+
+                $('#btnRefresh').off('click').on('click', () => {
+                    this.load();
+                });
+
+                $('#btnExcel').off('click').on('click', () => {
+                    this.exportExcel();
+                });
+
+                $('#btnPrint').off('click').on('click', () => {
+                    this.printTable();
+                });
+
+                if (PAGE_CONFIG.autoLoad) {
+                    this.load();
+                }
+            },
+
+            load: function() {
+                const params = SearchForm.getParams('#searchContainer');
+                params.page = this.currentPage;
+                params.size = params.size || this.itemsPerPage;
+
+                if (this.sortBy) {
+                    params.sortBy = this.sortBy;
+                    params.sortDirection = this.sortDirection || 'ASC';
+                }
+
+                $.ajax({
+                    url: PAGE_CONFIG.apiEndpoint,
+                    method: 'GET',
+                    data: params,
+                    success: (response) => {
+                        if (response.success && response.data) {
+                            const pageData = response.data;
+                            DataTable.setData('#tableContainer', pageData.content || []);
+
+                            this.totalItems = pageData.totalElements || 0;
+                            this.itemsPerPage = params.size;
+
+                            Pagination.update('#pagination', {
+                                currentPage: this.currentPage,
+                                totalItems: this.totalItems,
+                                itemsPerPage: this.itemsPerPage
+                            });
+                        } else {
+                            DataTable.setData('#tableContainer', []);
+                            Pagination.reset('#pagination');
+                        }
+                    },
+                    error: (xhr) => {
+                        console.error('Failed to load code templates:', xhr);
+                        Toast.error('템플릿 목록을 불러오는데 실패했습니다.');
+                        DataTable.setData('#tableContainer', []);
+                        Pagination.reset('#pagination');
+                    }
+                });
+            },
+
+            printTable: function() {
+                const columns = PAGE_CONFIG.table.columns.map(col => ({ key: col.key, label: col.label }));
+                const data = DataTable.getData('#tableContainer');
+                PrintUtil.print({ title: '코드 템플릿 목록', columns: columns, data: data });
+            },
+
+            exportExcel: function() {
+                const params = SearchForm.getParams('#searchContainer');
+                delete params.page;
+                delete params.size;
+                if (this.sortBy) {
+                    params.sortBy = this.sortBy;
+                    params.sortDirection = this.sortDirection || 'ASC';
+                }
+                const queryString = $.param(params);
+                window.location.href = API_BASE_URL + '/code-templates/export' + (queryString ? '?' + queryString : '');
+            }
+        };
+
+        $(document).ready(function() {
+            CodeTemplatesPage.init();
+        });
+    </script>
+</div>
+</body>
+</html>
