@@ -116,8 +116,11 @@
     <update id="approve">
         UPDATE SPW_CMS_PAGE
         SET APPROVE_STATE    = 'APPROVED',
-            BEGINNING_DATE   = TO_DATE(#{beginningDate}, 'YYYY-MM-DD'),
-            EXPIRED_DATE     = TO_DATE(#{expiredDate}, 'YYYY-MM-DD'),
+            <!-- 날짜 미지정(null) 허용 — IS NOT NULL 조건으로 Oracle '' = NULL 문제 회피 -->
+            BEGINNING_DATE   = CASE WHEN #{beginningDate} IS NOT NULL
+                                    THEN TO_DATE(#{beginningDate}, 'YYYY-MM-DD') ELSE NULL END,
+            EXPIRED_DATE     = CASE WHEN #{expiredDate} IS NOT NULL
+                                    THEN TO_DATE(#{expiredDate}, 'YYYY-MM-DD') ELSE NULL END,
             APPROVE_DATE     = SYSTIMESTAMP,
             LAST_MODIFIER_ID = #{modifierId}
         WHERE PAGE_ID = #{pageId}

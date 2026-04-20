@@ -4,7 +4,9 @@
 <th:block th:fragment="script">
 <script th:inline="javascript">
 /*<![CDATA[*/
-    const HAS_CMS_WRITE = /*[[${userAuthorities != null && userAuthorities.contains('CMS:W')}]]*/ false;
+    const HAS_CMS_WRITE  = /*[[${userAuthorities != null && userAuthorities.contains('CMS:W')}]]*/ false;
+    // 미리보기 서버 URL — 하드코딩 대신 서버에서 주입 (환경변수 CMS_PREVIEW_URL)
+    const CMS_PREVIEW_URL = /*[[${cmsPreviewUrl}]]*/ '';
 /*]]>*/
 </script>
 <script>
@@ -209,11 +211,8 @@
 
         // ── CMS 페이지 미리보기 ──
         openPreview: function(pageId) {
-            window.open(
-                'http://133.186.135.23:3000/cms/view?bank=' + encodeURIComponent(pageId) + '&preview=1',
-                'cmsPreview',
-                'width=1280,height=800,scrollbars=yes,resizable=yes'
-            );
+            const url = CMS_PREVIEW_URL.replace(/\/$/, '') + '/cms/view?bank=' + encodeURIComponent(pageId) + '&preview=1';
+            window.open(url, 'cmsPreview', 'width=1280,height=800,scrollbars=yes,resizable=yes');
         },
 
         // ── 승인 모달 ──
@@ -223,11 +222,9 @@
             $('#approvePageName').text(row.pageName || '-');
             $('#approveRequesterName').text(row.createUserName || '-');
             $('#approveRequestedDtime').text(row.lastModifiedDtime || '-');
-            const today = this._today();
-            const beginningDate = row.beginningDate || today;
-            const beginningMin = row.beginningDate && row.beginningDate < today ? row.beginningDate : today;
-            $('#approveBeginningDate').attr('min', beginningMin).val(beginningDate);
-            $('#approveExpiredDate').attr('min', this._maxDate(beginningDate, today)).val(row.expiredDate || '');
+            // 승인 요청 시 작성자가 지정한 날짜를 표시만 하고 수정 불가 처리
+            $('#approveBeginningDate').val(row.beginningDate || '').prop('readonly', true);
+            $('#approveExpiredDate').val(row.expiredDate || '').prop('readonly', true);
             new bootstrap.Modal('#approveModal').show();
         },
 
@@ -236,9 +233,11 @@
             const beginningDate = $('#approveBeginningDate').val();
             const expiredDate   = $('#approveExpiredDate').val();
 
-            if (!beginningDate) { Toast.warning('노출 시작일을 입력하세요.'); return; }
-            if (!expiredDate) { Toast.warning('노출 종료일을 입력하세요.'); return; }
-            if (expiredDate < beginningDate) { Toast.warning('노출 종료일은 시작일보다 빠를 수 없습니다.'); return; }
+            // 날짜는 readonly — 승인 요청 시 미지정이면 빈 값으로 승인 허용
+            // 둘 다 입력된 경우에만 순서 유효성 검사
+            if (beginningDate && expiredDate && expiredDate < beginningDate) {
+                Toast.warning('노출 종료일은 시작일보다 빠를 수 없습니다.'); return;
+            }
 
             fetch(`/api/cms-admin/pages/${pageId}/approval/approve`, {
                 method: 'POST',
@@ -371,16 +370,6 @@
             expiredDate.setHours(23, 59, 59, 999);
             return expiredDate < new Date();
         },
-
-        _today: function() {
-            return new Date().toLocaleDateString('en-CA');
-        },
-
-        _maxDate: function(left, right) {
-            if (!left) return right;
-            if (!right) return left;
-            return left > right ? left : right;
-        },
     };
 
     // ==================== 이벤트 바인딩 ====================
@@ -397,9 +386,6 @@
 
         $('#btnApproveConfirm').on('click', function() { CmsApprovalPage._submitApprove(); });
         $('#btnRejectConfirm').on('click',  function() { CmsApprovalPage._submitReject(); });
-        $('#approveBeginningDate').on('change', function() {
-            $('#approveExpiredDate').attr('min', CmsApprovalPage._maxDate($(this).val(), CmsApprovalPage._today()));
-        });
 
         $('#btnRefresh').off('click').on('click', function() { CmsApprovalPage.load(); });
         $('#btnExcel').off('click').on('click', function() { Toast.warning('엑셀 내보내기는 지원되지 않습니다.'); });
