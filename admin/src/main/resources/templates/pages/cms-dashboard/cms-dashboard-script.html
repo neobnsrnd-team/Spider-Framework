@@ -30,6 +30,7 @@
         // DB 값 → 한글 표시명 매핑
         VIEW_MODE_LABEL: {
             mobile:     '모바일',
+            web:        '웹',
             PC:         '웹',
             responsive: '반응형',
         },
@@ -227,15 +228,33 @@
         // ── 페이지 생성 모달 ──
         openCreatePageModal: function() {
             $('#createPageName').val('');
-            $('#createViewMode').val('PC');
+            this.selectCreateViewMode('mobile');
+            this.updateCreateButtonState(false);
             new bootstrap.Modal('#createPageModal').show();
         },
 
+        selectCreateViewMode: function(viewMode) {
+            $('#createViewMode').val(viewMode);
+            $('.cms-create-view-mode')
+                .removeClass('active')
+                .filter(`[data-view-mode="${viewMode}"]`)
+                .addClass('active');
+        },
+
+        updateCreateButtonState: function(creating) {
+            const hasName = !!$('#createPageName').val().trim();
+            $('#btnCreatePageConfirm')
+                .prop('disabled', creating || !hasName)
+                .text(creating ? '생성 중...' : '만들기');
+        },
+
         _submitCreatePage: function() {
+            if ($('#btnCreatePageConfirm').prop('disabled')) return;
             const pageName = $('#createPageName').val().trim();
             const viewMode = $('#createViewMode').val();
 
             if (!pageName) { Toast.warning('페이지명을 입력하세요.'); return; }
+            this.updateCreateButtonState(true);
 
             fetch('/api/cms-dashboard/pages', {
                 method: 'POST',
@@ -252,9 +271,13 @@
                         this.load(1);
                     } else {
                         Toast.error(res.message);
+                        this.updateCreateButtonState(false);
                     }
                 })
-                .catch(() => Toast.error('페이지 생성 중 오류가 발생했습니다.'));
+                .catch(() => {
+                    this.updateCreateButtonState(false);
+                    Toast.error('페이지 생성 중 오류가 발생했습니다.');
+                });
         },
 
         // ── 승인 요청 모달 ──
@@ -343,6 +366,15 @@
             CmsDashboardPage.load(1);
         });
 
+        $('.cms-create-view-mode').on('click', function() {
+            CmsDashboardPage.selectCreateViewMode($(this).data('view-mode'));
+        });
+        $('#createPageName').on('input', function() {
+            CmsDashboardPage.updateCreateButtonState(false);
+        });
+        $('#createPageName').on('keydown', function(event) {
+            if (event.key === 'Enter' && $(this).val().trim()) CmsDashboardPage._submitCreatePage();
+        });
         $('#btnCreatePage').on('click', function() { CmsDashboardPage.openCreatePageModal(); });
         $('#btnCreatePageConfirm').on('click', function() { CmsDashboardPage._submitCreatePage(); });
         $('#btnApproveRequestConfirm').on('click', function() { CmsDashboardPage._submitApproveRequest(); });

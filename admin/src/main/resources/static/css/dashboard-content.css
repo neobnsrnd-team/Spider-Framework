@@ -32,6 +32,77 @@
     max-width: 560px;
 }
 
+#createPageModal .modal-content {
+    border: 0;
+    border-radius: 20px;
+    box-shadow: 0 24px 64px rgba(0, 70, 164, 0.15);
+}
+
+#createPageModal .modal-body,
+#createPageModal .modal-footer {
+    padding-left: 32px;
+    padding-right: 32px;
+}
+
+#createPageModal .modal-header {
+    padding: 24px 32px 12px;
+    border-bottom: 0;
+}
+
+#createPageModal .modal-footer {
+    padding-bottom: 28px;
+    border-top: 0;
+}
+
+.cms-create-view-mode-group {
+    display: flex;
+    gap: 12px;
+}
+
+.cms-create-view-mode {
+    flex: 1;
+    min-width: 0;
+    padding: 16px 12px;
+    border: 2px solid #e5e7eb;
+    border-radius: 8px;
+    background: #ffffff;
+    color: #374151;
+    cursor: pointer;
+    text-align: center;
+    transition: border-color 0.15s ease, background-color 0.15s ease, color 0.15s ease;
+}
+
+.cms-create-view-mode.active {
+    border-color: #0046a4;
+    background: #f0f4ff;
+    color: #0046a4;
+}
+
+.cms-create-view-mode-icon,
+.cms-create-view-mode-title,
+.cms-create-view-mode-desc {
+    display: block;
+}
+
+.cms-create-view-mode-icon {
+    margin-bottom: 8px;
+    font-size: 24px;
+    font-weight: 700;
+    line-height: 1;
+}
+
+.cms-create-view-mode-title {
+    margin-bottom: 6px;
+    font-size: 14px;
+    font-weight: 700;
+}
+
+.cms-create-view-mode-desc {
+    color: #6b7280;
+    font-size: 11px;
+    line-height: 1.4;
+}
+
 #approveRequestModal th {
     white-space: nowrap;
 }

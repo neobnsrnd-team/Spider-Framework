@@ -15,6 +15,6 @@ public class CmsDashboardCreateRequest {
     /** 페이지명 */
     private String pageName;
 
-    /** 뷰 모드 (PC / mobile) */
+    /** 뷰 모드 (mobile / web / responsive) */
     private String viewMode;
 }
