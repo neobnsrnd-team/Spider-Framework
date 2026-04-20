@@ -105,7 +105,8 @@
     <!-- ==================== 서버 인스턴스 조회 ==================== -->
 
     <select id="findFirstInstanceId" resultType="string">
-        SELECT TO_CHAR(INSTANCE_ID) FROM FWK_CMS_SERVER_INSTANCE WHERE ROWNUM = 1
+        <!-- ALIVE_YN = 'Y' 인 활성 인스턴스만 선택 — 비활성 서버로 이력이 잘못 기록되는 것을 방지 -->
+        SELECT TO_CHAR(INSTANCE_ID) FROM FWK_CMS_SERVER_INSTANCE WHERE ALIVE_YN = 'Y' AND ROWNUM = 1
     </select>
 
     <!-- ==================== 다음 파일 버전 조회 ==================== -->
