@@ -1,0 +1,3 @@
+# .gemini/config.yaml
+code_review:
+  comment_language: ko #한글로 코드 리뷰
