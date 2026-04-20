@@ -75,6 +75,15 @@ public class PromptBuilder {
         sb.append("Domain: ").append(domainKey)
                 .append(" → [data-domain=\"").append(domainKey).append("\"] 토큰을 사용할 것\n\n");
 
+        // 최상위 래퍼 지시 — 10-brand.md 규칙: 모든 page.tsx 루트에 data-brand·data-domain 명시 필수
+        sb.append("## Root Wrapper Rule\n");
+        sb.append("생성하는 컴포넌트의 최상위 엘리먼트에 반드시 data-brand와 data-domain 속성을 지정할 것.\n");
+        sb.append("- 루트 컴포넌트가 해당 prop을 지원하면 prop으로 전달\n");
+        sb.append("- 지원하지 않으면 래퍼 div로 감쌀 것:\n");
+        sb.append("  <div data-brand=\"").append(brandKey).append("\" data-domain=\"").append(domainKey).append("\">\n");
+        sb.append("    {/* 컴포넌트 내용 */}\n");
+        sb.append("  </div>\n\n");
+
         // Figma 디자인 컨텍스트 섹션
         sb.append("## Figma Design Context\n");
         sb.append("Component: ")
