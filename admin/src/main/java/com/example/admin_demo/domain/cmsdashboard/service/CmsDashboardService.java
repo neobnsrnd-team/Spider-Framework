@@ -51,7 +51,8 @@ public class CmsDashboardService {
     public String createPage(CmsDashboardCreateRequest req, String userId, String userName) {
         // CMS 원본(crypto.randomUUID())과 동일한 UUID 방식으로 생성
         String pageId = UUID.randomUUID().toString();
-        cmsDashboardMapper.insertPage(pageId, req.getPageName(), req.getViewMode(), userId, userName);
+        String templateId = "blank".equals(req.getTemplateId()) ? null : req.getTemplateId();
+        cmsDashboardMapper.insertPage(pageId, req.getPageName(), req.getViewMode(), templateId, userId, userName);
         log.info("CMS 페이지 생성: pageId={}, userId={}", pageId, userId);
         return pageId;
     }

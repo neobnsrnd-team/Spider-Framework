@@ -1,0 +1,214 @@
+/* CMS dashboard page styles */
+
+#dashboardTable {
+    min-width: 980px;
+}
+
+#dashboardTable th:first-child,
+#dashboardTable td:first-child {
+    width: 150px;
+}
+
+#dashboardTable th,
+#dashboardTable td {
+    vertical-align: middle;
+}
+
+#dashboardTable .clickable-cell {
+    display: inline-block;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+#dashboardTableBody .badge {
+    min-width: 52px;
+}
+
+#createPageModal .modal-dialog,
+#approveRequestModal .modal-dialog,
+#rejectedReasonModal .modal-dialog {
+    max-width: 560px;
+}
+
+#createPageModal .modal-content {
+    border: 0;
+    border-radius: 20px;
+    box-shadow: 0 24px 64px rgba(0, 70, 164, 0.15);
+}
+
+#createPageModal .modal-body,
+#createPageModal .modal-footer {
+    padding-left: 32px;
+    padding-right: 32px;
+}
+
+#createPageModal .modal-header {
+    padding: 24px 32px 12px;
+    border-bottom: 0;
+}
+
+#createPageModal .modal-footer {
+    padding-bottom: 28px;
+    border-top: 0;
+}
+
+.cms-create-view-mode-group {
+    display: flex;
+    gap: 12px;
+}
+
+.cms-create-view-mode {
+    flex: 1;
+    min-width: 0;
+    padding: 16px 12px;
+    border: 2px solid #e5e7eb;
+    border-radius: 8px;
+    background: #ffffff;
+    color: #374151;
+    cursor: pointer;
+    text-align: center;
+    transition: border-color 0.15s ease, background-color 0.15s ease, color 0.15s ease;
+}
+
+.cms-create-view-mode.active {
+    border-color: #0046a4;
+    background: #f0f4ff;
+    color: #0046a4;
+}
+
+.cms-create-view-mode-icon,
+.cms-create-view-mode-title,
+.cms-create-view-mode-desc {
+    display: block;
+}
+
+.cms-create-view-mode-icon {
+    margin-bottom: 8px;
+    font-size: 24px;
+    font-weight: 700;
+    line-height: 1;
+}
+
+.cms-create-view-mode-title {
+    margin-bottom: 6px;
+    font-size: 14px;
+    font-weight: 700;
+}
+
+.cms-create-view-mode-desc {
+    color: #6b7280;
+    font-size: 11px;
+    line-height: 1.4;
+}
+
+.cms-create-template-toggle {
+    align-items: center;
+    background: #ffffff;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    color: #374151;
+    cursor: pointer;
+    display: flex;
+    font-size: 13px;
+    font-weight: 700;
+    justify-content: space-between;
+    padding: 12px 14px;
+    width: 100%;
+}
+
+.cms-create-template-toggle[aria-expanded="true"] .bi {
+    transform: rotate(180deg);
+}
+
+.cms-create-template-toggle .bi {
+    color: #6b7280;
+    transition: transform 0.15s ease;
+}
+
+.cms-create-template-current {
+    align-items: center;
+    color: #6b7280;
+    display: flex;
+    font-size: 12px;
+    gap: 8px;
+}
+
+.cms-create-template-selected-name {
+    display: block;
+    font-weight: 500;
+    max-width: 180px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.cms-create-template-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    max-height: 220px;
+    overflow-y: auto;
+    padding-right: 4px;
+    padding-top: 8px;
+}
+
+.cms-create-template {
+    align-items: flex-start;
+    background: #ffffff;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    color: #374151;
+    cursor: pointer;
+    display: flex;
+    gap: 10px;
+    padding: 12px 14px;
+    text-align: left;
+    width: 100%;
+}
+
+.cms-create-template.active {
+    background: #f0f4ff;
+    border: 2px solid #0046a4;
+}
+
+.cms-create-template-radio {
+    background: #ffffff;
+    border: 1px solid #d1d5db;
+    border-radius: 50%;
+    flex-shrink: 0;
+    height: 16px;
+    margin-top: 1px;
+    width: 16px;
+}
+
+.cms-create-template.active .cms-create-template-radio {
+    border: 5px solid #0046a4;
+}
+
+.cms-create-template-title,
+.cms-create-template-desc {
+    display: block;
+}
+
+.cms-create-template-title {
+    color: #111827;
+    font-size: 13px;
+    font-weight: 700;
+}
+
+.cms-create-template.active .cms-create-template-title {
+    color: #0046a4;
+}
+
+.cms-create-template-desc {
+    color: #6b7280;
+    font-size: 11px;
+    line-height: 1.4;
+    margin-top: 3px;
+}
+
+#approveRequestModal th {
+    white-space: nowrap;
+}

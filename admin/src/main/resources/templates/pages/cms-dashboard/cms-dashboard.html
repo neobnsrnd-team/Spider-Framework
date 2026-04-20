@@ -36,30 +36,67 @@
 
     <!-- ==================== 새 페이지 생성 모달 ==================== -->
     <div class="modal fade" id="createPageModal" tabindex="-1">
-        <div class="modal-dialog">
+        <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title">새 페이지 생성</h5>
+                    <h5 class="modal-title">새 페이지 만들기</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
                     <div class="mb-3">
                         <label class="form-label">페이지명 <span class="text-danger">*</span></label>
                         <input type="text" id="createPageName" class="form-control"
-                               placeholder="페이지명을 입력하세요."/>
+                               placeholder="예: 메인 페이지"/>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label">뷰모드 <span class="text-danger">*</span></label>
-                        <select id="createViewMode" class="form-select">
-                            <option value="PC">PC</option>
-                            <option value="mobile">mobile</option>
-                        </select>
+                        <label class="form-label">레이아웃 선택 <span class="text-danger">*</span></label>
+                        <input type="hidden" id="createViewMode" value="mobile"/>
+                        <div class="cms-create-view-mode-group" role="group" aria-label="레이아웃 선택">
+                            <button type="button" class="cms-create-view-mode active" data-view-mode="mobile">
+                                <span class="cms-create-view-mode-icon">📱</span>
+                                <span class="cms-create-view-mode-title">모바일</span>
+                                <span class="cms-create-view-mode-desc">390px 고정 너비<br/>모바일 앱 화면에 최적화</span>
+                            </button>
+                            <button type="button" class="cms-create-view-mode" data-view-mode="web">
+                                <span class="cms-create-view-mode-icon">🖥️</span>
+                                <span class="cms-create-view-mode-title">웹</span>
+                                <span class="cms-create-view-mode-desc">1280px 고정 너비<br/>데스크톱 웹 페이지용</span>
+                            </button>
+                            <button type="button" class="cms-create-view-mode" data-view-mode="responsive">
+                                <span class="cms-create-view-mode-icon">🔄</span>
+                                <span class="cms-create-view-mode-title">반응형</span>
+                                <span class="cms-create-view-mode-desc">전체 너비 사용<br/>모든 기기에 대응</span>
+                            </button>
+                        </div>
                     </div>
-                    <p class="mb-0 text-body-secondary small">생성 후 CMS 에디터로 자동 이동합니다.</p>
+                    <div class="mb-3">
+                        <input type="hidden" id="createTemplateId" value="blank"/>
+                        <button class="cms-create-template-toggle" type="button"
+                                data-bs-toggle="collapse" data-bs-target="#createTemplateCollapse"
+                                aria-expanded="true" aria-controls="createTemplateCollapse">
+                            <span>템플릿 선택</span>
+                            <span class="cms-create-template-current">
+                                <span class="cms-create-template-selected-name">빈 페이지</span>
+                                <i class="bi bi-chevron-down"></i>
+                            </span>
+                        </button>
+                        <div class="collapse show" id="createTemplateCollapse">
+                            <div class="cms-create-template-list" role="listbox">
+                                <button type="button" class="cms-create-template active" data-template-id="blank">
+                                    <span class="cms-create-template-radio"></span>
+                                    <span>
+                                        <span class="cms-create-template-title">빈 페이지</span>
+                                        <span class="cms-create-template-desc">아무 컴포넌트도 없는 빈 화면에서 시작합니다.</span>
+                                    </span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <p class="mb-0 text-body-secondary small">레이아웃은 페이지 생성 후 변경할 수 없습니다.</p>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">취소</button>
-                    <button type="button" id="btnCreatePageConfirm" class="btn btn-primary">생성</button>
+                    <button type="button" id="btnCreatePageConfirm" class="btn btn-primary">만들기</button>
                 </div>
             </div>
         </div>

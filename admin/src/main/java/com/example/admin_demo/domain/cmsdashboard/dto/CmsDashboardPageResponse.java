@@ -22,7 +22,7 @@ public class CmsDashboardPageResponse {
     /** 페이지명 (PAGE_NAME) */
     private String pageName;
 
-    /** 뷰 모드 (VIEW_MODE: PC / mobile) */
+    /** 뷰 모드 (VIEW_MODE: mobile / web / responsive) */
     private String viewMode;
 
     /** 승인 상태 (APPROVE_STATE: WORK / PENDING / APPROVED / REJECTED) */

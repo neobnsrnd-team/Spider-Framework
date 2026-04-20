@@ -399,7 +399,7 @@ public class PageController {
         return resolveView(request, "pages/datasource-manage/datasource-manage :: content", model);
     }
 
-    // ── CMS 사용자 대시보드 ── v3_cms_user_dashboard
+    // CMS dashboard route is kept available even when it is not exposed as a menu.
 
     @GetMapping("/cms/dashboard")
     public String cmsDashboard(HttpServletRequest request, Model model) {

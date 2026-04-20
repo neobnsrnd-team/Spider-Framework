@@ -18,7 +18,7 @@ public class CmsDashboardListRequest {
     /** 검색어 (PAGE_NAME) */
     private String search;
 
-    /** 뷰 모드 필터 (PC / mobile) */
+    /** 뷰 모드 필터 (mobile / web / responsive) */
     private String viewMode;
 
     /** 정렬 기준 */
