@@ -27,6 +27,13 @@
             REJECTED: '<span class="badge bg-danger">반려</span>',
         },
 
+        // DB 값 → 한글 표시명 매핑
+        VIEW_MODE_LABEL: {
+            mobile:     '모바일',
+            PC:         '웹',
+            responsive: '반응형',
+        },
+
         load: function(page) {
             if (page !== undefined) this.currentPage = page;
             const params = new URLSearchParams({
@@ -90,7 +97,7 @@
             const $tbody = $('#dashboardTableBody');
             if (!rows || rows.length === 0) {
                 this.rowsByPageId = {};
-                $tbody.html('<tr><td colspan="9" class="text-center py-4 text-body-secondary">조회된 데이터가 없습니다.</td></tr>');
+                $tbody.html('<tr><td colspan="8" class="text-center py-4 text-body-secondary">조회된 데이터가 없습니다.</td></tr>');
                 return;
             }
 
@@ -101,13 +108,9 @@
 
             const html = rows.map(row => {
                 const badge      = this.APPROVE_STATE_BADGE[row.approveState] || HtmlUtils.escape(row.approveState);
+                const viewMode   = this.VIEW_MODE_LABEL[row.viewMode] || HtmlUtils.escape(row.viewMode || '');
                 const expiredCls = row.isExpired === 'Y' ? 'text-danger fw-bold' : '';
                 const pid        = HtmlUtils.escape(row.pageId);
-
-                // 파일여부 아이콘
-                const fileIcon = row.hasFile === 'Y'
-                    ? '<i class="bi bi-file-earmark-check text-success" title="파일 있음"></i>'
-                    : '<span class="text-body-secondary small">-</span>';
 
                 // 승인요청 버튼 — CMS DashboardClient.tsx:472-484 기준
                 // WORK → "승인요청", REJECTED / APPROVED → "재승인요청", PENDING → 버튼 없음
@@ -141,9 +144,8 @@
                               onclick="CmsDashboardPage.openEditor('${pid}')"
                               title="CMS 에디터로 이동">${HtmlUtils.escape(row.pageName || '')}</span>${rejectedLink}
                     </td>
-                    <td class="text-center">${HtmlUtils.escape(row.viewMode || '')}</td>
+                    <td class="text-center">${viewMode}</td>
                     <td class="text-center">${badge}</td>
-                    <td class="text-center">${fileIcon}</td>
                     <td class="text-center">${HtmlUtils.escape(row.beginningDate || '-')}</td>
                     <td class="text-center ${expiredCls}">${HtmlUtils.escape(row.expiredDate || '-')}</td>
                     <td class="text-center small">${HtmlUtils.escape(row.lastModifiedDtime || '-')}</td>
