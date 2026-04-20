@@ -88,6 +88,7 @@ menu:
     - v3_BOARD             # 게시판
     - v3_service_manage    # 서비스관리
     - v3_emergency_notice  # 긴급공지
+    - v3_cms_manage        # HTML CMS
 
 # React 코드 승인 시 .tsx 파일을 저장할 디렉토리
 approval:

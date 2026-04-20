@@ -21,8 +21,8 @@ public class SwaggerConfig {
     public OpenAPI openAPI() {
         return new OpenAPI()
                 .info(new Info()
-                        .title("Spider Admin API")
-                        .description("NeoSpider Admin System REST API")
+                        .title("ReactPlatform API")
+                        .description("NeoSpider ReactPlatform System REST API")
                         .version("v1.0"))
                 .addSecurityItem(new SecurityRequirement().addList("cookieAuth"))
                 .components(new Components()
