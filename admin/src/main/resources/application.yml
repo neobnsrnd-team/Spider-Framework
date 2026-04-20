@@ -129,7 +129,7 @@ claude:
 # CMS Deploy Configuration
 cms:
   app-base-url: ${CMS_APP_BASE_URL:/cms}
-  user-url: ${CMS_USER_URL:http://localhost:3001/}
+  user-url: ${CMS_USER_URL:http://localhost:3000/}
   preview-url: ${CMS_PREVIEW_URL:http://localhost}
   deploy:
     receive-url: ${CMS_DEPLOY_RECEIVE_URL:http://133.186.135.23:3001/api/deploy/receive}

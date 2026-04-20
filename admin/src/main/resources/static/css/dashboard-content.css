@@ -1,0 +1,37 @@
+/* CMS dashboard page styles */
+
+#dashboardTable {
+    min-width: 980px;
+}
+
+#dashboardTable th:first-child,
+#dashboardTable td:first-child {
+    width: 150px;
+}
+
+#dashboardTable th,
+#dashboardTable td {
+    vertical-align: middle;
+}
+
+#dashboardTable .clickable-cell {
+    display: inline-block;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+#dashboardTableBody .badge {
+    min-width: 52px;
+}
+
+#createPageModal .modal-dialog,
+#approveRequestModal .modal-dialog,
+#rejectedReasonModal .modal-dialog {
+    max-width: 560px;
+}
+
+#approveRequestModal th {
+    white-space: nowrap;
+}
