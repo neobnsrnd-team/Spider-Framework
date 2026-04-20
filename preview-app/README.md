@@ -23,13 +23,13 @@
 
 ## 기술 스택
 
-| 구분 | 기술 |
-|------|------|
-| Framework | React 19 + TypeScript |
-| Build | Vite 8 |
-| Style | Tailwind CSS 4 |
-| 트랜스파일 | @babel/standalone (CDN) |
-| 컴포넌트 | reactive-springware + lucide-react |
+| 구분       | 기술                               |
+| ---------- | ---------------------------------- |
+| Framework  | React 19 + TypeScript              |
+| Build      | Vite 8                             |
+| Style      | Tailwind CSS 4                     |
+| 트랜스파일 | @babel/standalone (CDN)            |
+| 컴포넌트   | reactive-springware + lucide-react |
 
 ---
 
@@ -100,9 +100,9 @@ Renderer가 import 구문을 교체한 코드는 모든 심볼을 이 전역 객
 ```ts
 // componentRegistry.ts
 window.__components = {
-  ...LucideIcons,   // lucide-react 아이콘 전체
-  ...RSW,           // reactive-springware 컴포넌트 전체 (충돌 시 우선)
-}
+  ...LucideIcons, // lucide-react 아이콘 전체
+  ...RSW, // reactive-springware 컴포넌트 전체 (충돌 시 우선)
+};
 ```
 
 reactive-springware 컴포넌트는 `@cl` alias로 소스를 직접 참조하므로
@@ -112,10 +112,10 @@ reactive-springware 컴포넌트는 `@cl` alias로 소스를 직접 참조하므
 
 오류 발생 단계에 따라 처리 방식이 다르다.
 
-| 단계 | 오류 유형 | 처리 방식 |
-|------|-----------|-----------|
-| ①~④ | Babel 파싱 실패, `new Function` 실패 등 | 동기 `try-catch` |
-| ⑤ | undefined 컴포넌트, props 타입 불일치 등 런타임 오류 | `ErrorBoundary` (`componentDidCatch`) |
+| 단계 | 오류 유형                                            | 처리 방식                             |
+| ---- | ---------------------------------------------------- | ------------------------------------- |
+| ①~④  | Babel 파싱 실패, `new Function` 실패 등              | 동기 `try-catch`                      |
+| ⑤    | undefined 컴포넌트, props 타입 불일치 등 런타임 오류 | `ErrorBoundary` (`componentDidCatch`) |
 
 > React 18+의 `createRoot().render()`는 비동기이므로,
 > 컴포넌트 트리 내부 오류는 `try-catch`로 잡히지 않는다. `ErrorBoundary`가 필수인 이유다.
@@ -133,10 +133,10 @@ reactive-springware 컴포넌트는 `@cl` alias로 소스를 직접 참조하므
 # preview-app 디렉토리에서 실행
 npm install
 npm run build
-# → ../admin/src/main/resources/static/preview-app/ 에 출력
+# → ../reactPlatform/src/main/resources/static/preview-app/ 에 출력
 ```
 
-`admin` 서버는 `/preview-app/**` 경로로 이 파일들을 서빙하며,
+`reactPlatform` 서버는 `/preview-app/**` 경로로 이 파일들을 서빙하며,
 `reactPlatform`의 Thymeleaf 화면이 `<iframe src="/preview-app/index.html">`으로 삽입한다.
 
 ---

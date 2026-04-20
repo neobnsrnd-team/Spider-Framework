@@ -30,7 +30,7 @@ import org.springframework.transaction.support.TransactionSynchronizationManager
  *
  * <p>흐름:
  * <ol>
- *   <li>쓰기 트랜잭션 진입 시 USE_YN 행을 SELECT FOR UPDATE로 잠금 (TOCTOU 방지)</li>
+ *   <li>쓰기 트랜잭션 진입 시 DEPLOY_STATUS 행을 SELECT FOR UPDATE로 잠금 (TOCTOU 방지)</li>
  *   <li>Admin DB 업데이트 (FWK_PROPERTY DEPLOY_STATUS 변경) + 이력 스냅샷 삽입</li>
  *   <li>트랜잭션 커밋 후 Demo Backend TCP 호출 (비치명적 — 실패 시 재기동 후 복구됨)</li>
  * </ol>
@@ -45,6 +45,8 @@ public class EmergencyNoticeDeployService {
 
     /** 배포 상태 상수 */
     private static final String STATUS_DEPLOYED = "DEPLOYED";
+
+    private static final String STATUS_ENDED = "ENDED";
 
     /** TCP 커맨드 상수 — demo/backend와 약속된 식별자 */
     private static final String CMD_NOTICE_SYNC = "NOTICE_SYNC";
@@ -98,8 +100,8 @@ public class EmergencyNoticeDeployService {
      * 긴급공지를 배포한다.
      *
      * <ol>
-     *   <li>USE_YN 행을 SELECT FOR UPDATE로 잠금 — 동시 배포 요청 직렬화</li>
-     *   <li>FWK_PROPERTY DEPLOY_STATUS를 'DEPLOYED'로 변경</li>
+     *   <li>DEPLOY_STATUS 행을 SELECT FOR UPDATE로 잠금 — 동시 배포 요청 직렬화</li>
+     *   <li>DEPLOY_STATUS='DEPLOYED', START_DTIME=now, END_DTIME=NULL 행 업데이트</li>
      *   <li>배포 이력 스냅샷 삽입</li>
      *   <li>커밋 완료 후 Demo Backend에 TCP NOTICE_SYNC 커맨드 전송</li>
      * </ol>
@@ -129,8 +131,8 @@ public class EmergencyNoticeDeployService {
      * 긴급공지 배포를 종료한다.
      *
      * <ol>
-     *   <li>USE_YN 행을 SELECT FOR UPDATE로 잠금</li>
-     *   <li>FWK_PROPERTY DEPLOY_STATUS를 'ENDED'로 변경</li>
+     *   <li>DEPLOY_STATUS 행을 SELECT FOR UPDATE로 잠금</li>
+     *   <li>DEPLOY_STATUS='ENDED', END_DTIME=now 행 업데이트</li>
      *   <li>배포 종료 이력 스냅샷 삽입</li>
      *   <li>커밋 완료 후 Demo Backend에 TCP NOTICE_END 커맨드 전송</li>
      * </ol>
@@ -188,20 +190,20 @@ public class EmergencyNoticeDeployService {
     // ── private helpers ───────────────────────────────────────────────────────
 
     /**
-     * USE_YN 행의 배포 상태를 조회하고 없으면 NotFoundException을 던진다.
+     * DEPLOY_STATUS 행의 배포 상태를 조회하고 없으면 NotFoundException을 던진다.
      * 읽기 전용 트랜잭션({@code getDeployInfo})에서 사용한다.
      */
     private EmergencyNoticeDeployStatusResponse selectDeployStatusOrThrow() {
         EmergencyNoticeDeployStatusResponse status = emergencyNoticeDeployMapper.selectDeployStatus();
         if (status == null) {
             throw new NotFoundException(
-                    "긴급공지 초기 데이터가 없습니다. 03_insert_initial_data.sql 실행 후 04_alter_fwk_property.sql을 실행해주세요.");
+                    "긴급공지 초기 데이터가 없습니다. 03_insert_initial_data.sql 실행 후 04_alter_tables.sql을 실행해주세요.");
         }
         return status;
     }
 
     /**
-     * USE_YN 행을 SELECT FOR UPDATE로 잠근 뒤 배포 상태를 반환한다.
+     * DEPLOY_STATUS 행을 SELECT FOR UPDATE로 잠근 뒤 배포 상태를 반환한다.
      * 동시 요청이 같은 상태를 읽고 중복 배포·종료하는 TOCTOU 경쟁을 방지한다.
      * 반드시 쓰기 트랜잭션(@Transactional) 내에서 호출해야 한다.
      */
@@ -209,7 +211,7 @@ public class EmergencyNoticeDeployService {
         EmergencyNoticeDeployStatusResponse status = emergencyNoticeDeployMapper.selectDeployStatusForUpdate();
         if (status == null) {
             throw new NotFoundException(
-                    "긴급공지 초기 데이터가 없습니다. 03_insert_initial_data.sql 실행 후 04_alter_fwk_property.sql을 실행해주세요.");
+                    "긴급공지 초기 데이터가 없습니다. 03_insert_initial_data.sql 실행 후 04_alter_tables.sql을 실행해주세요.");
         }
         return status;
     }

@@ -1258,10 +1258,13 @@ app.get("/api/notices/preview", async (req, res) => {
 async function restoreNoticeState() {
   try {
     const result = await withConnection(async (conn) => {
-      // USE_YN 행에서 배포 상태 확인
+      // USE_YN 행에서 표시 유형, DEPLOY_STATUS 행에서 배포 상태 조회
       // outFormat은 db.js에서 전역으로 OUT_FORMAT_OBJECT로 설정되어 있으므로 별도 지정 불필요
       const statusRes = await conn.execute(
-        `SELECT DEFAULT_VALUE AS DISPLAY_TYPE, DEPLOY_STATUS
+        `SELECT DEFAULT_VALUE AS DISPLAY_TYPE,
+                (SELECT DEFAULT_VALUE FROM FWK_PROPERTY
+                  WHERE PROPERTY_GROUP_ID = 'notice'
+                    AND PROPERTY_ID = 'DEPLOY_STATUS') AS DEPLOY_STATUS
            FROM FWK_PROPERTY
           WHERE PROPERTY_GROUP_ID = 'notice'
             AND PROPERTY_ID = 'USE_YN'`,

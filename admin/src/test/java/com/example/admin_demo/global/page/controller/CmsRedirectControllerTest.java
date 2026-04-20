@@ -18,7 +18,8 @@ import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
 
 @WebMvcTest(CmsRedirectController.class)
-@TestPropertySource(properties = "cms.user-url=http://133.186.135.23:3001/")
+@TestPropertySource(
+        properties = {"cms.app-base-url=http://localhost:9000/cms", "cms.user-url=http://133.186.135.23:3001/"})
 @DisplayName("CMS root redirect")
 class CmsRedirectControllerTest {
 
@@ -42,8 +43,8 @@ class CmsRedirectControllerTest {
     }
 
     @Test
-    @DisplayName("cms_user role redirects /cms to external CMS server")
-    void cmsRoot_cmsUserRole_redirectsExternalCmsServer() throws Exception {
+    @DisplayName("cms_user role redirects /cms to configured CMS user URL")
+    void cmsRoot_cmsUserRole_redirectsConfiguredCmsUserUrl() throws Exception {
         mockMvc.perform(get("/cms").with(user(userDetails("worker", "cms_user", "CMS:R"))))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("http://133.186.135.23:3001/"));

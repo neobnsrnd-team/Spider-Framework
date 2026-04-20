@@ -19,7 +19,6 @@ import com.example.admin_demo.domain.cmsapproval.dto.CmsRollbackRequest;
 import com.example.admin_demo.domain.cmsapproval.mapper.CmsApprovalMapper;
 import com.example.admin_demo.global.dto.PageRequest;
 import com.example.admin_demo.global.dto.PageResponse;
-import com.example.admin_demo.global.exception.InvalidInputException;
 import com.example.admin_demo.global.exception.NotFoundException;
 import java.time.LocalDate;
 import java.util.List;
@@ -97,13 +96,17 @@ class CmsApprovalServiceTest {
     }
 
     @Test
-    @DisplayName("[승인] 요청 노출 기간이 없으면 InvalidInputException을 던진다")
-    void approve_missingDisplayPeriod_throwsInvalidInputException() {
+    @DisplayName("[승인] 노출 기간 미지정(null)이어도 승인이 정상 처리된다")
+    void approve_missingDisplayPeriod_approvesSuccessfully() {
+        // 승인 요청 시 날짜를 지정하지 않을 수 있으므로 null은 허용
         CmsApproveRequest req = new CmsApproveRequest();
         given(cmsApprovalMapper.existsByPageId(PAGE_ID)).willReturn(1);
+        given(cmsApprovalMapper.getNextVersion(PAGE_ID)).willReturn(1);
 
-        assertThatThrownBy(() -> cmsApprovalService.approve(PAGE_ID, req, MODIFIER_ID))
-                .isInstanceOf(InvalidInputException.class);
+        cmsApprovalService.approve(PAGE_ID, req, MODIFIER_ID);
+
+        then(cmsApprovalMapper).should().approve(eq(PAGE_ID), eq(null), eq(null), eq(MODIFIER_ID));
+        then(cmsApprovalMapper).should().insertHistory(eq(PAGE_ID), eq(1));
     }
 
     @Test

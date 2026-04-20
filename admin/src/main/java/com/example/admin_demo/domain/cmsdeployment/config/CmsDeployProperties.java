@@ -16,12 +16,9 @@ import org.springframework.stereotype.Component;
 @Setter
 public class CmsDeployProperties {
 
-    /** 배포 receive 엔드포인트 URL */
-    private String receiveUrl;
+    /** CMS push 엔드포인트 URL — HTML 조립·파일 저장·이력 기록을 CMS가 담당 */
+    private String pushUrl;
 
     /** 배포 인증 토큰 (x-deploy-token 헤더) */
     private String secret;
-
-    /** cms-tracker.js 취득 URL */
-    private String trackerJsUrl;
 }

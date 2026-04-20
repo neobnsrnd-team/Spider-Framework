@@ -34,6 +34,10 @@ public class PageController {
     @Value("${cms.user-url}")
     private String cmsUserUrl;
 
+    /** CMS 미리보기 서버 URL (환경변수 CMS_PREVIEW_URL로 오버라이드 가능) */
+    @Value("${cms.preview-url}")
+    private String cmsPreviewUrl;
+
     private final BoardService boardService;
 
     @ModelAttribute
@@ -415,6 +419,7 @@ public class PageController {
 
     @GetMapping("/cms-admin/approvals")
     public String cmsAdminApprovals(HttpServletRequest request, Model model) {
+        model.addAttribute("cmsPreviewUrl", cmsPreviewUrl);
         return resolveView(request, "pages/cms-approval/cms-approval :: content", model);
     }
 

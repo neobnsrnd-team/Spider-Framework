@@ -31,12 +31,19 @@
     // ─── 생성 ───────────────────────────────────────────────
     $('#btnGenerate').on('click', function () {
         const figmaUrl = $('#figmaUrlInput').val().trim();
+        const brand = $('#brandSelect').val();
+        const domain = $('#domainSelect').val() || null;
+
         if (!figmaUrl) {
             Toast.warning('Figma URL을 입력해주세요.');
             return;
         }
-        if (!figmaUrl.startsWith('https://www.figma.com/')) {
-            Toast.warning('올바른 Figma URL 형식이 아닙니다.');
+        if (!/^https:\/\/www\.figma\.com\/(design|file)\/[A-Za-z0-9]+\/.+[?&]node-id=[^&]+/.test(figmaUrl)) {
+            Toast.warning('올바른 Figma URL 형식이 아닙니다. (예: https://www.figma.com/design/...?node-id=1-2)');
+            return;
+        }
+        if (!brand) {
+            Toast.warning('브랜드를 선택해주세요.');
             return;
         }
 
@@ -46,13 +53,11 @@
         // 생성 중에는 초기화 버튼도 비활성화하여 요청 중간에 폼이 바뀌는 것을 방지
         $('#btnReset').prop('disabled', true);
 
-        const requirements = $('#requirementsInput').val().trim() || null;
-
         $.ajax({
             url: API_BASE_URL + '/react-generate/generate',
             method: 'POST',
             contentType: 'application/json',
-            data: JSON.stringify({ figmaUrl: figmaUrl, requirements: requirements }),
+            data: JSON.stringify({ figmaUrl: figmaUrl, brand: brand, domain: domain }),
             success: function (res) {
                 if (res.success && res.data) {
                     renderResult(res.data);
@@ -142,7 +147,8 @@
     $('#btnReset').on('click', function () {
         // 입력 폼 초기화
         $('#figmaUrlInput').val('');
-        $('#requirementsInput').val('');
+        $('#brandSelect').val('');
+        $('#domainSelect').val('');
 
         // 결과 영역 숨김 및 내부 상태 초기화
         $('#resultSection').addClass('d-none');

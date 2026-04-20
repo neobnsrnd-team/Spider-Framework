@@ -102,10 +102,19 @@ class CmsAbTestControllerTest {
     }
 
     @Test
-    @WithMockUser(authorities = "CMS:W")
-    @DisplayName("GET /api/cms-admin/ab-tests rejects users without CMS:R")
-    void findDashboard_withoutCmsR_returns403() throws Exception {
-        mockMvc.perform(get(URL)).andExpect(status().isForbidden());
+    @WithMockUser(authorities = {"CMS:R", "CMS:W"})
+    @DisplayName("GET /api/cms-admin/ab-tests allows derived CMS write authority")
+    void findDashboard_withDerivedCmsW_returns200() throws Exception {
+        given(cmsAbTestService.findDashboard(any(), any()))
+                .willReturn(CmsAbTestDashboardResponse.builder()
+                        .pages(PageResponse.of(List.of(), 0, 0, 10))
+                        .availablePages(List.of())
+                        .groups(List.of())
+                        .build());
+
+        mockMvc.perform(get(URL))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true));
     }
 
     @Test
