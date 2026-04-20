@@ -200,7 +200,9 @@ export function CMSBuilder({ onSave, initialPage }: CMSBuilderProps) {
   // page 선언 이후에 위치해야 TDZ 에러가 발생하지 않음
   const handlePreview = useCallback(() => {
     localStorage.setItem("cms_preview", JSON.stringify(page));
-    window.open("/preview", "_blank");
+    // BASE_URL(=import.meta.env.BASE_URL)을 prefix로 붙여 nginx 프록시 모드에서도 올바른 경로로 이동
+    const base = import.meta.env.BASE_URL.replace(/\/$/, "");
+    window.open(`${base}/preview`, "_blank");
   }, [page]);
 
   // Context 정보(layouts, codegenConfig, overlayTemplates)를 포함해 코드를 생성한 뒤

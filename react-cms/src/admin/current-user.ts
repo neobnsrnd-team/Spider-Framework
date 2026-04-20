@@ -15,7 +15,7 @@
  * if (!canWriteCms(user)) { jsonResponse(res, 403, { error: 'Forbidden' }); return; }
  */
 
-import { AUTH_BYPASS, SPIDER_ADMIN_API_URL } from '../lib/env';
+import { authEnv } from '../lib/env';
 
 // ── 타입 정의 ────────────────────────────────────────────────────────────────
 
@@ -122,18 +122,18 @@ function getBypassUser(cookieHeader: string): CurrentUser {
  */
 export async function getCurrentUser(cookieHeader: string): Promise<CurrentUser> {
   // 개발 우회 모드 — admin 미배포 환경 테스트용
-  if (AUTH_BYPASS === 'true') {
+  if (authEnv.AUTH_BYPASS === 'true') {
     return getBypassUser(cookieHeader);
   }
 
-  if (!SPIDER_ADMIN_API_URL) {
+  if (!authEnv.SPIDER_ADMIN_API_URL) {
     // 환경변수 미설정 시 경고 후 GUEST 처리 (운영 환경에서는 반드시 설정해야 함)
     console.warn('[react-cms] SPIDER_ADMIN_API_URL이 설정되지 않았습니다. GUEST로 처리합니다.');
     return GUEST_USER;
   }
 
   try {
-    const response = await fetch(`${SPIDER_ADMIN_API_URL}/api/auth/me`, {
+    const response = await fetch(`${authEnv.SPIDER_ADMIN_API_URL}/api/auth/me`, {
       // 요청자의 쿠키(JWT 세션)를 Spider Admin에 그대로 전달해 사용자 식별
       headers: { cookie: cookieHeader },
     });

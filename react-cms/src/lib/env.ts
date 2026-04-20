@@ -34,14 +34,12 @@ export const oracleEnv = {
 /**
  * 개발용 인증 우회 모드.
  * 'true'로 설정하면 Spider Admin API 호출 없이 쿠키(`cms_bypass_role`) 값으로 역할을 분기한다.
- */
-export const AUTH_BYPASS = process.env.AUTH_BYPASS ?? 'false';
-
-/**
- * Spider Admin API 베이스 URL.
- * 운영 환경에서 `/api/auth/me` 호출에 사용된다.
- * AUTH_BYPASS=true 환경에서는 사용되지 않는다.
  *
- * @example http://localhost:8080
+ * getter로 선언해 호출 시점에 process.env를 읽는다.
+ * vite.config.ts의 static import 평가는 loadEnv 실행보다 앞서므로,
+ * 모듈 로드 시 상수로 캡처하면 항상 fallback 값('false')이 된다.
  */
-export const SPIDER_ADMIN_API_URL = process.env.SPIDER_ADMIN_API_URL ?? '';
+export const authEnv = {
+  get AUTH_BYPASS()          { return process.env.AUTH_BYPASS          ?? 'false'; },
+  get SPIDER_ADMIN_API_URL() { return process.env.SPIDER_ADMIN_API_URL ?? '';      },
+};
