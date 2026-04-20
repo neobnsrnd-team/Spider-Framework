@@ -38,7 +38,6 @@ import org.springframework.web.multipart.MultipartFile;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-@Transactional(readOnly = true)
 public class CmsAssetService {
 
     private static final String STATE_WORK = "WORK";
@@ -71,6 +70,7 @@ public class CmsAssetService {
      *
      * <p>클라이언트가 보낸 {@code createUserId}는 신뢰하지 않고 인증 주체의 ID로 덮어쓴다.
      */
+    @Transactional(readOnly = true)
     public PageResponse<CmsAssetListResponse> findMyRequestList(
             String currentUserId, CmsAssetRequestListRequest req, PageRequest pageRequest) {
 
@@ -84,6 +84,7 @@ public class CmsAssetService {
     }
 
     /** 결재자 승인 관리 목록 조회 (기본 PENDING 필터는 Mapper XML에서 처리) */
+    @Transactional(readOnly = true)
     public PageResponse<CmsAssetListResponse> findApprovalList(
             CmsAssetApprovalListRequest req, PageRequest pageRequest) {
 
@@ -95,6 +96,7 @@ public class CmsAssetService {
     }
 
     /** 이미지 상세 조회 (모달 프리뷰) */
+    @Transactional(readOnly = true)
     public CmsAssetDetailResponse findById(String assetId) {
         CmsAssetDetailResponse detail = cmsAssetMapper.findDetailById(assetId);
         if (detail == null) {
