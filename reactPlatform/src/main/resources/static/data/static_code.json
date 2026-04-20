@@ -1,0 +1,36 @@
+{
+    "USE_YN_LIST": {
+        "USE_YN": [
+            { "NAME": "사용", "VALUE": "Y" },
+            { "NAME": "미사용", "VALUE": "N" }
+        ],
+        "_desc": "사용여부"
+    },
+    "GUBUN_TYPE_LIST": {
+        "GUBUN_TYPE": [
+            { "NAME": "거래", "VALUE": "T" },
+            { "NAME": "서비스", "VALUE": "S" }
+        ],
+        "_desc": "거래/서비스 구분"
+    },
+    "OPER_MODE_TYPE_LIST": {
+        "OPER_MODE_TYPE": [
+            { "NAME": "운영", "VALUE": "R" },
+            { "NAME": "테스트", "VALUE": "T" },
+            { "NAME": "개발", "VALUE": "D" }
+        ],
+        "_desc": "운영모드"
+    },
+    "REFRESH_TERM_LIST": {
+        "REFRESH_TERM": [
+            { "NAME": "1분", "VALUE": "1" },
+            { "NAME": "5분", "VALUE": "5" },
+            { "NAME": "10분", "VALUE": "10" },
+            { "NAME": "30분", "VALUE": "30" },
+            { "NAME": "1시간", "VALUE": "60" },
+            { "NAME": "3시간", "VALUE": "180" },
+            { "NAME": "6시간", "VALUE": "360" }
+        ],
+        "_desc": "새로고침 주기"
+    }
+}

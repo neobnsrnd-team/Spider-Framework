@@ -17,7 +17,6 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.context.SecurityContextHolderFilter;
-import org.springframework.security.web.csrf.CsrfTokenRequestAttributeHandler;
 
 @Configuration
 @EnableWebSecurity
@@ -56,10 +55,11 @@ public class SecurityConfig {
                 // ContentCachingFilter를 Security Filter 앞에 추가
                 .addFilterBefore(new ContentCachingFilter(), SecurityContextHolderFilter.class)
 
-                // CSRF 설정 — CsrfTokenRequestAttributeHandler로 XOR 마스킹 비활성화
-                // Spring Security 6 기본값(XorCsrfTokenRequestAttributeHandler)은 Thymeleaf ${_csrf.token} 렌더링을 깨뜨림
+                // CSRF 설정 — admin과 동일하게 REST API는 CSRF 비활성화
+                // Spring Security 6 SPA CSRF를 제대로 구현하려면 SpaCsrfTokenRequestHandler + CsrfCookieFilter가 필요하나
+                // POC 범위에서는 /api/** ignore로 대체 (세션 인증이지만 동일 출처 JS에서만 호출)
                 .csrf(csrf -> csrf
-                        .csrfTokenRequestHandler(new CsrfTokenRequestAttributeHandler())
+                        .ignoringRequestMatchers("/api/**")
                         .ignoringRequestMatchers("/h2-console/**"))
 
                 // Headers 설정 (H2 Console iframe 허용)

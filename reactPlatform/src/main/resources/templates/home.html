@@ -122,7 +122,6 @@
             if (index === -1) return;
 
             this.tabs.splice(index, 1);
-            $('link[data-page-css]').filter(function() { return this.getAttribute('data-page-css') === page; }).remove();
 
             if (this.activeTab === page) {
                 // 활성 탭은 DOM에 있으므로 제거 전 정리 이벤트 발송 (Admin_EventBus.off() 호출 기회 제공)
@@ -203,7 +202,6 @@
             this.activeTab = null;
             this.contentCache = {};
             this._cacheOrder = [];
-            $('link[data-page-css]').remove();
             $('#dynamic-content').children('[data-tab-page]').remove();
             this.renderTabs();
             this.showWelcome();
@@ -227,9 +225,7 @@
                     while (this._cacheOrder.length > this.MAX_CACHED_TABS) {
                         const evict = this._cacheOrder.shift();
                         delete this.contentCache[evict];
-                        $('link[data-page-css]').filter(function () {
-                            return this.getAttribute('data-page-css') === evict;
-                        }).remove();
+
                     }
                 }
             }
@@ -254,20 +250,6 @@
                 </div>
             `);
             contentArea.append(tabContent);
-
-            // 페이지별 CSS 동적 로드 (미로드 시에만)
-            if (!$('link[data-page-css]').filter(function() { return this.getAttribute('data-page-css') === page; }).length) {
-                const lastSegment = page.split('/').filter(Boolean).pop() || '';
-                const cssPath = `/css/${lastSegment}-content.css`;
-                $('<link>')
-                    .attr('rel', 'stylesheet')
-                    .attr('href', cssPath)
-                    .attr('data-page-css', page)
-                    .on('error', function () {
-                        console.log(`CSS file not found: ${cssPath}`);
-                    })
-                    .appendTo('head');
-            }
 
             // 페이지 콘텐츠 AJAX 로드
             // jQuery의 .html()은 내부적으로 DOMEval을 사용하여 script를 자동 실행한다.
