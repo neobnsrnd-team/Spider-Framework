@@ -10,6 +10,14 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 
 // https://vite.dev/config/
 export default defineConfig({
+  // VITE_BASE 환경변수로 base 경로를 제어한다.
+  // 프록시 연동 시: VITE_BASE=/react-cms/ npm run dev
+  // 단독 개발 시: 기본값 '/' 유지 (평소 동작 그대로)
+  base: process.env.VITE_BASE ?? '/',
+  server: {
+    // 모든 네트워크 인터페이스에 바인딩 — Docker(nginx)에서 host.docker.internal로 접근하기 위해 필요
+    host: true,
+  },
   plugins: [
     react(),
     tailwindcss(),

@@ -16,12 +16,20 @@ import { blocks, overlays, layouts } from "./cms.config"
 // import { savePage } from "./savePage"
 import userScopeCSS from "./user-scope.css?inline"
 
+// BASE_URL은 Vite가 vite.config.ts의 base 설정값으로 주입한다.
+// VITE_BASE=/cms/ 로 실행 시 '/cms/' — 프록시 연동에서 React Router basename으로 사용.
+// 단독 개발 시 기본값 '/' → basename 미설정으로 현재 동작 유지.
+const basename = import.meta.env.BASE_URL !== '/'
+  ? import.meta.env.BASE_URL.replace(/\/$/, '')
+  : undefined;
+
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <CMSApp
       blocks={blocks}
       overlays={overlays}
       layouts={layouts}
+      basename={basename}
       codegenConfig={{ blockImportFrom: "@cl", layoutImportFrom: "@cl" }}
       stylesheetContent={userScopeCSS}
       // onSave={savePage}
