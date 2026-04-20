@@ -1,6 +1,5 @@
 package com.example.admin_demo.domain.cmsasset.client;
 
-import com.example.admin_demo.domain.cmsasset.client.dto.CmsBuilderDeleteApiResponse;
 import com.example.admin_demo.domain.cmsasset.client.dto.CmsBuilderUploadApiResponse;
 import com.example.admin_demo.domain.cmsasset.config.CmsBuilderProperties;
 import com.example.admin_demo.global.exception.ErrorType;
@@ -95,28 +94,21 @@ public class CmsBuilderClient {
     /**
      * CMS Builder 에 이미지 자산 삭제를 요청한다 — Issue #88.
      *
-     * <p>업로드 API 와 동일 규약을 가정한다: CMS 가 실패 시에도 HTTP 200 + {@code ok:false} 로
-     * 응답할 수 있으므로 body 의 {@code ok} 필드로 최종 성공 여부를 판정한다.
-     * 네트워크 오류 / 비정상 응답은 {@link BaseException} (HTTP 502) 로 래핑한다.
+     * <p>DELETE 엔드포인트는 성공 시 빈 body(204) 또는 비JSON body 를 반환할 수 있어
+     * 업로드와 달리 body 파싱을 하지 않는다. HTTP status 기반으로 판정하며,
+     * 2xx 이면 성공, 4xx/5xx 는 {@link RestClientException} 으로 전파되어 {@link BaseException}(502) 로 래핑된다.
      *
      * @param assetId 삭제 대상 자산 식별자 (CMS 가 발급한 UUID)
-     * @param userId  삭제 수행자 ID (CMS 감사 로그용. 현재 CMS 가 무시해도 미래 호환을 위해 전달)
+     * @param userId  삭제 수행자 ID (로그용)
      * @throws BaseException 삭제 실패 시 (HTTP 502)
      */
     public void delete(String assetId, String userId) {
         try {
-            CmsBuilderDeleteApiResponse response = cmsBuilderRestClient
+            cmsBuilderRestClient
                     .delete()
                     .uri(DELETE_PATH_TEMPLATE, assetId)
                     .retrieve()
-                    .body(CmsBuilderDeleteApiResponse.class);
-
-            // 2xx + body null → 빈 성공 응답으로 간주 (일부 CMS 가 204-style 로 동작할 수 있음)
-            if (response != null && !response.isSuccess()) {
-                String errMsg = response.getError() != null ? response.getError() : "CMS 삭제 실패";
-                log.warn("CMS Builder 삭제 실패 응답: ok={}, error={}, assetId={}", response.getOk(), errMsg, assetId);
-                throw new BaseException(ErrorType.EXTERNAL_SERVICE_ERROR, errMsg);
-            }
+                    .toBodilessEntity();
 
             log.info("CMS Builder 삭제 성공: assetId={}, userId={}", assetId, userId);
 
