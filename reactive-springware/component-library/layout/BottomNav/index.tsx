@@ -1,7 +1,7 @@
 /**
  * @file index.tsx
- * @description 홈 화면 하단 고정 탭 네비게이션 컴포넌트.
- * 화면 하단에 fixed로 고정되며, backdrop-blur 배경을 적용한다.
+ * @description 홈 화면 하단 sticky 탭 네비게이션 컴포넌트.
+ * 화면 하단에 sticky로 달라붙으며, backdrop-blur 배경을 적용한다.
  * 활성 탭은 브랜드 색상 아이콘 + 텍스트 + 하단 점 인디케이터로 표시된다.
  *
  * HomePageLayout의 withBottomNav prop과 함께 사용하면
@@ -28,7 +28,7 @@ export function BottomNav({ items, activeId, className }: BottomNavProps) {
     <nav
       aria-label="하단 메뉴"
       className={cn(
-        /* 화면 하단 고정 — z-sticky로 콘텐츠 위에 항상 표시 */
+        /* 화면 하단 sticky — 스크롤 시 부모 컨테이너 내에서 하단에 달라붙음 */
         'sticky bottom-0 left-0 right-0 z-sticky',
         'flex items-end justify-around',
         'pt-sm pb-2 px-standard',
