@@ -31,6 +31,9 @@ public class PageController {
     @Value("${demo.frontend.url:http://localhost:5173}")
     private String demoFrontendUrl;
 
+    @Value("${cms.user-url}")
+    private String cmsUserUrl;
+
     private final BoardService boardService;
 
     @ModelAttribute
@@ -385,6 +388,15 @@ public class PageController {
     @GetMapping("/datasources")
     public String datasources(HttpServletRequest request, Model model) {
         return resolveView(request, "pages/datasource-manage/datasource-manage :: content", model);
+    }
+
+    // ── CMS 사용자 대시보드 ── v3_cms_user_dashboard
+
+    @GetMapping("/cms/dashboard")
+    public String cmsDashboard(HttpServletRequest request, Model model) {
+        // CMS 에디터 이동 URL을 JS에서 사용할 수 있도록 모델에 추가
+        model.addAttribute("cmsUserUrl", cmsUserUrl);
+        return resolveView(request, "pages/cms-dashboard/cms-dashboard :: content", model);
     }
 
     // ── CMS 관리 ── v3_cms_admin_pages, v3_cms_admin_approvals, v3_cms_admin_files,
