@@ -32,17 +32,4 @@ public interface CmsDeployMapper {
      * 페이지 미존재 시 null 반환.
      */
     String findApprovedPageHtml(@Param("pageId") String pageId);
-
-    /** FWK_CMS_SERVER_INSTANCE에서 첫 번째 인스턴스 ID 조회 */
-    String findFirstInstanceId();
-
-    /** 특정 pageId의 다음 배포 버전 번호 조회 */
-    int findNextFileVersion(@Param("pageId") String pageId);
-
-    void insertSendHistory(
-            @Param("instanceId") String instanceId,
-            @Param("fileId") String fileId,
-            @Param("fileSize") long fileSize,
-            @Param("fileCrcValue") String fileCrcValue,
-            @Param("userId") String userId);
 }

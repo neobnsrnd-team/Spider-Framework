@@ -9,22 +9,22 @@ import org.apache.ibatis.annotations.Param;
 /**
  * 긴급공지 배포 관리 MyBatis Mapper
  *
- * FWK_PROPERTY 배포 상태 컬럼(DEPLOY_STATUS, START_DTIME, END_DTIME)과
+ * FWK_PROPERTY 'notice' 그룹의 행(DEPLOY_STATUS·START_DTIME·END_DTIME)과
  * FWK_PROPERTY_HISTORY 이력을 다룬다.
  */
 @Mapper
 public interface EmergencyNoticeDeployMapper {
 
     /**
-     * 현재 배포 상태 조회 (USE_YN 행의 DEPLOY_STATUS, START_DTIME, END_DTIME)
+     * 현재 배포 상태 조회 (DEPLOY_STATUS 행 기준).
      * 읽기 전용 트랜잭션에서 사용한다.
      */
     EmergencyNoticeDeployStatusResponse selectDeployStatus();
 
     /**
      * 현재 배포 상태를 행 잠금(SELECT FOR UPDATE)과 함께 조회한다.
-     * 동시 요청이 같은 상태를 읽고 중복 배포하는 TOCTOU 경쟁을 방지하기 위해
-     * 쓰기 트랜잭션 최초 진입 시 반드시 이 메서드를 사용한다.
+     * DEPLOY_STATUS 행을 잠가 동시 요청이 같은 상태를 읽고 중복 배포하는 TOCTOU 경쟁을 방지한다.
+     * 반드시 쓰기 트랜잭션(@Transactional) 내에서 호출해야 한다.
      */
     EmergencyNoticeDeployStatusResponse selectDeployStatusForUpdate();
 
@@ -48,8 +48,11 @@ public interface EmergencyNoticeDeployMapper {
     int selectHistoryCount(@Param("reason") String reason);
 
     /**
-     * 배포 시작 상태 업데이트
-     * DEPLOY_STATUS='DEPLOYED', START_DTIME=now, END_DTIME=NULL
+     * 배포 시작: DEPLOY_STATUS='DEPLOYED', START_DTIME=now, END_DTIME=NULL을 단일 SQL로 업데이트.
+     *
+     * @param startDtime       배포 시작 일시 (yyyyMMddHHmmss)
+     * @param lastUpdateDtime  변경 일시 (yyyyMMddHHmmss)
+     * @param lastUpdateUserId 변경자 ID
      */
     void updateDeployStart(
             @Param("startDtime") String startDtime,
@@ -57,8 +60,11 @@ public interface EmergencyNoticeDeployMapper {
             @Param("lastUpdateUserId") String lastUpdateUserId);
 
     /**
-     * 배포 종료 상태 업데이트
-     * DEPLOY_STATUS='ENDED', END_DTIME=now
+     * 배포 종료: DEPLOY_STATUS='ENDED', END_DTIME=now를 단일 SQL로 업데이트.
+     *
+     * @param endDtime         배포 종료 일시 (yyyyMMddHHmmss)
+     * @param lastUpdateDtime  변경 일시 (yyyyMMddHHmmss)
+     * @param lastUpdateUserId 변경자 ID
      */
     void updateDeployEnd(
             @Param("endDtime") String endDtime,
@@ -91,6 +97,7 @@ public interface EmergencyNoticeDeployMapper {
 
     /**
      * 배포 액션 시 'notice' 그룹 전체 행 스냅샷을 FWK_PROPERTY_HISTORY에 삽입
+     * DEPLOY_STATUS·START_DTIME·END_DTIME 행도 포함된다.
      * 각 PROPERTY_ID별로 기존 최대 VERSION + 1을 자동 계산한다.
      */
     void insertHistorySnapshot(

@@ -238,9 +238,13 @@
                 .catch(() => Toast.error('상세 조회 중 오류가 발생했습니다.'));
         },
 
-        // ── 승인 ──
+        // ── 승인 (#55: CMS 파일 배포 연동) ──
+        // 승인 DB UPDATE + CMS 파일 배포가 한 트랜잭션에서 처리되므로 응답이 길어질 수 있다.
+        // LoadingOverlay 로 전체 화면 dim 처리해 중복 클릭·타 작업 진행을 차단.
         approve: function(assetId) {
             if (!confirm('해당 이미지를 승인하시겠습니까?')) return;
+
+            LoadingOverlay.show('승인 처리 중...');
 
             fetch(`/api/cms-admin/asset-approvals/${encodeURIComponent(assetId)}/approve`, {
                 method: 'POST',
@@ -251,7 +255,8 @@
                     if (res.success) { Toast.success(res.message); this.load(); }
                     else             { Toast.error(res.message); }
                 })
-                .catch(() => Toast.error('승인 처리 중 오류가 발생했습니다.'));
+                .catch(() => Toast.error('승인 처리 중 오류가 발생했습니다.'))
+                .finally(() => LoadingOverlay.hide());
         },
 
         // ── 반려 모달 ──

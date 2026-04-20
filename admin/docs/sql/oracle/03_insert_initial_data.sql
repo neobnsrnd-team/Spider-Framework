@@ -657,4 +657,32 @@ INSERT INTO FWK_ROLE_MENU (ROLE_ID, MENU_ID, AUTH_CODE) VALUES ('ADMIN', 'v3_rea
 INSERT INTO FWK_ROLE_MENU (ROLE_ID, MENU_ID, AUTH_CODE) VALUES ('ADMIN', 'v3_react_generate', 'W');
 INSERT INTO FWK_ROLE_MENU (ROLE_ID, MENU_ID, AUTH_CODE) VALUES ('ADMIN', 'v3_react_generate_his', 'W');
 INSERT INTO FWK_ROLE_MENU (ROLE_ID, MENU_ID, AUTH_CODE) VALUES ('ADMIN', 'v3_react_approval', 'W');
+
+
+-- =============================================================
+-- CMS 배포 서버 인스턴스 (FWK_CMS_SERVER_INSTANCE)
+-- =============================================================
+-- ⚠ 개발자가 DB에서 직접 실행해야 합니다.
+-- 배포 서버가 없으면 cms-deployment.html 배포 버튼 클릭 시 500 오류 발생.
+-- ALIVE_YN = 'N' 인 인스턴스는 배포 대상에서 제외됨.
+INSERT INTO FWK_CMS_SERVER_INSTANCE (
+    INSTANCE_ID,
+    INSTANCE_NAME,
+    INSTANCE_DESC,
+    INSTANCE_IP,
+    INSTANCE_PORT,
+    SERVER_TYPE,
+    ALIVE_YN,
+    LAST_MODIFIER_ID
+) VALUES (
+    'prod-operation-01',
+    '운영 서버',
+    '운영 배포 서버 (133.186.135.23:3001)',
+    '133.186.135.23',
+    3001,
+    'WEB',
+    'Y',
+    'system'
+);
+
 COMMIT;

@@ -132,9 +132,9 @@ cms:
   user-url: ${CMS_USER_URL:http://localhost:3000/}
   preview-url: ${CMS_PREVIEW_URL:http://localhost}
   deploy:
-    receive-url: ${CMS_DEPLOY_RECEIVE_URL:http://133.186.135.23:3001/api/deploy/receive}
+    # CMS push API — HTML 조립(ContentBuilder CSS·런타임, 에셋 경로 치환)·파일 저장·이력 기록을 CMS가 담당
+    push-url: ${CMS_DEPLOY_PUSH_URL:http://133.186.135.23:3001/api/deploy/push}
     secret: ${CMS_DEPLOY_SECRET:}
-    tracker-js-url: ${CMS_DEPLOY_TRACKER_JS_URL:http://133.186.135.23:3001/cms-tracker.js}
   # CMS Builder (미승인 이미지 업로드) — 내부망 서버-투-서버 호출 (Issue #65)
   # nginx 가 80 → CMS(Next.js) 업스트림으로 프록시하므로 외부에서는 포트 없이 접근한다.
   builder:
@@ -142,6 +142,9 @@ cms:
     upload-path: ${CMS_BUILDER_UPLOAD_PATH:/cms/api/builder/upload}
     connect-timeout-seconds: ${CMS_BUILDER_CONNECT_TIMEOUT:5}
     read-timeout-seconds: ${CMS_BUILDER_READ_TIMEOUT:60}
+    # 배포(deploy) 전용 — 파일 이동은 CMS 내부 I/O 라 수초 내 완료 기대, 짧게 둔다 (#55)
+    deploy-connect-timeout-seconds: ${CMS_BUILDER_DEPLOY_CONNECT_TIMEOUT:5}
+    deploy-read-timeout-seconds: ${CMS_BUILDER_DEPLOY_READ_TIMEOUT:10}
 
 # Scheduling Configuration (배치 이력 정리 스케줄러)
 scheduling:

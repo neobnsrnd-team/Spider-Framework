@@ -102,22 +102,6 @@
         <include refid="historySearchConditions"/>
     </select>
 
-    <!-- ==================== 서버 인스턴스 조회 ==================== -->
-
-    <select id="findFirstInstanceId" resultType="string">
-        SELECT TO_CHAR(INSTANCE_ID) FROM FWK_CMS_SERVER_INSTANCE WHERE ROWNUM = 1
-    </select>
-
-    <!-- ==================== 다음 파일 버전 조회 ==================== -->
-
-    <select id="findNextFileVersion" resultType="int">
-        SELECT NVL(MAX(
-            TO_NUMBER(REGEXP_SUBSTR(FILE_ID, '_v(\d+)\.html$', 1, 1, NULL, 1))
-        ), 0) + 1
-        FROM FWK_CMS_FILE_SEND_HIS
-        WHERE FILE_ID LIKE #{pageId} || '_v%.html'
-    </select>
-
     <!-- ==================== 배포 대상 페이지 HTML 조회 (push용) ==================== -->
     <!--
         CLOB 타입인 PAGE_HTML을 resultType=map 으로 반환하면 MyBatis가 java.sql.Clob 객체를
@@ -132,16 +116,5 @@
           AND USE_YN        = 'Y'
     </select>
 
-    <!-- ==================== 배포 이력 INSERT ==================== -->
-
-    <insert id="insertSendHistory">
-        INSERT INTO FWK_CMS_FILE_SEND_HIS (
-            INSTANCE_ID, FILE_ID, FILE_SIZE, FILE_CRC_VALUE,
-            LAST_MODIFIER_ID, LAST_MODIFIED_DTIME
-        ) VALUES (
-            #{instanceId}, #{fileId}, #{fileSize}, #{fileCrcValue},
-            #{userId}, TO_CHAR(SYSTIMESTAMP, 'YYYYMMDDHH24MISS')
-        )
-    </insert>
 
 </mapper>
