@@ -2,34 +2,73 @@
  * @file cmsBankPlugin.ts
  * @description CMS 빌더에서 페이지 저장 시 호출되는 Vite 플러그인.
  *
- * `/__cms/create-page` POST 엔드포인트를 Vite dev 서버에 등록하여
- * defaultSave.ts 의 fetch 요청을 수신하고, 다음 두 가지 작업을 수행한다:
- *   1. 생성된 JSX 코드를 페이지 파일(.tsx)로 디스크에 저장
- *   2. 라우터 파일(routes/index.tsx)에 import 문과 라우트 항목을 자동 추가
+ * 기존 파일 시스템 저장 엔드포인트에 더해 Oracle DB 기반 CRUD API를 제공합니다.
+ *
+ * 등록 엔드포인트:
+ *   - POST /__cms/create-page      — JSX 파일 생성 + 라우터 등록 (기존 유지)
+ *   - POST /__cms/api/save         — 페이지 JSON DB 저장 (신규 UUID 또는 기존 업데이트)
+ *   - POST /__cms/api/load         — pageId로 DB 조회 후 JSON 반환
+ *   - GET  /__cms/api/pages        — 페이지 목록 (검색·정렬·페이지네이션)
+ *   - DELETE /__cms/api/pages      — pageId로 페이지 삭제
  *
  * @example
- * // demo/front/vite.config.ts
- * import { cmsBankPlugin } from '../../react-cms/src/vite-plugin/cmsBankPlugin'
- *
+ * // react-cms/vite.config.ts
+ * import { cmsBankPlugin } from './src/vite-plugin/cmsBankPlugin'
  * export default defineConfig({
- *   plugins: [
- *     cmsBankPlugin({
- *       routerPath: 'src/routes/index.tsx',
- *       pagesDir:   'src/pages/cms',
- *     }),
- *   ],
+ *   plugins: [cmsBankPlugin({ routerPath: '../demo/front/src/routes/index.tsx', pagesDir: '../demo/front/src/pages/cms' })],
  * })
  */
 import type { Plugin } from "vite";
 import fs from "node:fs";
 import path from "node:path";
+import { v4 as uuidv4 } from "uuid";
+
+// DB 모듈은 dynamic import로 지연 로드합니다.
+// Vite는 vite.config.ts 평가 단계(서버 초기화 전)에 플러그인을 로드하므로,
+// 이 시점에는 .env가 아직 process.env에 반영되지 않을 수 있습니다.
+// 첫 요청이 들어올 때 import하면 .env가 반영된 이후이므로 안전합니다.
+// Promise를 캐싱하여 중복 import 방지 (module system이 캐싱하지만 명시적으로도 보장).
+type PageRepository = typeof import("../db/repository/page.repository");
+
+let _repoPromise: Promise<PageRepository> | null = null;
+async function getRepo(): Promise<PageRepository> {
+  if (!_repoPromise) {
+    _repoPromise = import("../db/repository/page.repository") as Promise<PageRepository>;
+  }
+  return _repoPromise;
+}
+
+// ── 유틸 ────────────────────────────────────────────────────────
+
+/** req body를 JSON으로 파싱 */
+function readBody(req: import("http").IncomingMessage): Promise<unknown> {
+  return new Promise((resolve, reject) => {
+    let raw = "";
+    req.on("data", (chunk: Buffer) => { raw += chunk.toString(); });
+    req.on("end", () => {
+      try { resolve(JSON.parse(raw)); }
+      catch { reject(new Error("Invalid JSON")); }
+    });
+    req.on("error", reject);
+  });
+}
+
+/** JSON 응답 전송 헬퍼 */
+function jsonResponse(
+  res: import("http").ServerResponse,
+  status: number,
+  body: unknown,
+): void {
+  res.statusCode = status;
+  res.setHeader("Content-Type", "application/json");
+  res.end(JSON.stringify(body));
+}
+
+// ── 파일 시스템 저장 (기존 로직) ────────────────────────────────
 
 interface CreatePagePayload {
-  /** 등록할 URL 경로 (예: "/my-page") */
   uri: string;
-  /** codeGenerator가 생성한 페이지 소스 코드 */
   code: string;
-  /** PascalCase 컴포넌트 이름 (예: "MyPage") */
   pageName: string;
 }
 
@@ -93,41 +132,51 @@ function addToRouter(
   fs.writeFileSync(routerFile, content, "utf-8");
 }
 
+// ── 플러그인 ─────────────────────────────────────────────────────
+
 /**
  * CMS 빌더 페이지 저장 요청을 처리하는 Vite 플러그인.
  * Vite dev 서버에서만 동작하며 프로덕션 빌드에는 영향을 주지 않는다.
  */
 export function cmsBankPlugin(options: CmsBankPluginOptions = {}): Plugin {
   let root: string;
+  let base = "/";
 
   return {
     name: "vite-cms-page-writer",
     configResolved(config) {
       root = config.root;
+      base = config.base ?? "/";
     },
     configureServer(server) {
-      server.middlewares.use("/__cms/create-page", (req, res, next) => {
-        if (req.method !== "POST") {
-          next();
-          return;
-        }
+      // 단일 미들웨어로 모든 /__cms/ 요청을 처리한다.
+      // nginx 프록시 모드(base=/react-cms/)에서 들어오는 요청은
+      // '/react-cms/__cms/...' 형태이므로, base 접두사를 제거해 경로를 정규화한다.
+      server.middlewares.use(async (req, res, next) => {
+        const rawUrl = req.url ?? "/";
 
-        let body = "";
-        req.on("data", (chunk: Buffer) => {
-          body += chunk.toString();
-        });
-        req.on("end", () => {
+        // base 접두사 제거: '/react-cms/__cms/api/save' → '/__cms/api/save'
+        const normalizedUrl =
+          base !== "/" && rawUrl.startsWith(base)
+            ? "/" + rawUrl.slice(base.length)
+            : rawUrl;
+
+        const urlPath = normalizedUrl.split("?")[0];
+
+        // ── POST /__cms/create-page ────────────────────────────
+        if (urlPath === "/__cms/create-page" && req.method === "POST") {
           try {
-            const payload: CreatePagePayload = JSON.parse(body);
+            const payload = await readBody(req) as CreatePagePayload;
 
-            const routerFile = path.join(
-              root,
-              options.routerPath ?? "src/routes/index.tsx",
-            );
-            const pagesDir = path.join(
-              root,
-              options.pagesDir ?? "src/pages/cms",
-            );
+            // PascalCase 영숫자만 허용 — 경로 조작(../ 등) 방지
+            const NAME_REGEX = /^[A-Z][a-zA-Z0-9]*$/;
+            if (!NAME_REGEX.test(payload.pageName)) {
+              jsonResponse(res, 400, { error: "pageName은 PascalCase 영숫자만 허용됩니다." });
+              return;
+            }
+
+            const routerFile = path.join(root, options.routerPath ?? "src/routes/index.tsx");
+            const pagesDir   = path.join(root, options.pagesDir   ?? "src/pages/cms");
 
             // @/ alias는 src/ 를 가리키므로 routerFile 경로에서 /src/ 위치를 찾아 srcDir 추론
             const srcMatch = routerFile.replace(/\\/g, "/").match(/^(.*\/src)\//);
@@ -138,18 +187,114 @@ export function cmsBankPlugin(options: CmsBankPluginOptions = {}): Plugin {
             createPageFile(pagesDir, payload.pageName, payload.code);
             addToRouter(routerFile, payload.pageName, payload.uri, pageImportPath);
 
-            res.setHeader("Content-Type", "application/json");
-            res.end(JSON.stringify({ success: true }));
+            jsonResponse(res, 200, { success: true });
           } catch (err) {
-            res.statusCode = 500;
-            res.setHeader("Content-Type", "application/json");
-            res.end(JSON.stringify({ error: String(err) }));
+            jsonResponse(res, 500, { error: String(err) });
           }
-        });
-        req.on("error", () => {
-          res.statusCode = 500;
-          res.end(JSON.stringify({ error: "Stream error" }));
-        });
+          return;
+        }
+
+        // ── POST /__cms/api/save ───────────────────────────────
+        // body: { pageId?: string, pageName: string, pageJson: string, pageCode: string }
+        // response: { pageId: string }
+        if (urlPath === "/__cms/api/save" && req.method === "POST") {
+          try {
+            const body = await readBody(req) as {
+              pageId?: string;
+              pageName: string;
+              pageJson: string;
+              pageCode: string;
+            };
+
+            const repo = await getRepo();
+            let pageId = body.pageId ?? null;
+
+            if (pageId) {
+              const existing = await repo.getPageById(pageId);
+              if (existing) {
+                await repo.updatePage({ pageId, pageName: body.pageName, pageJson: body.pageJson, pageCode: body.pageCode });
+              } else {
+                // 클라이언트가 보낸 pageId가 DB에 없으면 신규 생성
+                await repo.createPage({ pageId, pageName: body.pageName, pageJson: body.pageJson, pageCode: body.pageCode });
+              }
+            } else {
+              pageId = uuidv4();
+              await repo.createPage({ pageId, pageName: body.pageName, pageJson: body.pageJson, pageCode: body.pageCode });
+            }
+
+            jsonResponse(res, 200, { pageId });
+          } catch (err) {
+            console.error("[react-cms] DB save error:", err);
+            jsonResponse(res, 500, { error: String(err) });
+          }
+          return;
+        }
+
+        // ── POST /__cms/api/load ───────────────────────────────
+        // body: { pageId: string }
+        // response: { page: CmsPage | null }
+        if (urlPath === "/__cms/api/load" && req.method === "POST") {
+          try {
+            const body = await readBody(req) as { pageId: string };
+            const page = await (await getRepo()).getPageById(body.pageId);
+            jsonResponse(res, 200, { page });
+          } catch (err) {
+            console.error("[react-cms] DB load error:", err);
+            jsonResponse(res, 500, { error: String(err) });
+          }
+          return;
+        }
+
+        // ── GET /__cms/api/pages ───────────────────────────────
+        // ?search=&sortBy=date&approveState=&page=1&pageSize=10
+        // response: { list: CmsPage[], totalCount: number }
+        if (urlPath === "/__cms/api/pages" && req.method === "GET") {
+          try {
+            const url          = new URL(normalizedUrl, "http://localhost");
+            const search       = url.searchParams.get("search")       ?? undefined;
+            const sortBy       = url.searchParams.get("sortBy")       ?? undefined;
+            const approveState = url.searchParams.get("approveState") ?? undefined;
+            const page         = parseInt(url.searchParams.get("page")     ?? "1",  10);
+            const pageSize     = parseInt(url.searchParams.get("pageSize") ?? "10", 10);
+
+            const result = await (await getRepo()).listPages({
+              search,
+              sortBy: sortBy === "name" ? "name" : "date",
+              approveState,
+              page,
+              pageSize,
+            });
+
+            jsonResponse(res, 200, result);
+          } catch (err) {
+            console.error("[react-cms] DB list error:", err);
+            jsonResponse(res, 500, { error: String(err) });
+          }
+          return;
+        }
+
+        // ── DELETE /__cms/api/pages?pageId=xxx ─────────────────
+        // response: { success: true }
+        if (urlPath === "/__cms/api/pages" && req.method === "DELETE") {
+          try {
+            const url    = new URL(normalizedUrl, "http://localhost");
+            const pageId = url.searchParams.get("pageId");
+
+            if (!pageId) {
+              jsonResponse(res, 400, { error: "pageId가 필요합니다." });
+              return;
+            }
+
+            await (await getRepo()).deletePage(pageId);
+            jsonResponse(res, 200, { success: true });
+          } catch (err) {
+            console.error("[react-cms] DB delete error:", err);
+            jsonResponse(res, 500, { error: String(err) });
+          }
+          return;
+        }
+
+        next();
       });
     },
   };

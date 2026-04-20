@@ -1,4 +1,4 @@
-import { defineConfig } from 'vite'
+import { defineConfig, loadEnv } from 'vite'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite';
 import { resolve, dirname } from 'path';
@@ -9,7 +9,16 @@ import { cmsBankPlugin } from './src/vite-plugin/cmsBankPlugin';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
 // https://vite.dev/config/
-export default defineConfig({
+export default defineConfig(({ mode }) => {
+  // Vite 5+에서 loadEnv는 더 이상 process.env에 자동 주입하지 않음.
+  // prefix '' = VITE_ 접두사 없는 변수(ORACLE_*)도 포함해 전부 로드한 뒤,
+  // ORACLE_ 접두사 키만 선택적으로 주입 — 민감 정보의 불필요한 노출 방지.
+  const env = loadEnv(mode, process.cwd(), '');
+  Object.keys(env)
+    .filter(k => k.startsWith('ORACLE_'))
+    .forEach(k => { process.env[k] = env[k]; });
+
+  return {
   // VITE_BASE 환경변수로 base 경로를 제어한다.
   // 프록시 연동 시: VITE_BASE=/react-cms/ npm run dev
   // 단독 개발 시: 기본값 '/' 유지 (평소 동작 그대로)
@@ -40,4 +49,5 @@ export default defineConfig({
       '@lib': resolve(__dirname, '../reactive-springware/lib'),
     },
   },
+  }
 })

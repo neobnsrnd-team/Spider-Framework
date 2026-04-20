@@ -1,34 +1,73 @@
 /**
  * @file savePage.ts
- * @description CMS 빌더 페이지 저장 핸들러 (프로젝트별 커스텀 구현 예시).
- * cmsBankPlugin이 등록한 `/__cms/create-page` Vite dev 서버 엔드포인트에 POST 요청을 보냅니다.
- * main.tsx에서 CMSApp의 onSave prop에 전달합니다.
+ * @description CMS 빌더 페이지 저장 핸들러.
+ * 실행 모드에 따라 저장 방식을 분기합니다:
+ *   - admin 연동 모드 (npm run dev:proxy, BASE_URL=/react-cms/):
+ *       Oracle DB 저장만 수행 — 파일 생성 없음
+ *   - 단독 실행 모드 (npm run dev, BASE_URL=/):
+ *       파일 시스템 저장만 수행 — demo/front 앱 라우트 자동 등록
  *
- * 주의: 현재 main.tsx에서는 주석 처리되어 있으며 defaultSave가 사용됩니다.
- * 레이아웃/오버레이 Context 정보가 필요한 경우 CMSBuilder에서 생성한 params.code를 그대로 사용하세요.
+ * DB 저장 시 pageId를 localStorage에 캐싱합니다.
+ * pageName이 같으면 재저장 시 동일 pageId로 UPDATE합니다.
  *
  * @param page 저장할 CMSPage 데이터
- * @param params pageName(PascalCase), uri(라우트 경로)
+ * @param params pageName(PascalCase), uri(라우트 경로), code(JSX 코드 문자열)
  */
 import { generateJSX } from "@cms-core"
 import type { CMSPage, SavePageParams } from "@cms-core"
 
+/** localStorage key: pageName → pageId 매핑 */
+const PAGE_ID_KEY_PREFIX = "cms_page_id_"
+
+// BASE_URL 기준 /__cms/ 접두사 생성.
+// 프록시 모드(BASE_URL=/react-cms/): '/react-cms/__cms' → nginx가 Vite로 라우팅
+// 단독 모드(BASE_URL=/):             '/__cms'           → Vite 직접 처리
+const cmsBase = `${import.meta.env.BASE_URL.replace(/\/$/, "")}/__cms`
+
+// BASE_URL이 '/'가 아니면 nginx 프록시를 거쳐 admin과 연동되는 모드로 판단
+const isAdminMode = import.meta.env.BASE_URL !== "/"
+
 export async function savePage(page: CMSPage, params: SavePageParams): Promise<void> {
   const { pageName, uri } = params
-  // params.code에 CMSBuilder가 Context 정보를 포함해 생성한 코드가 있으면 그대로 사용.
-  // 없으면(직접 호출 시) generateJSX로 기본 코드 생성 — layouts/overlayTemplates 미포함 주의.
-  const code = generateJSX(page)
+  // CMSBuilder에서 Context 정보를 포함해 사전 생성한 코드 우선 사용.
+  // 없으면(직접 호출 시) generateJSX로 폴백 — Context 정보 미포함 주의.
+  const code = params.code ?? generateJSX(page)
 
-  const res = await fetch("/__cms/create-page", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ uri, code, pageName }),
-  })
+  if (isAdminMode) {
+    // ── admin 연동 모드: DB 저장만 수행 ─────────────────────────
+    const storedPageId = localStorage.getItem(`${PAGE_ID_KEY_PREFIX}${pageName}`) ?? undefined
 
-  if (!res.ok) {
-    // 서버 응답이 JSON이 아닌 경우(예: Vite 오류 페이지)에 대비해 catch로 빈 객체 반환
-    const data = await res.json().catch(() => ({}))
-    // data가 { error?: string } 형태임을 단언 — cmsBankPlugin 응답 포맷에 의존
-    throw new Error((data as { error?: string }).error ?? "페이지 저장에 실패했습니다.")
+    const dbRes = await fetch(`${cmsBase}/api/save`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        pageId:   storedPageId,
+        pageName,
+        pageJson: JSON.stringify(page),
+        pageCode: code,
+      }),
+    })
+
+    if (!dbRes.ok) {
+      const data = await dbRes.json().catch(() => ({}))
+      throw new Error((data as { error?: string }).error ?? "DB 저장에 실패했습니다.")
+    }
+
+    const { pageId } = (await dbRes.json()) as { pageId: string }
+    // 반환된 pageId를 캐싱 — 재저장 시 UPDATE로 처리
+    localStorage.setItem(`${PAGE_ID_KEY_PREFIX}${pageName}`, pageId)
+  } else {
+    // ── 단독 실행 모드: 파일 시스템 저장만 수행 ─────────────────
+    // demo/front 앱의 JSX 파일 생성 + 라우트 자동 등록
+    const fsRes = await fetch(`${cmsBase}/create-page`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ uri, code, pageName }),
+    })
+
+    if (!fsRes.ok) {
+      const data = await fsRes.json().catch(() => ({}))
+      throw new Error((data as { error?: string }).error ?? "파일 저장에 실패했습니다.")
+    }
   }
 }
