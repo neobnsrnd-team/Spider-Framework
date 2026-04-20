@@ -107,14 +107,15 @@
                 //   WORK     + CMS:W → [승인요청] [삭제]
                 //   REJECTED + CMS:W → [삭제]
                 //   그 외 (PENDING/APPROVED, 권한없음)       → '-'
+                // text-nowrap 과 gap 으로 두 버튼이 한 줄에 유지되고 td 좁아도 줄바꿈으로 가려지지 않게 한다.
                 let tdAction = '-';
                 if (window.HAS_CMS_WRITE) {
-                    const btnDelete = `<button class="btn btn-outline-danger btn-xs ms-1" onclick="CmsAssetRequestPage.deleteAsset('${aid}')">삭제</button>`;
+                    const btnDelete = `<button class="btn btn-outline-danger btn-xs" onclick="CmsAssetRequestPage.deleteAsset('${aid}')">삭제</button>`;
                     if (row.assetState === 'WORK') {
-                        tdAction = `<button class="btn btn-primary btn-xs" onclick="CmsAssetRequestPage.requestApproval('${aid}')">승인요청</button>` + btnDelete;
+                        const btnRequest = `<button class="btn btn-primary btn-xs" onclick="CmsAssetRequestPage.requestApproval('${aid}')">승인요청</button>`;
+                        tdAction = `<div class="d-inline-flex gap-1 text-nowrap">${btnRequest}${btnDelete}</div>`;
                     } else if (row.assetState === 'REJECTED') {
-                        // ms-1 은 WORK 의 승인요청 옆 간격용이라 단독 노출 시 제거
-                        tdAction = btnDelete.replace(' ms-1', '');
+                        tdAction = btnDelete;
                     }
                 }
 
