@@ -8,11 +8,11 @@ import java.util.List;
 import org.apache.ibatis.annotations.Param;
 
 /**
- * FWK_RPS_CODE_HIS 테이블 Mapper.
+ * FWK_REACT_CODE_HIS 테이블 Mapper.
  * React 코드 생성 이력의 저장·조회·상태 변경을 담당한다.
  *
  * <p>Oracle {@code @MapperScan}("domain.**.mapper") 스캔 대상으로 등록되어
- * Oracle datasource를 통해 FWK_RPS_CODE_HIS 테이블에 접근한다.
+ * Oracle datasource를 통해 FWK_REACT_CODE_HIS 테이블에 접근한다.
  */
 public interface ReactGenerateMapper {
 

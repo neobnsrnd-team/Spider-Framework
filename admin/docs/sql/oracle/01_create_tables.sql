@@ -1194,27 +1194,6 @@ CREATE TABLE FWK_CODE_TEMPLATE (
 
 
 -- =============================================================
--- 16. React Generate (1 table)
--- =============================================================
-
-CREATE TABLE FWK_RPS_CODE_HIS (
-    CODE_ID                    VARCHAR2(36)   NOT NULL,
-    FIGMA_URL                  VARCHAR2(1000) NOT NULL,
-    REQUIREMENTS               CLOB,
-    SYSTEM_PROMPT              CLOB,                         -- 디버깅 및 감사용 저장
-    USER_PROMPT                CLOB,
-    REACT_CODE                 CLOB,
-    FAIL_REASON                CLOB,
-    STATUS                     VARCHAR2(20)   DEFAULT 'GENERATED' NOT NULL,  -- GENERATED / FAILED / PENDING_APPROVAL / APPROVED / REJECTED
-    CREATE_DTIME               VARCHAR2(14)   DEFAULT TO_CHAR(SYSDATE, 'YYYYMMDDHH24MISS') NOT NULL,
-    CREATE_USER_ID             VARCHAR2(20)   NOT NULL,
-    APPROVAL_DTIME             VARCHAR2(14),
-    APPROVAL_USER_ID           VARCHAR2(20),
-    CONSTRAINT PK_RPS_CODE_HIS PRIMARY KEY (CODE_ID),
-    CONSTRAINT CHK_REACT_GEN_STATUS CHECK (STATUS IN ('GENERATED', 'FAILED', 'PENDING_APPROVAL', 'APPROVED', 'REJECTED'))
-);
-
--- =============================================================
 -- 16. FWK_CODE_TEMPLATE (1 table)
 -- =============================================================
 

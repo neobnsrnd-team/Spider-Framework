@@ -9,7 +9,7 @@ spring:
   config:
     import: classpath:menu-resource-permissions.yml, optional:file:.env[.properties]
   profiles:
-    active: oracle  # oracle 또는 mysql
+    active: oracle # oracle 또는 mysql
 
   # H2 Console (로그 조회용 - 기본 활성화)
   h2:
@@ -17,7 +17,7 @@ spring:
       enabled: true
       path: /h2-console
       settings:
-        web-allow-others: false  # 보안: 로컬만 접근
+        web-allow-others: false # 보안: 로컬만 접근
 
   # File Upload Configuration
   servlet:
@@ -78,26 +78,23 @@ log:
 logging:
   level:
     root: INFO
-    com.example.admin_demo: INFO  # 상세 로그 필요 시 DEBUG
-    org.mybatis: INFO  # SQL 확인 필요 시 DEBUG
+    com.example.admin_demo: INFO # 상세 로그 필요 시 DEBUG
+    org.mybatis: INFO # SQL 확인 필요 시 DEBUG
 
 # Menu Configuration
 # 사이드바에서 숨길 메뉴 ID 목록 (DB 미변경, 이 프로젝트에서만 적용)
 menu:
   hidden-menu-ids:
     #- acl_manage  # Framework 관리메뉴 (asis 메뉴  TODO 임시노출해제)
-    - test         # test 메뉴
-    - testtest     # test 메뉴
-    - TTT2         # test 메뉴
-    - test1        # test 메뉴
-    - 테스트메뉴     # test 메뉴
-
-# React 코드 승인 Configuration
-# 승인(approval) 시 생성된 .tsx 파일을 저장할 디렉토리.
-# Vite HMR이 파일 추가를 감지해 demo/front에 즉시 반영된다 (개발 모드).
-approval:
-  react:
-    output-dir: ${REACT_APPROVAL_OUTPUT_DIR:../demo/front/src/generated}
+    - test # test 메뉴
+    - testtest # test 메뉴
+    - TTT2 # test 메뉴
+    - test1 # test 메뉴
+    - 테스트메뉴 # test 메뉴
+    - v3_react_platform # ReactPlatform 메뉴 — DB는 유지(reactPlatform 프로젝트 사용), admin에서만 숨김 (Oracle)
+    - v3_react_generate
+    - v3_react_generate_his
+    - v3_react_approval
 
 # Demo 연동 Configuration (긴급공지 SSE Push, 미리보기)
 demo:
@@ -106,25 +103,6 @@ demo:
     admin-secret: ${DEMO_BACKEND_ADMIN_SECRET:admin-secret}
   frontend:
     url: ${DEMO_FRONTEND_URL:http://localhost:5173}
-
-# Figma API Configuration (React Generate 메뉴 — 디자인 노드 조회)
-figma:
-  api:
-    url: https://api.figma.com
-    token: ${FIGMA_ACCESS_TOKEN}
-    connect-timeout-seconds: 10
-    read-timeout-seconds: 30
-
-# Claude API Configuration (React Generate 메뉴)
-claude:
-  api:
-    url: https://api.anthropic.com/v1/messages
-    key: ${CLAUDE_API_KEY}
-    model: claude-sonnet-4-6      # 코드 생성 품질과 비용 균형 고려
-    max-tokens: 8192
-    # Claude 응답은 수십 초 소요될 수 있으므로 기본 RestTemplate 타임아웃과 별도 설정
-    connect-timeout-seconds: 10
-    read-timeout-seconds: 120
 
 # CMS Deploy Configuration
 cms:
@@ -151,9 +129,9 @@ cms:
 scheduling:
   batch-his-cleanup:
     enabled: true
-    cron: "0 0 2 * * ?"     # 매일 새벽 2시 실행
-    retention-days: 90       # 보관 기간 (일)
-    strategy: DELETE         # DELETE 또는 DROP_PARTITION (파티셔닝 적용 시)
+    cron: "0 0 2 * * ?" # 매일 새벽 2시 실행
+    retention-days: 90 # 보관 기간 (일)
+    strategy: DELETE # DELETE 또는 DROP_PARTITION (파티셔닝 적용 시)
 
 # TCP 통신 설정
 # Admin TCP 서버(9999), batch-was TCP 서버(9998), demo/backend TCP 서버(9997)

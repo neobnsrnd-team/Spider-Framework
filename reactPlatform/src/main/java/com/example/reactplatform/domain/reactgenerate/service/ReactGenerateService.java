@@ -348,7 +348,7 @@ public class ReactGenerateService {
      *
      * <ul>
      *   <li>FWK_ERROR_HIS: ErrorLogEvent 발행으로 시스템 공통 오류 이력 저장</li>
-     *   <li>FWK_RPS_CODE_HIS: codeId가 있으면 해당 코드 레코드를 FAILED 처리</li>
+     *   <li>FWK_REACT_CODE_HIS: codeId가 있으면 해당 코드 레코드를 FAILED 처리</li>
      * </ul>
      *
      * @param codeId       렌더링 실패한 코드의 CODE_ID (없으면 null)
@@ -376,7 +376,7 @@ public class ReactGenerateService {
             log.warn("렌더링 오류 이벤트 발행 실패 — 상태 업데이트는 계속 진행됩니다", e);
         }
 
-        // FWK_RPS_CODE_HIS: 해당 코드 레코드를 FAILED로 업데이트
+        // FWK_REACT_CODE_HIS: 해당 코드 레코드를 FAILED로 업데이트
         if (codeId != null && !codeId.isBlank()) {
             log.warn("렌더링 오류로 코드 실패 처리 — codeId: {}, error: {}", codeId, errorMessage);
             reactGenerateMapper.updateToFailed(codeId, errorMessage);

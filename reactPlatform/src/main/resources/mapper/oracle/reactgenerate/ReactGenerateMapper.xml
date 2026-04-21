@@ -3,7 +3,7 @@
         "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 
 <!--
-    ReactGenerate Mapper (FWK_RPS_CODE_HIS)
+    ReactGenerate Mapper (FWK_REACT_CODE_HIS)
     - React 코드 생성 이력 INSERT / SELECT / UPDATE
 -->
 <mapper namespace="com.example.reactplatform.domain.reactgenerate.mapper.ReactGenerateMapper">
@@ -11,7 +11,7 @@
     <!-- ==================== INSERT ==================== -->
 
     <insert id="insert">
-        INSERT INTO FWK_RPS_CODE_HIS (
+        INSERT INTO FWK_REACT_CODE_HIS (
             CODE_ID,
             FIGMA_URL,
             REQUIREMENTS,
@@ -74,7 +74,7 @@
     <select id="selectById" resultType="com.example.reactplatform.domain.reactgenerate.dto.ReactGenerateResponse">
         SELECT
             <include refid="selectColumns"/>
-        FROM FWK_RPS_CODE_HIS
+        FROM FWK_REACT_CODE_HIS
         WHERE CODE_ID = #{codeId,jdbcType=VARCHAR}
     </select>
 
@@ -98,7 +98,7 @@
                     CREATE_DTIME     AS createDtime,
                     APPROVAL_USER_ID AS approvalUserId,
                     APPROVAL_DTIME   AS approvalDtime
-                FROM FWK_RPS_CODE_HIS
+                FROM FWK_REACT_CODE_HIS
                 <include refid="historyWhereConditions"/>
                 ORDER BY CREATE_DTIME DESC
             ) INNER_QRY
@@ -109,7 +109,7 @@
 
     <select id="selectCount" resultType="int">
         SELECT COUNT(*)
-        FROM FWK_RPS_CODE_HIS
+        FROM FWK_REACT_CODE_HIS
         <include refid="historyWhereConditions"/>
     </select>
 
@@ -123,7 +123,7 @@
             CREATE_DTIME     AS createDtime,
             APPROVAL_USER_ID AS approvalUserId,
             APPROVAL_DTIME   AS approvalDtime
-        FROM FWK_RPS_CODE_HIS
+        FROM FWK_REACT_CODE_HIS
         <include refid="historyWhereConditions"/>
         ORDER BY CREATE_DTIME DESC
     </select>
@@ -146,7 +146,7 @@
                     STATUS         AS status,
                     CREATE_USER_ID AS createUserId,
                     CREATE_DTIME   AS createDtime
-                FROM FWK_RPS_CODE_HIS
+                FROM FWK_REACT_CODE_HIS
                 WHERE STATUS = 'PENDING_APPROVAL'
                 ORDER BY CREATE_DTIME ASC
             ) INNER_QRY
@@ -158,7 +158,7 @@
     <!-- 승인 대기(PENDING_APPROVAL) 전체 건수 조회 (페이지네이션용) -->
     <select id="selectPendingCount" resultType="int">
         SELECT COUNT(*)
-        FROM FWK_RPS_CODE_HIS
+        FROM FWK_REACT_CODE_HIS
         WHERE STATUS = 'PENDING_APPROVAL'
     </select>
 
@@ -211,7 +211,7 @@
                     CREATE_DTIME     AS createDtime,
                     APPROVAL_USER_ID AS approvalUserId,
                     APPROVAL_DTIME   AS approvalDtime
-                FROM FWK_RPS_CODE_HIS
+                FROM FWK_REACT_CODE_HIS
                 <include refid="approvalHistoryWhereConditions"/>
                 ORDER BY APPROVAL_DTIME DESC
             ) INNER_QRY
@@ -223,14 +223,14 @@
     <!-- 승인 이력 전체 건수 조회 (페이지네이션용) -->
     <select id="selectApprovalHistoryCount" resultType="int">
         SELECT COUNT(*)
-        FROM FWK_RPS_CODE_HIS
+        FROM FWK_REACT_CODE_HIS
         <include refid="approvalHistoryWhereConditions"/>
     </select>
 
     <!-- ==================== UPDATE ==================== -->
 
     <update id="updateStatus">
-        UPDATE FWK_RPS_CODE_HIS
+        UPDATE FWK_REACT_CODE_HIS
         SET
             STATUS           = #{status,jdbcType=VARCHAR},
             APPROVAL_USER_ID = #{approvalUserId,jdbcType=VARCHAR},
@@ -246,7 +246,7 @@
         UPDATE가 발생하지 않아 0을 반환한다. 반환값으로 선점 여부를 판단한다.
     -->
     <update id="updateStatusConditional">
-        UPDATE FWK_RPS_CODE_HIS
+        UPDATE FWK_REACT_CODE_HIS
         SET
             STATUS           = #{status,jdbcType=VARCHAR},
             APPROVAL_USER_ID = #{approvalUserId,jdbcType=VARCHAR},
@@ -257,7 +257,7 @@
     </update>
 
     <update id="updateToFailed">
-        UPDATE FWK_RPS_CODE_HIS
+        UPDATE FWK_REACT_CODE_HIS
         SET
             STATUS      = 'FAILED',
             FAIL_REASON = #{failReason,jdbcType=CLOB}
