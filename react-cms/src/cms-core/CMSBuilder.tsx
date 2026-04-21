@@ -45,11 +45,19 @@ export interface CMSBuilderProps {
   onSave?: (page: CMSPage, params: SavePageParams) => void | Promise<void>;
   /** 초기 페이지 데이터 (불러오기용) */
   initialPage?: CMSPage;
+  /**
+   * 빌더 모드.
+   * 'edit': 기존 페이지 수정 — 가져오기 버튼 비표시.
+   * 'create': 새 페이지 생성 (기본값).
+   */
+  mode?: "create" | "edit";
+  /** 편집 모드에서 저장 모달의 초기 페이지명 */
+  initialPageName?: string;
 }
 
 // ── CMSBuilder ─────────────────────────────────────────────────────────────────
 
-export function CMSBuilder({ onSave, initialPage }: CMSBuilderProps) {
+export function CMSBuilder({ onSave, initialPage, mode = "create", initialPageName }: CMSBuilderProps) {
   const blockMeta = useContext(BlockMetaContext);
   const blockRegistry = useContext(BlockRegistryContext);
   const overlayTemplates = useContext(OverlayTemplatesContext);
@@ -225,6 +233,8 @@ export function CMSBuilder({ onSave, initialPage }: CMSBuilderProps) {
           layoutType={builder.layoutType}
           editingOverlay={editingOverlay}
           onExitOverlay={builder.exitOverlay}
+          // 편집 모드에서는 외부 파일 가져오기가 기존 편집 내용을 덮어쓸 수 있어 비표시
+          showImport={mode !== "edit"}
           onImport={handleImport}
           onExport={() => downloadPageJson(page)}
           onViewCode={() => setCodeOpen(true)}
@@ -298,6 +308,7 @@ export function CMSBuilder({ onSave, initialPage }: CMSBuilderProps) {
             page={page}
             onSave={wrappedOnSave}
             onClose={() => setSaveOpen(false)}
+            initialPageName={initialPageName}
           />,
           document.body,
         )}
@@ -315,6 +326,7 @@ function Toolbar({
   layoutType,
   editingOverlay,
   onExitOverlay,
+  showImport,
   onImport,
   onExport,
   onViewCode,
@@ -326,6 +338,7 @@ function Toolbar({
   layoutType: string | undefined;
   editingOverlay?: CMSOverlay;
   onExitOverlay: () => void;
+  showImport: boolean;
   onImport: () => void;
   onExport: () => void;
   onViewCode: () => void;
@@ -361,7 +374,7 @@ function Toolbar({
         )}
       </div>
       <div className="flex items-center gap-1.5">
-        <ToolbarButton onClick={onImport}>가져오기</ToolbarButton>
+        {showImport && <ToolbarButton onClick={onImport}>가져오기</ToolbarButton>}
         <ToolbarButton onClick={onExport} disabled={blockCount === 0 && !layoutType}>
           내보내기
         </ToolbarButton>

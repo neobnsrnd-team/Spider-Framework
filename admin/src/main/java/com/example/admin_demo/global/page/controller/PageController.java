@@ -399,7 +399,12 @@ public class PageController {
         return resolveView(request, "pages/datasource-manage/datasource-manage :: content", model);
     }
 
-    // CMS dashboard route is kept available even when it is not exposed as a menu.
+    // React CMS / HTML CMS 대시보드 라우트 — 메뉴 노출 여부와 무관하게 경로 유지
+
+    @GetMapping("/react-cms/dashboard")
+    public String reactCmsDashboard(HttpServletRequest request, Model model) {
+        return resolveView(request, "pages/react-cms-dashboard/react-cms-dashboard :: content", model);
+    }
 
     @GetMapping("/cms/dashboard")
     public String cmsDashboard(HttpServletRequest request, Model model) {

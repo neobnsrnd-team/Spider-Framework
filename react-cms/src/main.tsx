@@ -12,11 +12,12 @@
  *   - /builder         : CMS 에디터
  *   - /preview         : 페이지 미리보기
  */
-import { StrictMode } from "react";
+import { StrictMode, useState, useEffect } from "react";
 import { createRoot } from "react-dom/client";
-import { createBrowserRouter, RouterProvider, Navigate, Outlet } from "react-router-dom";
+import { createBrowserRouter, RouterProvider, Navigate, Outlet, useSearchParams } from "react-router-dom";
 import "./index.css";
 import { CMSApp } from "@cms-core";
+import type { CMSPage } from "@cms-core/types";
 import { CMSBuilder } from "@cms-core/CMSBuilder";
 import PreviewPage from "@cms-core/preview/PreviewPage";
 import CmsAuthGuard from "./cms-admin/CmsAuthGuard";
@@ -24,7 +25,81 @@ import NotAuthorizedPage from "./cms-admin/NotAuthorizedPage";
 import { blocks, overlays, layouts } from "./cms.config";
 import { savePage } from "./savePage";
 import userScopeCSS from "./user-scope.css?inline";
-import { isAdminMode } from "./lib/client-env";
+import { isAdminMode, cmsBase } from "./lib/client-env";
+
+/** localStorage key prefix: pageName → pageId 매핑 (savePage.ts와 동일) */
+const PAGE_ID_KEY_PREFIX = "cms_page_id_";
+
+/**
+ * pageId 쿼리 파라미터가 있으면 DB에서 해당 페이지를 조회해 편집 모드로 빌더를 시작합니다.
+ * pageId 없이 접근하면 신규 생성 모드로 빌더를 시작합니다.
+ */
+function BuilderPage() {
+  const [searchParams] = useSearchParams();
+  const pageId = searchParams.get("pageId");
+
+  const [initialPage, setInitialPage] = useState<CMSPage | undefined>(undefined);
+  const [initialPageName, setInitialPageName] = useState<string | undefined>(undefined);
+  const [loading, setLoading] = useState(!!pageId);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!pageId) return;
+
+    fetch(`${cmsBase}/api/load`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ pageId }),
+    })
+      .then((r) => r.json())
+      .then((data: { page?: { PAGE_HTML?: string | null; PAGE_NAME?: string } | null }) => {
+        const row = data.page;
+        if (!row) {
+          setError("페이지를 찾을 수 없습니다.");
+          return;
+        }
+        // 재편집을 위해 pageId를 localStorage에 캐싱 — savePage.ts의 UPDATE 분기를 타도록 함
+        if (row.PAGE_NAME) {
+          localStorage.setItem(`${PAGE_ID_KEY_PREFIX}${row.PAGE_NAME}`, pageId);
+          setInitialPageName(row.PAGE_NAME);
+        }
+        if (row.PAGE_HTML) {
+          try {
+            setInitialPage(JSON.parse(row.PAGE_HTML) as CMSPage);
+          } catch {
+            setError("페이지 데이터를 불러올 수 없습니다.");
+          }
+        }
+      })
+      .catch(() => setError("페이지 불러오기 중 오류가 발생했습니다."))
+      .finally(() => setLoading(false));
+  }, [pageId]);
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-screen text-sm text-gray-500">
+        페이지를 불러오는 중...
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex items-center justify-center h-screen text-sm text-red-500">
+        {error}
+      </div>
+    );
+  }
+
+  return (
+    <CMSBuilder
+      onSave={savePage}
+      initialPage={initialPage}
+      mode={pageId ? "edit" : "create"}
+      initialPageName={initialPageName}
+    />
+  );
+}
 
 // BASE_URL은 Vite가 vite.config.ts의 base 설정값으로 주입한다.
 // VITE_BASE=/react-cms/ 로 실행 시 '/react-cms/' — nginx 프록시를 거쳐 admin과 연동되는 모드.
@@ -49,7 +124,7 @@ const router = createBrowserRouter(
         { index: true, element: <Navigate to="/builder" replace /> },
         {
           path: "builder",
-          element: <CMSBuilder onSave={savePage} />,
+          element: <BuilderPage />,
         },
         {
           path: "preview",
