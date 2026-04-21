@@ -93,7 +93,7 @@
             const $tbody = $('#approvalTableBody');
             if (!rows || rows.length === 0) {
                 this.rowsByPageId = {};
-                $tbody.html('<tr><td colspan="10" class="text-center py-4 text-body-secondary">조회된 데이터가 없습니다.</td></tr>');
+                $tbody.html('<tr><td colspan="9" class="text-center py-4 text-body-secondary">조회된 데이터가 없습니다.</td></tr>');
                 return;
             }
 
@@ -137,7 +137,7 @@
                     <td class="text-center">${HtmlUtils.escape(row.viewMode || '')}</td>
                     <td>${HtmlUtils.escape(row.createUserName || '')}</td>
                     <td class="text-center">${badge}</td>
-                    <!-- 공개여부 컬럼 UI 숨김 (#132) — 정책 확정 시 주석 해제 + approval-table.html colspan 복원 -->
+                    <!-- 공개여부 컬럼 UI 숨김 (#132) — 정책 확정 시 주석 해제 + 두 곳의 colspan 9→10 복원 (approval-table.html:23, 이 파일 96행) -->
                     <!-- <td class="text-center">${isPublicBtn}</td> -->
                     <td class="text-center">${HtmlUtils.escape(row.beginningDate || '-')}</td>
                     <td class="text-center ${expiredCls}">${HtmlUtils.escape(row.expiredDate || '-')}</td>
