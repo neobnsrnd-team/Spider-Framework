@@ -58,9 +58,7 @@ public class SecurityConfig {
                 // CSRF 설정 — admin과 동일하게 REST API는 CSRF 비활성화
                 // Spring Security 6 SPA CSRF를 제대로 구현하려면 SpaCsrfTokenRequestHandler + CsrfCookieFilter가 필요하나
                 // POC 범위에서는 /api/** ignore로 대체 (세션 인증이지만 동일 출처 JS에서만 호출)
-                .csrf(csrf -> csrf
-                        .ignoringRequestMatchers("/api/**")
-                        .ignoringRequestMatchers("/h2-console/**"))
+                .csrf(csrf -> csrf.ignoringRequestMatchers("/api/**").ignoringRequestMatchers("/h2-console/**"))
 
                 // Headers 설정 (H2 Console iframe 허용)
                 .headers(headers -> headers.frameOptions(frame -> frame.sameOrigin()))
