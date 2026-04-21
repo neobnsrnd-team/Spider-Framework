@@ -16,6 +16,7 @@ import org.springframework.stereotype.Component;
 import io.netty.channel.Channel;
 import io.netty.channel.group.ChannelGroup;
 import io.netty.channel.group.DefaultChannelGroup;
+import io.netty.util.AttributeKey;
 import io.netty.util.concurrent.GlobalEventExecutor;
 
 /**
@@ -36,7 +37,13 @@ public class TcpSessionManager {
     private final ConcurrentHashMap<String, SessionInfo> sessions = new ConcurrentHashMap<>();
 
     /**
-     * sessionId → Netty Channel 역매핑 (채널 종료 시 세션 자동 정리에 사용).
+     * 채널에 sessionId를 직접 저장하기 위한 AttributeKey.
+     * onChannelInactive 시 Map 순회 없이 O(1)으로 세션을 탐색·정리할 수 있다.
+     */
+    static final AttributeKey<String> SESSION_ID_KEY = AttributeKey.valueOf("tcp.sessionId");
+
+    /**
+     * sessionId → Netty Channel 역매핑 (invalidate 시 채널 참조 정리에 사용).
      */
     private final ConcurrentHashMap<String, Channel> sessionChannels = new ConcurrentHashMap<>();
 
@@ -94,6 +101,8 @@ public class TcpSessionManager {
         // channel이 null이면 HTTP 세션 — 채널 종료 이벤트가 없으므로 채널 매핑 생략
         if (channel != null) {
             sessionChannels.put(sessionId, channel);
+            // AttributeKey로 채널에 sessionId를 직접 저장 → onChannelInactive O(1) 탐색
+            channel.attr(SESSION_ID_KEY).set(sessionId);
         }
         userSessions.put(userId, sessionId);
 
@@ -138,14 +147,12 @@ public class TcpSessionManager {
      * @param channel 끊긴 Netty 채널
      */
     public void onChannelInactive(Channel channel) {
-        // 채널 ID로 sessionId를 역탐색해 제거
-        sessionChannels.entrySet().removeIf(entry -> {
-            if (entry.getValue().equals(channel)) {
-                invalidate(entry.getKey());
-                return true;
-            }
-            return false;
-        });
+        // AttributeKey로 채널에 저장된 sessionId를 O(1)으로 꺼내 세션 정리
+        // — 기존 Map 전체 순회(O(N)) 방식 대비 성능 개선
+        String sessionId = channel.attr(SESSION_ID_KEY).getAndSet(null);
+        if (sessionId != null) {
+            invalidate(sessionId);
+        }
     }
 
     // ── 공지 구독 채널 관리 ────────────────────────────────────────────────────

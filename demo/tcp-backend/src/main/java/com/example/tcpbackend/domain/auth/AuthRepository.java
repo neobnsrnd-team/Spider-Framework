@@ -53,7 +53,7 @@ public class AuthRepository {
     }
 
     /**
-     * 사용자 프로필과 현재 시각을 조회한다.
+     * 사용자 프로필을 조회한다.
      * (TCP에서는 JWT 대신 세션에 사용자 정보가 있으므로
      *  GET_PROFILE 커맨드 시 최신 DB 값을 확인할 때 사용)
      *
@@ -63,7 +63,7 @@ public class AuthRepository {
     public Optional<UserRow> findById(String userId) {
         String sql = """
                 SELECT USER_ID, USER_NAME, USER_GRADE, LOG_YN,
-                       TO_CHAR(SYSDATE, 'YYYYMMDDHH24MISS') AS LAST_LOGIN_DTIME
+                       LAST_LOGIN_DTIME
                   FROM D_SPIDERLINK.POC_USER
                  WHERE USER_ID = ?
                 """;

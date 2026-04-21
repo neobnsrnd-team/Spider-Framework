@@ -18,6 +18,7 @@ import com.example.tcpbackend.tcp.TcpRequest;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufInputStream;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.ByteToMessageDecoder;
 
@@ -81,12 +82,9 @@ public class LengthPrefixDecoder extends ByteToMessageDecoder {
             return;
         }
 
-        // body를 바이트 배열로 읽어 JSON 역직렬화
-        byte[] bodyBytes = new byte[bodyLength];
-        in.readBytes(bodyBytes);
-
-        try {
-            TcpRequest request = objectMapper.readValue(bodyBytes, TcpRequest.class);
+        // ByteBufInputStream으로 ByteBuf에서 직접 역직렬화 — byte[] 중간 복사 생략
+        try (ByteBufInputStream bbis = new ByteBufInputStream(in, bodyLength)) {
+            TcpRequest request = objectMapper.readValue((java.io.InputStream) bbis, TcpRequest.class);
             out.add(request);
         } catch (Exception e) {
             log.error("[Decoder] JSON 역직렬화 실패 (channel={}): {}", ctx.channel().id(), e.getMessage());

@@ -16,6 +16,7 @@ import com.example.tcpbackend.tcp.TcpResponse;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufOutputStream;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.MessageToByteEncoder;
 
@@ -43,11 +44,16 @@ public class LengthPrefixEncoder extends MessageToByteEncoder<TcpResponse> {
     @Override
     protected void encode(ChannelHandlerContext ctx, TcpResponse msg, ByteBuf out) throws Exception {
         try {
-            byte[] jsonBytes = objectMapper.writeValueAsBytes(msg);
-            // 4바이트 길이 헤더 (big-endian) 먼저 기록
-            out.writeInt(jsonBytes.length);
-            // JSON body 기록
-            out.writeBytes(jsonBytes);
+            // 길이 헤더 자리를 먼저 확보하고, ByteBufOutputStream으로 ByteBuf에 직접 직렬화
+            // — byte[] 중간 복사 없이 메모리 할당 비용을 줄인다
+            int lenIdx = out.writerIndex();
+            out.writeInt(0); // 길이 헤더 placeholder
+            try (ByteBufOutputStream bbos = new ByteBufOutputStream(out)) {
+                objectMapper.writeValue((java.io.OutputStream) bbos, msg);
+            }
+            // 실제 기록된 JSON 바이트 수로 길이 헤더를 덮어씀
+            int bodyLen = out.writerIndex() - lenIdx - Integer.BYTES;
+            out.setInt(lenIdx, bodyLen);
         } catch (Exception e) {
             log.error("[Encoder] JSON 직렬화 실패 (channel={}): {}", ctx.channel().id(), e.getMessage());
             // 직렬화 실패 시 해당 응답은 전송하지 않는다 — 클라이언트 타임아웃으로 처리

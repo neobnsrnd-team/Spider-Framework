@@ -27,6 +27,7 @@ import org.springframework.web.util.ContentCachingResponseWrapper;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.util.regex.Pattern;
 
 /**
  * API 요청/응답 로깅 필터.
@@ -38,6 +39,14 @@ public class RequestLoggingFilter extends OncePerRequestFilter {
 
     /** 로그에 출력할 바디 최대 길이 (너무 크면 로그가 지저분해지므로 제한) */
     private static final int MAX_BODY_LENGTH = 2000;
+
+    /**
+     * JSON 바디에서 민감 필드 값을 마스킹하기 위한 정규식.
+     * password, pin, secret, adminSecret, token 등의 필드 값을 "***"로 대체한다.
+     */
+    private static final Pattern SENSITIVE_FIELD_PATTERN = Pattern.compile(
+            "(?i)(\"(?:password|pin|secret|adminSecret|token)\"\\s*:\\s*)\"[^\"]*\""
+    );
 
     @Override
     protected void doFilterInternal(
@@ -75,7 +84,8 @@ public class RequestLoggingFilter extends OncePerRequestFilter {
             long elapsed = System.currentTimeMillis() - startMs;
             int  status  = wrappedRes.getStatus();
 
-            String reqBody = extractBody(wrappedReq.getContentAsByteArray());
+            // 요청 바디는 비밀번호 등 민감 정보가 포함될 수 있으므로 마스킹 처리한다.
+            String reqBody = maskSensitiveFields(extractBody(wrappedReq.getContentAsByteArray()));
             String resBody = extractBody(wrappedRes.getContentAsByteArray());
 
             if (status >= 500) {
@@ -110,5 +120,16 @@ public class RequestLoggingFilter extends OncePerRequestFilter {
             return body.substring(0, MAX_BODY_LENGTH) + "... (truncated)";
         }
         return body;
+    }
+
+    /**
+     * JSON 문자열에서 민감 필드(password, pin, secret 등)의 값을 "***"로 대체한다.
+     * 로그인 요청 등에서 비밀번호가 평문으로 로그에 남는 것을 방지한다.
+     *
+     * @param body 로그 출력 전 바디 문자열
+     * @return 민감 필드가 마스킹된 문자열
+     */
+    private String maskSensitiveFields(String body) {
+        return SENSITIVE_FIELD_PATTERN.matcher(body).replaceAll("$1\"***\"");
     }
 }

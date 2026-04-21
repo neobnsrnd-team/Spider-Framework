@@ -6,6 +6,7 @@
 package com.example.tcpbackend.domain.card;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -15,7 +16,6 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -36,7 +36,6 @@ public class CardService {
     private final CardRepository cardRepository;
     private final BankingRepository bankingRepository;
     private final AppProperties appProperties;
-    private final JdbcTemplate jdbc;
 
     /**
      * POC용 인메모리 PIN 시도 횟수 저장소.
@@ -47,12 +46,10 @@ public class CardService {
 
     public CardService(CardRepository cardRepository,
                        BankingRepository bankingRepository,
-                       AppProperties appProperties,
-                       JdbcTemplate jdbc) {
+                       AppProperties appProperties) {
         this.cardRepository = cardRepository;
         this.bankingRepository = bankingRepository;
         this.appProperties = appProperties;
-        this.jdbc = jdbc;
     }
 
     /**
@@ -131,14 +128,12 @@ public class CardService {
 
         // ── 2. 트랜잭션 기준 시각 조회 ──────────────────────────────────
         // 복수 UPDATE/INSERT에 동일 시각을 사용해야 데이터 일관성이 보장된다.
-        Map<String, Object> txTime = jdbc.queryForMap(
-                "SELECT TO_CHAR(SYSDATE, 'YYYYMMDDHH24MISS') AS TX_DATETIME," +
-                "       TO_CHAR(SYSDATE, 'YYYYMMDD')         AS TX_DATE," +
-                "       TO_CHAR(SYSDATE, 'YYYY.MM.DD HH24:MI') AS COMPLETED_AT" +
-                "  FROM DUAL");
-        String txDateTime  = (String) txTime.get("TX_DATETIME");
-        String txDate      = (String) txTime.get("TX_DATE");
-        String completedAt = (String) txTime.get("COMPLETED_AT");
+        // DB DUAL 조회 대신 애플리케이션 시각을 사용해 불필요한 네트워크 왕복을 제거한다.
+        // (DB 서버와 애플리케이션 서버 시간이 동기화되어 있다는 전제)
+        LocalDateTime now      = LocalDateTime.now();
+        String txDateTime  = now.format(DateTimeFormatter.ofPattern("yyyyMMddHHmmss"));
+        String txDate      = now.format(DateTimeFormatter.ofPattern("yyyyMMdd"));
+        String completedAt = now.format(DateTimeFormatter.ofPattern("yyyy.MM.dd HH:mm"));
 
         // ── 3. 미결제 내역 조회 (FOR UPDATE) ────────────────────────────
         List<Map<String, Object>> unpaidRows = cardRepository.findUnpaidRowsForUpdate(userId, cardId);
