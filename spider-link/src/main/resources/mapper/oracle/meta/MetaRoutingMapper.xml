@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.example.spiderlink.domain.meta.mapper.MetaRoutingMapper">
+
+    <!-- 게이트웨이에 등록된 커맨드 목록 (시작 시 지원 커맨드 캐시 초기화용) -->
+    <select id="selectRegisteredCommands" resultType="string">
+        SELECT REQ_ID_CODE
+          FROM FWK_LISTENER_TRX_MESSAGE
+         WHERE GW_ID = #{gwId}
+    </select>
+
+    <!-- 커맨드 → TRX_ID -->
+    <select id="selectTrxId" resultType="string">
+        SELECT TRX_ID
+          FROM FWK_LISTENER_TRX_MESSAGE
+         WHERE GW_ID       = #{gwId}
+           AND REQ_ID_CODE = #{command}
+    </select>
+
+    <!-- TRX_ID + ORG_ID + IO_TYPE → SERVICE_ID -->
+    <select id="selectServiceId" resultType="string">
+        SELECT SERVICE_ID
+          FROM FWK_SERVICE
+         WHERE TRX_ID  = #{trxId}
+           AND ORG_ID  = #{orgId}
+           AND IO_TYPE = #{ioType}
+           AND USE_YN  = 'Y'
+    </select>
+
+    <!-- SERVICE_ID → 실행 단계 목록 (순서 오름차순) -->
+    <select id="selectServiceSteps"
+            resultType="com.example.spiderlink.domain.meta.dto.ServiceStep">
+        SELECT SERVICE_ID      AS serviceId,
+               SERVICE_SEQ_NO  AS serviceSeqNo,
+               COMPONENT_ID    AS componentId
+          FROM FWK_SERVICE_RELATION
+         WHERE SERVICE_ID = #{serviceId}
+         ORDER BY SERVICE_SEQ_NO ASC
+    </select>
+
+    <!-- COMPONENT_ID → 컴포넌트 메타데이터 -->
+    <select id="selectComponent"
+            resultType="com.example.spiderlink.domain.meta.dto.ComponentInfo">
+        SELECT COMPONENT_ID           AS componentId,
+               COMPONENT_CLASS_NAME   AS componentClassName,
+               COMPONENT_METHOD_NAME  AS componentMethodName,
+               COMPONENT_TYPE         AS componentType
+          FROM FWK_COMPONENT
+         WHERE COMPONENT_ID = #{componentId}
+           AND USE_YN = 'Y'
+    </select>
+
+    <!-- 서비스 스텝의 SQL 파라미터 바인딩 정보
+         FWK_RELATION_PARAM(payload 키) ⋈ FWK_COMPONENT_PARAM(SQL 파라미터 키) -->
+    <select id="selectRelationParams"
+            resultType="com.example.spiderlink.domain.meta.dto.RelationParam">
+        SELECT CP.PARAM_KEY    AS paramKey,
+               RP.PARAM_VALUE  AS paramValue
+          FROM FWK_RELATION_PARAM  RP
+          JOIN FWK_COMPONENT_PARAM CP
+            ON RP.COMPONENT_ID = CP.COMPONENT_ID
+           AND RP.PARAM_SEQ_NO = CP.PARAM_SEQ_NO
+         WHERE RP.SERVICE_ID     = #{serviceId}
+           AND RP.SERVICE_SEQ_NO = #{serviceSeqNo}
+           AND RP.COMPONENT_ID   = #{componentId}
+         ORDER BY RP.PARAM_SEQ_NO ASC
+    </select>
+
+</mapper>

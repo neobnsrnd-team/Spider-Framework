@@ -1,6 +1,7 @@
 package com.example.spiderlink.infra.tcp.demoserver;
 
 import com.example.spiderlink.infra.tcp.handler.CommandDispatcher;
+import com.example.spiderlink.infra.tcp.parser.JsonMessageParser;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.annotation.PreDestroy;
 import java.io.IOException;
@@ -39,6 +40,7 @@ public class DemoTcpServer implements ApplicationRunner {
 
     private final CommandDispatcher commandDispatcher;
     private final ObjectMapper objectMapper;
+    private final JsonMessageParser jsonMessageParser;
 
     private volatile ServerSocket serverSocket;
     private ExecutorService handlerPool;
@@ -64,7 +66,7 @@ public class DemoTcpServer implements ApplicationRunner {
             while (!Thread.currentThread().isInterrupted() && !serverSocket.isClosed()) {
                 Socket clientSocket = serverSocket.accept();
                 try {
-                    handlerPool.submit(new DemoTcpClientHandler(clientSocket, commandDispatcher, objectMapper));
+                    handlerPool.submit(new DemoTcpClientHandler(clientSocket, commandDispatcher, objectMapper, jsonMessageParser));
                 } catch (RejectedExecutionException e) {
                     log.error("[DemoTcpServer] 핸들러 풀 포화, 소켓 닫음: {}", e.getMessage());
                     try { clientSocket.close(); } catch (IOException ignored) {}

@@ -36,7 +36,8 @@ public class LoopField extends MessageField {
 
     public LoopField(String name, int loopCountLength, int maxOccurs, String defaultValue) {
         // LoopField 자체의 dataType·align·filler는 파싱에 쓰이지 않고 count 읽기에만 사용
-        super(name, MessageField.NUM, loopCountLength, 0, MessageField.RIGHT, '0', null, true);
+        // required=false — LoopField는 구조 마커이므로 필수값 검증 대상이 아님
+        super(name, MessageField.NUM, loopCountLength, 0, MessageField.RIGHT, '0', null, true, false);
         this.maxOccurs    = maxOccurs;
         this.defaultValue = defaultValue;
     }

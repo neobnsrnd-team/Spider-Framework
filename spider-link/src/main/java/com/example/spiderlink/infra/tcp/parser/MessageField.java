@@ -58,4 +58,7 @@ public class MessageField {
 
     /** LOG_YN — false 면 파싱 결과를 디버그 로그에 출력하지 않음 */
     private final boolean logMode;
+
+    /** REQUIRED_YN — true 면 요청 payload에 해당 필드가 반드시 존재해야 함 */
+    private final boolean required;
 }

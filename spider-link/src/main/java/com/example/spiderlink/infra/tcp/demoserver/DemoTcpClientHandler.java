@@ -3,6 +3,7 @@ package com.example.spiderlink.infra.tcp.demoserver;
 import com.example.spiderlink.infra.tcp.handler.CommandDispatcher;
 import com.example.spiderlink.infra.tcp.model.JsonCommandRequest;
 import com.example.spiderlink.infra.tcp.model.JsonCommandResponse;
+import com.example.spiderlink.infra.tcp.parser.JsonMessageParser;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
@@ -18,6 +19,9 @@ import lombok.extern.slf4j.Slf4j;
  * CommandDispatcher에 위임한 뒤 JsonCommandResponse를 반환한다.</p>
  *
  * <p>프로토콜: [4바이트 길이(int, big-endian)] + [UTF-8 JSON 바이트열]</p>
+ *
+ * <p>수신 payload는 JsonMessageParser를 통해 FWK_MESSAGE_FIELD 메타데이터 기준으로
+ * 민감 필드 마스킹 처리 후 로그에 기록된다.</p>
  */
 @Slf4j
 @RequiredArgsConstructor
@@ -28,6 +32,8 @@ public class DemoTcpClientHandler implements Runnable {
     private final Socket socket;
     private final CommandDispatcher commandDispatcher;
     private final ObjectMapper objectMapper;
+    /** FWK_MESSAGE_FIELD 기반 로그 마스킹 처리 */
+    private final JsonMessageParser jsonMessageParser;
 
     @Override
     public void run() {
@@ -48,10 +54,16 @@ public class DemoTcpClientHandler implements Runnable {
             dis.readFully(bytes);
 
             JsonCommandRequest request = objectMapper.readValue(bytes, JsonCommandRequest.class);
-            log.info("[DemoTcpClientHandler] 수신: command={}, requestId={}", request.getCommand(), request.getRequestId());
+            // FWK_MESSAGE_FIELD 기반 마스킹 — 민감 필드(예: password)를 로그에서 보호
+            String maskedPayload = jsonMessageParser.maskForLog(
+                    request.getCommand() + "_REQ", request.getPayload());
+            log.info("[DemoTcpClientHandler] 수신: command={}, requestId={}, payload={}",
+                    request.getCommand(), request.getRequestId(), maskedPayload);
 
             Object result;
             try {
+                // FWK_MESSAGE_FIELD REQUIRED_YN 기준 필수 필드 검증 — 누락 시 IllegalArgumentException
+                jsonMessageParser.validate(request.getCommand() + "_REQ", request.getPayload());
                 result = commandDispatcher.dispatch(request.getCommand(), request);
             } catch (Exception e) {
                 log.warn("[DemoTcpClientHandler] 커맨드 처리 중 예외: command={}, error={}", request.getCommand(), e.getMessage(), e);

@@ -68,4 +68,7 @@ public class MessageFieldMeta {
      * LoopField의 길이 필드가 0일 때 고정 반복 횟수로 사용.
      */
     private Integer fieldRepeatCnt;
+
+    /** 필수 여부 (FWK_MESSAGE_FIELD.REQUIRED_YN). Y=필수, N=선택 */
+    private String requiredYn;
 }
