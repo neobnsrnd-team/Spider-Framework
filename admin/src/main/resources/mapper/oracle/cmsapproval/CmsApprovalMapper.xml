@@ -35,6 +35,8 @@
         <where>
             p.USE_YN = 'Y'
             AND p.APPROVE_STATE != 'WORK'
+            <!-- 타 프로젝트가 SPW_CMS_PAGE 에 추가한 REACT 등 다른 PAGE_TYPE 제외 (#134) -->
+            AND p.PAGE_TYPE = 'PAGE'
             <if test="req.approveState != null and req.approveState != ''">
                 AND p.APPROVE_STATE = #{req.approveState}
             </if>
@@ -104,11 +106,13 @@
 
     <!-- ==================== 페이지 존재 확인 ==================== -->
 
+    <!-- PAGE_TYPE='PAGE' 가드 (#134): 서비스의 checkPageExists 에서 타 프로젝트 pageId 를 NotFound 로 차단해 직접 API 호출에 의한 무결성·보안 문제 방지 -->
     <select id="existsByPageId" resultType="int">
         SELECT COUNT(*)
         FROM SPW_CMS_PAGE
-        WHERE PAGE_ID = #{pageId}
-          AND USE_YN  = 'Y'
+        WHERE PAGE_ID   = #{pageId}
+          AND USE_YN    = 'Y'
+          AND PAGE_TYPE = 'PAGE'
     </select>
 
     <!-- ==================== 승인 — APPROVED ==================== -->
@@ -123,8 +127,9 @@
                                     THEN TO_DATE(#{expiredDate}, 'YYYY-MM-DD') ELSE NULL END,
             APPROVE_DATE     = SYSTIMESTAMP,
             LAST_MODIFIER_ID = #{modifierId}
-        WHERE PAGE_ID = #{pageId}
+        WHERE PAGE_ID       = #{pageId}
           AND APPROVE_STATE = 'PENDING'
+          AND PAGE_TYPE     = 'PAGE'
     </update>
 
     <!-- ==================== 반려 — REJECTED ==================== -->
@@ -135,8 +140,9 @@
             REJECTED_REASON  = #{rejectedReason},
             APPROVE_DATE     = SYSTIMESTAMP,
             LAST_MODIFIER_ID = #{modifierId}
-        WHERE PAGE_ID = #{pageId}
+        WHERE PAGE_ID       = #{pageId}
           AND APPROVE_STATE = 'PENDING'
+          AND PAGE_TYPE     = 'PAGE'
     </update>
 
     <!-- ==================== 공개 상태 변경 ==================== -->
@@ -145,7 +151,8 @@
         UPDATE SPW_CMS_PAGE
         SET IS_PUBLIC        = #{isPublic},
             LAST_MODIFIER_ID = #{modifierId}
-        WHERE PAGE_ID = #{pageId}
+        WHERE PAGE_ID   = #{pageId}
+          AND PAGE_TYPE = 'PAGE'
     </update>
 
     <!-- ==================== 노출 기간 수정 ==================== -->
@@ -155,7 +162,8 @@
         SET BEGINNING_DATE   = TO_DATE(#{beginningDate}, 'YYYY-MM-DD'),
             EXPIRED_DATE     = TO_DATE(#{expiredDate}, 'YYYY-MM-DD'),
             LAST_MODIFIER_ID = #{modifierId}
-        WHERE PAGE_ID = #{pageId}
+        WHERE PAGE_ID   = #{pageId}
+          AND PAGE_TYPE = 'PAGE'
     </update>
 
     <!-- ==================== 이력 스냅샷 ==================== -->
@@ -234,8 +242,9 @@
             FILE_PATH        = #{filePath},
             APPROVE_STATE    = 'WORK',
             LAST_MODIFIER_ID = #{modifierId}
-        WHERE PAGE_ID = #{pageId}
-          AND USE_YN  = 'Y'
+        WHERE PAGE_ID   = #{pageId}
+          AND USE_YN    = 'Y'
+          AND PAGE_TYPE = 'PAGE'
     </update>
 
 </mapper>
