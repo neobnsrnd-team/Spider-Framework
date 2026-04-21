@@ -27,6 +27,12 @@ public class ReactCmsAdminDeployPageResponse {
     /** 작성자명 */
     private String createUserName;
 
-    /** 최근 배포된 파일 URL (배포 이력 없으면 null) */
+    /** 최근 배포된 파일 URL (배포 이력 없으면 null) — 서비스 레이어에서 instanceIp/Port + 설정값으로 조합 */
     private String deployedUrl;
+
+    /** 최근 배포 서버 IP (URL 조합용, 배포 이력 없으면 null) */
+    private String instanceIp;
+
+    /** 최근 배포 서버 포트 (URL 조합용, 배포 이력 없으면 null) */
+    private Integer instancePort;
 }

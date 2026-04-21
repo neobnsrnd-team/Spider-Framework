@@ -33,10 +33,9 @@
                     p.PAGE_ID                                                   AS pageId,
                     p.PAGE_NAME                                                 AS pageName,
                     p.CREATE_USER_NAME                                          AS createUserName,
-                    CASE WHEN lh.FILE_ID IS NOT NULL
-                        THEN 'http://' || si.INSTANCE_IP || ':' || TO_CHAR(si.INSTANCE_PORT)
-                             || '/deployed/' || p.PAGE_ID || '.html'
-                    END                                                         AS deployedUrl
+                    <!-- 하드코딩 대신 서비스 레이어에서 application.yml 설정값(protocol, path-prefix)으로 URL 조합 -->
+                    CASE WHEN lh.FILE_ID IS NOT NULL THEN si.INSTANCE_IP END    AS instanceIp,
+                    CASE WHEN lh.FILE_ID IS NOT NULL THEN si.INSTANCE_PORT END  AS instancePort
                 FROM SPW_CMS_PAGE p
                 LEFT JOIN (
                     SELECT
@@ -103,19 +102,18 @@
         <include refid="historySearchConditions"/>
     </select>
 
-    <!-- ==================== 배포 대상 페이지 HTML 조회 (push용) ==================== -->
+    <!-- ==================== 배포 대상 페이지 존재 확인 (push 사전 검증용) ==================== -->
     <!--
-        CLOB 타입인 PAGE_HTML을 resultType=string 으로 매핑하면
-        MyBatis가 커넥션이 열려 있는 동안 문자열로 변환한다.
-        PAGE_TYPE='REACT', APPROVE_STATE='APPROVED' 동시 검증.
+        CLOB 타입인 PAGE_HTML 전체 조회 대신 COUNT 쿼리로 대체.
+        대용량 CLOB 로드 없이 PAGE_TYPE='REACT', APPROVE_STATE='APPROVED' 동시 검증.
     -->
-    <select id="findApprovedPageHtml" resultType="string">
-        SELECT PAGE_HTML
+    <select id="existsApprovedPage" resultType="int">
+        SELECT COUNT(*)
         FROM SPW_CMS_PAGE
-        WHERE PAGE_ID       = #{pageId}
-          AND PAGE_TYPE      = 'REACT'
-          AND APPROVE_STATE  = 'APPROVED'
-          AND USE_YN         = 'Y'
+        WHERE PAGE_ID      = #{pageId}
+          AND PAGE_TYPE    = 'REACT'
+          AND APPROVE_STATE = 'APPROVED'
+          AND USE_YN       = 'Y'
     </select>
 
 </mapper>

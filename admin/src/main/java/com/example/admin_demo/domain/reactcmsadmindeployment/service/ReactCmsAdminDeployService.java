@@ -43,6 +43,18 @@ public class ReactCmsAdminDeployService {
         long total = reactCmsAdminDeployMapper.countApprovedPageList(req);
         List<ReactCmsAdminDeployPageResponse> list =
                 reactCmsAdminDeployMapper.findApprovedPageList(req, pageRequest.getOffset(), pageRequest.getEndRow());
+
+        // 프로토콜과 경로는 application.yml 설정값으로 관리 — 하드코딩 대신 환경별 변경 가능
+        String protocol = deployProperties.getDeployedProtocol();
+        String pathPrefix = deployProperties.getDeployedPathPrefix();
+        list.forEach(item -> {
+            if (item.getInstanceIp() != null && item.getInstancePort() != null) {
+                item.setDeployedUrl(
+                        protocol + "://" + item.getInstanceIp() + ":" + item.getInstancePort()
+                        + pathPrefix + "/" + item.getPageId() + ".html");
+            }
+        });
+
         return PageResponse.of(list, total, pageRequest.getPage(), pageRequest.getSize());
     }
 
@@ -62,9 +74,8 @@ public class ReactCmsAdminDeployService {
      * HTML 조립·파일 저장·이력 기록은 CMS push API가 담당한다.
      */
     public void push(String pageId, String userId) {
-        // REACT 타입이고 APPROVED 상태인지 사전 검증 — CMS가 실패하기 전에 빠른 피드백 제공
-        String html = reactCmsAdminDeployMapper.findApprovedPageHtml(pageId);
-        if (html == null) {
+        // REACT 타입이고 APPROVED 상태인지 사전 검증 — CLOB 전체 로드 대신 COUNT 쿼리로 경량 확인
+        if (reactCmsAdminDeployMapper.existsApprovedPage(pageId) == 0) {
             throw new NotFoundException("승인된 React 페이지를 찾을 수 없습니다. pageId=" + pageId);
         }
         callCmsPush(pageId, userId);

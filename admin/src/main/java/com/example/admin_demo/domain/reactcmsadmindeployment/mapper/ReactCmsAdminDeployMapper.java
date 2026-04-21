@@ -31,9 +31,9 @@ public interface ReactCmsAdminDeployMapper {
     // ── 배포 실행 지원 ────────────────────────────────────────────────────────
 
     /**
-     * PAGE_TYPE='REACT', APPROVE_STATE='APPROVED' 인 페이지 HTML 조회.
-     * CLOB을 String으로 직접 반환해 커넥션이 열린 상태에서 변환한다.
-     * 페이지 미존재 시 null 반환.
+     * PAGE_TYPE='REACT', APPROVE_STATE='APPROVED' 인 페이지 존재 여부 확인.
+     * CLOB 전체 조회 대신 COUNT 쿼리를 사용해 대용량 데이터 로드를 방지한다.
+     * 0이면 미존재, 1이면 존재.
      */
-    String findApprovedPageHtml(@Param("pageId") String pageId);
+    int existsApprovedPage(@Param("pageId") String pageId);
 }
