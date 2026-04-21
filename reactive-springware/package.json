@@ -37,7 +37,7 @@
     "prepack": "npm run build",
     "build:manifest": "node scripts/build-manifest.mjs",
     "extract:manifest": "tsx scripts/extract-manifest.ts",
-    "generate:prompts": "npx tsx scripts/extract-components.ts && npx tsx scripts/extract-design-tokens.ts && npx tsx scripts/extract-component-map.ts",
+    "generate:prompts": "npx tsx scripts/extract-components.ts && npx tsx scripts/extract-design-tokens.ts && npx tsx scripts/extract-claude.ts",
     "build:all": "npm run build && npm run build:manifest && npm run extract:manifest",
     "typecheck": "tsc --noEmit",
     "lint": "eslint . --ext ts,tsx",

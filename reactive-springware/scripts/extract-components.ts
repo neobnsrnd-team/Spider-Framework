@@ -108,7 +108,7 @@ function main() {
     '## 사용 규칙',
     '',
     '- 아래 컴포넌트만 사용할 것. 목록에 없는 컴포넌트는 존재하지 않음',
-    '- import 경로: `@neobnsrnd-team/reactive-springware`',
+    '- import 경로: `@cl`',
     '- TypeScript로 작성하고 props interface를 포함할 것',
     '',
   ];

@@ -1,447 +1,406 @@
-# Reactive-Springware Claude Code 지침_dev version
+# React 페이지 컴포넌트 생성 규칙
 
-## 코드 작성 규칙
+## 목적
 
-### 주석
+Figma 디자인을 기반으로 **React 페이지 컴포넌트 파일 1개(`.tsx`)** 를 생성한다.
 
-이 프로젝트의 실사용자는 프로젝트 내부 구조를 전혀 모르는 외부 개발자다.
-코드만 봐도 의도를 파악할 수 있도록 주석을 충분히 작성한다.
-
-**파일 상단 JSDoc**
-
-- 새 파일을 생성할 때는 반드시 파일 상단에 JSDoc 주석을 작성한다.
-- 주석에는 다음 내용을 포함한다:
-  - 파일명 (`@file`)
-  - 파일/함수의 역할 설명 (`@description`)
-  - 주요 파라미터 (`@param`)
-  - 반환값 (`@returns`)
-  - 필요한 경우 사용 예시 (`@example`)
-
-**인라인 주석**
-
-- 다음 경우에는 반드시 인라인 주석을 추가한다:
-  - 왜 이 값을 선택했는지 이유가 필요한 상수·기본값 (e.g. 기본 listStyle이 'card'인 이유)
-  - 외부 개발자가 처음 봤을 때 의도를 오해할 수 있는 로직
-  - 타입 단언(`as`)이나 예외 처리 등 방어 코드
-  - 여러 분기 중 특정 분기가 존재하는 이유가 명확하지 않은 경우
+생성 결과물의 목표:
+- 순수 UI만 담당한다. API 호출·비즈니스 로직을 포함하지 않는다.
+- 생성 직후 미리보기가 가능해야 한다.
+- 개발자가 컴포넌트 내부를 수정하지 않고 props만 넘겨 실제 데이터를 연동할 수 있어야 한다.
 
 ---
 
-# 🧪 Development Phase Rules
+## 1. 생성 파일 구조 — Props + Mock Props 패턴
 
-This project is currently in **development phase**.
+파일은 반드시 아래 4개 블록 순서로 구성한다.
 
-During development phase, the following rules MUST be followed:
+```tsx
+// ① Props 인터페이스 — named export
+export interface PaymentPageProps {
+  billingAmount: number;
+  accountBalance: number;
+  cardName: string;
+}
 
-### Component Usage Rules
+// ② 페이지 컴포넌트 — named export, 순수 UI
+export function PaymentPage({
+  billingAmount,
+  accountBalance,
+  cardName,
+}: PaymentPageProps) {
+  return (
+    <div data-brand="hana" data-domain="banking">
+      {/* UI */}
+    </div>
+  );
+}
 
-- Pages MUST be generated using components from `component-library/`
-- Direct HTML elements are NOT allowed
-- New UI must use existing component-library components
+// ③ Mock Props — 인터페이스 타입으로 선언하여 일치 보장
+const mockProps: PaymentPageProps = {
+  billingAmount: 285000,
+  accountBalance: 3000000,
+  cardName: '하나 머니 체크카드',
+};
 
-If additional components are required:
-
-- Create reusable common components
-- Add them to `component-library/`
-- Generate Storybook file together
-
-#### Mandatory When Creating New Components
-
-When creating new components in `component-library/`:
-
-Claude MUST also generate:
-
-- Component file
-- Types file (if needed)
-- Storybook file
-
-Example:
-
+// ④ Preview — default export, 미리보기 진입점
+export default function Preview() {
+  return <PaymentPage {...mockProps} />;
+}
 ```
-component-library/
-  Button/
-    index.tsx
-    types.ts
-    Button.stories.tsx
+
+### Mock Props 작성 기준
+
+- 타입은 반드시 Props 인터페이스로 명시한다. (`const mockProps: PaymentPageProps = {}`)
+- 금액은 실제처럼 보이는 숫자를 사용한다. (`285000`, `3000000`)
+- 문자열은 실제 서비스에서 사용할 법한 값을 사용한다. (`'하나 머니 체크카드'`, `'123-456-789012'`)
+- 배열은 2~3개 항목으로 구성하여 목록 UI가 렌더링되도록 한다.
+
+---
+
+## 2. Import 규칙
+
+```tsx
+// UI 컴포넌트 — @cl에서만 import
+import { Button, Stack, Inline, Typography } from '@cl';
+
+// 아이콘 — lucide-react에서만 import
+import { Search, ChevronRight, X } from 'lucide-react';
+
+// React hooks — UI 상태가 필요한 경우만
+import { useState } from 'react';
+```
+
+import 순서: `@cl` → `lucide-react` → `react`
+
+- `@cl` 이외의 UI 라이브러리 추가 금지
+- HTML 태그 직접 사용 금지 (`div`, `button`, `p`, `h1` 등)
+- 단, `data-brand` 래퍼 역할의 최상위 `div` 1개는 예외 허용
+
+---
+
+## 3. 브랜드 규칙
+
+모든 페이지 컴포넌트 루트에 `data-brand`와 `data-domain`을 반드시 명시한다.
+
+```tsx
+<div data-brand="hana" data-domain="banking">
+  <PageLayout title="...">...</PageLayout>
+</div>
+```
+
+### 브랜드 매핑표
+
+| 브랜드 | `data-brand` | 대표 색상 |
+|--------|-------------|---------|
+| 하나은행 | `hana` | 청록 `#008485` |
+| IBK기업은행 | `ibk` | 파랑 `#0068b7` |
+| KB국민은행 | `kb` | 골드 `#ffbc00` |
+| NH농협은행 | `nh` | 초록 `#00a859` |
+| 신한은행 | `shinhan` | 블루 `#0046ff` |
+| 우리은행 | `woori` | 블루 `#0067ac` |
+| 카드 | `card` | 파랑 `#1a56db` |
+| 보험 | `insurance` | 빨강 `#e03a1e` |
+| 지로 | `giro` | 보라 `#5b21b6` |
+
+### `data-domain` 값
+
+| `data-brand` | `data-domain` |
+|-------------|--------------|
+| `hana` / `ibk` / `kb` / `nh` / `shinhan` / `woori` | `banking` |
+| `card` | `card` |
+| `insurance` | `insurance` |
+| `giro` | `giro` |
+
+---
+
+## 4. 레이아웃 규칙
+
+### Figma Auto Layout → React 변환표
+
+| Figma | React | 주의사항 |
+|-------|-------|---------|
+| Auto Layout (Vertical) | `<Stack gap="..." />` | `direction` prop 없음 |
+| Auto Layout (Horizontal) | `<Inline gap="..." />` | `Row` 사용 금지 |
+| Grid (N열) | `<Grid cols={N} />` | `columns` 아님, `cols` |
+| 테두리 있는 컨테이너 | `<Card />` | |
+| 섹션 (제목 + 콘텐츠) | `<Section title="..." />` | title 있으면 SectionHeader 자동 포함 |
+| 섹션 헤더 행만 | `<SectionHeader title="..." />` | |
+| 일반 페이지 | `<PageLayout title="..." />` | |
+| 홈 화면 | `<HomePageLayout title="..." />` | |
+| 헤더 없는 화면 | `<BlankPageLayout />` | 로그인·온보딩 전용 |
+
+❌ `<Stack direction="horizontal" />` — 수평은 `Inline` 사용  
+❌ `<Row />` `<Column />` — 존재하지 않음  
+❌ `<Grid columns={4} />` — prop명은 `cols`
+
+### Spacing 토큰 변환표
+
+| Figma px | `gap` prop | `className` | 주요 용도 |
+|---------|-----------|------------|---------|
+| 4px | `gap="xs"` | `gap-xs` | 밀집 요소 |
+| 8px | `gap="sm"` | `gap-sm` | 소형 간격 |
+| 12px | `gap="md"` | `gap-md` | 기본 간격 |
+| 20px | `gap="lg"` | `gap-lg` | 섹션 내 여백 |
+| 24px | `gap="xl"` | `gap-xl` | 섹션 간 여백 |
+| 32px | `gap="2xl"` | `gap-2xl` | 대형 블록 |
+| 16px | — | `px-standard` | 좌우 패딩 전용 |
+
+> `gap` prop 허용값: `xs | sm | md | lg | xl | 2xl`  
+> `standard`는 gap prop으로 사용 불가 — `className="gap-standard"` 으로만 사용
+
+### 페이지 타입별 구조
+
+**일반 페이지**
+
+```tsx
+<div data-brand="hana" data-domain="banking">
+  <PageLayout title="이체하기" onBack={onBack}>
+    <Stack gap="md">
+      {/* 콘텐츠 */}
+    </Stack>
+  </PageLayout>
+</div>
+```
+
+**홈 화면**
+
+```tsx
+<div data-brand="hana" data-domain="banking">
+  <HomePageLayout title="하나은행" logo={<Building2 />} withBottomNav>
+    <Stack gap="md">
+      {/* 콘텐츠 */}
+    </Stack>
+  </HomePageLayout>
+  {/* BottomNav는 반드시 HomePageLayout 바깥에 배치 */}
+  <BottomNav items={bottomNavItems} activeId="home" />
+</div>
+```
+
+**로그인·온보딩**
+
+```tsx
+<div data-brand="hana" data-domain="banking">
+  <BlankPageLayout>
+    <AppBrandHeader brandInitial="H" brandName="하나은행" />
+    {/* 콘텐츠 */}
+  </BlankPageLayout>
+</div>
+```
+
+### 레이아웃 패딩 주의사항
+
+`PageLayout`과 `HomePageLayout`의 main 영역에 `px-standard py-md` 패딩이 내장되어 있다.  
+내부 Stack에 별도 패딩 추가 금지.
+
+```tsx
+// ✅
+<HomePageLayout>
+  <Stack gap="lg">...</Stack>
+</HomePageLayout>
+
+// ❌ 패딩 중복
+<HomePageLayout>
+  <Stack gap="lg" className="px-standard">...</Stack>
+</HomePageLayout>
+```
+
+### 컴포넌트 계층
+
+Page → Layout → Section → Component 순서를 반드시 지킨다.  
+Component 내부에 Page를 중첩하는 구조 금지.
+
+---
+
+## 5. 스타일 규칙
+
+**허용**
+```tsx
+className="px-standard pb-standard"   // 디자인 토큰 기반
+className="bg-brand-5 rounded-xl"     // 토큰 기반 색상·반경
+className="text-text-muted"           // 시맨틱 색상 토큰
+className="transition-colors duration-150"  // 토큰 기반 애니메이션
+```
+
+**금지**
+```tsx
+style={{ color: '#333', padding: 16 }}     // inline style 전면 금지
+className="text-[#333] mt-[20px]"          // 임의 값 Tailwind 금지
+className="bg-[#f5f8f8]"                   // 하드코딩 색상 금지
+```
+
+애니메이션 외부 라이브러리 추가 금지 (`framer-motion`, `react-spring` 등).
+
+---
+
+## 6. 상태 규칙
+
+탭 선택, 아코디언 열림/닫힘 등 **순수 UI 상태**만 `useState` 허용.
+
+```tsx
+// ✅ 허용 — UI 상태
+const [activeTab, setActiveTab] = useState('deposit');
+const [isOpen, setIsOpen] = useState(false);
+```
+
+**금지**
+```tsx
+// ❌ API 호출
+useEffect(() => { fetch('/api/accounts'); }, []);
+
+// ❌ React Query
+const { data } = useQuery({ queryKey: ['accounts'], queryFn: fetchAccounts });
 ```
 
 ---
 
-### File Generation Location Rules
+## 7. 컴포넌트 선택 우선순위 및 Figma 매핑
 
-All generated pages and files MUST be created under:
+1. `biz/` — 도메인 특화 컴포넌트 (가장 구체적)
+2. `modules/` — 도메인 무관 모듈 컴포넌트
+3. `layout/` — 레이아웃 컴포넌트
+4. `core/` — 원자 컴포넌트
 
-```
-demo/react-demo-app/
-```
+목록에 없는 컴포넌트를 임의로 새로 만들지 않는다. 가장 유사한 기존 컴포넌트를 사용한다.
 
-Claude MUST NOT create files outside this directory.
+### Figma UI 요소 → React 컴포넌트 빠른 참조
 
----
+| Figma UI 요소 | React 컴포넌트 | 비고 |
+|-------------|--------------|-----|
+| 버튼 | `Button` | variant: `primary \| outline \| ghost \| danger` |
+| 입력 필드 | `Input` | |
+| 셀렉트 박스 | `Select` | size prop 없음 |
+| 텍스트 레이블 | `Typography` | variant: `heading \| subheading \| body-lg \| body \| body-sm \| caption` |
+| 아이콘 | `lucide-react` | @cl에 아이콘 컴포넌트 없음 |
+| 뱃지/태그 | `Badge` | variant: `primary \| brand \| success \| danger \| warning \| neutral` |
+| 체크박스 | `Checkbox` | |
+| 라디오 버튼 | `Radio` | |
+| 토글/스위치 | `Toggle` | |
+| 구분선 | `<hr className="border-border-subtle" />` | 별도 컴포넌트 없음 |
+| 카드 컨테이너 | `Card` | 테두리 있는 컨테이너 |
+| 목록 항목 (클릭) | `ListItem` | |
+| 레이블-값 행 | `InfoRow` | label·value 모두 string만; JSX 포함 시 `LabelValueRow` |
+| 레이블-값 행 (JSX) | `LabelValueRow` | value에 Badge·Button 등 JSX 허용 |
+| 모달 | `Modal` | |
+| 바텀시트 | `BottomSheet` | 모바일(390px) 기본 |
+| 탭 네비게이션 | `TabNav` | variant: `underline \| pill` |
+| 빈 상태 화면 | `EmptyState` | |
+| 에러 상태 화면 | `ErrorState` | |
+| 알림 배너 | `AlertBanner` | intent: `warning \| danger \| success \| info` |
+| 계좌 카드 | `AccountSummaryCard` | type: `deposit \| savings \| loan \| foreignDeposit \| retirement \| securities` |
+| 카드(신용/체크) 카드 | `CardSummaryCard` | type: `credit \| check \| prepaid` |
+| 보험 카드 | `InsuranceSummaryCard` | type: `life \| health \| car` |
+| 배너 슬라이더 | `BannerCarousel` | |
+| 그라데이션 배너 | `BrandBanner` | `<Card variant="brand">` 사용 금지 |
+| 바텀 글로벌 탭 | `BottomNav` | `HomePageLayout` 바깥에 배치 |
+| 단계 표시기 | `StepIndicator` | props: `total`, `current` |
+| 검색창 | `SearchInput` | |
+| 은행 선택 그리드 | `BankSelectGrid` | prop명: `columns` (`cols` 아님) |
 
-### Folder Scope Restriction
+### Figma Variant 값 → React prop 값 변환
 
-Claude MUST only modify files inside:
-
-```
-figma-react-generator/
-```
-
-Rules:
-
-- Only modify files inside `figma-react-generator/`
-- Do NOT reference parent folders
-- Do NOT modify upper-level directories
-- Do NOT follow existing structure outside this folder
-
----
-
-### Generation Scope Summary
-
-Claude MUST:
-
-✔ Follow rule files first
-✔ Follow all rules inside rules/ folder
-✔ Use component-library components only
-✔ Create reusable components when needed
-✔ Generate Storybook with new components
-✔ Generate files under demo/react-demo-app
-✔ Only modify figma-react-generator folder
-
-Claude MUST NOT:
-
-❌ Follow existing project structure blindly
-❌ Ignore rules folder
-❌ Modify parent folders
-❌ Generate files outside defined directories
-❌ Use raw HTML instead of component-library
-
----
-
-### Final Rule
-
-Rules defined in this document override:
-
-- Existing project structure
-- Existing folder layout
-- Existing code patterns
-
-Claude MUST strictly follow these rules during code generation.
+| Figma Variant 값 | `variant` prop |
+|-----------------|---------------|
+| `Primary` / `Filled` | `'primary'` |
+| `Secondary` / `Outlined` / `Stroke` | `'outline'` |
+| `Tertiary` / `Ghost` / `Typography` | `'ghost'` |
+| `Destructive` / `Error` | `'danger'` |
+| `Info` | `'info'` |
+| `Neutral` | `'neutral'` |
+| `Success` | `'success'` |
+| `Warning` | `'warning'` |
 
 ---
 
-# 🎯 목적
+## 8. 주요 Props 오류 레퍼런스
 
-이 프로젝트는 Figma 디자인을 기반으로 React 코드를 자동 생성하는 플랫폼이다.
-Claude가 생성하는 모든 코드는 **일관성**, **재사용성**, **유지보수성**을 최우선으로 한다.
+코드 생성 전 반드시 확인한다. 실제로 자주 발생한 오류 목록이다.
 
----
+| 잘못된 코드 | 올바른 코드 |
+|------------|------------|
+| `<Grid columns={4}>` | `<Grid cols={4}>` |
+| `<Button variant="secondary">` | `<Button variant="outline">` |
+| `<Badge variant="info">` | `<Badge variant="neutral">` |
+| `<AlertBanner intent="primary">` | `<AlertBanner intent="info">` |
+| `<AlertBanner intent="error">` | `<AlertBanner intent="danger">` |
+| `<Card variant="brand">` | `<BrandBanner>` 컴포넌트 사용 |
+| `<Stack direction="horizontal">` | `<Inline>` |
+| `<BottomNav icons={}>` | `<BottomNav items={[{ id, icon, label, onClick }]}>` |
+| `<Typography variant="title-xl">` | `<Typography variant="heading">` |
+| `<Typography variant="h1">` | `<Typography variant="heading">` |
+| `<Typography color="gray">` | `<Typography color="muted">` |
+| `<Typography color="primary">` | `<Typography color="brand">` |
+| `<Select size="md">` | `<Select>` (size prop 없음) |
+| `<InfoRow value={<Badge />}>` | `<LabelValueRow value={<Badge />}>` |
+| `<TabNav variant="segment">` | `<TabNav variant="pill">` |
+| `<CardPillTab selected={true}>` | `<CardPillTab isSelected={true}>` |
+| `<SelectableListItem selected={true}>` | `<SelectableListItem isSelected={true}>` |
+| `<BankSelectGrid cols={4}>` | `<BankSelectGrid columns={4}>` |
+| `<StepIndicator step={2}>` | `<StepIndicator total={4} current={2}>` |
 
-# 🧠 기본 원칙
+> ⚠️ `InfoRow`는 `label`, `value` 모두 `string`만 허용. JSX(아이콘, 버튼 등)가 필요하면 `LabelValueRow` 사용.  
+> ⚠️ `BottomNav`의 각 item에 `onClick`은 필수. 누락 시 TypeScript 오류.
 
-### 1. component-library가 유일한 UI 소스다
+### 컴포넌트별 허용 variant
 
-모든 UI는 반드시 `component-library`에서 가져온다.
-직접 HTML 태그(`div`, `button` 등)를 사용하거나 외부 UI 라이브러리를 추가하지 않는다.
-이 원칙을 지켜야 디자인 시스템과 코드가 항상 동기화된다.
-
-### 2. 디자인 토큰이 유일한 스타일 소스다
-
-색상·간격·폰트 크기는 반드시 `design-tokens`에서 가져온다.
-임의 값(`#333`, `16px`)을 하드코딩하면 Figma 디자인 변경 시 코드를 일일이 수정해야 하는 기술 부채가 생긴다.
-
-### 3. Figma 매핑 기준을 벗어나지 않는다
-
-`docs/component-map.md`에 정의된 컴포넌트만 생성한다.
-정의되지 않은 컴포넌트를 임의로 만들면 디자이너의 의도와 다른 UI가 생성된다.
-
-### 4. 관심사를 명확히 분리한다
-
-- **HTTP 호출·데이터 가공·모델 변환·에러 처리**는 `{entity}Repository.ts`에서만 한다.
-- **데이터 패칭 로직**은 `use{Entity}.ts`에서만 한다.
-- **컴포넌트**는 데이터를 표시하는 역할만 한다.
-
-Repository 패턴을 사용하는 이유: API 응답 구조가 바뀌어도 Repository만 수정하면 되고, Hook과 Page는 변경하지 않아도 된다. 유지보수 비용이 크게 줄어든다.
-
-### 5. 데이터 상태를 반드시 처리한다
-
-모든 데이터 화면은 `loading`, `error`, `empty` 세 가지 상태를 빠짐없이 처리해야 한다.
-처리하지 않으면 로딩 중 깨진 화면, 에러 시 빈 화면, 데이터 없을 때 의미 없는 빈 테이블이 사용자에게 노출된다.
-반드시 이 순서로 처리한다: `isLoading` → `isError` → empty check → 정상 렌더링.
-
-### 6. 타입 안전성을 유지한다
-
-`any` 타입은 TypeScript를 사용하는 의미를 없앤다.
-모든 props와 API 응답에는 명시적 타입을 정의한다.
-
----
-
-# 🚫 하지 말아야 하는 이유
-
-| 금지 항목                           | 하지 말아야 하는 이유                            |
-| ----------------------------------- | ------------------------------------------------ |
-| HTML 태그 직접 사용                 | 디자인 시스템 일관성 붕괴                        |
-| Inline style                        | Figma 변경 시 코드 일괄 추적 불가                |
-| 임의 색상·크기 하드코딩             | 테마 변경 시 전체 수정 필요                      |
-| Hook·Component에서 직접 HTTP 호출   | Repository 계층 우회, API 변경 시 전체 수정 필요 |
-| `any` 타입                          | 런타임 오류를 컴파일 타임에 잡지 못함            |
-| 정의되지 않은 컴포넌트 생성         | Figma 디자인 의도 이탈                           |
-| loading/error/empty 처리 생략       | 로딩 중·에러·빈 데이터 상황에서 UI 깨짐          |
-| Page에서 `useState` 직접 사용       | 비즈니스 로직이 Page에 쌓여 재사용·테스트 불가   |
-| Component에서 이벤트 로직 직접 처리 | 컴포넌트 재사용성 소멸, 라우팅·API 호출 분산     |
+| 컴포넌트 | 허용 값 |
+|---------|--------|
+| `Button` variant | `primary` \| `outline` \| `ghost` \| `danger` |
+| `Badge` variant | `primary` \| `brand` \| `success` \| `danger` \| `warning` \| `neutral` |
+| `Typography` variant | `heading` \| `subheading` \| `body-lg` \| `body` \| `body-sm` \| `caption` |
+| `Typography` color | `heading` \| `base` \| `label` \| `secondary` \| `muted` \| `brand` \| `danger` \| `success` |
+| `AlertBanner` intent | `warning` \| `danger` \| `success` \| `info` |
+| `TabNav` variant | `underline` \| `pill` |
+| `BannerCarousel` items.variant | `promo` \| `info` \| `warning` |
+| `AccountSummaryCard` type | `deposit` \| `savings` \| `loan` \| `foreignDeposit` \| `retirement` \| `securities` |
+| `CardSummaryCard` type | `credit` \| `check` \| `prepaid` |
+| `InsuranceSummaryCard` type | `life` \| `health` \| `car` |
+| `InsuranceSummaryCard` status | `active` \| `pending` \| `expired` |
 
 ---
 
-### 컴포넌트 조합 규칙
+## 9. 금지 규칙
 
-컴포넌트 계층은 Page → Layout → Section → Component 순서를 반드시 지킨다.
-이 계층을 건너뛰거나 역방향으로 중첩하면 레이아웃 일관성이 무너진다.
-특히 Component 내부에 Page를 다시 만드는 구조는 절대 허용하지 않는다.
-
-### 네이밍 규칙
-
-일관된 네이밍이 없으면 같은 역할의 파일이 다른 이름으로 생성되어 구조 파악이 어려워진다.
-
-| 대상                | 규칙                     | 예시                           |
-| ------------------- | ------------------------ | ------------------------------ |
-| Page (목록)         | `{Entity}ListPage`       | `UserListPage`                 |
-| Page (상세)         | `{Entity}DetailPage`     | `UserDetailPage`               |
-| Page (등록)         | `{Entity}CreatePage`     | `UserCreatePage`               |
-| Page (수정)         | `{Entity}EditPage`       | `UserEditPage`                 |
-| Component (테이블)  | `{Entity}Table`          | `UserTable`                    |
-| Component (폼)      | `{Entity}Form`           | `UserForm`                     |
-| Component (모달)    | `{Entity}{Action}Modal`  | `UserDeleteModal`              |
-| Hook (목록)         | `use{Entity}List`        | `useUserList`                  |
-| Hook (폼)           | `use{Entity}Form`        | `useUserForm`                  |
-| Repository          | camelCase + `Repository` | `userRepository.ts`            |
-| Type                | camelCase + `Types`      | `userTypes.ts`                 |
-| 이벤트 (Hook 정의)  | `handle{Action}`         | `handleDelete`, `handleSearch` |
-| 이벤트 (props 전달) | `on{Action}`             | `onDelete`, `onSearch`         |
-
-### Props 설계 규칙
-
-Props는 최소한으로 설계한다. 불필요하게 많은 props는 컴포넌트의 역할이 불분명하다는 신호다.
-`variant`, `size` 같은 열거형 props를 사용하고, boolean을 나열하는 방식은 피한다.
-boolean props는 이름만으로 의미가 명확해야 한다. (`disabled`, `loading` 등)
-
-### 상태관리 방향
-
-상태의 출처(서버 vs 클라이언트)에 따라 관리 도구를 다르게 사용한다.
-서버 데이터에 `useState`를 사용하면 캐싱·동기화·에러 처리를 직접 구현해야 해서 코드가 복잡해진다.
-**Page에서 상태를 직접 생성하지 않는다.** 상태는 반드시 Hook을 통해 가져온다. Page에서 `useState`를 직접 쓰면 로직이 Page에 쌓이고 테스트와 재사용이 불가능해진다.
-전역 상태는 정말 전역이 필요한 경우(인증, 테마)에만 사용한다. 과도한 전역 상태는 데이터 흐름을 추적하기 어렵게 만든다.
-
-### 이벤트 처리 규칙
-
-이벤트 핸들러는 **Hook에서 정의**하고, Page는 Hook에서 받은 핸들러를 Component에 전달만 한다. Component는 callback props로만 받는다.
-Component 내부에서 직접 이벤트를 처리하면 같은 컴포넌트를 다른 동작으로 재사용할 수 없다.
-핸들러 네이밍: Hook에서 정의할 때는 `handle~`, props로 전달할 때는 `on~` prefix를 사용한다.
-
-### 컴포넌트 크기 규칙
-
-컴포넌트는 200줄을 넘지 않도록 한다.
-200줄을 초과한다면 역할이 두 개 이상이라는 신호다. 분리를 검토한다.
+| 금지 항목 | 이유 |
+|----------|------|
+| HTML 태그 직접 사용 (`div`, `button`, `p` 등) | 디자인 시스템 일관성 붕괴 |
+| inline style | 디자인 토큰 추적 불가 |
+| 하드코딩 색상·수치 | 테마 변경 시 전체 수정 필요 |
+| API 호출·React Query·useEffect 데이터 패칭 | 순수 UI 원칙 위반 |
+| `@cl` 이외 UI 라이브러리 추가 | `@cl`이 유일한 UI 소스 |
+| 존재하지 않는 컴포넌트 임의 생성 | 디자인 시스템 이탈 |
+| 파일 분리 (여러 파일 생성) | 단일 tsx 파일이 생성 단위 |
+| BottomNav를 HomePageLayout 안에 배치 | 레이아웃 깨짐 |
+| HomePageLayout 내부에 패딩 추가 | 내장 패딩과 중복 |
+| 애니메이션 외부 라이브러리 추가 | 번들 크기·디자인 시스템 일관성 훼손 |
 
 ---
 
-# 🙋 개발자 확인 원칙
+## 10. 불명확한 경우 처리 원칙
 
-판단할 수 없는 상황에서는 **절대 임의로 가정하고 진행하지 않는다.**
-불확실한 내용을 추측하여 생성하면 잘못된 코드를 수정하는 비용이 처음부터 확인하는 비용보다 크다.
+판단이 불명확한 경우 **임의로 결정하되, 해당 위치에 주석으로 가정 내용을 명시**한다.  
+확인 질문을 응답으로 보내지 않는다. 항상 tsx 파일을 생성한다.
 
-다음 상황에서는 반드시 개발자에게 확인 후 진행한다.
-
-- 고객사 브랜드가 명시되지 않은 경우 (지원 브랜드: 하나은행·신한은행·KB국민은행·IBK기업은행·NH농협은행·우리은행 등)
-- Figma 컴포넌트가 `docs/component-map.md`에 없는 경우
-- 엔티티명을 Figma 디자인에서 판단할 수 없는 경우
-- API 엔드포인트, 응답 구조, pagination 방식이 불명확한 경우
-- Table vs Card vs Form 등 화면 타입이 애매한 경우
-- Form의 create/update 용도, validation 방식이 불명확한 경우
-- 생성하려는 파일이 이미 존재하거나 라우터 URL이 충돌하는 경우
-- 비즈니스 로직이나 권한 처리 방식을 추론할 수 없는 경우
-
-확인 질문은 한 번에 모아서 한다. 항목마다 개별로 질문하지 않는다.
-
----
-
-# 🎯 라이브러리 최종 목표
-
-Claude가 생성한 코드는 **Figma 디자인과 동일한 UI**를 보여주면서,
-외부 개발자가 처음 보더라도 구조와 의도를 바로 이해할 수 있어야 한다.
-
----
-
-# 🎨 디자인 토큰 규칙
-
-## globals.css는 자동 생성 파일이다
-
-`design-tokens/globals.css`는 **직접 수정하지 않는다.**
-이 파일은 Figma Variables → Token Studio export → Claude 변환 과정을 통해서만 업데이트된다.
-
-## temp.json을 받으면 반드시 아래 절차를 수행한다
-
-누군가 `temp.json` 파일을 전달하거나 "globals.css 업데이트해줘"라고 요청하면,
-아래 절차를 순서대로 수행한다. 절대 globals.css를 직접 수정하는 것으로 시작하지 않는다.
-
-```
-1. temp.json 파싱
-   └─ 최상위 키(primitives / semantic / brand.hana 등 / domain.*)를 기준으로 분류
-
-2. figma-tokens/*.json 업데이트 (카테고리별 분배)
-   ├─ primitives.json  — spacing, radius, text, font, shadow, transition, breakpoint, nav, z
-   ├─ semantic.json    — color.* (brand·domain 참조 포함)
-   ├─ brand.{키}.json  — brand.* 토큰 (하나은행·신한은행 등 브랜드별)
-   └─ domain.{키}.json — domain.* 토큰 (banking·card·giro·insurance)
-
-3. figma-tokens/*.json → globals.css 변환
-   ├─ [data-brand="hana"] 등 브랜드 블록 — brand.*.json에서 생성
-   ├─ [data-domain="card"] 등 도메인 블록 — domain.*.json에서 생성
-   ├─ @theme 블록 — semantic.json에서 생성
-   └─ @layer base 블록 — 전역 기본 스타일 유지
-
-4. temp.json 삭제 안내
-   └─ "temp.json은 삭제해도 됩니다" 메시지 출력
+```tsx
+// data-brand: Figma에서 브랜드 식별 불가 → 기본값 hana 적용
+<div data-brand="hana" data-domain="banking">
 ```
 
-## 토큰 파일 구조 규칙
-
-변환 시 아래 파일 구조와 경로를 반드시 유지한다.
-
-```
-design-tokens/
-├── globals.css              ← 자동 생성 (직접 수정 금지)
-└── figma-tokens/
-    ├── primitives.json      ← spacing / radius / text / font / shadow 등 고정값
-    ├── semantic.json        ← color.* 시맨틱 토큰 (brand·domain 토큰 참조)
-    ├── brand.hana.json      ← 하나은행
-    ├── brand.ibk.json       ← IBK기업은행
-    ├── brand.kb.json        ← KB국민은행
-    ├── brand.nh.json        ← NH농협은행
-    ├── brand.shinhan.json   ← 신한은행
-    ├── brand.woori.json     ← 우리은행
-    ├── domain.banking.json  ← 뱅킹 도메인
-    ├── domain.card.json     ← 카드 도메인
-    ├── domain.giro.json     ← 지로 도메인
-    └── domain.insurance.json← 보험 도메인
+```tsx
+const mockProps: AccountPageProps = {
+  // 실제 데이터 구조 불명확 → 일반적인 형태로 작성
+  accountName: '하나 주거래 통장',
+  balance: 3000000,
+};
 ```
 
-신규 브랜드·도메인이 temp.json에 포함되어 있으면 대응하는 파일을 새로 생성한다.
-기존에 없는 키가 추가된 경우 개발자에게 확인 후 적절한 파일에 배치한다.
+### 기본값 정책
 
-## figma-plugin/src/tokens.ts와의 관계
-
-`tokens.ts`는 **Figma 플러그인 전용** 파일이다.
-globals.css와 완전히 동기화할 필요 없으며, 아래 토큰만 관리한다.
-
-- Figma 컴포넌트 생성 시 사용하는 **변수 경로 상수** (Figma Variables 바인딩용 경로) 와 **값 상수**(Figma Plugin API용 런타임 값) 조합으로 이루어져있다.
-- 브랜드별·도메인별 색상은 tokens.ts에 포함하지 않는다.
-- Figma 컴포넌트를 생성할 때 필요한 변수 경로 상수가 tokens.ts에 없는 경우, 임의로 추가하지 않고 **반드시 개발자에게 확인** 후 진행한다.
-- temp.json 업데이트 작업에서 tokens.ts는 수정하지 않는다.
-- tokens.ts 수정이 필요한 경우 개발자에게 별도로 확인한다.
-
----
-
-# 🔌 Figma 플러그인 컴포넌트 생성 규칙
-
-`figma-plugin/src/components/` 하위에 컴포넌트 생성 파일을 작성할 때 반드시 아래 규칙을 따른다.
-
-## 변수 바인딩 원칙
-
-모든 속성은 **Figma Variables가 존재하면 바인딩하고, 없으면 fallback 값으로 폴백**한다.
-속성 종류에 따라 사용하는 헬퍼가 다르다.
-
-### 색상 속성 → `COLOR_VAR + setFillWithVar / addTextWithVar`
-
-```ts
-// fill 색상 바인딩
-await setFillWithVar(node, COLOR_VAR.surface, COLOR.surface);
-
-// 텍스트 생성 + 색상 바인딩 (동시에 처리)
-await addTextWithVar(parent, '텍스트', FONT_SIZE.base, COLOR_VAR.textHeading, COLOR.textHeading, bold);
-```
-
-### 수치 속성(spacing, radius, fontSize) → `SIZE_VAR + setFloatVar`
-
-`setAutoLayout`, `setPadding`, `node.cornerRadius =` 등으로 fallback 값을 먼저 설정한 뒤,
-반드시 곧바로 `setFloatVar`로 동일 필드를 Variable에 바인딩한다.
-
-```ts
-// itemSpacing
-setAutoLayout(node, 'VERTICAL', SPACING.md);
-await setFloatVar(node, 'itemSpacing', SIZE_VAR.spacingMd, SPACING.md);
-
-// padding (setPadding으로 fallback 설정 후 각 필드를 개별 바인딩)
-setPadding(node, SPACING.xl, SPACING.xl);
-await setFloatVar(node, 'paddingTop',    SIZE_VAR.spacingXl, SPACING.xl);
-await setFloatVar(node, 'paddingRight',  SIZE_VAR.spacingXl, SPACING.xl);
-await setFloatVar(node, 'paddingBottom', SIZE_VAR.spacingXl, SPACING.xl);
-await setFloatVar(node, 'paddingLeft',   SIZE_VAR.spacingXl, SPACING.xl);
-
-// cornerRadius
-await setFloatVar(node, 'cornerRadius', SIZE_VAR.radiusFull, RADIUS.full);
-
-// 상단만 radius 적용하는 경우 (예: BottomSheet rounded-t-2xl)
-await setFloatVar(node, 'topLeftRadius',  SIZE_VAR.radiusLg, RADIUS.lg);
-await setFloatVar(node, 'topRightRadius', SIZE_VAR.radiusLg, RADIUS.lg);
-node.bottomLeftRadius  = 0;
-node.bottomRightRadius = 0;
-
-// fontSize — addTextWithVar의 7번째 인자로 전달
-await addTextWithVar(parent, '텍스트', FONT_SIZE.sm, COLOR_VAR.textBase, COLOR.textBase, bold, SIZE_VAR.fontSizeSm);
-```
-
-값이 `0`인 padding도 `SIZE_VAR.spacing0`가 tokens.ts에 존재하므로 동일하게 바인딩한다.
-
-```ts
-// 예: paddingTop/Bottom = 0인 경우
-setPadding(node, 0, SPACING.md);
-await setFloatVar(node, 'paddingTop',    SIZE_VAR.spacing0,  SPACING['0']);
-await setFloatVar(node, 'paddingBottom', SIZE_VAR.spacing0,  SPACING['0']);
-await setFloatVar(node, 'paddingRight',  SIZE_VAR.spacingMd, SPACING.md);
-await setFloatVar(node, 'paddingLeft',   SIZE_VAR.spacingMd, SPACING.md);
-```
-
-### stroke 속성 → `COLOR_VAR + setStrokeWithVar`
-
-```ts
-// stroke에 COLOR 변수 바인딩 (setStroke는 RGB만 받으므로 반드시 이 헬퍼 사용)
-await setStrokeWithVar(node, COLOR_VAR.border, COLOR.border);
-await setStrokeWithVar(node, COLOR_VAR.brandPrimary, BRAND.primary, 2); // weight 지정 가능
-```
-
-### lineHeight 속성 → `SIZE_VAR + setLineHeightVar`
-
-```ts
-// lineHeight는 { value, unit } 객체 구조라 setFloatVar로 처리 불가 — 전용 헬퍼 사용
-const text = await addTextWithVar(parent, '텍스트', FONT_SIZE.base, COLOR_VAR.textHeading, COLOR.textHeading, bold, SIZE_VAR.fontSizeBase);
-await setLineHeightVar(text, SIZE_VAR.lineHeightBase, LINE_HEIGHT.base);
-```
-
-## `layoutSizingHorizontal = 'FILL'` / `layoutGrow = 1` 설정 순서
-
-반드시 `parent.appendChild(child)` **이후에** 설정한다. 이전에 설정하면 Figma가 조용히 무시한다.
-
-```ts
-// ❌ 잘못된 예 — Figma가 무시함
-node.layoutSizingHorizontal = 'FILL';
-parent.appendChild(node);
-
-// ✅ 올바른 예 — appendChild 이후에 설정
-parent.appendChild(node);
-node.layoutSizingHorizontal = 'FILL';
-```
-
-## 헬퍼 함수 (`figma-plugin/src/helpers.ts`)
-
-| 함수 | 용도 |
+| 상황 | 처리 |
 |------|------|
-| `setFillWithVar(node, colorVar, fallback)` | fill에 COLOR 변수 바인딩 |
-| `setStrokeWithVar(node, colorVar, fallback, weight?)` | stroke에 COLOR 변수 바인딩 (setStroke 대체) |
-| `setFloatVar(node, field, sizeVar, fallback)` | 수치 필드(padding/radius/itemSpacing 등)에 FLOAT 변수 바인딩 |
-| `setLineHeightVar(node, sizeVar, fallback)` | TextNode lineHeight에 FLOAT 변수 바인딩 (setFloatVar 대체) |
-| `addTextWithVar(parent, text, fontSize, colorVar, fallback, bold?, fontSizeVar?)` | 텍스트 생성 + 색상·fontSize 변수 바인딩 |
-| `setAutoLayout(node, direction, gap, align?)` | Auto Layout 설정 (gap은 fallback용 — 이후 setFloatVar로 바인딩) |
-| `setPadding(node, top, right, bottom?, left?)` | padding 설정 (fallback용 — 이후 setFloatVar로 바인딩) |
-| `combineVariants(components, name, cols?)` | variant 배열을 그리드 배치 후 ComponentSet으로 묶음 |
-
----
+| 브랜드 불명확 | `data-brand="hana"`, `data-domain="banking"` 적용 후 주석 명시 |
+| 컴포넌트 매핑 불명확 | 섹션 7 빠른 참조표에서 가장 유사한 컴포넌트 선택 |
+| 금액 mock | 실제처럼 보이는 숫자 사용 (`285000`, `3000000`) |
+| 목록 mock | 2~3개 항목으로 구성 |
+| 날짜 mock | `'2026.04.22'` 형식 사용 |
+| Figma 섹션 일부 구현 불가 | 생략하지 않고 빈 상태로 구조 유지 후 주석으로 이유 명시 |

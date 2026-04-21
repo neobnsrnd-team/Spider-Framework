@@ -32,7 +32,7 @@ function App() {
     return () => window.removeEventListener('message', handler)
   }, [])
 
-  if (code === null) {
+  if (!code) { // null(초기 상태) 또는 빈 문자열(모달 닫힘 초기화) 모두 안내 화면으로 처리
     // 아직 코드를 수신하기 전 초기 상태 — 안내 문구 표시
     return (
       <div
