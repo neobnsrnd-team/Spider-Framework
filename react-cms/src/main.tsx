@@ -100,8 +100,22 @@ function BuilderPage() {
 
   if (error) {
     return (
-      <div className="flex items-center justify-center h-screen text-sm text-red-500">
-        {error}
+      <div className="flex flex-col items-center justify-center h-screen gap-4">
+        <p className="text-sm text-red-500">{error}</p>
+        <div className="flex gap-2">
+          <button
+            className="px-4 py-2 text-xs rounded-lg bg-primary text-white hover:bg-primary-dark transition-colors"
+            onClick={() => { window.location.href = window.location.pathname; }}
+          >
+            새 페이지 생성
+          </button>
+          <button
+            className="px-4 py-2 text-xs rounded-lg bg-gray-200 text-gray-700 hover:bg-gray-300 transition-colors"
+            onClick={() => window.history.back()}
+          >
+            돌아가기
+          </button>
+        </div>
       </div>
     );
   }

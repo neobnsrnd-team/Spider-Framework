@@ -10,6 +10,7 @@ import com.example.admin_demo.global.dto.PageResponse;
 import com.example.admin_demo.global.exception.InvalidInputException;
 import com.example.admin_demo.global.exception.NotFoundException;
 import java.util.List;
+import java.time.LocalDate;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -44,18 +45,23 @@ public class ReactCmsDashboardService {
      * 페이지 삭제
      *
      * <p>이력이 있으면 소프트 삭제(USE_YN='N'), 없으면 하드 삭제(물리 행 삭제).
+     * DELETE/UPDATE 쿼리에 소유권 조건(CREATE_USER_ID)을 포함하여 결과를 검증함으로써
+     * checkPageOwner와 실제 삭제 사이의 Race Condition을 방지한다.
      */
     @Transactional
     public void deletePage(String pageId, String userId) {
-        checkPageOwner(pageId, userId);
-
         int historyCount = reactCmsDashboardMapper.hasHistory(pageId);
+        int affected;
         if (historyCount > 0) {
-            reactCmsDashboardMapper.deleteSoft(pageId, userId);
+            affected = reactCmsDashboardMapper.deleteSoft(pageId, userId);
             log.info("React CMS 페이지 소프트 삭제 (이력 존재): pageId={}, userId={}", pageId, userId);
         } else {
-            reactCmsDashboardMapper.deleteHard(pageId, userId);
+            affected = reactCmsDashboardMapper.deleteHard(pageId, userId);
             log.info("React CMS 페이지 하드 삭제 (이력 없음): pageId={}, userId={}", pageId, userId);
+        }
+        // 소유권 불일치 또는 이미 삭제된 경우 0 반환 → 404
+        if (affected == 0) {
+            throw new NotFoundException("페이지를 찾을 수 없습니다.");
         }
     }
 
@@ -63,7 +69,8 @@ public class ReactCmsDashboardService {
     public ReactCmsApprovalStatusResponse findApprovalStatus(String pageId) {
         ReactCmsApprovalStatusResponse status = reactCmsDashboardMapper.findApprovalStatus(pageId);
         if (status == null) {
-            throw new NotFoundException("페이지를 찾을 수 없습니다. pageId=" + pageId);
+            log.debug("페이지를 찾을 수 없습니다. pageId={}", pageId);
+            throw new NotFoundException("페이지를 찾을 수 없습니다.");
         }
         return status;
     }
@@ -73,21 +80,30 @@ public class ReactCmsDashboardService {
     public void requestApproval(String pageId, ReactCmsDashboardApproveRequestDto req, String userId) {
         checkPageOwner(pageId, userId);
 
+        // 시작일·종료일 대소 검증 — Jackson이 형식 오류를 400으로 처리하므로 여기서는 논리 검증만
+        LocalDate beginning = req.getBeginningDate();
+        LocalDate expired   = req.getExpiredDate();
+        if (beginning != null && expired != null && expired.isBefore(beginning)) {
+            throw new InvalidInputException("종료일은 시작일 이후여야 합니다.");
+        }
+
         // 클라이언트 전달값 대신 DB에서 직접 승인자 이름 조회 — 위변조 방지
         String approverName = reactCmsDashboardMapper.findApproverNameById(req.getApproverId());
         if (approverName == null) {
-            throw new InvalidInputException("유효하지 않은 승인자입니다. approverId=" + req.getApproverId());
+            log.debug("유효하지 않은 승인자입니다. approverId={}", req.getApproverId());
+            throw new InvalidInputException("유효하지 않은 승인자입니다.");
         }
 
         reactCmsDashboardMapper.requestApproval(
-                pageId, req.getApproverId(), approverName, req.getBeginningDate(), req.getExpiredDate(), userId);
+                pageId, req.getApproverId(), approverName, beginning, expired, userId);
         log.info("React CMS 페이지 승인 요청: pageId={}, approverId={}, userId={}", pageId, req.getApproverId(), userId);
     }
 
     /** 페이지 소유권 확인 — 존재하지 않거나 본인 REACT 페이지가 아니면 예외 */
     private void checkPageOwner(String pageId, String userId) {
         if (reactCmsDashboardMapper.existsByPageIdAndUserId(pageId, userId) == 0) {
-            throw new NotFoundException("페이지를 찾을 수 없습니다. pageId=" + pageId);
+            log.debug("페이지를 찾을 수 없습니다. pageId={}, userId={}", pageId, userId);
+            throw new NotFoundException("페이지를 찾을 수 없습니다.");
         }
     }
 }

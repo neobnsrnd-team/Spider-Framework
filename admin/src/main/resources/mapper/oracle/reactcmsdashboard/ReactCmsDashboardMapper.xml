@@ -42,23 +42,33 @@
         </where>
     </sql>
 
+    <!-- ${} 문자열 치환 대신 <if>로 ASC/DESC를 직접 분기하여 SQL Injection 방지 -->
     <sql id="orderBy">
-        <bind name="orderDir" value="req.sortDirection == 'ASC' ? 'ASC' : 'DESC'"/>
         <choose>
             <when test="req.sortBy == 'pageName'">
-                ORDER BY p.PAGE_NAME ${orderDir} NULLS LAST, p.LAST_MODIFIED_DTIME DESC NULLS LAST
+                ORDER BY p.PAGE_NAME
+                <if test="req.sortDirection == 'ASC'">ASC</if><if test="req.sortDirection != 'ASC'">DESC</if>
+                NULLS LAST, p.LAST_MODIFIED_DTIME DESC NULLS LAST
             </when>
             <when test="req.sortBy == 'approveState'">
-                ORDER BY p.APPROVE_STATE ${orderDir} NULLS LAST, p.LAST_MODIFIED_DTIME DESC NULLS LAST
+                ORDER BY p.APPROVE_STATE
+                <if test="req.sortDirection == 'ASC'">ASC</if><if test="req.sortDirection != 'ASC'">DESC</if>
+                NULLS LAST, p.LAST_MODIFIED_DTIME DESC NULLS LAST
             </when>
             <when test="req.sortBy == 'beginningDate'">
-                ORDER BY p.BEGINNING_DATE ${orderDir} NULLS LAST, p.LAST_MODIFIED_DTIME DESC NULLS LAST
+                ORDER BY p.BEGINNING_DATE
+                <if test="req.sortDirection == 'ASC'">ASC</if><if test="req.sortDirection != 'ASC'">DESC</if>
+                NULLS LAST, p.LAST_MODIFIED_DTIME DESC NULLS LAST
             </when>
             <when test="req.sortBy == 'expiredDate'">
-                ORDER BY p.EXPIRED_DATE ${orderDir} NULLS LAST, p.LAST_MODIFIED_DTIME DESC NULLS LAST
+                ORDER BY p.EXPIRED_DATE
+                <if test="req.sortDirection == 'ASC'">ASC</if><if test="req.sortDirection != 'ASC'">DESC</if>
+                NULLS LAST, p.LAST_MODIFIED_DTIME DESC NULLS LAST
             </when>
             <when test="req.sortBy == 'lastModifiedDtime'">
-                ORDER BY p.LAST_MODIFIED_DTIME ${orderDir} NULLS LAST
+                ORDER BY p.LAST_MODIFIED_DTIME
+                <if test="req.sortDirection == 'ASC'">ASC</if><if test="req.sortDirection != 'ASC'">DESC</if>
+                NULLS LAST
             </when>
             <otherwise>
                 ORDER BY p.LAST_MODIFIED_DTIME DESC NULLS LAST
@@ -150,22 +160,14 @@
 
     <!-- ==================== 승인 요청 — PENDING 전환 ==================== -->
 
+    <!-- beginningDate/expiredDate는 LocalDate 타입 — MyBatis가 java.sql.Date로 변환하므로 TO_DATE 불필요 -->
     <update id="requestApproval">
         UPDATE SPW_CMS_PAGE
         SET APPROVE_STATE       = 'PENDING',
             APPROVER_ID         = #{approverId},
             APPROVER_NAME       = #{approverName},
-            <!-- Oracle에서 '' = NULL이므로 IS NOT NULL만으로 충분 -->
-            BEGINNING_DATE      = CASE
-                                      WHEN #{beginningDate} IS NOT NULL
-                                      THEN TO_DATE(#{beginningDate}, 'YYYY-MM-DD')
-                                      ELSE NULL
-                                  END,
-            EXPIRED_DATE        = CASE
-                                      WHEN #{expiredDate} IS NOT NULL
-                                      THEN TO_DATE(#{expiredDate}, 'YYYY-MM-DD')
-                                      ELSE NULL
-                                  END,
+            BEGINNING_DATE      = #{beginningDate},
+            EXPIRED_DATE        = #{expiredDate},
             LAST_MODIFIER_ID    = #{userId},
             LAST_MODIFIED_DTIME = SYSTIMESTAMP
         WHERE PAGE_ID        = #{pageId}

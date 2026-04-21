@@ -99,36 +99,37 @@
             const html = rows.map(row => {
                 const badge      = this.APPROVE_STATE_BADGE[row.approveState] || HtmlUtils.escape(row.approveState);
                 const expiredCls = row.isExpired === 'Y' ? 'text-danger fw-bold' : '';
+                // XSS 방지: pageId는 data-* 속성에만 저장하고 onclick 인라인 삽입 금지
                 const pid        = HtmlUtils.escape(row.pageId);
 
                 // 승인요청 버튼 — WORK: "승인요청", REJECTED/APPROVED: "재승인요청", PENDING: 버튼 없음
                 let tdApprove = '-';
                 if (HAS_REACT_CMS_WRITE) {
                     if (row.approveState === 'WORK') {
-                        tdApprove = `<button class="btn btn-primary btn-xs"
-                            onclick="ReactCmsDashboardPage.openApproveRequestModal('${pid}')">승인요청</button>`;
+                        tdApprove = `<button class="btn btn-primary btn-xs js-approve-request"
+                            data-page-id="${pid}">승인요청</button>`;
                     } else if (row.approveState === 'REJECTED' || row.approveState === 'APPROVED') {
-                        tdApprove = `<button class="btn btn-outline-primary btn-xs"
-                            onclick="ReactCmsDashboardPage.openApproveRequestModal('${pid}')">재승인요청</button>`;
+                        tdApprove = `<button class="btn btn-outline-primary btn-xs js-approve-request"
+                            data-page-id="${pid}">재승인요청</button>`;
                     }
                 }
 
                 const tdDelete = HAS_REACT_CMS_WRITE
-                    ? `<button class="btn btn-outline-danger btn-xs"
-                           onclick="ReactCmsDashboardPage.deletePage('${pid}')">삭제</button>`
+                    ? `<button class="btn btn-outline-danger btn-xs js-delete-page"
+                           data-page-id="${pid}">삭제</button>`
                     : '-';
 
                 // 반려 상태면 페이지명 옆에 반려 사유 확인 아이콘 표시
                 const rejectedLink = (row.approveState === 'REJECTED' && row.rejectedReason)
-                    ? ` <a href="#" class="text-danger small" title="반려 사유 확인"
-                            onclick="ReactCmsDashboardPage.showRejectedReason('${pid}'); return false;">
+                    ? ` <a href="#" class="text-danger small js-rejected-reason" title="반려 사유 확인"
+                            data-page-id="${pid}">
                             <i class="bi bi-exclamation-circle"></i></a>`
                     : '';
 
                 return `<tr>
                     <td>
-                        <span class="clickable-cell"
-                              onclick="ReactCmsDashboardPage.openEditor('${pid}')"
+                        <span class="clickable-cell js-open-editor"
+                              data-page-id="${pid}"
                               title="React CMS 에디터로 이동">${HtmlUtils.escape(row.pageName || '')}</span>${rejectedLink}
                     </td>
                     <td class="text-center">${HtmlUtils.escape(row.viewMode || 'mobile')}</td>
@@ -213,6 +214,21 @@
             );
         },
 
+        // 승인자 목록 캐시 — 변경 빈도가 낮으므로 페이지 세션 동안 재사용
+        _approversCache: null,
+
+        _loadApprovers: function() {
+            if (this._approversCache) {
+                return Promise.resolve(this._approversCache);
+            }
+            return fetch('/api/auth/react-cms-approvers')
+                .then(r => r.json())
+                .then(res => {
+                    if (res.success) this._approversCache = res.data;
+                    return res.success ? res.data : [];
+                });
+        },
+
         // ── 승인 요청 모달 ──
         openApproveRequestModal: function(pageId) {
             const row = this.rowsByPageId[pageId] || {};
@@ -224,23 +240,23 @@
             $('#approveRequestBeginningDate').val(row.beginningDate || '');
             $('#approveRequestExpiredDate').val(row.expiredDate || '');
 
-            // 승인자 목록 로드
-            fetch('/api/auth/react-cms-approvers')
-                .then(r => r.json())
-                .then(res => {
-                    if (!res.success) return;
-                    const options = res.data.map(a =>
-                        `<option value="${HtmlUtils.escape(a.userId)}" data-name="${HtmlUtils.escape(a.userName)}">
-                            ${HtmlUtils.escape(a.userName)}
-                        </option>`
-                    ).join('');
-                    $('#approveRequestApproverId').append(options);
-                });
+            this._loadApprovers().then(approvers => {
+                const options = approvers.map(a =>
+                    `<option value="${HtmlUtils.escape(a.userId)}" data-name="${HtmlUtils.escape(a.userName)}">
+                        ${HtmlUtils.escape(a.userName)}
+                    </option>`
+                ).join('');
+                $('#approveRequestApproverId').append(options);
+            });
 
             new bootstrap.Modal('#approveRequestModal').show();
         },
 
+        _isSubmittingApproval: false,
+
         _submitApproveRequest: function() {
+            if (this._isSubmittingApproval) return;
+
             const pageId     = $('#approveRequestPageId').val();
             const approverId = $('#approveRequestApproverId').val();
 
@@ -248,6 +264,9 @@
 
             const beginningDate = $('#approveRequestBeginningDate').val();
             const expiredDate   = $('#approveRequestExpiredDate').val();
+
+            this._isSubmittingApproval = true;
+            $('#btnApproveRequestConfirm').prop('disabled', true);
 
             // approverName은 서버에서 DB 조회 — 클라이언트에서 전달하지 않음 (위변조 방지)
             fetch(`/api/react-cms-dashboard/pages/${pageId}/approve-request`, {
@@ -261,7 +280,11 @@
                     if (res.success) { Toast.success(res.message); this.load(); }
                     else             { Toast.error(res.message); }
                 })
-                .catch(() => Toast.error('승인 요청 중 오류가 발생했습니다.'));
+                .catch(() => Toast.error('승인 요청 중 오류가 발생했습니다.'))
+                .finally(() => {
+                    this._isSubmittingApproval = false;
+                    $('#btnApproveRequestConfirm').prop('disabled', false);
+                });
         },
 
         // ── 반려 사유 확인 ──
@@ -308,12 +331,30 @@
         });
 
         // 빌더에서 저장 완료 신호 수신 → 팝업 닫기 + 목록 새로고침
+        // Origin 검증으로 타 도메인 메시지 차단
         window.addEventListener('message', function(e) {
+            if (e.origin !== window.location.origin) return;
             if (e.data === 'reactCmsSaved') {
                 ReactCmsDashboardPage._editorWin?.close();
                 ReactCmsDashboardPage.load(1);
             }
         });
+
+        // 이벤트 위임 — XSS 방지를 위해 onclick 인라인 대신 data-page-id로 pageId 전달
+        $(document)
+            .on('click', '.js-open-editor', function() {
+                ReactCmsDashboardPage.openEditor($(this).data('page-id'));
+            })
+            .on('click', '.js-approve-request', function() {
+                ReactCmsDashboardPage.openApproveRequestModal($(this).data('page-id'));
+            })
+            .on('click', '.js-delete-page', function() {
+                ReactCmsDashboardPage.deletePage($(this).data('page-id'));
+            })
+            .on('click', '.js-rejected-reason', function(e) {
+                e.preventDefault();
+                ReactCmsDashboardPage.showRejectedReason($(this).data('page-id'));
+            });
 
         $('#btnApproveRequestConfirm').on('click', function() { ReactCmsDashboardPage._submitApproveRequest(); });
     });

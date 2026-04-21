@@ -1,5 +1,7 @@
 package com.example.admin_demo.domain.reactcmsdashboard.dto;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
+import java.time.LocalDate;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -15,9 +17,11 @@ public class ReactCmsDashboardApproveRequestDto {
     /** 승인자 ID (APPROVER_ID) — 이름은 서버에서 DB 조회하여 결정 (위변조 방지) */
     private String approverId;
 
-    /** 노출 시작일 (YYYY-MM-DD, 선택) */
-    private String beginningDate;
+    /** 노출 시작일 (선택) — 잘못된 형식은 Jackson 역직렬화 단계에서 400으로 처리 */
+    @JsonFormat(pattern = "yyyy-MM-dd")
+    private LocalDate beginningDate;
 
-    /** 노출 종료일 (YYYY-MM-DD, 선택) */
-    private String expiredDate;
+    /** 노출 종료일 (선택) */
+    @JsonFormat(pattern = "yyyy-MM-dd")
+    private LocalDate expiredDate;
 }

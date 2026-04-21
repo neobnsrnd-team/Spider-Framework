@@ -3,6 +3,7 @@ package com.example.admin_demo.domain.reactcmsdashboard.mapper;
 import com.example.admin_demo.domain.reactcmsdashboard.dto.ReactCmsApprovalStatusResponse;
 import com.example.admin_demo.domain.reactcmsdashboard.dto.ReactCmsDashboardListRequest;
 import com.example.admin_demo.domain.reactcmsdashboard.dto.ReactCmsDashboardPageResponse;
+import java.time.LocalDate;
 import java.util.List;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
@@ -32,11 +33,11 @@ public interface ReactCmsDashboardMapper {
     /** 이력 존재 여부 확인 — 삭제 분기(하드/소프트)에 사용 */
     int hasHistory(@Param("pageId") String pageId);
 
-    /** 소프트 삭제 — USE_YN = 'N' (이력 있는 페이지) */
-    void deleteSoft(@Param("pageId") String pageId, @Param("userId") String userId);
+    /** 소프트 삭제 — USE_YN = 'N' (이력 있는 페이지). 영향받은 행 수 반환 */
+    int deleteSoft(@Param("pageId") String pageId, @Param("userId") String userId);
 
-    /** 하드 삭제 — 물리 행 삭제 (이력 없는 페이지) */
-    void deleteHard(@Param("pageId") String pageId, @Param("userId") String userId);
+    /** 하드 삭제 — 물리 행 삭제 (이력 없는 페이지). 영향받은 행 수 반환 */
+    int deleteHard(@Param("pageId") String pageId, @Param("userId") String userId);
 
     /**
      * 승인자 이름 조회 — 클라이언트 전달값 대신 서버에서 직접 조회하여 위변조 방지
@@ -57,7 +58,7 @@ public interface ReactCmsDashboardMapper {
             @Param("pageId") String pageId,
             @Param("approverId") String approverId,
             @Param("approverName") String approverName,
-            @Param("beginningDate") String beginningDate,
-            @Param("expiredDate") String expiredDate,
+            @Param("beginningDate") LocalDate beginningDate,
+            @Param("expiredDate") LocalDate expiredDate,
             @Param("userId") String userId);
 }
