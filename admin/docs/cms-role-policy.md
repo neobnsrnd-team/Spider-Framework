@@ -46,6 +46,7 @@
 - `/cms/dashboard`
 
 현재 정책상 `/cms/dashboard`는 일반 유저용 화면으로 본다. 따라서 `CMS:W`는 기본적으로 `/cms/dashboard` 접근이 필요하지 않다.
+그러나 CMS:W 권한은 R+W의 권한을 가지므로 `/cms/dashboard`에 대한 권한은 포함하고 있다.
 
 ## 권한별 허용 기능
 
