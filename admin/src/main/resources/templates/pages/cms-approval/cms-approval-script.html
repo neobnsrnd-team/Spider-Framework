@@ -137,7 +137,8 @@
                     <td class="text-center">${HtmlUtils.escape(row.viewMode || '')}</td>
                     <td>${HtmlUtils.escape(row.createUserName || '')}</td>
                     <td class="text-center">${badge}</td>
-                    <td class="text-center">${isPublicBtn}</td>
+                    <!-- 공개여부 컬럼 UI 숨김 (#132) — 정책 확정 시 주석 해제 + approval-table.html colspan 복원 -->
+                    <!-- <td class="text-center">${isPublicBtn}</td> -->
                     <td class="text-center">${HtmlUtils.escape(row.beginningDate || '-')}</td>
                     <td class="text-center ${expiredCls}">${HtmlUtils.escape(row.expiredDate || '-')}</td>
                     <td class="text-center small">${HtmlUtils.escape(row.lastModifiedDtime || '-')}</td>
