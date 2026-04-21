@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.example.spiderbatch.domain.batch.mapper.BatchAppMapper">
+
+    <!-- batchAppId로 BATCH_APP_FILE_NAME 조회 (= Spring Batch Job Bean 이름) -->
+    <select id="selectBatchAppFileName" resultType="String">
+        SELECT BATCH_APP_FILE_NAME
+        FROM FWK_BATCH_APP
+        WHERE BATCH_APP_ID = #{batchAppId}
+    </select>
+
+    <!-- batchAppId로 배치 앱 이름과 CRON 표현식 조회 (실행 중인 배치 모니터링 표시 정보 보강용) -->
+    <select id="selectBatchAppInfo" resultType="com.example.spiderbatch.domain.batch.dto.BatchAppInfo">
+        SELECT BATCH_APP_NAME AS batchAppName,
+               CRON_TEXT      AS cronText
+        FROM FWK_BATCH_APP
+        WHERE BATCH_APP_ID = #{batchAppId}
+    </select>
+
+</mapper>

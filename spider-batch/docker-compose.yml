@@ -1,0 +1,37 @@
+version: '3.8'
+
+# 모니터링 스택 (Prometheus + Grafana)
+# batch-was 앱 자체는 로컬/별도 서버에서 실행 — host.docker.internal:8081 로 스크랩
+services:
+  prometheus:
+    image: prom/prometheus:v2.50.1
+    container_name: spider-batch-prometheus
+    volumes:
+      # prometheus.yml은 읽기 전용 마운트 — 컨테이너 내부에서 수정 불가
+      - ./monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    ports:
+      - "9090:9090"
+    restart: unless-stopped
+
+  grafana:
+    image: grafana/grafana:10.3.3
+    container_name: spider-batch-grafana
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      # 익명 회원가입 비활성화 — 관리자 계정으로만 접근
+      - GF_USERS_ALLOW_SIGN_UP=false
+    volumes:
+      # provisioning 디렉토리: 데이터소스·대시보드 자동 구성 (읽기 전용)
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+      # Grafana 대시보드·설정 데이터 영속화 (Named Volume)
+      - grafana-data:/var/lib/grafana
+    depends_on:
+      - prometheus
+    restart: unless-stopped
+
+volumes:
+  # Grafana 데이터 영속화 볼륨 — docker compose down 후에도 대시보드 유지
+  grafana-data:

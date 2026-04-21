@@ -2,14 +2,14 @@ package com.example.admin_demo.infra.tcp.client;
 
 import com.example.admin_demo.infra.tcp.model.JsonCommandRequest;
 import com.example.admin_demo.infra.tcp.model.JsonCommandResponse;
-import com.example.admin_demo.infra.tcp.model.ManagementContext;
+import com.example.spiderlink.infra.tcp.model.ManagementContext;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
+import java.io.ObjectInputFilter;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
-import java.io.ObjectStreamClass;
 import java.net.InetSocketAddress;
 import java.net.Socket;
 import lombok.RequiredArgsConstructor;
@@ -47,6 +47,13 @@ public class TcpClient {
     /** JSON 응답 최대 허용 크기 (1 MB) — 초과 시 OutOfMemoryError 방지를 위해 즉시 예외 발생 */
     private static final int MAX_MSG_LEN = 1024 * 1024;
 
+    /**
+     * ObjectStream 역직렬화 허용 화이트리스트.
+     * ObjectStreamMessageCodec과 동일한 패턴을 사용하여 일관성 유지.
+     */
+    private static final String OBJECT_STREAM_FILTER =
+            "com.example.spiderlink.infra.tcp.model.ManagementContext;java.lang.*;java.util.*;!*";
+
     private final ObjectMapper objectMapper;
 
     /**
@@ -65,24 +72,13 @@ public class TcpClient {
             ObjectOutputStream oos = new ObjectOutputStream(socket.getOutputStream());
             oos.writeObject(ctx);
             oos.flush();
-            // resolveClass 오버라이드로 허용된 패키지 외 클래스의 역직렬화 차단 (RCE 방어)
-            try (ObjectInputStream ois = new ObjectInputStream(socket.getInputStream()) {
-                @Override
-                protected Class<?> resolveClass(ObjectStreamClass desc) throws IOException, ClassNotFoundException {
-                    String name = desc.getName();
-                    if (!name.startsWith("com.example.admin_demo.")
-                            && !name.startsWith("java.lang.")
-                            && !name.startsWith("java.util.")
-                            && !name.startsWith("[")) {
-                        throw new IOException("역직렬화 차단: 허용되지 않은 클래스 " + name);
-                    }
-                    return super.resolveClass(desc);
-                }
-            }) {
-                ManagementContext response = (ManagementContext) ois.readObject();
-                log.debug("[TcpClient] ObjectStream 응답 수신: resultCode={}", response.getResultCode());
-                return response;
-            }
+            // ObjectInputFilter 화이트리스트로 허용된 클래스 외 역직렬화 차단 (RCE 방어)
+            // ObjectStreamMessageCodec과 동일한 방식으로 통일
+            ObjectInputStream ois = new ObjectInputStream(socket.getInputStream());
+            ois.setObjectInputFilter(ObjectInputFilter.Config.createFilter(OBJECT_STREAM_FILTER));
+            ManagementContext response = (ManagementContext) ois.readObject();
+            log.debug("[TcpClient] ObjectStream 응답 수신: resultCode={}", response.getResultCode());
+            return response;
         } catch (ClassNotFoundException e) {
             throw new IOException("ManagementContext 역직렬화 실패: " + e.getMessage(), e);
         }

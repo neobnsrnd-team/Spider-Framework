@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.example.spiderbatch.domain.batch.mapper.BatchHisMapper">
+
+    <!-- 다음 실행 회차 계산 (같은 날 같은 배치의 MAX seq + 1) -->
+    <select id="selectNextExecuteSeq" resultType="int">
+        SELECT NVL(MAX(BATCH_EXECUTE_SEQ), 0) + 1
+        FROM FWK_BATCH_HIS
+        WHERE BATCH_APP_ID = #{batchAppId}
+          AND INSTANCE_ID  = #{instanceId}
+          AND BATCH_DATE   = #{batchDate}
+    </select>
+
+    <!-- 배치 시작 이력 INSERT (RES_RT_CODE='0', STARTED) -->
+    <insert id="insertBatchHis">
+        INSERT INTO FWK_BATCH_HIS (
+            BATCH_APP_ID,
+            INSTANCE_ID,
+            BATCH_DATE,
+            BATCH_EXECUTE_SEQ,
+            LOG_DTIME,
+            RES_RT_CODE,
+            LAST_UPDATE_USER_ID
+        ) VALUES (
+            #{batchAppId},
+            #{instanceId},
+            #{batchDate},
+            #{batchExecuteSeq},
+            #{logDtime},
+            '0',
+            #{lastUpdateUserId}
+        )
+    </insert>
+
+    <!-- 배치 실행 결과 UPDATE -->
+    <update id="updateBatchHisResult">
+        UPDATE FWK_BATCH_HIS SET
+            RES_RT_CODE          = #{resRtCode},
+            BATCH_END_DTIME      = #{batchEndDtime},
+            ERROR_REASON         = #{errorReason},
+            EXECUTE_COUNT        = #{executeCount},
+            SUCCESS_COUNT        = #{successCount},
+            FAIL_COUNT           = #{failCount},
+            LAST_UPDATE_USER_ID  = #{lastUpdateUserId}
+        WHERE BATCH_APP_ID      = #{batchAppId}
+          AND INSTANCE_ID       = #{instanceId}
+          AND BATCH_DATE        = #{batchDate}
+          AND BATCH_EXECUTE_SEQ = #{batchExecuteSeq}
+    </update>
+
+</mapper>

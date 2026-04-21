@@ -17,7 +17,7 @@ import lombok.experimental.SuperBuilder;
 @SuperBuilder
 @NoArgsConstructor
 @AllArgsConstructor
-public abstract class CommandRequest<T> {
+public abstract class CommandRequest<T> implements HasCommand {
 
     /** 실행할 커맨드 이름 (예: NOTICE_SYNC, NOTICE_END, PING) */
     private String command;
