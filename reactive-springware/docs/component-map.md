@@ -2,7 +2,7 @@
 
 > **대상 Figma 파일**: Hana Bank App (`eRnV2DPVtHbGn5HSISS65O`)
 > **작성 기준**: 기존 코드베이스(`packages/@shared/components`) 분석 + theme.json v2.0.0
-> **패키지 네임스페이스**: `@neobnsrnd-team/reactive-springware`
+> **패키지 네임스페이스**: `@cl`
 > **최종 수정**: 2026-03-26
 
 ---
@@ -280,7 +280,7 @@ Figma: [탭1] [탭2] [탭3]  (선택된 탭 하단 인디케이터)
 ### 4.1 패키지 네임스페이스 규칙
 
 ```
-@neobnsrnd-team/reactive-springware
+@cl
 ├── core/        → 원자(Atom) 컴포넌트
 ├── modules/     → 분자(Molecule) 컴포넌트
 ├── biz/         → 도메인 특화 컴포넌트
