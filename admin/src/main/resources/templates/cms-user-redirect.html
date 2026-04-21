@@ -1,0 +1,13 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<!--
+    탭 시스템 AJAX 응답용 — window.top.location.href 로 브라우저 전체를 외부 CMS URL로 이동시킨다.
+    서버 사이드 redirect 를 사용하면 AJAX가 외부 URL을 따라가 CORS 차단 문제가 발생하므로
+    클라이언트 사이드 이동 방식을 사용한다.
+-->
+<script th:inline="javascript">
+    window.top.location.href = /*[[${cmsUserUrl}]]*/ '/';
+</script>
+</body>
+</html>
