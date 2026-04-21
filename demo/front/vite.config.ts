@@ -26,11 +26,11 @@ export default defineConfig({
   },
   server: {
     proxy: {
-      /* /api/notices/* 요청을 Demo Backend로 프록시
-         SSE(EventSource)는 브라우저가 GET 요청을 직접 보내므로
-         CORS 없이 프록시를 통해 연결한다. */
-      '/api/notices': {
-        target:      'http://localhost:3001',
+      /* 모든 /api/* 요청을 Demo Backend로 프록시
+         - CORS 헤더 없이 브라우저 → Vite Dev Server → Backend 흐름으로 처리
+         - SSE(EventSource) 포함 모든 API 엔드포인트 커버 */
+      '/api': {
+        target:      'http://localhost:9998',
         changeOrigin: true,
       },
     },
