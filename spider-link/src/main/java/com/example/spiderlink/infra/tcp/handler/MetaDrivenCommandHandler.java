@@ -40,7 +40,7 @@ import org.springframework.stereotype.Component;
 @Slf4j
 @Component
 @RequiredArgsConstructor
-public class MetaDrivenCommandHandler implements CommandHandler {
+public class MetaDrivenCommandHandler implements CommandHandler<JsonCommandRequest, JsonCommandResponse> {
 
     private static final String GW_ID   = "DEMO_GW";
     private static final String ORG_ID  = "DEMO";
@@ -69,7 +69,7 @@ public class MetaDrivenCommandHandler implements CommandHandler {
 
     @Override
     @SuppressWarnings("unchecked")
-    public Object handle(String command, JsonCommandRequest request) {
+    public JsonCommandResponse handle(String command, JsonCommandRequest request) {
         Map<String, Object> payload = request.getPayload() != null ? request.getPayload() : Map.of();
         String userId = String.valueOf(payload.getOrDefault("userId", ""));
         String trxId  = metaRoutingMapper.selectTrxId(GW_ID, command);
