@@ -558,7 +558,7 @@ ${fieldDeclarations}
 
 -- CMS extension menus (sort_order 13 to avoid conflict with emergency_notice at 12)
 INSERT INTO FWK_MENU (MENU_ID, PRIOR_MENU_ID, SORT_ORDER, MENU_NAME, MENU_URL, DISPLAY_YN, USE_YN, LAST_UPDATE_DTIME, LAST_UPDATE_USER_ID)
-VALUES ('v3_cms_manage', 'v3_acl_manage', 13, 'CMS', '/cms', 'Y', 'Y', TO_CHAR(SYSDATE, 'YYYYMMDDHH24MISS'), 'system');
+VALUES ('v3_cms_manage', 'v3_acl_manage', 13, 'CMS', '/cms/user-dashboard', 'Y', 'Y', TO_CHAR(SYSDATE, 'YYYYMMDDHH24MISS'), 'system');
 
 INSERT INTO FWK_MENU (MENU_ID, PRIOR_MENU_ID, SORT_ORDER, MENU_NAME, MENU_URL, DISPLAY_YN, USE_YN, LAST_UPDATE_DTIME, LAST_UPDATE_USER_ID)
 VALUES ('v3_cms_dashboard', 'v3_cms_manage', 1, 'CMS 작업자 대시보드', '/cms/dashboard', 'N', 'Y', TO_CHAR(SYSDATE, 'YYYYMMDDHH24MISS'), 'system');
