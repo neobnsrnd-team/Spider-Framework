@@ -25,6 +25,7 @@ public class DemoAuthLoginCommandHandler implements CommandHandler {
     private static final String TRX_ID = "DEMO_AUTH_LOGIN";
 
     private final DemoMapper demoMapper;
+    private final DemoTrxLogger trxLogger;
 
     @Override
     public boolean supports(String command) {
@@ -37,32 +38,40 @@ public class DemoAuthLoginCommandHandler implements CommandHandler {
         String userId   = payload != null ? String.valueOf(payload.getOrDefault("userId", ""))   : "";
         String password = payload != null ? String.valueOf(payload.getOrDefault("password", "")) : "";
 
+        trxLogger.logRequest(TRX_ID, request.getRequestId(), userId, "userId=" + userId);
+
         if (userId.isBlank() || password.isBlank()) {
-            return JsonCommandResponse.builder()
+            JsonCommandResponse response = JsonCommandResponse.builder()
                     .command(command)
                     .success(false)
                     .error("userId 또는 password가 누락되었습니다.")
                     .build();
+            trxLogger.logResponse(TRX_ID, request.getRequestId(), userId, response.getError(), "N");
+            return response;
         }
 
         DemoPocUserResponse user = demoMapper.selectPocUserByIdAndPassword(userId, password);
 
         if (user == null) {
             log.info("[DemoAuthLoginCommandHandler] 인증 실패: userId={}", userId);
-            return JsonCommandResponse.builder()
+            JsonCommandResponse response = JsonCommandResponse.builder()
                     .command(command)
                     .success(false)
                     .error("아이디 또는 비밀번호가 틀렸습니다.")
                     .build();
+            trxLogger.logResponse(TRX_ID, request.getRequestId(), userId, response.getError(), "N");
+            return response;
         }
 
         if (!"Y".equals(user.getLogYn())) {
             log.info("[DemoAuthLoginCommandHandler] 비활성 계정: userId={}", userId);
-            return JsonCommandResponse.builder()
+            JsonCommandResponse response = JsonCommandResponse.builder()
                     .command(command)
                     .success(false)
                     .error("사용이 정지된 계정입니다. 관리자에게 문의하세요.")
                     .build();
+            trxLogger.logResponse(TRX_ID, request.getRequestId(), userId, response.getError(), "N");
+            return response;
         }
 
         try {
@@ -72,7 +81,7 @@ public class DemoAuthLoginCommandHandler implements CommandHandler {
         }
 
         log.info("[DemoAuthLoginCommandHandler] 인증 성공: userId={}", userId);
-        return JsonCommandResponse.builder()
+        JsonCommandResponse response = JsonCommandResponse.builder()
                 .command(command)
                 .success(true)
                 .payload(Map.<String, Object>of(
@@ -82,5 +91,7 @@ public class DemoAuthLoginCommandHandler implements CommandHandler {
                         "lastLoginDtime", user.getLastLoginDtime() != null ? user.getLastLoginDtime() : ""
                 ))
                 .build();
+        trxLogger.logResponse(TRX_ID, request.getRequestId(), userId, "userId=" + userId + ",grade=" + user.getUserGrade(), "Y");
+        return response;
     }
 }

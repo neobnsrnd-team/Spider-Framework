@@ -25,6 +25,7 @@ public class DemoPayableAmtCommandHandler implements CommandHandler {
     private static final String TRX_ID = "DEMO_PAYABLE_AMT";
 
     private final DemoMapper demoMapper;
+    private final DemoTrxLogger trxLogger;
 
     @Override
     public boolean supports(String command) {
@@ -37,12 +38,16 @@ public class DemoPayableAmtCommandHandler implements CommandHandler {
         String userId = payload != null ? String.valueOf(payload.getOrDefault("userId", "")) : "";
         String cardId = payload != null ? String.valueOf(payload.getOrDefault("cardId", "")) : "";
 
+        trxLogger.logRequest(TRX_ID, request.getRequestId(), userId, "userId=" + userId + ",cardId=" + cardId);
+
         if (userId.isBlank() || cardId.isBlank()) {
-            return JsonCommandResponse.builder()
+            JsonCommandResponse response = JsonCommandResponse.builder()
                     .command(command)
                     .success(false)
                     .error("userId 또는 cardId가 누락되었습니다.")
                     .build();
+            trxLogger.logResponse(TRX_ID, request.getRequestId(), userId, response.getError(), "N");
+            return response;
         }
 
         DemoPayableAmtResponse result = demoMapper.selectPayableAmt(userId, cardId);
@@ -51,7 +56,7 @@ public class DemoPayableAmtCommandHandler implements CommandHandler {
         long creditLimit   = result != null ? result.getCreditLimit()   : 0L;
 
         log.info("[DemoPayableAmtCommandHandler] 조회 성공: userId={}, cardId={}", userId, cardId);
-        return JsonCommandResponse.builder()
+        JsonCommandResponse response = JsonCommandResponse.builder()
                 .command(command)
                 .success(true)
                 .payload(Map.<String, Object>of(
@@ -59,5 +64,7 @@ public class DemoPayableAmtCommandHandler implements CommandHandler {
                         "creditLimit",   creditLimit
                 ))
                 .build();
+        trxLogger.logResponse(TRX_ID, request.getRequestId(), userId, "payableAmount=" + payableAmount + ",creditLimit=" + creditLimit, "Y");
+        return response;
     }
 }

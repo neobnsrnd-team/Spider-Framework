@@ -24,6 +24,7 @@ public class DemoAuthMeCommandHandler implements CommandHandler {
     private static final String TRX_ID = "DEMO_AUTH_ME";
 
     private final DemoMapper demoMapper;
+    private final DemoTrxLogger trxLogger;
 
     @Override
     public boolean supports(String command) {
@@ -35,27 +36,33 @@ public class DemoAuthMeCommandHandler implements CommandHandler {
         Map<String, Object> payload = request.getPayload();
         String userId = payload != null ? String.valueOf(payload.getOrDefault("userId", "")) : "";
 
+        trxLogger.logRequest(TRX_ID, request.getRequestId(), userId, "userId=" + userId);
+
         if (userId.isBlank()) {
-            return JsonCommandResponse.builder()
+            JsonCommandResponse response = JsonCommandResponse.builder()
                     .command(command)
                     .success(false)
                     .error("userId가 누락되었습니다.")
                     .build();
+            trxLogger.logResponse(TRX_ID, request.getRequestId(), userId, response.getError(), "N");
+            return response;
         }
 
         DemoPocUserResponse user = demoMapper.selectPocUserById(userId);
 
         if (user == null) {
             log.info("[DemoAuthMeCommandHandler] 사용자 없음: userId={}", userId);
-            return JsonCommandResponse.builder()
+            JsonCommandResponse response = JsonCommandResponse.builder()
                     .command(command)
                     .success(false)
                     .error("사용자를 찾을 수 없습니다.")
                     .build();
+            trxLogger.logResponse(TRX_ID, request.getRequestId(), userId, response.getError(), "N");
+            return response;
         }
 
         log.info("[DemoAuthMeCommandHandler] 프로필 조회 성공: userId={}", userId);
-        return JsonCommandResponse.builder()
+        JsonCommandResponse response = JsonCommandResponse.builder()
                 .command(command)
                 .success(true)
                 .payload(Map.<String, Object>of(
@@ -65,5 +72,7 @@ public class DemoAuthMeCommandHandler implements CommandHandler {
                         "lastLoginDtime", user.getLastLoginDtime() != null ? user.getLastLoginDtime() : ""
                 ))
                 .build();
+        trxLogger.logResponse(TRX_ID, request.getRequestId(), userId, "userId=" + userId + ",userName=" + user.getUserName(), "Y");
+        return response;
     }
 }
