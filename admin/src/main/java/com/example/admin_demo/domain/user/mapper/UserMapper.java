@@ -199,6 +199,13 @@ public interface UserMapper {
     List<CmsApproverResponse> findCmsApprovers();
 
     /**
+     * React CMS 결재자 목록 조회 (v3_react_cms_admin_approvals 쓰기 권한 보유 활성 사용자)
+     *
+     * @return {@link List} {@link CmsApproverResponse} 결재자 목록
+     */
+    List<CmsApproverResponse> findReactCmsApprovers();
+
+    /**
      * 엑셀 내보내기용 전체 목록 조회 (페이징 없음)
      */
     List<UserWithRoleResponse> findAllForExport(

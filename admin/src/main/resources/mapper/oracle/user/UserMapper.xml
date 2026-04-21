@@ -322,6 +322,33 @@
         ORDER BY u.USER_NAME ASC, u.USER_ID ASC
     </select>
 
+    <!-- React CMS 결재자 목록 조회 (v3_react_cms_admin_approvals 쓰기 권한 보유 활성 사용자) -->
+    <select id="findReactCmsApprovers"
+            resultType="com.example.admin_demo.global.auth.dto.CmsApproverResponse">
+        SELECT DISTINCT
+            u.USER_ID   AS userId,
+            u.USER_NAME AS userName
+        FROM FWK_USER u
+        WHERE u.USER_STATE_CODE = '1'
+          AND (
+              EXISTS (
+                  SELECT 1
+                  FROM FWK_USER_MENU um
+                  WHERE um.USER_ID = u.USER_ID
+                    AND um.MENU_ID = 'v3_react_cms_admin_approvals'
+                    AND um.AUTH_CODE = 'W'
+              )
+              OR EXISTS (
+                  SELECT 1
+                  FROM FWK_ROLE_MENU rm
+                  WHERE rm.ROLE_ID = u.ROLE_ID
+                    AND rm.MENU_ID = 'v3_react_cms_admin_approvals'
+                    AND rm.AUTH_CODE = 'W'
+              )
+          )
+        ORDER BY u.USER_NAME ASC, u.USER_ID ASC
+    </select>
+
     <!-- ==================== 엑셀 내보내기 (페이징 없음) ==================== -->
 
     <select id="findAllForExport"
