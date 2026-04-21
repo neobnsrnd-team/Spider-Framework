@@ -44,6 +44,8 @@
         WHERE p.USE_YN = 'Y'
           AND p.APPROVE_STATE = 'APPROVED'
           AND p.IS_PUBLIC = 'Y'
+          <!-- 타 프로젝트의 REACT 등 다른 PAGE_TYPE 제외 (#136) -->
+          AND p.PAGE_TYPE = 'PAGE'
         <if test="req.search != null and req.search != ''">
           AND (
               p.PAGE_ID LIKE '%' || #{req.search} || '%'
@@ -115,6 +117,7 @@
         WHERE p.USE_YN = 'Y'
           AND p.APPROVE_STATE = 'APPROVED'
           AND p.IS_PUBLIC = 'Y'
+          AND p.PAGE_TYPE = 'PAGE'
           AND p.AB_GROUP_ID IS NOT NULL
         <if test="search != null and search != ''">
           AND (
@@ -134,6 +137,7 @@
         WHERE p.USE_YN = 'Y'
           AND p.APPROVE_STATE = 'APPROVED'
           AND p.IS_PUBLIC = 'Y'
+          AND p.PAGE_TYPE = 'PAGE'
         <if test="search != null and search != ''">
           AND (
               p.PAGE_ID LIKE '%' || #{search} || '%'
@@ -157,7 +161,8 @@
         FROM SPW_CMS_PAGE p
         <include refid="statsJoin"/>
         WHERE p.AB_GROUP_ID = #{groupId}
-          AND p.USE_YN = 'Y'
+          AND p.USE_YN    = 'Y'
+          AND p.PAGE_TYPE = 'PAGE'
         ORDER BY p.AB_WEIGHT DESC NULLS LAST, p.PAGE_NAME
     </select>
 
@@ -165,7 +170,8 @@
         SELECT COUNT(*)
         FROM SPW_CMS_PAGE
         WHERE AB_GROUP_ID = #{groupId}
-          AND USE_YN = 'Y'
+          AND USE_YN    = 'Y'
+          AND PAGE_TYPE = 'PAGE'
     </select>
 
     <select id="countApprovedPagesByIds" resultType="long">
@@ -174,6 +180,7 @@
         WHERE USE_YN = 'Y'
           AND APPROVE_STATE = 'APPROVED'
           AND IS_PUBLIC = 'Y'
+          AND PAGE_TYPE = 'PAGE'
           AND PAGE_ID IN
           <foreach collection="pageIds" item="pageId" open="(" separator="," close=")">
               #{pageId}
@@ -186,6 +193,7 @@
         WHERE USE_YN = 'Y'
           AND AB_GROUP_ID IS NOT NULL
           AND AB_GROUP_ID != #{groupId}
+          AND PAGE_TYPE = 'PAGE'
           AND PAGE_ID IN
           <foreach collection="pageIds" item="pageId" open="(" separator="," close=")">
               #{pageId}
@@ -196,8 +204,9 @@
         SELECT COUNT(*)
         FROM SPW_CMS_PAGE
         WHERE AB_GROUP_ID = #{groupId}
-          AND PAGE_ID = #{pageId}
-          AND USE_YN = 'Y'
+          AND PAGE_ID     = #{pageId}
+          AND USE_YN      = 'Y'
+          AND PAGE_TYPE   = 'PAGE'
     </select>
 
     <update id="updateAbGroup">
@@ -205,8 +214,9 @@
         SET AB_GROUP_ID      = #{groupId},
             AB_WEIGHT        = #{weight},
             LAST_MODIFIER_ID = #{modifierId}
-        WHERE PAGE_ID = #{pageId}
-          AND USE_YN = 'Y'
+        WHERE PAGE_ID   = #{pageId}
+          AND USE_YN    = 'Y'
+          AND PAGE_TYPE = 'PAGE'
           AND (AB_GROUP_ID IS NULL OR AB_GROUP_ID = #{groupId})
     </update>
 
@@ -216,7 +226,8 @@
             AB_WEIGHT        = NULL,
             LAST_MODIFIER_ID = #{modifierId}
         WHERE AB_GROUP_ID = #{groupId}
-          AND USE_YN = 'Y'
+          AND USE_YN      = 'Y'
+          AND PAGE_TYPE   = 'PAGE'
     </update>
 
     <update id="clearPageAbGroup">
@@ -224,8 +235,9 @@
         SET AB_GROUP_ID      = NULL,
             AB_WEIGHT        = NULL,
             LAST_MODIFIER_ID = #{modifierId}
-        WHERE PAGE_ID = #{pageId}
-          AND USE_YN = 'Y'
+        WHERE PAGE_ID   = #{pageId}
+          AND USE_YN    = 'Y'
+          AND PAGE_TYPE = 'PAGE'
           AND AB_GROUP_ID IS NOT NULL
     </update>
 
@@ -234,15 +246,17 @@
         SET AB_WEIGHT        = 0,
             LAST_MODIFIER_ID = #{modifierId}
         WHERE AB_GROUP_ID = #{groupId}
-          AND PAGE_ID != #{winnerPageId}
-          AND USE_YN = 'Y'
+          AND PAGE_ID  != #{winnerPageId}
+          AND USE_YN    = 'Y'
+          AND PAGE_TYPE = 'PAGE'
     </update>
 
     <update id="setWinner">
         UPDATE SPW_CMS_PAGE
         SET AB_WEIGHT        = 1,
             LAST_MODIFIER_ID = #{modifierId}
-        WHERE PAGE_ID = #{winnerPageId}
-          AND USE_YN = 'Y'
+        WHERE PAGE_ID   = #{winnerPageId}
+          AND USE_YN    = 'Y'
+          AND PAGE_TYPE = 'PAGE'
     </update>
 </mapper>
