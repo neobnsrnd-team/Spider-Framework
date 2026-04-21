@@ -68,8 +68,12 @@ public class ReactGenerateService {
         // domain 미입력 시 banking 기본값 적용
         DomainType effectiveDomain = request.getDomain() != null ? request.getDomain() : DomainType.BANKING;
 
-        log.info("React 코드 생성 요청 — figmaUrl: {}, brand: {}, domain: {}, userId: {}",
-                request.getFigmaUrl(), request.getBrand(), effectiveDomain, createdBy);
+        log.info(
+                "React 코드 생성 요청 — figmaUrl: {}, brand: {}, domain: {}, userId: {}",
+                request.getFigmaUrl(),
+                request.getBrand(),
+                effectiveDomain,
+                createdBy);
 
         // 실패 이력 저장에 필요하므로 try 바깥에서 미리 생성
         String id = UUID.randomUUID().toString();
@@ -78,9 +82,9 @@ public class ReactGenerateService {
         // brand·domain은 requirements 컬럼에 JSON으로 저장 (DB 스키마 변경 없이 유지)
         String requirementsJson;
         try {
-            requirementsJson = objectMapper.writeValueAsString(
-                    Map.of("brand", request.getBrand().name().toLowerCase(),
-                           "domain", effectiveDomain.name().toLowerCase()));
+            requirementsJson = objectMapper.writeValueAsString(Map.of(
+                    "brand", request.getBrand().name().toLowerCase(),
+                    "domain", effectiveDomain.name().toLowerCase()));
         } catch (JsonProcessingException e) {
             throw new InternalException("brand/domain JSON 직렬화 실패", e);
         }
@@ -294,8 +298,12 @@ public class ReactGenerateService {
                     ? be.getDetailMessage()
                     : e.getMessage();
 
-            log.error("React 코드 생성 실패 — codeId: {}, brand: {}, domain: {}, error: {}",
-                    id, request.getBrand(), effectiveDomain, failReason);
+            log.error(
+                    "React 코드 생성 실패 — codeId: {}, brand: {}, domain: {}, error: {}",
+                    id,
+                    request.getBrand(),
+                    effectiveDomain,
+                    failReason);
             reactGenerateMapper.insert(
                     id,
                     request.getFigmaUrl(),

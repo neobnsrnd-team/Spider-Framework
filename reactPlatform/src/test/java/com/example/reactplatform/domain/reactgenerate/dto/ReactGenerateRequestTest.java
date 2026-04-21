@@ -1,5 +1,7 @@
 package com.example.reactplatform.domain.reactgenerate.dto;
 
+import static org.assertj.core.api.Assertions.assertThat;
+
 import com.example.reactplatform.domain.reactgenerate.enums.BrandType;
 import com.example.reactplatform.domain.reactgenerate.enums.DomainType;
 import jakarta.validation.ConstraintViolation;
@@ -10,8 +12,6 @@ import java.util.Set;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-
-import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * @file ReactGenerateRequestTest.java
