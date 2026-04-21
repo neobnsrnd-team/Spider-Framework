@@ -90,11 +90,13 @@ function patchExport(src: string): string {
     src
       // export interface Foo / export type Foo → interface Foo / type Foo (타입은 런타임 불필요, export는 new Function 스코프에서 문법 오류)
       .replace(/\bexport\s+(interface|type)\s/g, '$1 ')
-      // export function Foo / export const Foo / export class Foo 등 named export → export 키워드 제거
+      // export function / export async function / export const / export class 등 named export → export 키워드 제거
       // new Function 스코프에서 export는 문법 오류이므로 선언 키워드만 남긴다
-      .replace(/\bexport\s+(function|const|let|var|class)\s/g, '$1 ')
-      // export default function Name(...) — 함수 이름 보존
-      .replace(/export\s+default\s+function\s+(\w+)/, 'var __Component = function $1')
+      .replace(/\bexport\s+(async\s+function|function|const|let|var|class)\s/g, '$1 ')
+      // export { A, B } 블록 export 제거 — LLM이 하위 선언을 re-export 할 때 생성될 수 있음
+      .replace(/\bexport\s+\{[^}]+\}\s*;?/g, '')
+      // export default async function Name / export default function Name — async 포함, 함수 이름 보존
+      .replace(/export\s+default\s+(async\s+)?function\s+(\w+)/, 'var __Component = $1function $2')
       // export default class Name — 클래스 이름 보존
       .replace(/export\s+default\s+class\s+(\w+)/, 'var __Component = class $1')
       // export default <expr> — 화살표 함수, 변수 참조 등 나머지 케이스
