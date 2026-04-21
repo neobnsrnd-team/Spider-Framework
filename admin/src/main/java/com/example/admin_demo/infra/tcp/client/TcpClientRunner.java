@@ -16,7 +16,8 @@ import org.springframework.stereotype.Component;
  * 애플리케이션 기동 시 TCP 연결 샘플 동작 확인용 Runner.
  *
  * <p>dev 프로파일에서만 활성화된다.
- * demo/backend(9997)에 PING을 전송하여 연결 상태를 확인한다.</p>
+ * spider-link(9996)에 PING을 전송하여 연결 상태를 확인한다.
+ * spider-link가 demo/backend(9997)로 프록시하므로 전체 경로 확인이 가능하다.</p>
  */
 @Slf4j
 @Component
@@ -50,11 +51,11 @@ public class TcpClientRunner implements ApplicationRunner {
         try {
             JsonCommandResponse resp = tcpClient.sendJson(demoHost, demoPort, ping);
             log.info(
-                    "[TcpClientRunner] demo/backend PING 응답: success={}, message={}",
+                    "[TcpClientRunner] spider-link PING 응답: success={}, message={}",
                     resp.isSuccess(),
                     resp.getMessage());
         } catch (Exception e) {
-            log.warn("[TcpClientRunner] demo/backend PING 실패 (비치명적): {}", e.getMessage());
+            log.warn("[TcpClientRunner] spider-link PING 실패 (비치명적): {}", e.getMessage());
         }
     }
 }

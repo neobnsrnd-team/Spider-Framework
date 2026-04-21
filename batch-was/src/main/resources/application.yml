@@ -21,3 +21,18 @@ batch:
     instance-id: BT01
   tcp:
     port: ${BATCH_TCP_PORT:9998}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        # health: 운영 헬스체크, prometheus: Prometheus 스크랩 엔드포인트
+        include: health,prometheus
+  endpoint:
+    prometheus:
+      enabled: true
+  metrics:
+    tags:
+      # 모든 메트릭에 공통 태그 부여 — Grafana에서 애플리케이션·인스턴스별 필터링 가능
+      application: batch-was
+      instance: ${batch.was.instance-id:BT01}

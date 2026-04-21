@@ -42,6 +42,8 @@ const { getBillingPeriod } = require("./utils/billingPeriod");
 const { getBillingSummaryByMonth } = require("./utils/billingByMonth");
 // Admin TCP 클라이언트로부터 긴급공지 커맨드를 수신하는 TCP 서버 모듈
 const { startTcpServer } = require("./tcp/tcpServer");
+// Admin TCP 서버로 전문을 송신하는 클라이언트 모듈
+const { sendToAdmin } = require("./tcp/tcpClient");
 // Admin TcpClient.sendJson 대상 포트 (기본 9997). Admin `tcp.demo-backend.port`와 일치해야 함.
 const TCP_PORT = parseInt(process.env.TCP_PORT || "9997", 10);
 
@@ -142,26 +144,19 @@ app.get("/api/auth/me", verifyToken, async (req, res) => {
   try {
     const { userId } = req.user;
 
-    const result = await withConnection((conn) =>
-      conn.execute(
-        `SELECT USER_NAME, USER_GRADE,
-                TO_CHAR(SYSDATE, 'YYYYMMDDHH24MISS') AS LAST_LOGIN_DTIME
-           FROM D_SPIDERLINK.POC_USER
-          WHERE USER_ID = :userId`,
-        { userId },
-      ),
-    );
+    const response = await sendToAdmin("DEMO_AUTH_ME", { userId });
 
-    const row = result.rows?.[0];
-    if (!row) {
-      return res.status(404).json({ error: "사용자를 찾을 수 없습니다." });
+    if (!response.success) {
+      const status = response.error === "사용자를 찾을 수 없습니다." ? 404 : 500;
+      return res.status(status).json({ error: response.error });
     }
 
+    const { userName, userGrade, lastLoginDtime } = response.payload;
     return res.json({
       userId,
-      userName:  row.USER_NAME,
-      userGrade: row.USER_GRADE,
-      lastLogin: formatLoginDtime(row.LAST_LOGIN_DTIME),
+      userName,
+      userGrade,
+      lastLogin: formatLoginDtime(lastLoginDtime),
     });
   } catch (err) {
     console.error("[GET /api/auth/me]", err);
@@ -185,63 +180,31 @@ app.post("/api/auth/login", async (req, res) => {
   }
 
   try {
-    const result = await withConnection(async (conn) => {
-      return conn.execute(
-        `SELECT USER_ID, USER_NAME, USER_GRADE, LOG_YN,
-                TO_CHAR(SYSDATE, 'YYYYMMDDHH24MISS') AS LAST_LOGIN_DTIME
-           FROM D_SPIDERLINK.POC_USER
-          WHERE USER_ID = :userId AND PASSWORD = :password`,
-        { userId, password },
-      );
-    });
+    // Admin TCP 서버로 DEMO_AUTH_LOGIN 전문 송신 — Admin이 POC_USER 인증 및 LAST_LOGIN_DTIME 업데이트 처리
+    const response = await sendToAdmin("DEMO_AUTH_LOGIN", { userId, password });
 
-    const row = result.rows?.[0];
-
-    if (!row) {
-      return res.status(401).json({
-        success: false,
-        message: "아이디 또는 비밀번호가 틀렸습니다.",
-      });
+    if (!response.success) {
+      const status = response.error?.includes("틀렸습니다") ? 401
+                   : response.error?.includes("정지된") ? 403 : 500;
+      return res.status(status).json({ success: false, message: response.error });
     }
 
-    if (row.LOG_YN !== "Y") {
-      return res.status(403).json({
-        success: false,
-        message: "사용이 정지된 계정입니다. 관리자에게 문의하세요.",
-      });
-    }
+    const { userId: resUserId, userName, userGrade, lastLoginDtime } = response.payload;
 
-    // 마지막 로그인 시각 업데이트 (실패해도 로그인은 허용)
-    withConnection((conn) =>
-      conn.execute(
-        `UPDATE D_SPIDERLINK.POC_USER
-          SET LAST_LOGIN_DTIME = TO_CHAR(SYSDATE, 'YYYYMMDDHH24MISS')
-        WHERE USER_ID = :userId`,
-        { userId },
-        { autoCommit: true },
-      ),
-    ).catch((e) =>
-      console.warn("[login] LAST_LOGIN_DTIME 업데이트 실패:", e.message),
-    );
-
-    const payload = {
-      userId: row.USER_ID,
-      userName: row.USER_NAME,
-      userGrade: row.USER_GRADE,
-    };
+    const jwtPayload = { userId: resUserId, userName, userGrade };
 
     // Access Token: 짧은 TTL, Authorization 헤더로 전달
-    const accessToken = jwt.sign(payload, JWT_SECRET, {
+    const accessToken = jwt.sign(jwtPayload, JWT_SECRET, {
       expiresIn: JWT_ACCESS_EXPIRES_IN,
     });
 
     // Refresh Token: 긴 TTL, httpOnly 쿠키로 전달 (JS 접근 불가 → XSS 방지)
-    const refreshToken = jwt.sign(payload, JWT_REFRESH_SECRET, {
+    const refreshToken = jwt.sign(jwtPayload, JWT_REFRESH_SECRET, {
       expiresIn: JWT_REFRESH_EXPIRES_IN,
     });
 
     // 인메모리 저장소에 등록 (탈취 감지용 — 저장값과 다르면 무효화)
-    refreshTokenStore.set(row.USER_ID, refreshToken);
+    refreshTokenStore.set(resUserId, refreshToken);
 
     // SameSite=lax: CSRF 방지 / path=/api/auth: 인증 경로에만 쿠키 전송
     res.cookie("refreshToken", refreshToken, {
@@ -255,11 +218,11 @@ app.post("/api/auth/login", async (req, res) => {
     return res.json({
       success: true,
       token: accessToken, // 기존 키 유지 (프론트 AuthUser.token 호환)
-      userId: row.USER_ID,
-      userName: row.USER_NAME,
-      userGrade: row.USER_GRADE,
+      userId: resUserId,
+      userName,
+      userGrade,
       // LAST_LOGIN_DTIME 업데이트 전 값 — 이전 접속 시각을 메뉴 화면에 표시하기 위해 반환
-      lastLogin: formatLoginDtime(row.LAST_LOGIN_DTIME),
+      lastLogin: formatLoginDtime(lastLoginDtime),
     });
   } catch (err) {
     console.error("[POST /api/auth/login]", err);
@@ -832,37 +795,18 @@ app.get("/api/cards/:cardId/payable-amount", verifyToken, async (req, res) => {
     const userId = req.user.userId;
     const { cardId } = req.params;
 
-    const [usageResult, cardResult] = await withConnection((conn) =>
-      Promise.all([
-        /* 미결제 잔액 합산 */
-        conn.execute(
-          `SELECT NVL(SUM("이용금액" - "누적결제금액"), 0) AS PAYABLE_AMOUNT
-             FROM D_SPIDERLINK.POC_카드사용내역
-            WHERE "이용자"       = :userId
-              AND "카드번호"     = :cardId
-              AND "누적결제금액" < "이용금액"
-              AND "결제상태코드" <> '9'`,
-          /* 결제상태코드 9(취소건)는 즉시결제 대상에서 제외.
-           * 0:미결제, 1:완납, 2:부분결제, 9:취소 */
-          { userId, cardId },
-        ),
-        /* 카드 한도금액 조회 */
-        conn.execute(
-          `SELECT NVL("한도금액", 0) AS CREDIT_LIMIT
-             FROM D_SPIDERLINK.POC_카드리스트
-            WHERE "사용자아이디" = :userId
-              AND "카드번호"     = :cardId`,
-          { userId, cardId },
-        ),
-      ]),
-    );
+    // Admin TCP 서버로 DEMO_PAYABLE_AMT 전문 송신 — Admin이 POC_카드사용내역/POC_카드리스트 조회 처리
+    const response = await sendToAdmin("DEMO_PAYABLE_AMT", { userId, cardId });
 
-    const payableAmount = Number(usageResult.rows?.[0]?.PAYABLE_AMOUNT ?? 0);
-    const creditLimit = Number(cardResult.rows?.[0]?.CREDIT_LIMIT ?? 0);
-    res.json({ payableAmount, creditLimit });
+    if (!response.success) {
+      return res.status(500).json({ error: response.error });
+    }
+
+    const { payableAmount, creditLimit } = response.payload;
+    res.json({ payableAmount: Number(payableAmount), creditLimit: Number(creditLimit) });
   } catch (err) {
     console.error("[GET /api/cards/:cardId/payable-amount]", err);
-    res.status(500).json({ error: "DB 조회 중 오류가 발생했습니다." });
+    res.status(500).json({ error: "서버 오류가 발생했습니다." });
   }
 });
 

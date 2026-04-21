@@ -10,10 +10,15 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 /**
- * Admin ↔ demo/backend 간 TCP 통신 어댑터.
+ * Admin → spider-link 간 TCP 통신 어댑터.
  *
- * <p>JsonCommandRequest를 4바이트 길이 프리픽스 + UTF-8 JSON 형식으로 전송한다.
- * demo/backend가 Node.js이므로 Java ObjectStream 대신 JSON 프로토콜을 사용한다.</p>
+ * <p>JsonCommandRequest를 4바이트 길이 프리픽스 + UTF-8 JSON 형식으로 전송한다.</p>
+ *
+ * <p>분리 이전: Admin이 직접 demo/backend(9997)로 JSON TCP 전송<br>
+ * 분리 이후:  Admin이 spider-link(9996)로 JSON TCP 전송 →
+ *             spider-link가 demo/backend(9997)로 프록시</p>
+ *
+ * <p>설정값 {@code tcp.demo-backend.host/port}는 실제로 spider-link 주소를 가리킨다.</p>
  */
 @Slf4j
 @Component
@@ -28,30 +33,36 @@ public class DemoBackendAdapter implements ManagementAdapter<JsonCommandRequest,
     @Value("${tcp.demo-backend.port:9997}")
     private int demoBackendPort;
 
-    /** demo/backend는 항상 별도 Node.js 프로세스이므로 로컬 실행 없음 */
+    /** spider-link는 항상 별도 프로세스이므로 로컬 실행 없음 */
     @Override
     public boolean isLocal() {
         return false;
     }
 
     /**
-     * demo/backend TCP 서버에 JsonCommandRequest를 전송한다.
+     * spider-link TCP 서버에 JsonCommandRequest를 전송한다.
+     * spider-link가 demo/backend(9997)로 프록시한다.
      *
      * @param command 실행 커맨드 (NOTICE_SYNC, NOTICE_END, PING 등)
-     * @param payload JsonCommandRequest 인스턴스
+     * @param req     JsonCommandRequest 인스턴스
      * @return 응답 JsonCommandResponse
      */
     @Override
     public JsonCommandResponse doProcess(String command, JsonCommandRequest req) {
         try {
             log.info(
-                    "[DemoBackendAdapter] JSON TCP 전송: host={}, port={}, command={}",
+                    "[DemoBackendAdapter] JSON TCP 전송: host={}, port={}, command={} (spider-link 경유)",
                     demoBackendHost,
                     demoBackendPort,
                     command);
             return tcpClient.sendJson(demoBackendHost, demoBackendPort, req);
         } catch (IOException e) {
-            log.warn("[DemoBackendAdapter] TCP 전송 실패 (비치명적): command={}, error={}", command, e.getMessage());
+            log.error(
+                    "[DemoBackendAdapter] TCP 전송 실패: command={}, host={}:{}, error={} — spider-link가 기동 중인지 확인하세요.",
+                    command,
+                    demoBackendHost,
+                    demoBackendPort,
+                    e.getMessage());
             return JsonCommandResponse.builder()
                     .command(command)
                     .success(false)

@@ -155,13 +155,21 @@ scheduling:
     retention-days: 90       # 보관 기간 (일)
     strategy: DELETE         # DELETE 또는 DROP_PARTITION (파티셔닝 적용 시)
 
+# Batch WAS HTTP 통신 설정
+# batch-was의 실행 중 배치 조회·강제 종료 API에 사용되는 HTTP 포트
+# WasInstanceResponse.port(TCP 포트)와 별도로 관리한다
+batch:
+  was:
+    http-port: ${BATCH_WAS_HTTP_PORT:8081}
+
 # TCP 통신 설정
-# Admin TCP 서버(9999), batch-was TCP 서버(9998), demo/backend TCP 서버(9997)
+# Admin TCP 서버(9999), batch-was TCP 서버(9998), spider-link TCP 서버(9996) → demo/backend(9997)
 tcp:
   server:
     port: ${TCP_SERVER_PORT:9999}
   batch-was:
     port: ${BATCH_WAS_TCP_PORT:9998}
+  # 실제 대상은 spider-link(9996) — spider-link가 demo/backend(9997)로 프록시한다
   demo-backend:
-    host: ${DEMO_BACKEND_TCP_HOST:localhost}
-    port: ${DEMO_BACKEND_TCP_PORT:9997}
+    host: ${SPIDER_LINK_TCP_HOST:localhost}
+    port: ${SPIDER_LINK_TCP_PORT:9996}
