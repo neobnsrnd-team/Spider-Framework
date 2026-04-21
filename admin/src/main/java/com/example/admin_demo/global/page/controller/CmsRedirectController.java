@@ -18,6 +18,7 @@ public class CmsRedirectController {
 
     /** 탭 시스템 AJAX 요청 식별 헤더 */
     private static final String TAB_REQUEST_HEADER = "X-Tab-Request";
+
     private static final String TAB_REQUEST_VALUE = "true";
 
     @Value("${cms.app-base-url:/cms}")
@@ -28,9 +29,7 @@ public class CmsRedirectController {
 
     @GetMapping("/cms/user-dashboard")
     public String redirectCmsRoot(
-            @AuthenticationPrincipal CustomUserDetails userDetails,
-            HttpServletRequest request,
-            Model model) {
+            @AuthenticationPrincipal CustomUserDetails userDetails, HttpServletRequest request, Model model) {
 
         if (isCmsAdmin(userDetails)) {
             // 관리자 — 동일 출처 내부 경로이므로 서버 사이드 redirect 사용
