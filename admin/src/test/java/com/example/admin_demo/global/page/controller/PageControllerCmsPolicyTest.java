@@ -35,9 +35,7 @@ class PageControllerCmsPolicyTest {
     @WithMockUser(authorities = "CMS:R")
     @DisplayName("[대시보드] CMS:R 권한으로 /cms/dashboard 접근 시 home 뷰를 반환한다")
     void cmsDashboard_withCmsR_returnsHome() throws Exception {
-        mockMvc.perform(get("/cms/dashboard"))
-                .andExpect(status().isOk())
-                .andExpect(view().name("home"));
+        mockMvc.perform(get("/cms/dashboard")).andExpect(status().isOk()).andExpect(view().name("home"));
     }
 
     @Test
@@ -51,18 +49,14 @@ class PageControllerCmsPolicyTest {
     @WithMockUser(authorities = {"CMS:R", "CMS:W"})
     @DisplayName("[대시보드] CMS:R과 CMS:W를 함께 가진 경우 /cms/dashboard 접근 시 home 뷰를 반환한다")
     void cmsDashboard_withCmsRAndCmsW_returnsHome() throws Exception {
-        mockMvc.perform(get("/cms/dashboard"))
-                .andExpect(status().isOk())
-                .andExpect(view().name("home"));
+        mockMvc.perform(get("/cms/dashboard")).andExpect(status().isOk()).andExpect(view().name("home"));
     }
 
     @Test
     @WithMockUser(authorities = "CMS:W")
     @DisplayName("[관리자] CMS:W 권한으로 /cms-admin/approvals 접근 시 home 뷰를 반환한다")
     void cmsAdminApprovals_withCmsW_returnsHome() throws Exception {
-        mockMvc.perform(get("/cms-admin/approvals"))
-                .andExpect(status().isOk())
-                .andExpect(view().name("home"));
+        mockMvc.perform(get("/cms-admin/approvals")).andExpect(status().isOk()).andExpect(view().name("home"));
     }
 
     @Test
