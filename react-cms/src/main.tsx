@@ -55,8 +55,11 @@ function BuilderPage() {
     }).then((r) => r.json());
 
     // admin 연동 모드에서만 승인 상태 조회
+    // 승인 상태는 부가 정보이므로 실패해도 에디터 진입이 가능하도록 독립 에러 처리
     const approvalLoad = isAdminMode
-      ? fetch(`/api/react-cms-dashboard/pages/${pageId}/approval-status`).then((r) => r.json())
+      ? fetch(`/api/react-cms-dashboard/pages/${pageId}/approval-status`)
+          .then((r) => r.json())
+          .catch(() => null)
       : Promise.resolve(null);
 
     Promise.all([pageLoad, approvalLoad])

@@ -27,9 +27,6 @@ public interface ReactCmsDashboardMapper {
     /** 내 페이지 목록 건수 */
     long countMyPageList(@Param("req") ReactCmsDashboardListRequest req, @Param("userId") String userId);
 
-    /** 페이지 존재 여부 확인 (소유권 포함 — 본인 REACT 페이지만 허용) */
-    int existsByPageIdAndUserId(@Param("pageId") String pageId, @Param("userId") String userId);
-
     /** 이력 존재 여부 확인 — 삭제 분기(하드/소프트)에 사용 */
     int hasHistory(@Param("pageId") String pageId);
 
@@ -53,8 +50,8 @@ public interface ReactCmsDashboardMapper {
      */
     ReactCmsApprovalStatusResponse findApprovalStatus(@Param("pageId") String pageId);
 
-    /** 승인 요청 — APPROVE_STATE = 'PENDING', 승인자 정보 저장 */
-    void requestApproval(
+    /** 승인 요청 — APPROVE_STATE = 'PENDING', 승인자 정보 저장. 영향받은 행 수 반환 */
+    int requestApproval(
             @Param("pageId") String pageId,
             @Param("approverId") String approverId,
             @Param("approverName") String approverName,

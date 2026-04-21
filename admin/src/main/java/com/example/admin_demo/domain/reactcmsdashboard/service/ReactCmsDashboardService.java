@@ -9,8 +9,8 @@ import com.example.admin_demo.global.dto.PageRequest;
 import com.example.admin_demo.global.dto.PageResponse;
 import com.example.admin_demo.global.exception.InvalidInputException;
 import com.example.admin_demo.global.exception.NotFoundException;
-import java.util.List;
 import java.time.LocalDate;
+import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -75,14 +75,16 @@ public class ReactCmsDashboardService {
         return status;
     }
 
-    /** 승인 요청 — APPROVE_STATE: WORK / REJECTED / APPROVED → PENDING */
+    /**
+     * 승인 요청 — APPROVE_STATE: WORK / REJECTED / APPROVED → PENDING
+     *
+     * <p>UPDATE 결과값으로 소유권·존재 여부를 검증하여 Race Condition을 방지한다.
+     */
     @Transactional
     public void requestApproval(String pageId, ReactCmsDashboardApproveRequestDto req, String userId) {
-        checkPageOwner(pageId, userId);
-
         // 시작일·종료일 대소 검증 — Jackson이 형식 오류를 400으로 처리하므로 여기서는 논리 검증만
         LocalDate beginning = req.getBeginningDate();
-        LocalDate expired   = req.getExpiredDate();
+        LocalDate expired = req.getExpiredDate();
         if (beginning != null && expired != null && expired.isBefore(beginning)) {
             throw new InvalidInputException("종료일은 시작일 이후여야 합니다.");
         }
@@ -94,16 +96,11 @@ public class ReactCmsDashboardService {
             throw new InvalidInputException("유효하지 않은 승인자입니다.");
         }
 
-        reactCmsDashboardMapper.requestApproval(
+        int affected = reactCmsDashboardMapper.requestApproval(
                 pageId, req.getApproverId(), approverName, beginning, expired, userId);
-        log.info("React CMS 페이지 승인 요청: pageId={}, approverId={}, userId={}", pageId, req.getApproverId(), userId);
-    }
-
-    /** 페이지 소유권 확인 — 존재하지 않거나 본인 REACT 페이지가 아니면 예외 */
-    private void checkPageOwner(String pageId, String userId) {
-        if (reactCmsDashboardMapper.existsByPageIdAndUserId(pageId, userId) == 0) {
-            log.debug("페이지를 찾을 수 없습니다. pageId={}, userId={}", pageId, userId);
+        if (affected == 0) {
             throw new NotFoundException("페이지를 찾을 수 없습니다.");
         }
+        log.info("React CMS 페이지 승인 요청: pageId={}, approverId={}, userId={}", pageId, req.getApproverId(), userId);
     }
 }

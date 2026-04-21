@@ -95,17 +95,6 @@
         <include refid="searchConditions"/>
     </select>
 
-    <!-- ==================== 페이지 존재·소유권 확인 ==================== -->
-
-    <select id="existsByPageIdAndUserId" resultType="int">
-        SELECT COUNT(*)
-        FROM SPW_CMS_PAGE
-        WHERE PAGE_ID        = #{pageId}
-          AND PAGE_TYPE      = 'REACT'
-          AND CREATE_USER_ID = #{userId}
-          AND USE_YN         = 'Y'
-    </select>
-
     <!-- ==================== 이력 존재 확인 ==================== -->
 
     <select id="hasHistory" resultType="int">
@@ -124,6 +113,7 @@
         WHERE PAGE_ID        = #{pageId}
           AND PAGE_TYPE      = 'REACT'
           AND CREATE_USER_ID = #{userId}
+          AND USE_YN         = 'Y'
     </update>
 
     <!-- ==================== 하드 삭제 — 물리 행 삭제 ==================== -->

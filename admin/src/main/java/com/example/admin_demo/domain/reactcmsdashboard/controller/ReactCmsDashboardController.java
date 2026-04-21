@@ -62,8 +62,7 @@ public class ReactCmsDashboardController {
     /** 승인 상태 조회 — react-cms 빌더가 편집 모드 진입 시 호출 (REACT-CMS:R) */
     @GetMapping("/api/react-cms-dashboard/pages/{pageId}/approval-status")
     @PreAuthorize("hasAuthority('REACT-CMS:R')")
-    public ResponseEntity<ApiResponse<ReactCmsApprovalStatusResponse>> findApprovalStatus(
-            @PathVariable String pageId) {
+    public ResponseEntity<ApiResponse<ReactCmsApprovalStatusResponse>> findApprovalStatus(@PathVariable String pageId) {
 
         return ResponseEntity.ok(ApiResponse.success(reactCmsDashboardService.findApprovalStatus(pageId)));
     }
