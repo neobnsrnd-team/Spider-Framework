@@ -166,17 +166,20 @@ menu-resource:
       R: REACT_APPROVAL:R
       W: REACT_APPROVAL:W
     v3_react_cms_manage:
-      R: REACT-CMS:R
-      W: REACT-CMS:W
-    v3_react_cms_user_dashboard:
-      R: REACT-CMS:R
-      W: REACT-CMS:W
+      R: REACT_CMS:R
+      W: REACT_CMS:W
     v3_react_cms_dashboard:
-      R: REACT-CMS:R
-      W: REACT-CMS:W
+      R: REACT_CMS:R
+      W: REACT_CMS:W
     v3_react_cms_admin_approvals:
-      R: REACT-CMS:R
-      W: REACT-CMS:W
+      R: REACT_CMS:R
+      W: REACT_CMS:W
+    v3_react_cms_admin_approval:
+      R: REACT_CMS:R
+      W: REACT_CMS:W
+    v3_react_cms_admin_deployments:
+      R: REACT_CMS:R
+      W: REACT_CMS:W
     v3_cms_manage:
       R: CMS:R
       W: CMS:W

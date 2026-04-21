@@ -21,4 +21,16 @@ public class CmsDeployProperties {
 
     /** 배포 인증 토큰 (x-deploy-token 헤더) */
     private String secret;
+
+    /**
+     * 배포된 파일 URL 구성 시 사용할 프로토콜 (기본값: http)
+     * 운영 환경이 HTTPS인 경우 https로 설정
+     */
+    private String deployedProtocol = "http";
+
+    /**
+     * 배포된 파일 URL 구성 시 사용할 경로 접두사 (기본값: /deployed)
+     * 운영 환경에 따라 경로가 다를 경우 변경
+     */
+    private String deployedPathPrefix = "/deployed";
 }
