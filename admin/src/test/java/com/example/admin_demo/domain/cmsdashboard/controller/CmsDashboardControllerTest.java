@@ -56,8 +56,8 @@ class CmsDashboardControllerTest {
     @Test
     @DisplayName("[조회] CMS:R 권한으로 내 페이지 목록 조회 시 200을 반환한다")
     void findMyPageList_withCmsR_returns200() throws Exception {
-        PageResponse<CmsDashboardPageResponse> pageResponse =
-                PageResponse.of(List.of(CmsDashboardPageResponse.builder().pageId("page-1").build()), 1L, 0, 10);
+        PageResponse<CmsDashboardPageResponse> pageResponse = PageResponse.of(
+                List.of(CmsDashboardPageResponse.builder().pageId("page-1").build()), 1L, 0, 10);
         given(cmsDashboardService.findMyPageList(any(), eq("cmsUser01"), any())).willReturn(pageResponse);
 
         mockMvc.perform(get("/api/cms-dashboard/pages").with(user(customUser("cmsUser01", "cms_user", "CMS:R"))))
@@ -76,7 +76,8 @@ class CmsDashboardControllerTest {
     @Test
     @DisplayName("[생성] CMS:R 권한으로 새 페이지 생성 시 200을 반환한다")
     void createPage_withCmsR_returns200() throws Exception {
-        given(cmsDashboardService.createPage(any(), eq("cmsUser01"), eq("cmsUser01"))).willReturn("page-1");
+        given(cmsDashboardService.createPage(any(), eq("cmsUser01"), eq("cmsUser01")))
+                .willReturn("page-1");
 
         mockMvc.perform(post("/api/cms-dashboard/pages")
                         .with(csrf())

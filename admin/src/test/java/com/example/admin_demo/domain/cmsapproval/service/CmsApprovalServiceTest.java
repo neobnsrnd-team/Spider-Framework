@@ -88,7 +88,8 @@ class CmsApprovalServiceTest {
         req.setExpiredDate("2099-04-18");
 
         given(cmsApprovalMapper.existsByPageId(PAGE_ID)).willReturn(1);
-        given(cmsApprovalMapper.approve(PAGE_ID, "2099-04-17", "2099-04-18", MODIFIER_ID)).willReturn(1);
+        given(cmsApprovalMapper.approve(PAGE_ID, "2099-04-17", "2099-04-18", MODIFIER_ID))
+                .willReturn(1);
         given(cmsApprovalMapper.getNextVersion(PAGE_ID)).willReturn(1);
 
         cmsApprovalService.approve(PAGE_ID, req, MODIFIER_ID);
@@ -122,7 +123,8 @@ class CmsApprovalServiceTest {
         req.setExpiredDate(expiredDate);
 
         given(cmsApprovalMapper.existsByPageId(PAGE_ID)).willReturn(1);
-        given(cmsApprovalMapper.approve(PAGE_ID, beginningDate, expiredDate, MODIFIER_ID)).willReturn(1);
+        given(cmsApprovalMapper.approve(PAGE_ID, beginningDate, expiredDate, MODIFIER_ID))
+                .willReturn(1);
         given(cmsApprovalMapper.getNextVersion(PAGE_ID)).willReturn(1);
 
         cmsApprovalService.approve(PAGE_ID, req, MODIFIER_ID);
