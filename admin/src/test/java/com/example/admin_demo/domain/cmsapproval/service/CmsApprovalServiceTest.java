@@ -11,6 +11,7 @@ import static org.mockito.BDDMockito.then;
 import com.example.admin_demo.domain.cmsapproval.dto.CmsApprovalHistoryResponse;
 import com.example.admin_demo.domain.cmsapproval.dto.CmsApprovalListRequest;
 import com.example.admin_demo.domain.cmsapproval.dto.CmsApprovalPageResponse;
+import com.example.admin_demo.domain.cmsapproval.dto.CmsApprovalRollbackHistoryResponse;
 import com.example.admin_demo.domain.cmsapproval.dto.CmsApproveRequest;
 import com.example.admin_demo.domain.cmsapproval.dto.CmsDisplayPeriodRequest;
 import com.example.admin_demo.domain.cmsapproval.dto.CmsPublicStateRequest;
@@ -23,7 +24,6 @@ import com.example.admin_demo.global.exception.InvalidInputException;
 import com.example.admin_demo.global.exception.NotFoundException;
 import java.time.LocalDate;
 import java.util.List;
-import java.util.Map;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -301,7 +301,10 @@ class CmsApprovalServiceTest {
     void rollback_normal_restoresVersion() {
         CmsRollbackRequest req = new CmsRollbackRequest();
         req.setVersion(1);
-        Map<String, Object> history = Map.of("PAGE_HTML", "<html/>", "FILE_PATH", "/path/to/file.html");
+        CmsApprovalRollbackHistoryResponse history = CmsApprovalRollbackHistoryResponse.builder()
+                .pageHtml("<html/>")
+                .filePath("/path/to/file.html")
+                .build();
 
         given(cmsApprovalMapper.existsByPageId(PAGE_ID)).willReturn(1);
         given(cmsApprovalMapper.findHistoryByVersion(PAGE_ID, 1)).willReturn(history);
