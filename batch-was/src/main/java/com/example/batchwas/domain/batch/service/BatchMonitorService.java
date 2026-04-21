@@ -75,8 +75,8 @@ public class BatchMonitorService {
     /**
      * 지정한 jobExecutionId의 배치 Job을 강제 종료한다.
      *
-     * <p>JobOperator.stop() 호출 전에 FWK_BATCH_HIS를 ABNORMAL 상태로 UPDATE하여
-     * stop() 이 예외를 던지더라도(이미 종료된 경우 등) DB 이력은 즉시 반영된다.</p>
+     * <p>JobOperator.stop() 성공 후 FWK_BATCH_HIS를 ABNORMAL로 UPDATE하여
+     * stop()이 실패(이미 종료 등)한 경우 DB 이력이 오염되지 않도록 한다.</p>
      *
      * @param jobExecutionId 종료할 JobExecution ID
      * @return 강제 종료 결과 (jobExecutionId + 메시지)
@@ -99,8 +99,26 @@ public class BatchMonitorService {
         boolean hasHisRecord = (batchAppId != null && batchDate != null && batchExecuteSeqLong != null);
         int batchExecuteSeq = hasHisRecord ? batchExecuteSeqLong.intValue() : 0;
 
-        // 3. FWK_BATCH_HIS UPDATE — UX 즉시 반영을 위해 JobOperator.stop() 보다 먼저 수행
-        if (hasHisRecord) {
+        // 3. Spring Batch Job 강제 종료 요청 — stop() 성공 확인 후 DB UPDATE
+        String message;
+        boolean stopSucceeded = false;
+        try {
+            jobOperator.stop(jobExecutionId);
+            stopSucceeded = true;
+            log.info("배치 강제 종료 요청 완료: jobExecutionId={}, batchAppId={}", jobExecutionId, batchAppId);
+            message = "강제 종료 요청이 완료되었습니다.";
+        } catch (NoSuchJobExecutionException e) {
+            // JobExplorer로는 존재하나 JobOperator 내부 상태와 불일치하는 극히 드문 케이스
+            log.warn("배치 강제 종료 - JobExecution을 찾을 수 없음 (이미 종료됐을 수 있음): jobExecutionId={}", jobExecutionId, e);
+            message = "이미 종료된 배치입니다.";
+        } catch (JobExecutionNotRunningException e) {
+            // 조회 시점과 종료 시점 사이에 배치가 완료된 경우
+            log.warn("배치 강제 종료 - 이미 실행 중이 아님: jobExecutionId={}", jobExecutionId, e);
+            message = "배치가 이미 실행 중이 아닙니다.";
+        }
+
+        // 4. stop() 성공한 경우에만 FWK_BATCH_HIS UPDATE — 정상 완료된 Job의 이력이 ABNORMAL로 오염되는 것을 방지
+        if (stopSucceeded && hasHisRecord) {
             String batchEndDtime = LocalDateTime.now().format(BatchConstants.END_DATE_TIME_FORMATTER);
             int updated = batchHisMapper.updateBatchHisResult(
                     batchAppId, instanceId, batchDate, batchExecuteSeq,
@@ -110,25 +128,9 @@ public class BatchMonitorService {
                     "ADMIN");
 
             if (updated == 0) {
-                // PK 불일치 시 경고만 남기고 강제 종료는 계속 진행
+                // PK 불일치 시 경고만 남기고 진행
                 log.warn("[WARN] FWK_BATCH_HIS UPDATE 0건 — batchAppId={}, seq={}", batchAppId, batchExecuteSeq);
             }
-        }
-
-        // 4. Spring Batch Job 강제 종료 요청
-        String message;
-        try {
-            jobOperator.stop(jobExecutionId);
-            log.info("배치 강제 종료 요청 완료: jobExecutionId={}, batchAppId={}", jobExecutionId, batchAppId);
-            message = "강제 종료 요청이 완료되었습니다.";
-        } catch (NoSuchJobExecutionException e) {
-            // JobExplorer로는 존재하나 JobOperator 내부 상태와 불일치하는 극히 드문 케이스
-            log.warn("배치 강제 종료 - JobExecution을 찾을 수 없음 (이미 종료됐을 수 있음): jobExecutionId={}", jobExecutionId, e);
-            message = "이미 종료된 배치입니다. (DB 이력은 강제 종료 처리됨)";
-        } catch (JobExecutionNotRunningException e) {
-            // 조회 시점과 종료 시점 사이에 배치가 완료된 경우
-            log.warn("배치 강제 종료 - 이미 실행 중이 아님: jobExecutionId={}", jobExecutionId, e);
-            message = "배치가 이미 실행 중이 아닙니다. (DB 이력은 강제 종료 처리됨)";
         }
 
         return BatchStopResponse.builder()

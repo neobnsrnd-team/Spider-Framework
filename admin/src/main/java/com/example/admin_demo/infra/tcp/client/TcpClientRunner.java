@@ -30,7 +30,7 @@ public class TcpClientRunner implements ApplicationRunner {
     @Value("${tcp.demo-backend.host:localhost}")
     private String demoHost;
 
-    @Value("${tcp.demo-backend.port:9997}")
+    @Value("${tcp.demo-backend.port:9996}")
     private int demoPort;
 
     @Override

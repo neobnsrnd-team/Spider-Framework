@@ -18,6 +18,7 @@ import org.springframework.batch.core.Job;
 import org.springframework.batch.core.JobExecution;
 import org.springframework.batch.core.JobParameters;
 import org.springframework.batch.core.JobParametersBuilder;
+import org.springframework.batch.core.StepExecution;
 import org.springframework.batch.core.configuration.JobRegistry;
 import org.springframework.batch.core.launch.JobLauncher;
 import org.springframework.batch.core.launch.NoSuchJobException;
@@ -120,7 +121,7 @@ public class BatchExecuteService {
 
         // 6. Job 완료 후 StepExecution 기준으로 처리 건수 집계 후 메트릭 기록
         long wc = jobExecution.getStepExecutions().stream()
-                .mapToLong(s -> s.getWriteCount())
+                .mapToLong(StepExecution::getWriteCount)
                 .sum();
         long sc = jobExecution.getStepExecutions().stream()
                 .mapToLong(s -> s.getReadSkipCount() + s.getProcessSkipCount() + s.getWriteSkipCount())
