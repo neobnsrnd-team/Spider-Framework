@@ -403,7 +403,7 @@ public class PageController {
     // CMS dashboard route is kept available even when it is not exposed as a menu.
 
     @GetMapping("/cms/dashboard")
-    @PreAuthorize("hasAuthority('CMS:R') and !hasAuthority('CMS:W')")
+    @PreAuthorize("hasAuthority('CMS:R')")
     public String cmsDashboard(HttpServletRequest request, Model model) {
         // CMS 에디터 이동 URL을 JS에서 사용할 수 있도록 모델에 추가
         model.addAttribute("cmsUserUrl", cmsUserUrl);

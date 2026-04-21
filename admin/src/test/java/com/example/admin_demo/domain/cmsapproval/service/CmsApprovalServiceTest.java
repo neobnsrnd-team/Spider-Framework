@@ -19,6 +19,7 @@ import com.example.admin_demo.domain.cmsapproval.dto.CmsRollbackRequest;
 import com.example.admin_demo.domain.cmsapproval.mapper.CmsApprovalMapper;
 import com.example.admin_demo.global.dto.PageRequest;
 import com.example.admin_demo.global.dto.PageResponse;
+import com.example.admin_demo.global.exception.InvalidInputException;
 import com.example.admin_demo.global.exception.NotFoundException;
 import java.time.LocalDate;
 import java.util.List;

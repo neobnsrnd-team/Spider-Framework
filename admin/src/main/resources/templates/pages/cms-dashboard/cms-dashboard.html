@@ -22,7 +22,7 @@
         </h4>
         <div class="page-header-actions">
             <button class="btn btn-primary btn-sm" id="btnCreatePage"
-                    th:if="${userAuthorities != null && userAuthorities.contains('CMS:R') && !userAuthorities.contains('CMS:W')}">
+                    th:if="${userAuthorities != null && userAuthorities.contains('CMS:R')}">
                 <i class="bi bi-plus-lg"></i> 새 페이지
             </button>
         </div>

@@ -42,9 +42,18 @@ class PageControllerCmsPolicyTest {
 
     @Test
     @WithMockUser(authorities = "CMS:W")
-    @DisplayName("[대시보드] CMS:W 권한으로 /cms/dashboard 접근 시 403을 반환한다")
-    void cmsDashboard_withCmsW_returns403() throws Exception {
+    @DisplayName("[대시보드] CMS:W 단독 권한으로 /cms/dashboard 접근 시 403을 반환한다")
+    void cmsDashboard_withCmsWOnly_returns403() throws Exception {
         mockMvc.perform(get("/cms/dashboard")).andExpect(status().isForbidden());
+    }
+
+    @Test
+    @WithMockUser(authorities = {"CMS:R", "CMS:W"})
+    @DisplayName("[대시보드] CMS:R과 CMS:W를 함께 가진 경우 /cms/dashboard 접근 시 home 뷰를 반환한다")
+    void cmsDashboard_withCmsRAndCmsW_returnsHome() throws Exception {
+        mockMvc.perform(get("/cms/dashboard"))
+                .andExpect(status().isOk())
+                .andExpect(view().name("home"));
     }
 
     @Test
