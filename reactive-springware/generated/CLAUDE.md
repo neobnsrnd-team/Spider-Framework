@@ -62,7 +62,7 @@ export default function Preview() {
 
 ```tsx
 // UI 컴포넌트 — @cl에서만 import
-import { Button, Stack, Inline, Text } from '@cl';
+import { Button, Stack, Inline, Typography } from '@cl';
 
 // 아이콘 — lucide-react에서만 import
 import { Search, ChevronRight, X } from 'lucide-react';
@@ -270,7 +270,7 @@ const { data } = useQuery({ queryKey: ['accounts'], queryFn: fetchAccounts });
 | 버튼 | `Button` | variant: `primary \| outline \| ghost \| danger` |
 | 입력 필드 | `Input` | |
 | 셀렉트 박스 | `Select` | size prop 없음 |
-| 텍스트 레이블 | `Text` | variant: `heading \| subheading \| body-lg \| body \| body-sm \| caption` |
+| 텍스트 레이블 | `Typography` | variant: `heading \| subheading \| body-lg \| body \| body-sm \| caption` |
 | 아이콘 | `lucide-react` | @cl에 아이콘 컴포넌트 없음 |
 | 뱃지/태그 | `Badge` | variant: `primary \| brand \| success \| danger \| warning \| neutral` |
 | 체크박스 | `Checkbox` | |
@@ -303,7 +303,7 @@ const { data } = useQuery({ queryKey: ['accounts'], queryFn: fetchAccounts });
 |-----------------|---------------|
 | `Primary` / `Filled` | `'primary'` |
 | `Secondary` / `Outlined` / `Stroke` | `'outline'` |
-| `Tertiary` / `Ghost` / `Text` | `'ghost'` |
+| `Tertiary` / `Ghost` / `Typography` | `'ghost'` |
 | `Destructive` / `Error` | `'danger'` |
 | `Info` | `'info'` |
 | `Neutral` | `'neutral'` |
@@ -326,10 +326,10 @@ const { data } = useQuery({ queryKey: ['accounts'], queryFn: fetchAccounts });
 | `<Card variant="brand">` | `<BrandBanner>` 컴포넌트 사용 |
 | `<Stack direction="horizontal">` | `<Inline>` |
 | `<BottomNav icons={}>` | `<BottomNav items={[{ id, icon, label, onClick }]}>` |
-| `<Text variant="title-xl">` | `<Text variant="heading">` |
-| `<Text variant="h1">` | `<Text variant="heading">` |
-| `<Text color="gray">` | `<Text color="muted">` |
-| `<Text color="primary">` | `<Text color="brand">` |
+| `<Typography variant="title-xl">` | `<Typography variant="heading">` |
+| `<Typography variant="h1">` | `<Typography variant="heading">` |
+| `<Typography color="gray">` | `<Typography color="muted">` |
+| `<Typography color="primary">` | `<Typography color="brand">` |
 | `<Select size="md">` | `<Select>` (size prop 없음) |
 | `<InfoRow value={<Badge />}>` | `<LabelValueRow value={<Badge />}>` |
 | `<TabNav variant="segment">` | `<TabNav variant="pill">` |
@@ -347,8 +347,8 @@ const { data } = useQuery({ queryKey: ['accounts'], queryFn: fetchAccounts });
 |---------|--------|
 | `Button` variant | `primary` \| `outline` \| `ghost` \| `danger` |
 | `Badge` variant | `primary` \| `brand` \| `success` \| `danger` \| `warning` \| `neutral` |
-| `Text` variant | `heading` \| `subheading` \| `body-lg` \| `body` \| `body-sm` \| `caption` |
-| `Text` color | `heading` \| `base` \| `label` \| `secondary` \| `muted` \| `brand` \| `danger` \| `success` |
+| `Typography` variant | `heading` \| `subheading` \| `body-lg` \| `body` \| `body-sm` \| `caption` |
+| `Typography` color | `heading` \| `base` \| `label` \| `secondary` \| `muted` \| `brand` \| `danger` \| `success` |
 | `AlertBanner` intent | `warning` \| `danger` \| `success` \| `info` |
 | `TabNav` variant | `underline` \| `pill` |
 | `BannerCarousel` items.variant | `promo` \| `info` \| `warning` |
