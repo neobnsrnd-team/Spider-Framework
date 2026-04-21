@@ -1,0 +1,18 @@
+
+  .   ____          _            __ _ _
+ /\\ / ___'_ __ _ _(_)_ __  __ _ \ \ \ \
+( ( )\___ | '_ | '_| | '_ \/ _` | \ \ \ \
+ \\/  ___)| |_)| | | | | || (_| |  ) ) ) )
+  '  |____| .__|_| |_|_| |_\__, | / / / /
+ =========|_|==============|___/=/_/_/_/
+ :: Spring Boot ::                (v3.2.5)
+
+2026-04-21T14:46:41.479+09:00  INFO 22648 --- [           main] c.e.tcpbackend.TcpBackendApplication     : Starting TcpBackendApplication v0.0.1-SNAPSHOT using Java 19.0.1 with PID 22648 (C:\Users\82103\yjpark\workspace\NEOBNS\POC_HNC\demo\tcp-backend\target\tcp-backend-0.0.1-SNAPSHOT.jar started by 82103 in C:\Users\82103\yjpark\workspace\NEOBNS\POC_HNC\demo\tcp-backend)
+2026-04-21T14:46:41.485+09:00 DEBUG 22648 --- [           main] c.e.tcpbackend.TcpBackendApplication     : Running with Spring Boot v3.2.5, Spring v6.1.6
+2026-04-21T14:46:41.487+09:00  INFO 22648 --- [           main] c.e.tcpbackend.TcpBackendApplication     : No active profile set, falling back to 1 default profile: "default"
+2026-04-21T14:46:46.600+09:00  INFO 22648 --- [           main] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Starting...
+2026-04-21T14:46:47.808+09:00  INFO 22648 --- [           main] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Added connection oracle.jdbc.driver.T4CConnection@58437801
+2026-04-21T14:46:47.811+09:00  INFO 22648 --- [           main] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Start completed.
+2026-04-21T14:46:47.847+09:00  INFO 22648 --- [           main] c.e.t.domain.notice.NoticeService        : [Notice] 배포 중인 긴급공지 없음 — 초기 상태로 기동
+2026-04-21T14:46:48.217+09:00  INFO 22648 --- [           main] c.e.t.config.NettyTcpServerConfig        : [TCP Server] Netty TCP 서버 기동 완료 — port: 9998, boss: 1, worker: 4
+2026-04-21T14:46:48.546+09:00  INFO 22648 --- [           main] c.e.tcpbackend.TcpBackendApplication     : Started TcpBackendApplication in 8.824 seconds (process running for 10.001)
