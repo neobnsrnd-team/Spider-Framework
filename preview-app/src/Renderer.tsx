@@ -90,9 +90,9 @@ function patchExport(src: string): string {
     src
       // export interface Foo / export type Foo → interface Foo / type Foo (타입은 런타임 불필요, export는 new Function 스코프에서 문법 오류)
       .replace(/\bexport\s+(interface|type)\s/g, '$1 ')
-      // export function Foo / export const Foo 등 named export → export 키워드 제거
+      // export function Foo / export const Foo / export class Foo 등 named export → export 키워드 제거
       // new Function 스코프에서 export는 문법 오류이므로 선언 키워드만 남긴다
-      .replace(/\bexport\s+(function|const|let|var)\s/g, '$1 ')
+      .replace(/\bexport\s+(function|const|let|var|class)\s/g, '$1 ')
       // export default function Name(...) — 함수 이름 보존
       .replace(/export\s+default\s+function\s+(\w+)/, 'var __Component = function $1')
       // export default class Name — 클래스 이름 보존
@@ -146,7 +146,15 @@ export default function Renderer({ code, codeId }: RendererProps) {
       const Component = new Function(
         'React',
         `${compiled}\nreturn __Component`,
-      )(React) as React.ComponentType
+      )(React)
+
+      // export default 가 없거나 patchExport가 실패하면 __Component는 undefined가 된다.
+      // as React.ComponentType 타입 단언은 이를 숨기므로, 런타임에 직접 검증한다.
+      if (typeof Component !== 'function') {
+        throw new Error(
+          '__Component를 추출할 수 없습니다. 생성된 코드에 export default가 없거나 patchExport 변환이 실패했을 수 있습니다.',
+        )
+      }
 
       if (!rootRef.current) {
         rootRef.current = ReactDOM.createRoot(container)

@@ -330,7 +330,8 @@ public class ReactGenerateService {
 
     /** DB 저장 형식(yyyyMMddHHmmss)을 사람이 읽기 쉬운 형식(yyyy-MM-dd HH:mm)으로 변환한다. */
     private String formatDtimeForExcel(String dtime) {
-        if (dtime == null || dtime.length() != 14) return dtime != null ? dtime : "";
+        if (dtime == null) return "";
+        if (dtime.length() != 14) return dtime;
         try {
             return LocalDateTime.parse(dtime, FORMATTER).format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm"));
         } catch (Exception e) {
@@ -351,12 +352,4 @@ public class ReactGenerateService {
         };
     }
 
-    /** CODE_ID로 이력을 조회하고, 없으면 NotFoundException을 던진다. */
-    private ReactGenerateResponse requireExists(String id) {
-        ReactGenerateResponse response = reactGenerateMapper.selectById(id);
-        if (response == null) {
-            throw new NotFoundException("생성 결과를 찾을 수 없습니다. codeId=" + id);
-        }
-        return response;
-    }
 }
