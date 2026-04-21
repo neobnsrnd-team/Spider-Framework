@@ -728,4 +728,21 @@ INSERT INTO FWK_USER_MENU (USER_ID, MENU_ID, AUTH_CODE, LAST_UPDATE_DTIME, LAST_
 INSERT INTO FWK_USER_MENU (USER_ID, MENU_ID, AUTH_CODE, LAST_UPDATE_DTIME, LAST_UPDATE_USER_ID) VALUES ('reactUser01', 'v3_react_cms_manage',         'W', TO_CHAR(SYSDATE, 'YYYYMMDDHH24MISS'), 'system');
 INSERT INTO FWK_USER_MENU (USER_ID, MENU_ID, AUTH_CODE, LAST_UPDATE_DTIME, LAST_UPDATE_USER_ID) VALUES ('reactUser01', 'v3_react_cms_user_dashboard',  'W', TO_CHAR(SYSDATE, 'YYYYMMDDHH24MISS'), 'system');
 
+-- =============================================================
+-- FWK_CODE_GROUP / FWK_CODE — DEMO 기관 Fixed Length 전문 설정
+-- =============================================================
+-- Fixed Length 전문 도입 시 spider-link가 byte[]에서 messageId를 추출할 때 사용하는 offset 값.
+-- UID_END_OFFSET 값은 FWK_MESSAGE_FIELD 필드 설계 확정 후 실제 messageId 필드 길이로 변경한다.
+-- ※ 현재 DEMO 전문은 전부 JSON 타입이므로 이 코드는 Fixed Length 전문 추가 시점까지 참조되지 않는다.
+-- ⚠ 개발자가 DB에서 직접 실행해야 한다.
+INSERT INTO FWK_CODE_GROUP (CODE_GROUP_ID, CODE_GROUP_NAME, CODE_GROUP_DESC, LAST_UPDATE_DTIME, LAST_UPDATE_USER_ID)
+VALUES ('FEPDEMO', 'DEMO 기관 메시지 설정 코드 그룹', 'Fixed Length 전문 messageId 추출 offset 설정', TO_CHAR(SYSDATE, 'YYYYMMDDHH24MISS'), 'Admin');
+
+INSERT INTO FWK_CODE (CODE_GROUP_ID, CODE, CODE_NAME, CODE_DESC, SORT_ORDER, USE_YN, LAST_UPDATE_DTIME, LAST_UPDATE_USER_ID)
+VALUES ('FEPDEMO', 'UID_START_OFFSET', '0', 'DEMO 기관 전문식별자 시작 offset', 1, 'Y', TO_CHAR(SYSDATE, 'YYYYMMDDHH24MISS'), 'Admin');
+
+-- UID_END_OFFSET: Fixed Length 전문의 messageId 필드 길이 확정 후 실제 값으로 변경
+INSERT INTO FWK_CODE (CODE_GROUP_ID, CODE, CODE_NAME, CODE_DESC, SORT_ORDER, USE_YN, LAST_UPDATE_DTIME, LAST_UPDATE_USER_ID)
+VALUES ('FEPDEMO', 'UID_END_OFFSET', '20', 'DEMO 기관 전문식별자 끝 offset (임시값 — 필드 설계 확정 후 변경)', 2, 'Y', TO_CHAR(SYSDATE, 'YYYYMMDDHH24MISS'), 'Admin');
+
 COMMIT;
