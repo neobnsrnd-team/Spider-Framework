@@ -21,7 +21,7 @@ import { ErrorBoundary } from './ErrorBoundary'
 
 interface RendererProps {
   code: string
-  /** 렌더링 오류 보고 시 FWK_RPS_CODE_HIS 레코드 특정에 사용 */
+  /** 렌더링 오류 보고 시 FWK_REACT_CODE_HIS 레코드 특정에 사용 */
   codeId: string | null
 }
 
@@ -84,7 +84,7 @@ function patchExport(src: string): string {
  * 렌더링 오류를 서버 오류 이력에 비동기로 전송한다 (fire-and-forget).
  *
  * @param message 오류 메시지
- * @param codeId  FWK_RPS_CODE_HIS 레코드 특정용 ID (없으면 null — DB 업데이트 생략)
+ * @param codeId  FWK_REACT_CODE_HIS 레코드 특정용 ID (없으면 null — DB 업데이트 생략)
  */
 function reportRenderError(message: string, codeId: string | null): void {
   fetch('/api/react-generate/render-error', {

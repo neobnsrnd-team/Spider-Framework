@@ -3,8 +3,8 @@ package com.example.admin_demo.domain.cmsapproval.mapper;
 import com.example.admin_demo.domain.cmsapproval.dto.CmsApprovalHistoryResponse;
 import com.example.admin_demo.domain.cmsapproval.dto.CmsApprovalListRequest;
 import com.example.admin_demo.domain.cmsapproval.dto.CmsApprovalPageResponse;
+import com.example.admin_demo.domain.cmsapproval.dto.CmsApprovalRollbackHistoryResponse;
 import java.util.List;
-import java.util.Map;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
@@ -25,14 +25,14 @@ public interface CmsApprovalMapper {
     int existsByPageId(@Param("pageId") String pageId);
 
     /** 승인 확정 — APPROVE_STATE → APPROVED */
-    void approve(
+    int approve(
             @Param("pageId") String pageId,
             @Param("beginningDate") String beginningDate,
             @Param("expiredDate") String expiredDate,
             @Param("modifierId") String modifierId);
 
     /** 반려 — APPROVE_STATE → REJECTED */
-    void reject(
+    int reject(
             @Param("pageId") String pageId,
             @Param("rejectedReason") String rejectedReason,
             @Param("modifierId") String modifierId);
@@ -58,7 +58,8 @@ public interface CmsApprovalMapper {
     List<CmsApprovalHistoryResponse> findHistoryList(@Param("pageId") String pageId);
 
     /** 특정 버전 이력 조회 (롤백용 PAGE_HTML, FILE_PATH) */
-    Map<String, Object> findHistoryByVersion(@Param("pageId") String pageId, @Param("version") int version);
+    CmsApprovalRollbackHistoryResponse findHistoryByVersion(
+            @Param("pageId") String pageId, @Param("version") int version);
 
     /** 롤백 — 지정 버전으로 복원 후 APPROVE_STATE → WORK */
     void rollback(

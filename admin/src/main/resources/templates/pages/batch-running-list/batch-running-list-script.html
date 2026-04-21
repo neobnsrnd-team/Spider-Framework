@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<!-- 실행중인 배치/스케줄 페이지 스크립트 Fragment -->
+<th:block th:fragment="script">
+<script>
+    /**
+     * @file batch-running-list-script.html
+     * @description 실행중인 배치/스케줄 목록 페이지 스크립트.
+     *              GET /api/batch/running 으로 현재 실행 중인 배치 목록을 조회하고,
+     *              POST /api/batch/stop 으로 선택한 배치를 강제 종료한다.
+     *              connected=false 항목은 WAS 통신 불가 인스턴스로 별도 표시한다.
+     */
+
+    /**
+     * 일시 포맷 함수 (YYYYMMDDHH24MISS → YYYY/MM/DD HH:MM:SS)
+     * @param {string} dtimeStr - 원본 일시 문자열
+     * @returns {string} 포맷된 일시 문자열, 값이 없으면 빈 문자열
+     */
+    function formatBatchRunningDateTime(dtimeStr) {
+        if (!dtimeStr || dtimeStr.length < 14) return '';
+        return dtimeStr.substring(0, 4) + '/' +
+               dtimeStr.substring(4, 6) + '/' +
+               dtimeStr.substring(6, 8) + ' ' +
+               dtimeStr.substring(8, 10) + ':' +
+               dtimeStr.substring(10, 12) + ':' +
+               dtimeStr.substring(12, 14);
+    }
+
+    /**
+     * 실행중인 배치/스케줄 목록 관리 객체
+     */
+    const BatchRunning = {
+
+        /** 강제 종료 요청에 사용할 대상 배치 정보 (모달 open 시 설정) */
+        pendingStop: {
+            instanceId: null,
+            jobExecutionId: null,
+            batchAppId: null,
+            batchAppName: null
+        },
+
+        /**
+         * GET /api/batch/running 호출하여 실행 중인 배치 목록을 조회하고 테이블을 렌더링한다.
+         */
+        load: function() {
+            $.ajax({
+                url: API_BASE_URL + '/batch/running',
+                method: 'GET',
+                success: (response) => {
+                    if (response.success && response.data) {
+                        BatchRunning.renderTable(response.data);
+                    } else {
+                        // API 응답은 성공이나 data가 없는 경우 빈 목록으로 처리
+                        BatchRunning.renderTable([]);
+                    }
+                },
+                error: (xhr) => {
+                    console.error('Failed to load batch running list:', xhr);
+                    Toast.error('실행중인 배치 목록을 불러오는데 실패했습니다.');
+                    BatchRunning.renderTable([]);
+                }
+            });
+        },
+
+        /**
+         * 조회된 배치 목록으로 테이블 본문을 렌더링한다.
+         * @param {Array} data - BatchRunningResponse 배열
+         *   각 항목: {jobExecutionId, batchAppId, batchAppName, batchAppFileName, cronText, batchDate, startTime, status, instanceId, connected}
+         */
+        renderTable: function(data) {
+            const tbody = $('#batchRunningTableBody');
+            tbody.empty();
+
+            if (!data || data.length === 0) {
+                tbody.append(`
+                    <tr>
+                        <td colspan="8" class="text-center py-4 text-body-secondary">
+                            현재 실행 중인 배치가 없습니다.
+                        </td>
+                    </tr>
+                `);
+                return;
+            }
+
+            data.forEach((item) => {
+                if (!item.connected) {
+                    // WAS 통신 불가 인스턴스: table-warning 배경 + "연결 불가" 배지, 나머지 셀은 "-"
+                    const row = $(`
+                        <tr class="table-warning">
+                            <td>
+                                ${HtmlUtils.escape(item.instanceId || '')}
+                                <span class="badge bg-warning text-dark ms-1">연결 불가</span>
+                            </td>
+                            <td>-</td>
+                            <td>-</td>
+                            <td>-</td>
+                            <td>-</td>
+                            <td class="text-center">-</td>
+                            <td class="text-center">-</td>
+                            <td class="text-center">-</td>
+                        </tr>
+                    `);
+                    tbody.append(row);
+                } else {
+                    // 정상 연결 인스턴스: 모든 필드 표시
+                    // cronText가 null/빈값이면 "-" 표시
+                    const cronText = (item.cronText && item.cronText.trim())
+                        ? HtmlUtils.escape(item.cronText)
+                        : '-';
+
+                    // 강제종료 버튼: BATCH_RUNNING:W 권한이 있을 때만 렌더링
+                    const stopBtnHtml = hasBatchRunningWrite
+                        ? `<button class="btn btn-danger btn-xs btn-stop-batch"
+                                   data-instance-id="${HtmlUtils.escape(item.instanceId || '')}"
+                                   data-job-execution-id="${item.jobExecutionId != null ? item.jobExecutionId : ''}"
+                                   data-batch-app-id="${HtmlUtils.escape(item.batchAppId || '')}"
+                                   data-batch-app-name="${HtmlUtils.escape(item.batchAppName || '')}">
+                               종료
+                           </button>`
+                        : '-';
+
+                    const row = $(`
+                        <tr>
+                            <td>${HtmlUtils.escape(item.instanceId || '')}</td>
+                            <td>${HtmlUtils.escape(item.batchAppId || '')}</td>
+                            <td>${HtmlUtils.escape(item.batchAppName || '')}</td>
+                            <td>${HtmlUtils.escape(item.batchAppFileName || '')}</td>
+                            <td>${cronText}</td>
+                            <td class="text-center">${formatBatchRunningDateTime(item.startTime)}</td>
+                            <td class="text-center">${HtmlUtils.escape(item.status || '')}</td>
+                            <td class="text-center">${stopBtnHtml}</td>
+                        </tr>
+                    `);
+                    tbody.append(row);
+                }
+            });
+        },
+
+        /**
+         * POST /api/batch/stop 호출하여 선택한 배치를 강제 종료한다.
+         * 요청 중 버튼 disabled 처리로 중복 클릭을 방지한다.
+         */
+        stopBatch: function() {
+            const { instanceId, jobExecutionId } = BatchRunning.pendingStop;
+
+            // 강제 종료 중 중복 요청 방지
+            $('#btnConfirmStop').prop('disabled', true);
+
+            $.ajax({
+                url: API_BASE_URL + '/batch/stop',
+                method: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify({ instanceId: instanceId, jobExecutionId: jobExecutionId }),
+                success: (response) => {
+                    // 모달 닫기
+                    bootstrap.Modal.getInstance(document.getElementById('stopConfirmModal')).hide();
+
+                    if (response.success) {
+                        Toast.success('배치가 강제 종료 요청되었습니다.');
+                    } else {
+                        // 서버가 success=false를 반환한 경우 경고 메시지 표시
+                        Toast.warning(response.message || '강제 종료 요청이 처리되지 않았습니다.');
+                    }
+
+                    // 목록 재조회하여 최신 상태 반영
+                    BatchRunning.load();
+                },
+                error: (xhr) => {
+                    console.error('Failed to stop batch:', xhr);
+                    bootstrap.Modal.getInstance(document.getElementById('stopConfirmModal')).hide();
+                    Toast.error('배치 강제 종료 요청에 실패했습니다.');
+                },
+                complete: () => {
+                    // 요청 완료 후 버튼 다시 활성화
+                    $('#btnConfirmStop').prop('disabled', false);
+                }
+            });
+        }
+    };
+
+    // ==================== Event Bindings ====================
+
+    // 강제종료 버튼 클릭 → 모달 정보 세팅 후 오픈 (tbody에 이벤트 위임)
+    $('#batchRunningTableBody').off('click', '.btn-stop-batch').on('click', '.btn-stop-batch', function() {
+        const instanceId    = $(this).data('instance-id');
+        const jobExecutionId = $(this).data('job-execution-id');
+        const batchAppId    = $(this).data('batch-app-id');
+        const batchAppName  = $(this).data('batch-app-name');
+
+        // 모달 내 상세 정보 업데이트
+        $('#stopModalInstanceId').text(instanceId || '-');
+        $('#stopModalBatchAppId').text(batchAppId || '-');
+        $('#stopModalBatchAppName').text(batchAppName || '-');
+
+        // pendingStop에 종료 대상 저장
+        BatchRunning.pendingStop = { instanceId, jobExecutionId, batchAppId, batchAppName };
+
+        // 강제 종료 확인 모달 열기
+        new bootstrap.Modal(document.getElementById('stopConfirmModal')).show();
+    });
+
+    // 강제 종료 확인 버튼 클릭 → 실제 종료 API 호출
+    $('#btnConfirmStop').off('click').on('click', function() {
+        BatchRunning.stopBatch();
+    });
+
+    // 새로고침 버튼 클릭 → 목록 재조회
+    $('#btnRefresh').off('click').on('click', function() {
+        BatchRunning.load();
+    });
+
+    // ==================== Initialization ====================
+
+    // 페이지 로드 시 실행중인 배치 목록 자동 조회
+    BatchRunning.load();
+
+    // 탭 재활성화 시 최신 목록으로 갱신 (SPA 탭 전환 후 캐시 복원 대응)
+    $('[data-tab-page]').off('tab:activated.batchRunning').on('tab:activated.batchRunning', function() {
+        BatchRunning.load();
+    });
+</script>
+</th:block>
+</body>
+</html>

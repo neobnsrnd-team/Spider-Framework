@@ -3,6 +3,7 @@ package com.example.admin_demo.domain.cmsapproval.service;
 import com.example.admin_demo.domain.cmsapproval.dto.CmsApprovalHistoryResponse;
 import com.example.admin_demo.domain.cmsapproval.dto.CmsApprovalListRequest;
 import com.example.admin_demo.domain.cmsapproval.dto.CmsApprovalPageResponse;
+import com.example.admin_demo.domain.cmsapproval.dto.CmsApprovalRollbackHistoryResponse;
 import com.example.admin_demo.domain.cmsapproval.dto.CmsApproveRequest;
 import com.example.admin_demo.domain.cmsapproval.dto.CmsDisplayPeriodRequest;
 import com.example.admin_demo.domain.cmsapproval.dto.CmsPublicStateRequest;
@@ -16,7 +17,6 @@ import com.example.admin_demo.global.exception.NotFoundException;
 import java.time.LocalDate;
 import java.time.format.DateTimeParseException;
 import java.util.List;
-import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -51,7 +51,10 @@ public class CmsApprovalService {
     public void approve(String pageId, CmsApproveRequest req, String modifierId) {
         checkPageExists(pageId);
         validateDisplayPeriod(req.getBeginningDate(), req.getExpiredDate());
-        cmsApprovalMapper.approve(pageId, req.getBeginningDate(), req.getExpiredDate(), modifierId);
+        int updated = cmsApprovalMapper.approve(pageId, req.getBeginningDate(), req.getExpiredDate(), modifierId);
+        if (updated == 0) {
+            throw new InvalidInputException("승인 대기 상태의 페이지가 아닙니다. pageId=" + pageId);
+        }
         int version = cmsApprovalMapper.getNextVersion(pageId);
         cmsApprovalMapper.insertHistory(pageId, version);
         log.info("CMS 페이지 승인 완료: pageId={}, version={}, modifierId={}", pageId, version, modifierId);
@@ -64,7 +67,10 @@ public class CmsApprovalService {
     @Transactional
     public void reject(String pageId, CmsRejectRequest req, String modifierId) {
         checkPageExists(pageId);
-        cmsApprovalMapper.reject(pageId, req.getRejectedReason(), modifierId);
+        int updated = cmsApprovalMapper.reject(pageId, req.getRejectedReason(), modifierId);
+        if (updated == 0) {
+            throw new InvalidInputException("승인 대기 상태의 페이지가 아닙니다. pageId=" + pageId);
+        }
         int version = cmsApprovalMapper.getNextVersion(pageId);
         cmsApprovalMapper.insertHistory(pageId, version);
         log.info("CMS 페이지 반려 완료: pageId={}, version={}, modifierId={}", pageId, version, modifierId);
@@ -96,12 +102,12 @@ public class CmsApprovalService {
     @Transactional
     public void rollback(String pageId, CmsRollbackRequest req, String modifierId) {
         checkPageExists(pageId);
-        Map<String, Object> history = cmsApprovalMapper.findHistoryByVersion(pageId, req.getVersion());
+        CmsApprovalRollbackHistoryResponse history = cmsApprovalMapper.findHistoryByVersion(pageId, req.getVersion());
         if (history == null) {
             throw new NotFoundException("해당 버전의 이력을 찾을 수 없습니다. pageId=" + pageId + ", version=" + req.getVersion());
         }
-        String pageHtml = (String) history.get("PAGE_HTML");
-        String filePath = (String) history.get("FILE_PATH");
+        String pageHtml = history.getPageHtml();
+        String filePath = history.getFilePath();
         cmsApprovalMapper.rollback(pageId, pageHtml, filePath, modifierId);
         log.info("CMS 페이지 롤백 완료: pageId={}, version={}, modifierId={}", pageId, req.getVersion(), modifierId);
     }

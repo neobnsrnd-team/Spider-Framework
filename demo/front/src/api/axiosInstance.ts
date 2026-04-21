@@ -21,7 +21,9 @@ import axios, {
   type InternalAxiosRequestConfig,
 } from 'axios';
 
-export const API_BASE    = 'http://localhost:3001/api';
+// 상대 경로로 설정하여 Vite 개발 서버 프록시를 통해 요청이 전달되도록 한다.
+// 절대 URL 사용 시 브라우저가 프록시를 우회해 직접 백엔드로 요청하여 CORS 오류 발생.
+export const API_BASE    = '/api';
 const        STORAGE_KEY = 'hnc_auth';
 
 // ── 모듈 레벨 인증 콜백 ─────────────────────────────────────────────────────

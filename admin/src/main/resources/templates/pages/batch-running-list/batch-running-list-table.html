@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<!-- 실행중인 배치/스케줄 테이블 Fragment -->
+<div th:fragment="table" class="table-responsive mt-2">
+    <table class="table table-sm table-hover sp-data-grid" id="batchRunningTable">
+        <thead class="table-light">
+            <tr>
+                <th class="col-w-100">인스턴스ID</th>
+                <th class="col-w-140">배치APP ID</th>
+                <th class="col-w-140">배치APP명</th>
+                <th class="col-w-180">배치APP FILE명</th>
+                <th class="col-w-140">CRON표현식</th>
+                <th class="col-w-140 text-center">시작시간</th>
+                <th class="col-w-80 text-center">상태</th>
+                <th class="col-w-80 text-center">강제종료</th>
+            </tr>
+        </thead>
+        <tbody id="batchRunningTableBody">
+            <tr>
+                <td colspan="8" class="text-center py-4 text-body-secondary">
+                    데이터를 불러오는 중...
+                </td>
+            </tr>
+        </tbody>
+    </table>
+</div>
+</body>
+</html>

@@ -11,6 +11,7 @@ import static org.mockito.BDDMockito.then;
 import com.example.admin_demo.domain.cmsapproval.dto.CmsApprovalHistoryResponse;
 import com.example.admin_demo.domain.cmsapproval.dto.CmsApprovalListRequest;
 import com.example.admin_demo.domain.cmsapproval.dto.CmsApprovalPageResponse;
+import com.example.admin_demo.domain.cmsapproval.dto.CmsApprovalRollbackHistoryResponse;
 import com.example.admin_demo.domain.cmsapproval.dto.CmsApproveRequest;
 import com.example.admin_demo.domain.cmsapproval.dto.CmsDisplayPeriodRequest;
 import com.example.admin_demo.domain.cmsapproval.dto.CmsPublicStateRequest;
@@ -19,10 +20,10 @@ import com.example.admin_demo.domain.cmsapproval.dto.CmsRollbackRequest;
 import com.example.admin_demo.domain.cmsapproval.mapper.CmsApprovalMapper;
 import com.example.admin_demo.global.dto.PageRequest;
 import com.example.admin_demo.global.dto.PageResponse;
+import com.example.admin_demo.global.exception.InvalidInputException;
 import com.example.admin_demo.global.exception.NotFoundException;
 import java.time.LocalDate;
 import java.util.List;
-import java.util.Map;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -87,6 +88,8 @@ class CmsApprovalServiceTest {
         req.setExpiredDate("2099-04-18");
 
         given(cmsApprovalMapper.existsByPageId(PAGE_ID)).willReturn(1);
+        given(cmsApprovalMapper.approve(PAGE_ID, "2099-04-17", "2099-04-18", MODIFIER_ID))
+                .willReturn(1);
         given(cmsApprovalMapper.getNextVersion(PAGE_ID)).willReturn(1);
 
         cmsApprovalService.approve(PAGE_ID, req, MODIFIER_ID);
@@ -101,6 +104,7 @@ class CmsApprovalServiceTest {
         // 승인 요청 시 날짜를 지정하지 않을 수 있으므로 null은 허용
         CmsApproveRequest req = new CmsApproveRequest();
         given(cmsApprovalMapper.existsByPageId(PAGE_ID)).willReturn(1);
+        given(cmsApprovalMapper.approve(PAGE_ID, null, null, MODIFIER_ID)).willReturn(1);
         given(cmsApprovalMapper.getNextVersion(PAGE_ID)).willReturn(1);
 
         cmsApprovalService.approve(PAGE_ID, req, MODIFIER_ID);
@@ -119,6 +123,8 @@ class CmsApprovalServiceTest {
         req.setExpiredDate(expiredDate);
 
         given(cmsApprovalMapper.existsByPageId(PAGE_ID)).willReturn(1);
+        given(cmsApprovalMapper.approve(PAGE_ID, beginningDate, expiredDate, MODIFIER_ID))
+                .willReturn(1);
         given(cmsApprovalMapper.getNextVersion(PAGE_ID)).willReturn(1);
 
         cmsApprovalService.approve(PAGE_ID, req, MODIFIER_ID);
@@ -146,6 +152,7 @@ class CmsApprovalServiceTest {
         req.setRejectedReason("내용 부적합");
 
         given(cmsApprovalMapper.existsByPageId(PAGE_ID)).willReturn(1);
+        given(cmsApprovalMapper.reject(PAGE_ID, "내용 부적합", MODIFIER_ID)).willReturn(1);
         given(cmsApprovalMapper.getNextVersion(PAGE_ID)).willReturn(2);
 
         cmsApprovalService.reject(PAGE_ID, req, MODIFIER_ID);
@@ -163,6 +170,29 @@ class CmsApprovalServiceTest {
 
         assertThatThrownBy(() -> cmsApprovalService.reject(PAGE_ID, req, MODIFIER_ID))
                 .isInstanceOf(NotFoundException.class);
+    }
+
+    @Test
+    @DisplayName("[승인] PENDING 상태가 아니면 InvalidInputException을 던진다")
+    void approve_notPending_throwsInvalidInputException() {
+        CmsApproveRequest req = new CmsApproveRequest();
+        given(cmsApprovalMapper.existsByPageId(PAGE_ID)).willReturn(1);
+        given(cmsApprovalMapper.approve(PAGE_ID, null, null, MODIFIER_ID)).willReturn(0);
+
+        assertThatThrownBy(() -> cmsApprovalService.approve(PAGE_ID, req, MODIFIER_ID))
+                .isInstanceOf(InvalidInputException.class);
+    }
+
+    @Test
+    @DisplayName("[반려] PENDING 상태가 아니면 InvalidInputException을 던진다")
+    void reject_notPending_throwsInvalidInputException() {
+        CmsRejectRequest req = new CmsRejectRequest();
+        req.setRejectedReason("이유");
+        given(cmsApprovalMapper.existsByPageId(PAGE_ID)).willReturn(1);
+        given(cmsApprovalMapper.reject(PAGE_ID, "이유", MODIFIER_ID)).willReturn(0);
+
+        assertThatThrownBy(() -> cmsApprovalService.reject(PAGE_ID, req, MODIFIER_ID))
+                .isInstanceOf(InvalidInputException.class);
     }
 
     // ─── updatePublicState ────────────────────────────────────────────
@@ -271,7 +301,10 @@ class CmsApprovalServiceTest {
     void rollback_normal_restoresVersion() {
         CmsRollbackRequest req = new CmsRollbackRequest();
         req.setVersion(1);
-        Map<String, Object> history = Map.of("PAGE_HTML", "<html/>", "FILE_PATH", "/path/to/file.html");
+        CmsApprovalRollbackHistoryResponse history = CmsApprovalRollbackHistoryResponse.builder()
+                .pageHtml("<html/>")
+                .filePath("/path/to/file.html")
+                .build();
 
         given(cmsApprovalMapper.existsByPageId(PAGE_ID)).willReturn(1);
         given(cmsApprovalMapper.findHistoryByVersion(PAGE_ID, 1)).willReturn(history);

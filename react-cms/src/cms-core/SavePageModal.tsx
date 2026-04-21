@@ -23,6 +23,8 @@ interface SavePageModalProps {
   onClose: () => void;
   /** 소비자가 제공하는 저장 핸들러. 생략 시 저장 버튼은 비활성 */
   onSave?: (page: CMSPage, params: SavePageParams) => void | Promise<void>;
+  /** 편집 모드에서 기존 페이지명을 초기값으로 설정 */
+  initialPageName?: string;
 }
 
 function validate(params: SavePageParams): string | null {
@@ -34,8 +36,8 @@ function validate(params: SavePageParams): string | null {
   return null;
 }
 
-export default function SavePageModal({ page, onClose, onSave }: SavePageModalProps) {
-  const [pageName, setPageName] = useState("");
+export default function SavePageModal({ page, onClose, onSave, initialPageName }: SavePageModalProps) {
+  const [pageName, setPageName] = useState(initialPageName ?? "");
   const [uri, setUri] = useState("/");
   const [status, setStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
   const [errorMsg, setErrorMsg] = useState("");
@@ -56,6 +58,9 @@ export default function SavePageModal({ page, onClose, onSave }: SavePageModalPr
         await onSave(page, params);
       }
       setStatus("success");
+      // 팝업으로 열린 경우 어드민 대시보드에 저장 완료 신호 전달
+      // 동일 Origin으로 한정하여 타 도메인 메시지 수신 차단
+      window.opener?.postMessage('reactCmsSaved', window.location.origin);
     } catch (e) {
       setErrorMsg(e instanceof Error ? e.message : "알 수 없는 오류가 발생했습니다.");
       setStatus("error");

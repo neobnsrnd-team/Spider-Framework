@@ -105,6 +105,9 @@ menu-resource:
     v3_batch_his_list:
       R: BATCH_HISTORY:R
       W: BATCH_HISTORY:W
+    v3_batch_running_list:
+      R: BATCH_RUNNING:R
+      W: BATCH_RUNNING:W
     v3_error_cause_his:
       R: ERROR_HIS:R
       W: ERROR_HIS:W
@@ -182,28 +185,20 @@ menu-resource:
       W: CMS:W
     v3_cms_dashboard:
       R: CMS:R
-      W: CMS:W
     v3_cms_edit:
       R: CMS:R
       W: CMS:W
     v3_cms_admin_approvals:
-      R: CMS:R
       W: CMS:W
     v3_cms_admin_asset_requests:
-      R: CMS:R
       W: CMS:W
     v3_cms_admin_asset_approvals:
-      R: CMS:R
       W: CMS:W
     v3_cms_admin_ab_tests:
-      R: CMS:R
       W: CMS:W
     v3_cms_admin_deployments:
-      R: CMS:R
       W: CMS:W
     v3_cms_admin_statistics:
-      R: CMS:R
       W: CMS:W
     v3_cms_admin_components:
-      R: CMS:R
       W: CMS:W

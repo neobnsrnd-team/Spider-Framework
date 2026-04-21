@@ -1,0 +1,19 @@
+global:
+  scrape_interval: 15s      # 기본 스크랩 주기
+  evaluation_interval: 15s  # 룰 평가 주기
+
+scrape_configs:
+  - job_name: 'batch-was'
+    metrics_path: '/actuator/prometheus'
+    # batch-was 전용 스크랩 주기 — 15s 보다 빠르게 수집하여 짧은 배치도 포착
+    scrape_interval: 10s
+    static_configs:
+      # host.docker.internal: Docker 컨테이너에서 호스트 머신의 batch-was(포트 8081)에 접근
+      # Linux 환경에서는 host.docker.internal 대신 실제 IP(예: 172.17.0.1 또는 서버 IP)로 교체 필요
+      - targets: ['host.docker.internal:8081']
+    relabel_configs:
+      # 스크랩 대상 주소와 무관하게 instance 레이블을 BT01로 고정
+      # — application.yml의 batch.was.instance-id 와 일치시켜 Grafana 필터링 용이
+      - source_labels: [__address__]
+        target_label: instance
+        replacement: 'BT01'

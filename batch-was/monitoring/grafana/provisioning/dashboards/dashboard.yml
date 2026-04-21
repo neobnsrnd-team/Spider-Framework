@@ -1,0 +1,14 @@
+apiVersion: 1
+
+providers:
+  - name: 'batch-was-dashboards'
+    orgId: 1
+    folder: 'Batch WAS'
+    type: file
+    # 대시보드 삭제 금지 — Grafana 재시작 시 파일 기반 대시보드가 유지됨
+    disableDeletion: false
+    # 30초마다 provisioning 디렉토리를 스캔하여 변경된 대시보드 자동 반영
+    updateIntervalSeconds: 30
+    options:
+      # Grafana 컨테이너 내부에서 대시보드 JSON 파일을 읽는 경로 (docker-compose volume 마운트 경로)
+      path: /etc/grafana/provisioning/dashboards

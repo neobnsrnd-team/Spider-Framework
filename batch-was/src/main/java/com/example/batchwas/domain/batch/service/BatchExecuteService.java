@@ -5,8 +5,12 @@ import com.example.batchwas.domain.batch.dto.BatchExecuteRequest;
 import com.example.batchwas.domain.batch.dto.BatchExecuteResponse;
 import com.example.batchwas.domain.batch.mapper.BatchAppMapper;
 import com.example.batchwas.domain.batch.mapper.BatchHisMapper;
+import io.micrometer.core.instrument.Counter;
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Timer;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.batch.core.BatchStatus;
@@ -14,6 +18,7 @@ import org.springframework.batch.core.Job;
 import org.springframework.batch.core.JobExecution;
 import org.springframework.batch.core.JobParameters;
 import org.springframework.batch.core.JobParametersBuilder;
+import org.springframework.batch.core.StepExecution;
 import org.springframework.batch.core.configuration.JobRegistry;
 import org.springframework.batch.core.launch.JobLauncher;
 import org.springframework.batch.core.launch.NoSuchJobException;
@@ -41,6 +46,8 @@ public class BatchExecuteService {
     private final JobLauncher jobLauncher;
     private final BatchAppMapper batchAppMapper;
     private final BatchHisMapper batchHisMapper;
+    /** Micrometer MeterRegistry: batch.job.duration / batch.job.status / batch.step.write.count 기록 */
+    private final MeterRegistry meterRegistry;
 
     /**
      * 배치 Job을 동기 실행하고 FWK_BATCH_HIS에 이력을 기록한다.
@@ -81,6 +88,9 @@ public class BatchExecuteService {
         log.info("배치 실행 시작: batchAppId={}, jobName={}, seq={}, batchDate={}",
                 request.getBatchAppId(), batchAppFileName, nextSeq, request.getBatchDate());
 
+        // Job 실행 시간 측정 시작 (Prometheus Timer 기록에 사용)
+        long startNanos = System.nanoTime();
+
         // 4. Job 조회 및 실행
         JobExecution jobExecution;
         try {
@@ -91,15 +101,34 @@ public class BatchExecuteService {
             // JobRegistry에 등록되지 않은 Job 이름
             String errorReason = "Job을 찾을 수 없습니다: " + batchAppFileName;
             log.error("배치 실행 실패 - {}: batchAppId={}", errorReason, request.getBatchAppId());
-            return updateAsError(request.getBatchAppId(), request.getBatchDate(), nextSeq, userId, errorReason);
+            BatchExecuteResponse response =
+                    updateAsError(request.getBatchAppId(), request.getBatchDate(), nextSeq, userId, errorReason);
+            // Job 조회 실패도 비정상 종료로 기록 — 처리 건수 없음
+            recordMetrics(request.getBatchAppId(), response.getResRtCode(), startNanos, 0L, 0L);
+            return response;
         } catch (Exception e) {
             String errorReason = "Job 실행 오류: " + e.getMessage();
             log.error("배치 실행 중 예외 발생: batchAppId={}", request.getBatchAppId(), e);
-            return updateAsError(request.getBatchAppId(), request.getBatchDate(), nextSeq, userId, errorReason);
+            BatchExecuteResponse response =
+                    updateAsError(request.getBatchAppId(), request.getBatchDate(), nextSeq, userId, errorReason);
+            // 예외 발생 시도 비정상 종료로 기록 — 처리 건수 없음
+            recordMetrics(request.getBatchAppId(), response.getResRtCode(), startNanos, 0L, 0L);
+            return response;
         }
 
         // 5. 실행 결과에 따라 FWK_BATCH_HIS UPDATE
-        return updateResult(request, nextSeq, userId, jobExecution);
+        BatchExecuteResponse response = updateResult(request, nextSeq, userId, jobExecution);
+
+        // 6. Job 완료 후 StepExecution 기준으로 처리 건수 집계 후 메트릭 기록
+        long wc = jobExecution.getStepExecutions().stream()
+                .mapToLong(StepExecution::getWriteCount)
+                .sum();
+        long sc = jobExecution.getStepExecutions().stream()
+                .mapToLong(s -> s.getReadSkipCount() + s.getProcessSkipCount() + s.getWriteSkipCount())
+                .sum();
+        recordMetrics(request.getBatchAppId(), response.getResRtCode(), startNanos, wc, sc);
+
+        return response;
     }
 
     /**
@@ -238,5 +267,54 @@ public class BatchExecuteService {
     /** userId가 null이거나 비어 있으면 SYSTEM으로 대체 */
     private String resolveUserId(String userId) {
         return (userId != null && !userId.isBlank()) ? userId : BatchConstants.SYSTEM_USER_ID;
+    }
+
+    /**
+     * Prometheus 메트릭을 기록한다.
+     *
+     * <ul>
+     *   <li>{@code batch.job.duration} (Timer): Job 실행 시간 (초 단위, Prometheus에서 _seconds/_count/_sum 자동 생성)</li>
+     *   <li>{@code batch.job.status} (Counter): 실행 결과(SUCCESS / ABNORMAL) 누적 카운트</li>
+     *   <li>{@code batch.step.write.count} (Counter): 실제 DB 쓰기 처리 건수 누적</li>
+     *   <li>{@code batch.step.skip.count} (Counter): read + process + write 스킵 건수 누적</li>
+     * </ul>
+     *
+     * @param batchAppId 배치 앱 ID (태그로 사용)
+     * @param resRtCode  결과 코드 ({@link BatchConstants#RES_RT_SUCCESS} or {@link BatchConstants#RES_RT_ABNORMAL})
+     * @param startNanos {@link System#nanoTime()} 기준 Job 시작 시각
+     * @param writeCount StepExecution 기준 실제 쓰기 건수 합산
+     * @param skipCount  StepExecution 기준 전체 스킵 건수 합산
+     */
+    private void recordMetrics(String batchAppId, String resRtCode, long startNanos,
+                               long writeCount, long skipCount) {
+        // Job 실행 시간 — Prometheus Timer는 _seconds_count, _seconds_sum, _seconds_bucket 생성
+        Timer.builder("batch.job.duration")
+                .tag("batchAppId", batchAppId)
+                .register(meterRegistry)
+                .record(System.nanoTime() - startNanos, TimeUnit.NANOSECONDS);
+
+        // 실행 결과 카운터 — SUCCESS / ABNORMAL 으로 분기
+        String statusTag = BatchConstants.RES_RT_SUCCESS.equals(resRtCode) ? "SUCCESS" : "ABNORMAL";
+        Counter.builder("batch.job.status")
+                .tag("batchAppId", batchAppId)
+                .tag("status", statusTag)
+                .register(meterRegistry)
+                .increment();
+
+        // 처리 건수 — 0건이면 카운터 등록 생략 (불필요한 빈 시계열 방지)
+        if (writeCount > 0) {
+            Counter.builder("batch.step.write.count")
+                    .tag("batchAppId", batchAppId)
+                    .register(meterRegistry)
+                    .increment(writeCount);
+        }
+
+        // 스킵 건수 — 0건이면 카운터 등록 생략
+        if (skipCount > 0) {
+            Counter.builder("batch.step.skip.count")
+                    .tag("batchAppId", batchAppId)
+                    .register(meterRegistry)
+                    .increment(skipCount);
+        }
     }
 }

@@ -124,6 +124,7 @@
             APPROVE_DATE     = SYSTIMESTAMP,
             LAST_MODIFIER_ID = #{modifierId}
         WHERE PAGE_ID = #{pageId}
+          AND APPROVE_STATE = 'PENDING'
     </update>
 
     <!-- ==================== 반려 — REJECTED ==================== -->
@@ -135,6 +136,7 @@
             APPROVE_DATE     = SYSTIMESTAMP,
             LAST_MODIFIER_ID = #{modifierId}
         WHERE PAGE_ID = #{pageId}
+          AND APPROVE_STATE = 'PENDING'
     </update>
 
     <!-- ==================== 공개 상태 변경 ==================== -->
@@ -213,10 +215,12 @@
         ORDER BY h.VERSION DESC
     </select>
 
-    <select id="findHistoryByVersion" resultType="map">
+    <!-- resultType=map 사용 시 PAGE_HTML(CLOB)이 java.sql.Clob 으로 반환되어 String 캐스트 시 ClassCastException 발생 → 전용 DTO 사용 -->
+    <select id="findHistoryByVersion"
+            resultType="com.example.admin_demo.domain.cmsapproval.dto.CmsApprovalRollbackHistoryResponse">
         SELECT
-            h.PAGE_HTML,
-            h.FILE_PATH
+            h.PAGE_HTML  AS pageHtml,
+            h.FILE_PATH  AS filePath
         FROM SPW_CMS_PAGE_HISTORY h
         WHERE h.PAGE_ID = #{pageId}
           AND h.VERSION  = #{version}

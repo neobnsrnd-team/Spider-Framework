@@ -1,10 +1,10 @@
 /* ===== LIGHT MODE (default) ===== */
 :root, [data-bs-theme="light"] {
     /* --- Brand / Primary (강조 요소에만 사용) --- */
-    --sp-primary: #4a6fa5;
-    --sp-primary-hover: #3a5f95;
-    --sp-primary-subtle: #dce8f5;
-    --sp-primary-rgb: 74, 111, 165;
+    --sp-primary: #2a8f7f;
+    --sp-primary-hover: #1e7a6b;
+    --sp-primary-subtle: #d0eeeb;
+    --sp-primary-rgb: 42, 143, 127;
 
     /* --- Semantic --- */
     --sp-success:     #16a34a;
@@ -95,13 +95,13 @@
     --sp-font-size-xs: 0.6875rem;         /* 11px */
 
     /* --- Form Table (Korean form-table: th/td 구조) --- */
-    --sp-form-header-bg: #dce4f0;
-    --sp-form-header-border: #c0ccd8;
-    --sp-form-header-text: #2c3e50;
+    --sp-form-header-bg: #d0e8e5;
+    --sp-form-header-border: #a8d0cc;
+    --sp-form-header-text: #1a3a35;
 
     /* --- Section Header (strip bar) --- */
-    --sp-section-header-bg: #c8d4e4;
-    --sp-section-header-border: #a8b8cc;
+    --sp-section-header-bg: #b8d8d4;
+    --sp-section-header-border: #8ec4be;
 
     /* --- Modal Body --- */
     --sp-modal-body-bg: #f0f2f5;
@@ -110,12 +110,12 @@
     --sp-overlay-bg: rgba(0,0,0,0.4);
 
     /* --- Gradient Table (domain modals) --- */
-    --sp-table-grad-start: #e8f0ff;
-    --sp-table-grad-end:   #dde8f8;
-    --sp-table-grad-border: #b8c8dc;
-    --sp-table-grad-hover:  #d0dcf0;
-    --sp-selection-bg:      #dce8f8;
-    --sp-selection-bg-strong: #c0d4f0;
+    --sp-table-grad-start: #dff0ee;
+    --sp-table-grad-end:   #cce8e4;
+    --sp-table-grad-border: #a0cec8;
+    --sp-table-grad-hover:  #bde0db;
+    --sp-selection-bg:      #cce8e4;
+    --sp-selection-bg-strong: #a8d8d2;
 
     /* --- Extra Font Size --- */
     --sp-font-size-2xs: 0.625rem;      /* 10px */
@@ -141,10 +141,10 @@
 
 /* ===== DARK MODE (One Dark) ===== */
 [data-bs-theme="dark"] {
-    --sp-primary: #6b8fc4;
-    --sp-primary-hover: #7fa0d4;
-    --sp-primary-subtle: #1e3a5f;
-    --sp-primary-rgb: 107, 143, 196;
+    --sp-primary: #3dada0;
+    --sp-primary-hover: #4dbdb0;
+    --sp-primary-subtle: #0d3530;
+    --sp-primary-rgb: 61, 173, 160;
 
     --sp-success:     #98c379;
     --sp-danger:      #e06c75;
@@ -193,7 +193,7 @@
     --sp-table-stripe-bg: #21252b;
 
     --sp-row-modified: #332e1a;
-    --sp-row-new:      #1a2838;
+    --sp-row-new:      #0d2e2b;
     --sp-row-deleted:  #361c1e;
 
     --sp-warning-subtle: #332e1a;

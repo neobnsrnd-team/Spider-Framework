@@ -9,6 +9,7 @@ import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.stereotype.Controller;
@@ -241,7 +242,7 @@ public class PageController {
         return resolveView(request, "pages/db-log/db-log :: content", model);
     }
 
-    // ── 배치 관리 ── batch_app_manage, batch_his_list
+    // ── 배치 관리 ── batch_app_manage, batch_his_list, batch_running_list
 
     @GetMapping("/batches/apps")
     public String batchApps(HttpServletRequest request, Model model) {
@@ -251,6 +252,11 @@ public class PageController {
     @GetMapping("/batches/history")
     public String batchHistory(HttpServletRequest request, Model model) {
         return resolveView(request, "pages/batch-his-list/batch-his-list :: content", model);
+    }
+
+    @GetMapping("/batches/running")
+    public String batchRunning(HttpServletRequest request, Model model) {
+        return resolveView(request, "pages/batch-running-list/batch-running-list :: content", model);
     }
 
     // ── 오류 관리 ── error_cause_his, error_code
@@ -377,6 +383,7 @@ public class PageController {
         return resolveView(request, "pages/react-cms-admin-deployment/react-cms-admin-deployment :: content", model);
     }
 
+
     // ── 서비스 관리 ── v3_neb_service_base_info, v3_neb_biz_component, v3_validator_component,
     //                    v3_biz_app, v3_sql_query_manage, v3_sql_dataSource_manage
 
@@ -410,9 +417,15 @@ public class PageController {
         return resolveView(request, "pages/datasource-manage/datasource-manage :: content", model);
     }
 
-    // CMS dashboard route is kept available even when it is not exposed as a menu.
+    // React CMS / HTML CMS 대시보드 라우트 — 메뉴 노출 여부와 무관하게 경로 유지
+
+    @GetMapping("/react-cms/dashboard")
+    public String reactCmsDashboard(HttpServletRequest request, Model model) {
+        return resolveView(request, "pages/react-cms-dashboard/react-cms-dashboard :: content", model);
+    }
 
     @GetMapping("/cms/dashboard")
+    @PreAuthorize("hasAuthority('CMS:R')")
     public String cmsDashboard(HttpServletRequest request, Model model) {
         // CMS 에디터 이동 URL을 JS에서 사용할 수 있도록 모델에 추가
         model.addAttribute("cmsUserUrl", cmsUserUrl);
@@ -424,47 +437,57 @@ public class PageController {
     //                 v3_cms_admin_statistics, v3_cms_admin_components
 
     @GetMapping("/cms-admin/pages")
+    @PreAuthorize("hasAuthority('CMS:W')")
     public String cmsAdminPages() {
         return "redirect:/cms-admin/approvals";
     }
 
     @GetMapping("/cms-admin/approvals")
+    @PreAuthorize("hasAuthority('CMS:W')")
     public String cmsAdminApprovals(HttpServletRequest request, Model model) {
         model.addAttribute("cmsPreviewUrl", cmsPreviewUrl);
         return resolveView(request, "pages/cms-approval/cms-approval :: content", model);
     }
 
     @GetMapping("/cms-admin/files")
+    @PreAuthorize("hasAuthority('CMS:W')")
     public String cmsAdminFiles() {
         return "redirect:/cms-admin/approvals";
     }
 
     @GetMapping("/cms-admin/asset-requests")
+    @PreAuthorize("hasAuthority('CMS:W')")
     public String cmsAdminAssetRequests(HttpServletRequest request, Model model) {
         return resolveView(request, "pages/asset/request :: content", model);
     }
 
     @GetMapping("/cms-admin/asset-approvals")
+    @PreAuthorize("hasAuthority('CMS:W')")
     public String cmsAdminAssetApprovals(HttpServletRequest request, Model model) {
         return resolveView(request, "pages/asset/approval :: content", model);
     }
 
     @GetMapping("/cms-admin/ab-tests")
+    @PreAuthorize("hasAuthority('CMS:W')")
     public String cmsAdminAbTests(HttpServletRequest request, Model model) {
+        model.addAttribute("cmsUserUrl", cmsUserUrl);
         return resolveView(request, "pages/cms-ab-test/cms-ab-test :: content", model);
     }
 
     @GetMapping("/cms-admin/deployments")
+    @PreAuthorize("hasAuthority('CMS:W')")
     public String cmsAdminDeployments(HttpServletRequest request, Model model) {
         return resolveView(request, "pages/cms-deployment/cms-deployment :: content", model);
     }
 
     @GetMapping("/cms-admin/statistics")
+    @PreAuthorize("hasAuthority('CMS:W')")
     public String cmsAdminStatistics(HttpServletRequest request, Model model) {
         return resolveView(request, "pages/cms-statistics/cms-statistics :: content", model);
     }
 
     @GetMapping("/cms-admin/components")
+    @PreAuthorize("hasAuthority('CMS:W')")
     public String cmsAdminComponents(HttpServletRequest request, Model model) {
         return cmsAdminSkeleton(request, model, "CMS 컴포넌트 관리", "컴포넌트 카탈로그와 페이지 매핑 관리", "Issue 7에서 컴포넌트 데이터 연동 예정입니다.");
     }

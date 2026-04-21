@@ -60,9 +60,9 @@ class CmsApprovalControllerTest {
     // ─── GET /api/cms-admin/approvals ─────────────────────────────────
 
     @Test
-    @WithMockUser(authorities = "CMS:R")
-    @DisplayName("[조회] 목록 조회 시 200과 PageResponse를 반환한다")
-    void findPageList_withCmsR_returns200() throws Exception {
+    @WithMockUser(authorities = "CMS:W")
+    @DisplayName("[조회] CMS:W 권한으로 목록 조회 시 200과 PageResponse를 반환한다")
+    void findPageList_withCmsW_returns200() throws Exception {
         PageResponse<CmsApprovalPageResponse> page = PageResponse.of(List.of(buildPageResponse()), 1L, 0, 10);
         given(cmsApprovalService.findPageList(any(), any())).willReturn(page);
 
@@ -74,8 +74,8 @@ class CmsApprovalControllerTest {
     }
 
     @Test
-    @WithMockUser(authorities = "CMS:R")
-    @DisplayName("[조회] 결과가 없으면 200과 빈 목록을 반환한다")
+    @WithMockUser(authorities = "CMS:W")
+    @DisplayName("[조회] CMS:W 권한으로 결과가 없으면 200과 빈 목록을 반환한다")
     void findPageList_emptyResult_returns200() throws Exception {
         given(cmsApprovalService.findPageList(any(), any())).willReturn(PageResponse.of(List.of(), 0L, 0, 10));
 
@@ -93,7 +93,7 @@ class CmsApprovalControllerTest {
 
     @Test
     @WithMockUser(authorities = {"CMS:R", "CMS:W"})
-    @DisplayName("[인가] 파생된 CMS:W 권한으로 목록 조회 시 200을 반환한다")
+    @DisplayName("[인가] CMS:R과 CMS:W를 함께 가진 경우 목록 조회 시 200을 반환한다")
     void findPageList_withDerivedCmsW_returns200() throws Exception {
         given(cmsApprovalService.findPageList(any(), any())).willReturn(PageResponse.of(List.of(), 0L, 0, 10));
 
@@ -105,9 +105,9 @@ class CmsApprovalControllerTest {
     // ─── GET /api/cms-admin/pages/{pageId}/approval-history ──────────
 
     @Test
-    @WithMockUser(authorities = "CMS:R")
-    @DisplayName("[이력조회] CMS:R 권한으로 이력 조회 시 200을 반환한다")
-    void findHistoryList_withCmsR_returns200() throws Exception {
+    @WithMockUser(authorities = "CMS:W")
+    @DisplayName("[이력조회] CMS:W 권한으로 이력 조회 시 200을 반환한다")
+    void findHistoryList_withCmsW_returns200() throws Exception {
         given(cmsApprovalService.findHistoryList(PAGE_ID)).willReturn(List.of(buildHistoryResponse()));
 
         mockMvc.perform(get(PAGE_URL + "/approval-history"))
@@ -117,8 +117,8 @@ class CmsApprovalControllerTest {
     }
 
     @Test
-    @WithMockUser(authorities = "CMS:R")
-    @DisplayName("[이력조회] 페이지가 없으면 404를 반환한다")
+    @WithMockUser(authorities = "CMS:W")
+    @DisplayName("[이력조회] CMS:W 권한으로 페이지가 없으면 404를 반환한다")
     void findHistoryList_pageNotFound_returns404() throws Exception {
         willThrow(new NotFoundException("pageId: " + PAGE_ID))
                 .given(cmsApprovalService)
@@ -131,6 +131,20 @@ class CmsApprovalControllerTest {
     @DisplayName("[인증] 비인증 이력 조회 시 401을 반환한다")
     void findHistoryList_unauthenticated_returns401() throws Exception {
         mockMvc.perform(get(PAGE_URL + "/approval-history")).andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    @WithMockUser(authorities = "CMS:R")
+    @DisplayName("[권한] CMS:R 권한으로 목록 조회 시 403을 반환한다")
+    void findPageList_withCmsR_returns403() throws Exception {
+        mockMvc.perform(get(APPROVALS_URL)).andExpect(status().isForbidden());
+    }
+
+    @Test
+    @WithMockUser(authorities = "CMS:R")
+    @DisplayName("[권한] CMS:R 권한으로 이력 조회 시 403을 반환한다")
+    void findHistoryList_withCmsR_returns403() throws Exception {
+        mockMvc.perform(get(PAGE_URL + "/approval-history")).andExpect(status().isForbidden());
     }
 
     // ─── POST /api/cms-admin/pages/{pageId}/approval/approve ─────────

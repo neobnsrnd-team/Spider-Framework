@@ -58,7 +58,9 @@ public class BatchManagementAdapter implements ManagementAdapter<ManagementConte
                     .build();
         }
 
-        // 인스턴스별 포트가 설정된 경우 우선 사용, 없으면 전역 설정 포트로 폴백
+        // FWK_WAS_INSTANCE.PORT는 TCP 관리 포트(9998)를 저장한다.
+        // 인스턴스별 포트가 설정된 경우 우선 사용, 없으면 전역 설정 포트로 폴백.
+        // (HTTP 모니터링 포트는 BatchRunningService가 별도 설정값 batch.was.http-port로 관리)
         int port = batchWasTcpPort;
         if (instance.getPort() != null && !instance.getPort().isBlank()) {
             try {

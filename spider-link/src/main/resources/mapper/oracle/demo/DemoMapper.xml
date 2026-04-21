@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.example.spiderlink.domain.demo.mapper.DemoMapper">
+
+    <select id="selectPocUserByIdAndPassword" resultType="com.example.spiderlink.domain.demo.dto.DemoPocUserResponse">
+        SELECT USER_ID,
+               USER_NAME,
+               USER_GRADE,
+               LOG_YN,
+               TO_CHAR(SYSDATE, 'YYYYMMDDHH24MISS') AS LAST_LOGIN_DTIME
+          FROM D_SPIDERLINK.POC_USER
+         WHERE USER_ID  = #{userId}
+           AND PASSWORD = #{password}
+    </select>
+
+    <select id="selectPocUserById" resultType="com.example.spiderlink.domain.demo.dto.DemoPocUserResponse">
+        SELECT USER_ID,
+               USER_NAME,
+               USER_GRADE,
+               TO_CHAR(SYSDATE, 'YYYYMMDDHH24MISS') AS LAST_LOGIN_DTIME
+          FROM D_SPIDERLINK.POC_USER
+         WHERE USER_ID = #{userId}
+    </select>
+
+    <update id="updateLastLoginDtime">
+        UPDATE D_SPIDERLINK.POC_USER
+           SET LAST_LOGIN_DTIME = TO_CHAR(SYSDATE, 'YYYYMMDDHH24MISS')
+         WHERE USER_ID = #{userId}
+    </update>
+
+    <!-- 결제상태코드 9(취소건)는 즉시결제 대상에서 제외 -->
+    <select id="selectPayableAmt" resultType="com.example.spiderlink.domain.demo.dto.DemoPayableAmtResponse">
+        SELECT (SELECT NVL(SUM("이용금액" - "누적결제금액"), 0)
+                  FROM D_SPIDERLINK.POC_카드사용내역
+                 WHERE "이용자"       = #{userId}
+                   AND "카드번호"     = #{cardId}
+                   AND "누적결제금액" &lt; "이용금액"
+                   AND "결제상태코드" &lt;&gt; '9') AS PAYABLE_AMOUNT,
+               (SELECT NVL("한도금액", 0)
+                  FROM D_SPIDERLINK.POC_카드리스트
+                 WHERE "사용자아이디" = #{userId}
+                   AND "카드번호"     = #{cardId}) AS CREDIT_LIMIT
+          FROM DUAL
+    </select>
+
+</mapper>

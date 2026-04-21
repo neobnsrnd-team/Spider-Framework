@@ -78,6 +78,11 @@ public class AuthController {
         return ResponseEntity.ok(ApiResponse.success(userMapper.findCmsApprovers()));
     }
 
+    @GetMapping("/react-cms-approvers")
+    public ResponseEntity<ApiResponse<List<CmsApproverResponse>>> reactCmsApprovers() {
+        return ResponseEntity.ok(ApiResponse.success(userMapper.findReactCmsApprovers()));
+    }
+
     @GetMapping("/permission/menu")
     public ResponseEntity<ApiResponse<Boolean>> checkMenuPermission(
             @RequestParam String userId, @RequestParam String menuId) {
