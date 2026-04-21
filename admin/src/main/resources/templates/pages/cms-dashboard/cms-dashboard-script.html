@@ -4,7 +4,7 @@
 <th:block th:fragment="script">
 <script th:inline="javascript">
 /*<![CDATA[*/
-    const HAS_CMS_WRITE = /*[[${userAuthorities != null && userAuthorities.contains('CMS:W')}]]*/ false;
+    const CAN_MANAGE_OWN_CMS_PAGE = /*[[${userAuthorities != null && userAuthorities.contains('CMS:R') && !userAuthorities.contains('CMS:W')}]]*/ false;
     // 새 페이지 생성 후 에디터 이동에 사용하는 CMS URL (말미 슬래시 제거)
     const CMS_USER_URL = /*[[${cmsUserUrl}]]*/ '';
 /*]]>*/
@@ -116,7 +116,7 @@
                 // 승인요청 버튼 — CMS DashboardClient.tsx:472-484 기준
                 // WORK → "승인요청", REJECTED / APPROVED → "재승인요청", PENDING → 버튼 없음
                 let tdApprove = '-';
-                if (HAS_CMS_WRITE) {
+                if (CAN_MANAGE_OWN_CMS_PAGE) {
                     if (row.approveState === 'WORK') {
                         tdApprove = `<button class="btn btn-primary btn-xs"
                             onclick="CmsDashboardPage.openApproveRequestModal('${pid}')">승인요청</button>`;
@@ -126,8 +126,8 @@
                     }
                 }
 
-                // 삭제 버튼 — CMS:W 권한 보유 시 표시
-                const tdDelete = HAS_CMS_WRITE
+                // 삭제 버튼 — CMS:R 제작자 권한에서 본인 페이지에만 표시
+                const tdDelete = CAN_MANAGE_OWN_CMS_PAGE
                     ? `<button class="btn btn-outline-danger btn-xs"
                            onclick="CmsDashboardPage.deletePage('${pid}')">삭제</button>`
                     : '-';

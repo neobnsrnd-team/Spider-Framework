@@ -25,14 +25,14 @@ public interface CmsApprovalMapper {
     int existsByPageId(@Param("pageId") String pageId);
 
     /** 승인 확정 — APPROVE_STATE → APPROVED */
-    void approve(
+    int approve(
             @Param("pageId") String pageId,
             @Param("beginningDate") String beginningDate,
             @Param("expiredDate") String expiredDate,
             @Param("modifierId") String modifierId);
 
     /** 반려 — APPROVE_STATE → REJECTED */
-    void reject(
+    int reject(
             @Param("pageId") String pageId,
             @Param("rejectedReason") String rejectedReason,
             @Param("modifierId") String modifierId);

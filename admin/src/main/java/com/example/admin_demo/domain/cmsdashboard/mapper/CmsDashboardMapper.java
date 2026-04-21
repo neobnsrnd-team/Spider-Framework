@@ -51,7 +51,7 @@ public interface CmsDashboardMapper {
     String findApproverNameById(@Param("approverId") String approverId);
 
     /** 승인 요청 — APPROVE_STATE = 'PENDING', 승인자 정보 저장 */
-    void requestApproval(
+    int requestApproval(
             @Param("pageId") String pageId,
             @Param("approverId") String approverId,
             @Param("approverName") String approverName,

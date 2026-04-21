@@ -49,9 +49,9 @@ public class CmsApprovalController {
 
     private final CmsApprovalService cmsApprovalService;
 
-    /** 승인 관리 목록 조회 (CMS:R) */
+    /** 승인 관리 목록 조회 (CMS:W) */
     @GetMapping("/api/cms-admin/approvals")
-    @PreAuthorize("hasAuthority('CMS:R')")
+    @PreAuthorize("hasAuthority('CMS:W')")
     public ResponseEntity<ApiResponse<PageResponse<CmsApprovalPageResponse>>> findPageList(
             @ModelAttribute CmsApprovalListRequest req,
             @RequestParam(defaultValue = "1") int page,
@@ -87,9 +87,9 @@ public class CmsApprovalController {
         return ResponseEntity.ok(ApiResponse.success("반려가 완료되었습니다.", null));
     }
 
-    /** 승인 이력 조회 (CMS:R) */
+    /** 승인 이력 조회 (CMS:W) */
     @GetMapping("/api/cms-admin/pages/{pageId}/approval-history")
-    @PreAuthorize("hasAuthority('CMS:R')")
+    @PreAuthorize("hasAuthority('CMS:W')")
     public ResponseEntity<ApiResponse<List<CmsApprovalHistoryResponse>>> findHistoryList(@PathVariable String pageId) {
 
         return ResponseEntity.ok(ApiResponse.success(cmsApprovalService.findHistoryList(pageId)));

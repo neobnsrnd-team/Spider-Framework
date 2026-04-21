@@ -178,6 +178,7 @@
         WHERE PAGE_ID        = #{pageId}
           AND CREATE_USER_ID = #{userId}
           AND USE_YN         = 'Y'
+          AND APPROVE_STATE IN ('WORK', 'REJECTED', 'APPROVED')
     </update>
 
 </mapper>

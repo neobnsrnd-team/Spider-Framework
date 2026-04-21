@@ -47,9 +47,9 @@ public class CmsDashboardController {
     @Value("${cms.user-url}")
     private String cmsUserUrl;
 
-    /** 내 페이지 목록 조회 (CMS:R) */
+    /** 내 페이지 목록 조회 (CMS:R 전용) */
     @GetMapping("/api/cms-dashboard/pages")
-    @PreAuthorize("hasAuthority('CMS:R')")
+    @PreAuthorize("hasAuthority('CMS:R') and !hasAuthority('CMS:W')")
     public ResponseEntity<ApiResponse<PageResponse<CmsDashboardPageResponse>>> findMyPageList(
             @ModelAttribute CmsDashboardListRequest req,
             @RequestParam(defaultValue = "1") int page,
@@ -64,11 +64,11 @@ public class CmsDashboardController {
     }
 
     /**
-     * 새 페이지 생성 (CMS:W)
+     * 새 페이지 생성 (CMS:R 전용)
      * 생성 후 editorUrl({CMS_USER_URL}/cms/edit?bank={pageId})을 반환한다.
      */
     @PostMapping("/api/cms-dashboard/pages")
-    @PreAuthorize("hasAuthority('CMS:W')")
+    @PreAuthorize("hasAuthority('CMS:R') and !hasAuthority('CMS:W')")
     public ResponseEntity<ApiResponse<CmsDashboardCreateResponse>> createPage(
             @RequestBody CmsDashboardCreateRequest req, @AuthenticationPrincipal CustomUserDetails userDetails) {
 
@@ -86,11 +86,11 @@ public class CmsDashboardController {
     }
 
     /**
-     * 페이지 삭제 (CMS:W)
+     * 페이지 삭제 (CMS:R 전용, 본인 페이지 한정)
      * 이력 있으면 소프트(USE_YN='N'), 없으면 하드 삭제.
      */
     @DeleteMapping("/api/cms-dashboard/pages/{pageId}")
-    @PreAuthorize("hasAuthority('CMS:W')")
+    @PreAuthorize("hasAuthority('CMS:R') and !hasAuthority('CMS:W')")
     public ResponseEntity<ApiResponse<Void>> deletePage(
             @PathVariable String pageId, @AuthenticationPrincipal CustomUserDetails userDetails) {
 
@@ -98,9 +98,9 @@ public class CmsDashboardController {
         return ResponseEntity.ok(ApiResponse.success("페이지가 삭제되었습니다.", null));
     }
 
-    /** 승인 요청 — APPROVE_STATE → PENDING (CMS:W) */
+    /** 승인 요청 — APPROVE_STATE → PENDING (CMS:R 전용, 본인 페이지 한정) */
     @PatchMapping("/api/cms-dashboard/pages/{pageId}/approve-request")
-    @PreAuthorize("hasAuthority('CMS:W')")
+    @PreAuthorize("hasAuthority('CMS:R') and !hasAuthority('CMS:W')")
     public ResponseEntity<ApiResponse<Void>> requestApproval(
             @PathVariable String pageId,
             @RequestBody CmsDashboardApproveRequestDto req,
