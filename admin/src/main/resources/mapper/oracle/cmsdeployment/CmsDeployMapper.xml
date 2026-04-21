@@ -16,6 +16,8 @@
         <where>
             p.USE_YN = 'Y'
             AND p.APPROVE_STATE = 'APPROVED'
+            <!-- 타 프로젝트의 REACT 등 다른 PAGE_TYPE 제외 (#136) -->
+            AND p.PAGE_TYPE = 'PAGE'
             <if test="req.search != null and req.search != ''">
                 AND (
                     p.PAGE_NAME LIKE '%' || #{req.search} || '%'
@@ -108,12 +110,14 @@
         반환하는데, NOT_SUPPORTED 전파 메서드에서 커넥션이 닫힌 후 읽으면 "Closed Connection" 오류가 발생한다.
         resultType=string 으로 직접 매핑하면 MyBatis가 커넥션이 열려 있는 동안 문자열로 변환한다.
     -->
+    <!-- push 호출에서 REACT 등 타 프로젝트 페이지를 배포 대상으로 삼지 못하도록 PAGE_TYPE 가드 (#136) -->
     <select id="findApprovedPageHtml" resultType="string">
         SELECT PAGE_HTML
         FROM SPW_CMS_PAGE
-        WHERE PAGE_ID      = #{pageId}
+        WHERE PAGE_ID       = #{pageId}
           AND APPROVE_STATE = 'APPROVED'
           AND USE_YN        = 'Y'
+          AND PAGE_TYPE     = 'PAGE'
     </select>
 
 
