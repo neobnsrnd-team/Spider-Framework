@@ -53,12 +53,13 @@
                 btnPrint.addEventListener('click', printTable);
             }
 
-            // 기본값: 오늘부터 7일 전
+            // 기본값: 오늘부터 7일 전 (toISOString은 UTC 기준 → 로컬 날짜 사용)
+            const _toLocalDate = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
             const today = new Date();
             const weekAgo = new Date(today);
             weekAgo.setDate(weekAgo.getDate() - 7);
-            document.getElementById('searchStartDate').value = weekAgo.toISOString().slice(0, 10);
-            document.getElementById('searchEndDate').value = today.toISOString().slice(0, 10);
+            document.getElementById('searchStartDate').value = _toLocalDate(weekAgo);
+            document.getElementById('searchEndDate').value = _toLocalDate(today);
 
             search();
         }

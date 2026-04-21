@@ -41,4 +41,10 @@ public class BatchRunningResponse {
 
     /** 실행 상태 (BatchStatus.name() — "STARTED", "STARTING" 등) */
     private String status;
+
+    /**
+     * 이 응답을 생성한 WAS 인스턴스 ID (application.yml batch.was.instance-id).
+     * Admin이 동일 IP를 공유하는 인스턴스들 사이에서 데이터 출처를 식별하는 데 사용한다.
+     */
+    private String instanceId;
 }

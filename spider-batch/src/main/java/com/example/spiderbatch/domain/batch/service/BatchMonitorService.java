@@ -179,6 +179,7 @@ public class BatchMonitorService {
                 .batchDate(batchDate != null ? batchDate : "")
                 .startTime(startTime)
                 .status(jobExecution.getStatus().name())
+                .instanceId(instanceId)
                 .build();
     }
 }
