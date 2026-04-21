@@ -11,6 +11,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.annotation.PostConstruct;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -124,7 +125,7 @@ public class MetaDrivenCommandHandler implements CommandHandler<JsonCommandReque
             }
 
             JsonCommandResponse response = JsonCommandResponse.builder()
-                    .command(command).success(true).payload(lastSelectResult).build();
+                    .command(command).success(true).payload(toCamelCaseKeys(lastSelectResult)).build();
             // FWK_MESSAGE_FIELD 기준 마스킹 후 응답 거래 로그 저장
             trxLogger.logResponse(trxId, request.getRequestId(), userId,
                     jsonMessageParser.maskForLog(command + "_RES", lastSelectResult), "Y");
@@ -137,5 +138,29 @@ public class MetaDrivenCommandHandler implements CommandHandler<JsonCommandReque
             trxLogger.logResponse(trxId, request.getRequestId(), userId, e.getMessage(), "N");
             return errResp;
         }
+    }
+
+    /** Oracle 대문자 컬럼명(USER_ID)을 camelCase(userId)로 변환 — demo/backend가 camelCase 키를 기대함 */
+    private Map<String, Object> toCamelCaseKeys(Map<String, Object> map) {
+        if (map == null) return null;
+        Map<String, Object> result = new LinkedHashMap<>();
+        for (Map.Entry<String, Object> entry : map.entrySet()) {
+            result.put(toCamelCase(entry.getKey()), entry.getValue());
+        }
+        return result;
+    }
+
+    private String toCamelCase(String columnName) {
+        if (columnName == null) return null;
+        String lower = columnName.toLowerCase();
+        if (!lower.contains("_")) return lower;
+        String[] parts = lower.split("_");
+        StringBuilder sb = new StringBuilder(parts[0]);
+        for (int i = 1; i < parts.length; i++) {
+            if (!parts[i].isEmpty()) {
+                sb.append(Character.toUpperCase(parts[i].charAt(0))).append(parts[i].substring(1));
+            }
+        }
+        return sb.toString();
     }
 }
