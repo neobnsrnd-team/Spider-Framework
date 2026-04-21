@@ -30,7 +30,7 @@ public class DemoBackendAdapter implements ManagementAdapter<JsonCommandRequest,
     @Value("${tcp.demo-backend.host:localhost}")
     private String demoBackendHost;
 
-    @Value("${tcp.demo-backend.port:9997}")
+    @Value("${tcp.demo-backend.port:9996}")
     private int demoBackendPort;
 
     /** spider-link는 항상 별도 프로세스이므로 로컬 실행 없음 */
