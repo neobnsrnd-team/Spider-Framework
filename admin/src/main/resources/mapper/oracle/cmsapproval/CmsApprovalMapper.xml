@@ -124,6 +124,7 @@
             APPROVE_DATE     = SYSTIMESTAMP,
             LAST_MODIFIER_ID = #{modifierId}
         WHERE PAGE_ID = #{pageId}
+          AND APPROVE_STATE = 'PENDING'
     </update>
 
     <!-- ==================== 반려 — REJECTED ==================== -->
@@ -135,6 +136,7 @@
             APPROVE_DATE     = SYSTIMESTAMP,
             LAST_MODIFIER_ID = #{modifierId}
         WHERE PAGE_ID = #{pageId}
+          AND APPROVE_STATE = 'PENDING'
     </update>
 
     <!-- ==================== 공개 상태 변경 ==================== -->

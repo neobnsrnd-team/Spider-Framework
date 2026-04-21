@@ -9,6 +9,7 @@ import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.stereotype.Controller;
@@ -395,6 +396,7 @@ public class PageController {
     }
 
     @GetMapping("/cms/dashboard")
+    @PreAuthorize("hasAuthority('CMS:R')")
     public String cmsDashboard(HttpServletRequest request, Model model) {
         // CMS 에디터 이동 URL을 JS에서 사용할 수 있도록 모델에 추가
         model.addAttribute("cmsUserUrl", cmsUserUrl);
@@ -406,48 +408,57 @@ public class PageController {
     //                 v3_cms_admin_statistics, v3_cms_admin_components
 
     @GetMapping("/cms-admin/pages")
+    @PreAuthorize("hasAuthority('CMS:W')")
     public String cmsAdminPages() {
         return "redirect:/cms-admin/approvals";
     }
 
     @GetMapping("/cms-admin/approvals")
+    @PreAuthorize("hasAuthority('CMS:W')")
     public String cmsAdminApprovals(HttpServletRequest request, Model model) {
         model.addAttribute("cmsPreviewUrl", cmsPreviewUrl);
         return resolveView(request, "pages/cms-approval/cms-approval :: content", model);
     }
 
     @GetMapping("/cms-admin/files")
+    @PreAuthorize("hasAuthority('CMS:W')")
     public String cmsAdminFiles() {
         return "redirect:/cms-admin/approvals";
     }
 
     @GetMapping("/cms-admin/asset-requests")
+    @PreAuthorize("hasAuthority('CMS:W')")
     public String cmsAdminAssetRequests(HttpServletRequest request, Model model) {
         return resolveView(request, "pages/asset/request :: content", model);
     }
 
     @GetMapping("/cms-admin/asset-approvals")
+    @PreAuthorize("hasAuthority('CMS:W')")
     public String cmsAdminAssetApprovals(HttpServletRequest request, Model model) {
         return resolveView(request, "pages/asset/approval :: content", model);
     }
 
     @GetMapping("/cms-admin/ab-tests")
+    @PreAuthorize("hasAuthority('CMS:W')")
     public String cmsAdminAbTests(HttpServletRequest request, Model model) {
         model.addAttribute("cmsUserUrl", cmsUserUrl);
         return resolveView(request, "pages/cms-ab-test/cms-ab-test :: content", model);
     }
 
     @GetMapping("/cms-admin/deployments")
+    @PreAuthorize("hasAuthority('CMS:W')")
     public String cmsAdminDeployments(HttpServletRequest request, Model model) {
         return resolveView(request, "pages/cms-deployment/cms-deployment :: content", model);
     }
 
     @GetMapping("/cms-admin/statistics")
+    @PreAuthorize("hasAuthority('CMS:W')")
     public String cmsAdminStatistics(HttpServletRequest request, Model model) {
         return resolveView(request, "pages/cms-statistics/cms-statistics :: content", model);
     }
 
     @GetMapping("/cms-admin/components")
+    @PreAuthorize("hasAuthority('CMS:W')")
     public String cmsAdminComponents(HttpServletRequest request, Model model) {
         return cmsAdminSkeleton(request, model, "CMS 컴포넌트 관리", "컴포넌트 카탈로그와 페이지 매핑 관리", "Issue 7에서 컴포넌트 데이터 연동 예정입니다.");
     }

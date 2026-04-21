@@ -94,8 +94,11 @@ public class CmsDashboardService {
             throw new InvalidInputException("유효하지 않은 승인자입니다. approverId=" + req.getApproverId());
         }
 
-        cmsDashboardMapper.requestApproval(
+        int updated = cmsDashboardMapper.requestApproval(
                 pageId, req.getApproverId(), approverName, req.getBeginningDate(), req.getExpiredDate(), userId);
+        if (updated == 0) {
+            throw new InvalidInputException("현재 상태에서는 승인 요청할 수 없습니다. pageId=" + pageId);
+        }
         log.info("CMS 페이지 승인 요청: pageId={}, approverId={}, userId={}", pageId, req.getApproverId(), userId);
     }
 

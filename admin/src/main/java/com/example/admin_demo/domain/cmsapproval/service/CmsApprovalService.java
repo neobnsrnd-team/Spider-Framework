@@ -51,7 +51,10 @@ public class CmsApprovalService {
     public void approve(String pageId, CmsApproveRequest req, String modifierId) {
         checkPageExists(pageId);
         validateDisplayPeriod(req.getBeginningDate(), req.getExpiredDate());
-        cmsApprovalMapper.approve(pageId, req.getBeginningDate(), req.getExpiredDate(), modifierId);
+        int updated = cmsApprovalMapper.approve(pageId, req.getBeginningDate(), req.getExpiredDate(), modifierId);
+        if (updated == 0) {
+            throw new InvalidInputException("승인 대기 상태의 페이지가 아닙니다. pageId=" + pageId);
+        }
         int version = cmsApprovalMapper.getNextVersion(pageId);
         cmsApprovalMapper.insertHistory(pageId, version);
         log.info("CMS 페이지 승인 완료: pageId={}, version={}, modifierId={}", pageId, version, modifierId);
@@ -64,7 +67,10 @@ public class CmsApprovalService {
     @Transactional
     public void reject(String pageId, CmsRejectRequest req, String modifierId) {
         checkPageExists(pageId);
-        cmsApprovalMapper.reject(pageId, req.getRejectedReason(), modifierId);
+        int updated = cmsApprovalMapper.reject(pageId, req.getRejectedReason(), modifierId);
+        if (updated == 0) {
+            throw new InvalidInputException("승인 대기 상태의 페이지가 아닙니다. pageId=" + pageId);
+        }
         int version = cmsApprovalMapper.getNextVersion(pageId);
         cmsApprovalMapper.insertHistory(pageId, version);
         log.info("CMS 페이지 반려 완료: pageId={}, version={}, modifierId={}", pageId, version, modifierId);
