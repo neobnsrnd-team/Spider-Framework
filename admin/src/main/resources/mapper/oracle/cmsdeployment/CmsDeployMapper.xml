@@ -34,7 +34,7 @@
                     p.CREATE_USER_NAME                                          AS createUserName,
                     CASE WHEN lh.FILE_ID IS NOT NULL
                         THEN 'http://' || si.INSTANCE_IP || ':' || TO_CHAR(si.INSTANCE_PORT)
-                             || '/deployed/' || p.PAGE_ID || '.html'
+                             || '/cms/deployed/' || p.PAGE_ID || '.html'
                     END                                                         AS deployedUrl
                 FROM SPW_CMS_PAGE p
                 LEFT JOIN (
