@@ -440,6 +440,7 @@ public class PageController {
 
     @GetMapping("/cms-admin/ab-tests")
     public String cmsAdminAbTests(HttpServletRequest request, Model model) {
+        model.addAttribute("cmsUserUrl", cmsUserUrl);
         return resolveView(request, "pages/cms-ab-test/cms-ab-test :: content", model);
     }
 

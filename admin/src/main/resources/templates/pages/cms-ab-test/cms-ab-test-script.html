@@ -4,6 +4,7 @@
 <th:block th:fragment="script">
 <script th:inline="javascript">
     window.CMS_AB_CAN_WRITE = /*[[${userAuthorities != null && userAuthorities.contains('CMS:W')}]]*/ false;
+    window.CMS_USER_URL = /*[[${cmsUserUrl}]]*/ '';
 </script>
 <script>
     window.CmsAbTestPage = {
@@ -119,11 +120,17 @@
                     </div>`;
                 }).join('');
 
-                const actions = CMS_AB_CAN_WRITE ? `<div class="ab-group-actions">
+                const testUrl = CMS_USER_URL.replace(/\/$/, '') + '/cms/api/ab/' + HtmlUtils.escape(group.groupId);
+                const testBtn = `<a href="${testUrl}" target="_blank" rel="noopener"
+                    class="btn btn-outline-info btn-xs"><i class="bi bi-box-arrow-up-right"></i> 테스트</a>`;
+                const actions = `<div class="ab-group-actions">
+                    ${testBtn}
+                    ${CMS_AB_CAN_WRITE ? `
                     <button class="btn btn-outline-primary btn-xs" onclick="CmsAbTestPage.openEditModal('${HtmlUtils.escape(group.groupId)}')">수정</button>
                     <button class="btn btn-outline-success btn-xs" onclick="CmsAbTestPage.openPromoteModal('${HtmlUtils.escape(group.groupId)}')" ${promoted ? 'disabled' : ''}>승격</button>
                     <button class="btn btn-outline-danger btn-xs" onclick="CmsAbTestPage.clearGroup('${HtmlUtils.escape(group.groupId)}')">삭제</button>
-                </div>` : '';
+                    ` : ''}
+                </div>`;
 
                 return `<div class="ab-group-card">
                     <div class="ab-group-header">
