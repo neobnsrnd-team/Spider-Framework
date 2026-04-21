@@ -12,6 +12,10 @@ spring:
       # 애플리케이션 시작 시 Job 자동 실행 방지 (API 호출로만 실행)
       enabled: false
 
+logging:
+  charset:
+    console: UTF-8
+
 server:
   port: 8081
 
@@ -21,6 +25,10 @@ batch:
     instance-id: BT01
   tcp:
     port: ${BATCH_TCP_PORT:9998}
+    # 동시 처리 가능한 최대 클라이언트 수 (Admin 동시 요청량에 맞게 조정)
+    handler-pool-size: 20
+    # 핸들러 풀이 가득 찼을 때 대기시킬 최대 요청 수 — 초과 시 소켓을 즉시 닫아 OOM 방지
+    queue-capacity: 100
 
 management:
   endpoints:

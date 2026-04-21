@@ -7,9 +7,10 @@ import jakarta.annotation.PreDestroy;
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.concurrent.RejectedExecutionException;
+import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import lombok.extern.slf4j.Slf4j;
@@ -27,7 +28,7 @@ import org.springframework.boot.ApplicationRunner;
  * // 사용 예시 (spider-batch TcpServerConfig)
  * @Bean
  * public SpiderTcpServer<ManagementContext, ManagementContext> batchTcpServer(...) {
- *     return new SpiderTcpServer<>(9998, 20, new ObjectStreamMessageCodec(), dispatcher);
+ *     return new SpiderTcpServer<>(9998, 20, 100, new ObjectStreamMessageCodec(), dispatcher);
  * }
  * }</pre>
  *
@@ -39,6 +40,8 @@ public class SpiderTcpServer<REQ extends HasCommand, RES> implements Application
 
     private final int port;
     private final int handlerPoolSize;
+    /** 대기 큐 용량 — 초과 시 RejectedExecutionException 발생, 소켓을 즉시 닫아 클라이언트에 신호 */
+    private final int queueCapacity;
     private final MessageCodec<REQ, RES> codec;
     private final CommandDispatcher<REQ, RES> dispatcher;
 
@@ -51,22 +54,29 @@ public class SpiderTcpServer<REQ extends HasCommand, RES> implements Application
     /** 핸들러 스레드 번호 생성용 카운터 */
     private final AtomicInteger handlerCount = new AtomicInteger(0);
 
-    public SpiderTcpServer(int port, int handlerPoolSize,
+    public SpiderTcpServer(int port, int handlerPoolSize, int queueCapacity,
                            MessageCodec<REQ, RES> codec, CommandDispatcher<REQ, RES> dispatcher) {
         this.port = port;
         this.handlerPoolSize = handlerPoolSize;
+        this.queueCapacity = queueCapacity;
         this.codec = codec;
         this.dispatcher = dispatcher;
     }
 
     @Override
     public void run(ApplicationArguments args) {
-        handlerPool = Executors.newFixedThreadPool(handlerPoolSize, r -> {
-            // non-daemon 스레드: JVM 종료 시 진행 중인 요청이 완료될 때까지 대기
-            Thread t = new Thread(r, "spider-tcp-handler-" + port + "-" + handlerCount.incrementAndGet());
-            t.setDaemon(false);
-            return t;
-        });
+        // ArrayBlockingQueue로 큐 상한을 지정해 OOM 방지.
+        // 큐가 가득 차면 RejectedExecutionException → startServer에서 소켓을 즉시 닫아 클라이언트에 신호.
+        handlerPool = new ThreadPoolExecutor(
+                handlerPoolSize, handlerPoolSize,
+                0L, TimeUnit.MILLISECONDS,
+                new ArrayBlockingQueue<>(queueCapacity),
+                r -> {
+                    // non-daemon 스레드: JVM 종료 시 진행 중인 요청이 완료될 때까지 대기
+                    Thread t = new Thread(r, "spider-tcp-handler-" + port + "-" + handlerCount.incrementAndGet());
+                    t.setDaemon(false);
+                    return t;
+                });
         Thread serverThread = new Thread(this::startServer, "spider-tcp-server-" + port);
         // accept 루프 스레드는 daemon: shutdown은 @PreDestroy에서 socket close로 처리
         serverThread.setDaemon(true);
@@ -108,6 +118,10 @@ public class SpiderTcpServer<REQ extends HasCommand, RES> implements Application
             socket.setSoTimeout(60_000);
 
             REQ request = codec.decode(socket.getInputStream());
+            if (request == null) {
+                log.warn("[SpiderTcpServer:{}] 수신된 요청이 null입니다. 소켓을 닫습니다.", port);
+                return;
+            }
             log.info("[SpiderTcpServer:{}] 수신: command={}", port, request.getCommand());
 
             RES response = dispatcher.dispatch(request);
@@ -116,6 +130,9 @@ public class SpiderTcpServer<REQ extends HasCommand, RES> implements Application
             log.info("[SpiderTcpServer:{}] 응답 전송 완료: command={}", port, request.getCommand());
         } catch (IOException e) {
             log.error("[SpiderTcpServer:{}] 클라이언트 처리 실패: {}", port, e.getMessage(), e);
+        } catch (Exception e) {
+            // dispatcher/codec에서 RuntimeException 발생 시 — 소켓을 닫아 클라이언트가 EOF로 인지하도록 함
+            log.error("[SpiderTcpServer:{}] 핸들러 처리 중 예외 발생: {}", port, e.getMessage(), e);
         }
     }
 
