@@ -241,7 +241,7 @@ public class PageController {
         return resolveView(request, "pages/db-log/db-log :: content", model);
     }
 
-    // ── 배치 관리 ── batch_app_manage, batch_his_list
+    // ── 배치 관리 ── batch_app_manage, batch_his_list, batch_running_list
 
     @GetMapping("/batches/apps")
     public String batchApps(HttpServletRequest request, Model model) {
@@ -251,6 +251,11 @@ public class PageController {
     @GetMapping("/batches/history")
     public String batchHistory(HttpServletRequest request, Model model) {
         return resolveView(request, "pages/batch-his-list/batch-his-list :: content", model);
+    }
+
+    @GetMapping("/batches/running")
+    public String batchRunning(HttpServletRequest request, Model model) {
+        return resolveView(request, "pages/batch-running-list/batch-running-list :: content", model);
     }
 
     // ── 오류 관리 ── error_cause_his, error_code

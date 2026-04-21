@@ -105,6 +105,9 @@ menu-resource:
     v3_batch_his_list:
       R: BATCH_HISTORY:R
       W: BATCH_HISTORY:W
+    v3_batch_running_list:
+      R: BATCH_RUNNING:R
+      W: BATCH_RUNNING:W
     v3_error_cause_his:
       R: ERROR_HIS:R
       W: ERROR_HIS:W

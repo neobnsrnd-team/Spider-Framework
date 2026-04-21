@@ -56,6 +56,18 @@
             <scope>runtime</scope>
         </dependency>
 
+        <!-- Actuator: /actuator/health, /actuator/prometheus 엔드포인트 제공 -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-actuator</artifactId>
+        </dependency>
+
+        <!-- Micrometer Prometheus Registry: Prometheus 메트릭 수집 포맷 지원 -->
+        <dependency>
+            <groupId>io.micrometer</groupId>
+            <artifactId>micrometer-registry-prometheus</artifactId>
+        </dependency>
+
         <!-- Validation -->
         <dependency>
             <groupId>org.springframework.boot</groupId>

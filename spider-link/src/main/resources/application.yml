@@ -1,0 +1,42 @@
+# ============================================
+# spider-link Application Configuration
+# ============================================
+# Spider link 연계엔진 — Admin과 demo/backend 간 TCP 중계 미들웨어
+# 통신 흐름: Admin(8080) --TCP(9996)--> spider-link --TCP(9997)--> demo/backend
+# ============================================
+
+spring:
+  profiles:
+    active: default
+
+# HTTP 포트 — Actuator 헬스체크용 (/actuator/health)
+server:
+  port: ${SPIDER_LINK_HTTP_PORT:8082}
+
+# TCP 통신 설정
+tcp:
+  # spider-link TCP 서버 포트 — Admin이 이 포트로 커맨드를 전송한다
+  server:
+    port: ${SPIDER_LINK_TCP_PORT:9996}
+    # 동시 접속 급증 시 무제한 스레드 생성 방지용 핸들러 풀 크기
+    handler-pool-size: ${SPIDER_LINK_HANDLER_POOL_SIZE:20}
+  # 프록시 대상 — demo/backend TCP 서버
+  demo-backend:
+    host: ${DEMO_BACKEND_TCP_HOST:localhost}
+    port: ${DEMO_BACKEND_TCP_PORT:9997}
+
+# Actuator 설정 — health 엔드포인트만 노출
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      show-details: never
+
+# 로깅
+logging:
+  level:
+    root: INFO
+    com.example.spiderlink: INFO

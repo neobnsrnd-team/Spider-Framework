@@ -685,4 +685,21 @@ INSERT INTO FWK_CMS_SERVER_INSTANCE (
     'system'
 );
 
+-- ============================================================
+-- 실행중인 배치/스케줄 메뉴 추가 (이슈 #47)
+-- ============================================================
+
+-- 1. 메뉴 등록 (v3_batch_manage 하위 3번째 항목으로 추가)
+INSERT INTO FWK_MENU (MENU_ID, PRIOR_MENU_ID, SORT_ORDER, MENU_NAME, MENU_URL, DISPLAY_YN, USE_YN, LAST_UPDATE_DTIME, LAST_UPDATE_USER_ID)
+VALUES ('v3_batch_executing_list', 'v3_batch_manage', 3, '실행중인 배치/스케줄', '/batches/running', 'Y', 'Y', TO_CHAR(SYSDATE, 'YYYYMMDDHH24MISS'), 'system');
+
+-- 2. admin 사용자에 메뉴 권한 부여
+INSERT INTO FWK_USER_MENU (USER_ID, MENU_ID, AUTH_CODE, LAST_UPDATE_DTIME, LAST_UPDATE_USER_ID)
+VALUES ('admin', 'v3_batch_executing_list', 'W', TO_CHAR(SYSDATE, 'YYYYMMDDHH24MISS'), 'system');
+
+-- 3. ADMIN 롤에 메뉴 권한 부여
+INSERT INTO FWK_ROLE_MENU (ROLE_ID, MENU_ID, AUTH_CODE)
+VALUES ('ADMIN', 'v3_batch_executing_list', 'W');
+
+
 COMMIT;
