@@ -1,5 +1,6 @@
 package com.example.admin_demo.domain.reactcmsdashboard.mapper;
 
+import com.example.admin_demo.domain.reactcmsdashboard.dto.ReactCmsApprovalStatusResponse;
 import com.example.admin_demo.domain.reactcmsdashboard.dto.ReactCmsDashboardListRequest;
 import com.example.admin_demo.domain.reactcmsdashboard.dto.ReactCmsDashboardPageResponse;
 import java.util.List;
@@ -43,6 +44,13 @@ public interface ReactCmsDashboardMapper {
      * @return 승인자 USER_NAME, 없으면 null
      */
     String findApproverNameById(@Param("approverId") String approverId);
+
+    /**
+     * 페이지 승인 상태 조회
+     *
+     * @return 승인 상태·반려 사유, 페이지 없으면 null
+     */
+    ReactCmsApprovalStatusResponse findApprovalStatus(@Param("pageId") String pageId);
 
     /** 승인 요청 — APPROVE_STATE = 'PENDING', 승인자 정보 저장 */
     void requestApproval(

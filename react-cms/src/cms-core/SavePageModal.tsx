@@ -58,6 +58,8 @@ export default function SavePageModal({ page, onClose, onSave, initialPageName }
         await onSave(page, params);
       }
       setStatus("success");
+      // 팝업으로 열린 경우 어드민 대시보드에 저장 완료 신호 전달
+      window.opener?.postMessage('reactCmsSaved', '*');
     } catch (e) {
       setErrorMsg(e instanceof Error ? e.message : "알 수 없는 오류가 발생했습니다.");
       setStatus("error");

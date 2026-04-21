@@ -225,7 +225,7 @@
             $('#approveRequestExpiredDate').val(row.expiredDate || '');
 
             // 승인자 목록 로드
-            fetch('/api/auth/cms-approvers')
+            fetch('/api/auth/react-cms-approvers')
                 .then(r => r.json())
                 .then(res => {
                     if (!res.success) return;
@@ -298,13 +298,21 @@
             ReactCmsDashboardPage.load(1);
         });
 
-        // [새 페이지] 버튼 — 빌더 팝업 열기
+        // [새 페이지] 버튼 — 빌더 팝업 열기 (창 참조 보관)
         $('#btnNewPage').on('click', function() {
-            window.open(
+            ReactCmsDashboardPage._editorWin = window.open(
                 '/react-cms/builder',
                 'reactCmsEditor',
                 'width=1280,height=800,scrollbars=yes,resizable=yes'
             );
+        });
+
+        // 빌더에서 저장 완료 신호 수신 → 팝업 닫기 + 목록 새로고침
+        window.addEventListener('message', function(e) {
+            if (e.data === 'reactCmsSaved') {
+                ReactCmsDashboardPage._editorWin?.close();
+                ReactCmsDashboardPage.load(1);
+            }
         });
 
         $('#btnApproveRequestConfirm').on('click', function() { ReactCmsDashboardPage._submitApproveRequest(); });

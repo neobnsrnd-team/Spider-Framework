@@ -1,5 +1,6 @@
 package com.example.admin_demo.domain.reactcmsdashboard.controller;
 
+import com.example.admin_demo.domain.reactcmsdashboard.dto.ReactCmsApprovalStatusResponse;
 import com.example.admin_demo.domain.reactcmsdashboard.dto.ReactCmsDashboardApproveRequestDto;
 import com.example.admin_demo.domain.reactcmsdashboard.dto.ReactCmsDashboardListRequest;
 import com.example.admin_demo.domain.reactcmsdashboard.dto.ReactCmsDashboardPageResponse;
@@ -27,9 +28,10 @@ import org.springframework.web.bind.annotation.RestController;
  *
  * <h4>API 엔드포인트:</h4>
  * <ul>
- *   <li>GET    /api/react-cms-dashboard/pages                          — 내 페이지 목록</li>
- *   <li>DELETE /api/react-cms-dashboard/pages/{pageId}                 — 페이지 삭제</li>
- *   <li>PATCH  /api/react-cms-dashboard/pages/{pageId}/approve-request — 승인 요청</li>
+ *   <li>GET    /api/react-cms-dashboard/pages                                  — 내 페이지 목록</li>
+ *   <li>GET    /api/react-cms-dashboard/pages/{pageId}/approval-status         — 승인 상태 조회</li>
+ *   <li>DELETE /api/react-cms-dashboard/pages/{pageId}                         — 페이지 삭제</li>
+ *   <li>PATCH  /api/react-cms-dashboard/pages/{pageId}/approve-request         — 승인 요청</li>
  * </ul>
  *
  * <p>새 페이지 생성은 react-cms 빌더(/react-cms/builder)에서 직접 수행하므로 POST 엔드포인트가 없다.
@@ -55,6 +57,15 @@ public class ReactCmsDashboardController {
 
         return ResponseEntity.ok(ApiResponse.success(
                 reactCmsDashboardService.findMyPageList(req, userDetails.getUserId(), pageRequest)));
+    }
+
+    /** 승인 상태 조회 — react-cms 빌더가 편집 모드 진입 시 호출 (REACT-CMS:R) */
+    @GetMapping("/api/react-cms-dashboard/pages/{pageId}/approval-status")
+    @PreAuthorize("hasAuthority('REACT-CMS:R')")
+    public ResponseEntity<ApiResponse<ReactCmsApprovalStatusResponse>> findApprovalStatus(
+            @PathVariable String pageId) {
+
+        return ResponseEntity.ok(ApiResponse.success(reactCmsDashboardService.findApprovalStatus(pageId)));
     }
 
     /**

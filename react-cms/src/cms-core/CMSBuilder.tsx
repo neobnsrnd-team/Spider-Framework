@@ -53,11 +53,15 @@ export interface CMSBuilderProps {
   mode?: "create" | "edit";
   /** 편집 모드에서 저장 모달의 초기 페이지명 */
   initialPageName?: string;
+  /** 현재 페이지 승인 상태 (WORK / PENDING / APPROVED / REJECTED) */
+  approveState?: string;
+  /** 반려 사유 — REJECTED 상태일 때 배너에 표시 */
+  rejectedReason?: string | null;
 }
 
 // ── CMSBuilder ─────────────────────────────────────────────────────────────────
 
-export function CMSBuilder({ onSave, initialPage, mode = "create", initialPageName }: CMSBuilderProps) {
+export function CMSBuilder({ onSave, initialPage, mode = "create", initialPageName, approveState, rejectedReason }: CMSBuilderProps) {
   const blockMeta = useContext(BlockMetaContext);
   const blockRegistry = useContext(BlockRegistryContext);
   const overlayTemplates = useContext(OverlayTemplatesContext);
@@ -205,6 +209,16 @@ export function CMSBuilder({ onSave, initialPage, mode = "create", initialPageNa
 
   const page = builder.getPage();
 
+  // APPROVED 상태에서 저장 시 확인 후 모달 열기
+  function handleSavePageClick() {
+    if (approveState === "APPROVED") {
+      if (!window.confirm(
+        "이 페이지는 승인된 상태입니다.\n수정하면 승인이 취소되고 '작업 중' 상태로 돌아갑니다.\n계속 수정하시겠습니까?"
+      )) return;
+    }
+    setSaveOpen(true);
+  }
+
   // page 선언 이후에 위치해야 TDZ 에러가 발생하지 않음
   const handlePreview = useCallback(() => {
     localStorage.setItem("cms_preview", JSON.stringify(page));
@@ -238,10 +252,25 @@ export function CMSBuilder({ onSave, initialPage, mode = "create", initialPageNa
           onImport={handleImport}
           onExport={() => downloadPageJson(page)}
           onViewCode={() => setCodeOpen(true)}
-          onSavePage={() => setSaveOpen(true)}
+          onSavePage={handleSavePageClick}
           onPreview={handlePreview}
           onClear={builder.clearBlocks}
+          approveState={approveState}
         />
+
+        {/* ── 승인 상태 배너 ── */}
+        {approveState === "PENDING" && (
+          <div className="px-4 py-2 bg-yellow-50 border-b border-yellow-200 text-xs text-yellow-800 flex items-center gap-2 flex-shrink-0">
+            <span>⏳</span>
+            <span>승인 요청 중인 페이지입니다. 승인이 완료되거나 요청이 취소된 후 수정할 수 있습니다.</span>
+          </div>
+        )}
+        {approveState === "REJECTED" && (
+          <div className="px-4 py-2 bg-red-50 border-b border-red-200 text-xs text-red-800 flex items-center gap-2 flex-shrink-0">
+            <span>⚠</span>
+            <span>반려 사유: {rejectedReason || "(사유 없음)"}</span>
+          </div>
+        )}
 
         <div className="flex flex-1 overflow-hidden">
           {/* ── 좌측: 블록 팔레트 + Overlays ── */}
@@ -333,6 +362,7 @@ function Toolbar({
   onSavePage,
   onPreview,
   onClear,
+  approveState,
 }: {
   blockCount: number;
   layoutType: string | undefined;
@@ -345,7 +375,9 @@ function Toolbar({
   onSavePage: () => void;
   onPreview: () => void;
   onClear: () => void;
+  approveState?: string;
 }) {
+  const isPending = approveState === "PENDING";
   return (
     <header className="flex items-center justify-between px-4 h-12 border-b border-gray-200 bg-white flex-shrink-0">
       <div className="flex items-center gap-2">
@@ -381,8 +413,12 @@ function Toolbar({
         <ToolbarButton onClick={onViewCode} disabled={blockCount === 0 && !layoutType}>
           코드 보기
         </ToolbarButton>
-        <ToolbarButton onClick={onSavePage} variant="success" disabled={blockCount === 0 && !layoutType}>
-          페이지 저장
+        <ToolbarButton
+          onClick={onSavePage}
+          variant="success"
+          disabled={(blockCount === 0 && !layoutType) || isPending}
+        >
+          {isPending ? "승인 요청 중" : "페이지 저장"}
         </ToolbarButton>
         <ToolbarButton onClick={onPreview} variant="primary" disabled={blockCount === 0}>
           미리보기

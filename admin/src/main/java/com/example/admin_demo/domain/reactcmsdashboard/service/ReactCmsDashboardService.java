@@ -1,5 +1,6 @@
 package com.example.admin_demo.domain.reactcmsdashboard.service;
 
+import com.example.admin_demo.domain.reactcmsdashboard.dto.ReactCmsApprovalStatusResponse;
 import com.example.admin_demo.domain.reactcmsdashboard.dto.ReactCmsDashboardApproveRequestDto;
 import com.example.admin_demo.domain.reactcmsdashboard.dto.ReactCmsDashboardListRequest;
 import com.example.admin_demo.domain.reactcmsdashboard.dto.ReactCmsDashboardPageResponse;
@@ -56,6 +57,15 @@ public class ReactCmsDashboardService {
             reactCmsDashboardMapper.deleteHard(pageId, userId);
             log.info("React CMS 페이지 하드 삭제 (이력 없음): pageId={}, userId={}", pageId, userId);
         }
+    }
+
+    /** 페이지 승인 상태 조회 — react-cms 빌더가 편집 모드 진입 시 호출 */
+    public ReactCmsApprovalStatusResponse findApprovalStatus(String pageId) {
+        ReactCmsApprovalStatusResponse status = reactCmsDashboardMapper.findApprovalStatus(pageId);
+        if (status == null) {
+            throw new NotFoundException("페이지를 찾을 수 없습니다. pageId=" + pageId);
+        }
+        return status;
     }
 
     /** 승인 요청 — APPROVE_STATE: WORK / REJECTED / APPROVED → PENDING */

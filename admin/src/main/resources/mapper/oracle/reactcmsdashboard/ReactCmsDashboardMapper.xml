@@ -135,6 +135,19 @@
           AND USER_STATE_CODE = '1'
     </select>
 
+    <!-- ==================== 승인 상태 조회 ==================== -->
+
+    <select id="findApprovalStatus"
+            resultType="com.example.admin_demo.domain.reactcmsdashboard.dto.ReactCmsApprovalStatusResponse">
+        SELECT
+            APPROVE_STATE   AS approveState,
+            REJECTED_REASON AS rejectedReason
+        FROM SPW_CMS_PAGE
+        WHERE PAGE_ID   = #{pageId}
+          AND PAGE_TYPE = 'REACT'
+          AND USE_YN    = 'Y'
+    </select>
+
     <!-- ==================== 승인 요청 — PENDING 전환 ==================== -->
 
     <update id="requestApproval">

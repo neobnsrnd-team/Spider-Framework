@@ -40,19 +40,30 @@ function BuilderPage() {
 
   const [initialPage, setInitialPage] = useState<CMSPage | undefined>(undefined);
   const [initialPageName, setInitialPageName] = useState<string | undefined>(undefined);
+  const [approveState, setApproveState] = useState<string | undefined>(undefined);
+  const [rejectedReason, setRejectedReason] = useState<string | null>(null);
   const [loading, setLoading] = useState(!!pageId);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!pageId) return;
 
-    fetch(`${cmsBase}/api/load`, {
+    const pageLoad = fetch(`${cmsBase}/api/load`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ pageId }),
-    })
-      .then((r) => r.json())
-      .then((data: { page?: { PAGE_HTML?: string | null; PAGE_NAME?: string } | null }) => {
+    }).then((r) => r.json());
+
+    // admin 연동 모드에서만 승인 상태 조회
+    const approvalLoad = isAdminMode
+      ? fetch(`/api/react-cms-dashboard/pages/${pageId}/approval-status`).then((r) => r.json())
+      : Promise.resolve(null);
+
+    Promise.all([pageLoad, approvalLoad])
+      .then(([data, approvalData]: [
+        { page?: { PAGE_HTML?: string | null; PAGE_NAME?: string } | null },
+        { data?: { approveState?: string; rejectedReason?: string | null } } | null,
+      ]) => {
         const row = data.page;
         if (!row) {
           setError("페이지를 찾을 수 없습니다.");
@@ -69,6 +80,10 @@ function BuilderPage() {
           } catch {
             setError("페이지 데이터를 불러올 수 없습니다.");
           }
+        }
+        if (approvalData?.data) {
+          setApproveState(approvalData.data.approveState);
+          setRejectedReason(approvalData.data.rejectedReason ?? null);
         }
       })
       .catch(() => setError("페이지 불러오기 중 오류가 발생했습니다."))
@@ -97,6 +112,8 @@ function BuilderPage() {
       initialPage={initialPage}
       mode={pageId ? "edit" : "create"}
       initialPageName={initialPageName}
+      approveState={approveState}
+      rejectedReason={rejectedReason}
     />
   );
 }
