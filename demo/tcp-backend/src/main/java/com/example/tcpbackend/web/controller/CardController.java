@@ -32,6 +32,7 @@ import org.slf4j.LoggerFactory;
 import com.example.tcpbackend.domain.card.CardService;
 import com.example.tcpbackend.domain.card.CardService.BusinessException;
 import com.example.tcpbackend.domain.card.CardService.PinException;
+import com.example.tcpbackend.tcp.SpiderLinkClient;
 import com.example.tcpbackend.tcp.session.SessionInfo;
 
 /**
@@ -51,9 +52,11 @@ public class CardController {
     private static final Logger log = LoggerFactory.getLogger(CardController.class);
 
     private final CardService cardService;
+    private final SpiderLinkClient spiderLinkClient;
 
-    public CardController(CardService cardService) {
-        this.cardService = cardService;
+    public CardController(CardService cardService, SpiderLinkClient spiderLinkClient) {
+        this.cardService      = cardService;
+        this.spiderLinkClient = spiderLinkClient;
     }
 
     /**
@@ -79,17 +82,21 @@ public class CardController {
      * @param cardId 카드번호 (URL 경로 변수)
      * @return { payableAmount, creditLimit }
      */
+    @SuppressWarnings("unchecked")
     @GetMapping("/{cardId}/payable-amount")
     public ResponseEntity<?> getPayableAmount(@PathVariable String cardId,
                                                HttpServletRequest request) {
         SessionInfo session = (SessionInfo) request.getAttribute("session");
-        try {
-            Map<String, Object> data = cardService.getPayableAmount(session.getUserId(), cardId);
-            return ResponseEntity.ok(data);
-        } catch (Exception e) {
+
+        Map<String, Object> slResponse = spiderLinkClient.send(
+                "DEMO_PAYABLE_AMT", Map.of("userId", session.getUserId(), "cardId", cardId));
+
+        if (!Boolean.TRUE.equals(slResponse.get("success"))) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(Map.of("error", "가능금액 조회 중 오류가 발생했습니다."));
+                    .body(Map.of("error", slResponse.getOrDefault("error", "가능금액 조회 실패")));
         }
+
+        return ResponseEntity.ok((Map<String, Object>) slResponse.get("payload"));
     }
 
     /**

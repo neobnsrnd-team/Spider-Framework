@@ -28,7 +28,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.example.tcpbackend.domain.auth.AuthService;
-import com.example.tcpbackend.domain.auth.dto.UserRow;
+import com.example.tcpbackend.tcp.SpiderLinkClient;
 import com.example.tcpbackend.tcp.session.SessionInfo;
 import com.example.tcpbackend.tcp.session.TcpSessionManager;
 
@@ -52,11 +52,14 @@ public class AuthController {
     private static final String REFRESH_COOKIE = "hnc_refresh";
 
     private final AuthService authService;
+    private final SpiderLinkClient spiderLinkClient;
     private final TcpSessionManager sessionManager;
 
-    public AuthController(AuthService authService, TcpSessionManager sessionManager) {
-        this.authService = authService;
-        this.sessionManager = sessionManager;
+    public AuthController(AuthService authService, SpiderLinkClient spiderLinkClient,
+                          TcpSessionManager sessionManager) {
+        this.authService      = authService;
+        this.spiderLinkClient = spiderLinkClient;
+        this.sessionManager   = sessionManager;
     }
 
     // ── 엔드포인트 ────────────────────────────────────────────────────────────
@@ -68,31 +71,36 @@ public class AuthController {
      * @param body     { userId, password }
      * @param response Refresh Token 쿠키 설정용
      */
+    @SuppressWarnings("unchecked")
     @PostMapping("/login")
     public ResponseEntity<?> login(@RequestBody LoginRequest body, HttpServletResponse response) {
-        try {
-            UserRow user = authService.login(body.userId(), body.password());
-            String sessionId = sessionManager.createSession(
-                    user.userId(), user.userName(), user.userGrade());
+        Map<String, Object> slResponse = spiderLinkClient.send(
+                "DEMO_AUTH_LOGIN", Map.of("userId", body.userId(), "password", body.password()));
 
-            // httpOnly 쿠키에 Refresh Token 설정 (브라우저가 /api/auth/* 요청 시 자동 전송)
-            response.addCookie(buildRefreshCookie(sessionId, 7 * 24 * 3600));
-
-            Map<String, Object> data = new LinkedHashMap<>();
-            data.put("success", true);
-            data.put("userId", user.userId());
-            data.put("userName", user.userName());
-            data.put("userGrade", user.userGrade());
-            data.put("token", sessionId);  // 프론트엔드가 localStorage에 저장하는 Access Token
-            data.put("lastLogin", AuthService.formatLoginDtime(user.lastLoginDtime()));
-
-            return ResponseEntity.ok(data);
-
-        } catch (IllegalArgumentException | IllegalStateException e) {
-            // 아이디/비밀번호 오류 or 비활성 계정 → 401
+        if (!Boolean.TRUE.equals(slResponse.get("success"))) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body(Map.of("success", false, "error", e.getMessage()));
+                    .body(Map.of("success", false,
+                            "error", slResponse.getOrDefault("error", "로그인 실패")));
         }
+
+        Map<String, Object> userData = (Map<String, Object>) slResponse.get("payload");
+        String userId    = String.valueOf(userData.get("userId"));
+        String userName  = String.valueOf(userData.get("userName"));
+        String userGrade = String.valueOf(userData.getOrDefault("userGrade", ""));
+
+        String sessionId = sessionManager.createSession(userId, userName, userGrade);
+        response.addCookie(buildRefreshCookie(sessionId, 7 * 24 * 3600));
+
+        Map<String, Object> data = new LinkedHashMap<>();
+        data.put("success", true);
+        data.put("userId",    userId);
+        data.put("userName",  userName);
+        data.put("userGrade", userGrade);
+        data.put("token",     sessionId);
+        data.put("lastLogin", AuthService.formatLoginDtime(
+                String.valueOf(userData.getOrDefault("lastLoginDtime", ""))));
+
+        return ResponseEntity.ok(data);
     }
 
     /**
@@ -143,16 +151,20 @@ public class AuthController {
      * 현재 사용자 프로필 조회.
      * 대시보드 진입 시 lastLogin이 없는 경우를 보완하는 용도로 사용된다.
      */
+    @SuppressWarnings("unchecked")
     @GetMapping("/me")
     public ResponseEntity<?> me(HttpServletRequest request) {
         SessionInfo session = (SessionInfo) request.getAttribute("session");
-        try {
-            Map<String, Object> profile = authService.getProfile(session.getUserId());
-            return ResponseEntity.ok(profile);
-        } catch (IllegalArgumentException e) {
+
+        Map<String, Object> slResponse = spiderLinkClient.send(
+                "DEMO_AUTH_ME", Map.of("userId", session.getUserId()));
+
+        if (!Boolean.TRUE.equals(slResponse.get("success"))) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                    .body(Map.of("error", e.getMessage()));
+                    .body(Map.of("error", slResponse.getOrDefault("error", "프로필 조회 실패")));
         }
+
+        return ResponseEntity.ok((Map<String, Object>) slResponse.get("payload"));
     }
 
     // ── 내부 유틸 ────────────────────────────────────────────────────────────

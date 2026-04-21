@@ -26,6 +26,10 @@ auth:
   pin-max-attempts: 3                 # PIN 최대 허용 실패 횟수 (3회 초과 시 잠금)
   admin-secret: ${ADMIN_SECRET:admin-secret}  # Admin 전용 커맨드 인증 비밀 키
 
+spiderlink:
+  host: ${SPIDERLINK_HOST:localhost}  # spider-link 미들웨어 TCP 호스트
+  port: ${SPIDERLINK_PORT:9995}       # spider-link 미들웨어 TCP 포트
+
 logging:
   level:
     com.example.tcpbackend: DEBUG

@@ -5,13 +5,13 @@
  */
 package com.example.tcpbackend.handler;
 
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
 import org.springframework.stereotype.Component;
 
-import com.example.tcpbackend.domain.auth.AuthService;
-import com.example.tcpbackend.domain.auth.dto.UserRow;
+import com.example.tcpbackend.tcp.SpiderLinkClient;
 import com.example.tcpbackend.tcp.TcpRequest;
 import com.example.tcpbackend.tcp.TcpResponse;
 import com.example.tcpbackend.tcp.session.SessionInfo;
@@ -28,12 +28,12 @@ import io.netty.channel.Channel;
 @Component
 public class AuthHandler {
 
-    private final AuthService authService;
+    private final SpiderLinkClient spiderLinkClient;
     private final TcpSessionManager sessionManager;
 
-    public AuthHandler(AuthService authService, TcpSessionManager sessionManager) {
-        this.authService = authService;
-        this.sessionManager = sessionManager;
+    public AuthHandler(SpiderLinkClient spiderLinkClient, TcpSessionManager sessionManager) {
+        this.spiderLinkClient = spiderLinkClient;
+        this.sessionManager   = sessionManager;
     }
 
     /**
@@ -44,6 +44,7 @@ public class AuthHandler {
      * @param channel 요청을 보낸 Netty 채널 (세션 생성에 사용)
      * @return 로그인 결과 응답 (sessionId 포함)
      */
+    @SuppressWarnings("unchecked")
     public TcpResponse handleLogin(TcpRequest request, Channel channel) {
         JsonNode payload = request.getPayload();
         if (payload == null) {
@@ -57,27 +58,31 @@ public class AuthHandler {
             return TcpResponse.error("LOGIN", "아이디와 비밀번호를 입력하세요.");
         }
 
-        try {
-            UserRow user = authService.login(userId, password);
+        Map<String, Object> reqPayload = new HashMap<>();
+        reqPayload.put("userId",   userId);
+        reqPayload.put("password", password);
 
-            // 세션 생성 — HTTP JWT 역할을 TCP 세션이 대체
-            String sessionId = sessionManager.createSession(
-                    user.userId(), user.userName(), user.userGrade(), channel);
+        Map<String, Object> response = spiderLinkClient.send("DEMO_AUTH_LOGIN", reqPayload);
 
-            Map<String, Object> data = new LinkedHashMap<>();
-            data.put("userId",    user.userId());
-            data.put("userName",  user.userName());
-            data.put("userGrade", user.userGrade());
-            data.put("lastLogin", AuthService.formatLoginDtime(user.lastLoginDtime()));
-
-            return TcpResponse.okWithSession("LOGIN", sessionId, data);
-
-        } catch (IllegalArgumentException e) {
-            return TcpResponse.error("LOGIN", e.getMessage());
-        } catch (IllegalStateException e) {
-            // 비활성 계정
-            return TcpResponse.error("LOGIN", e.getMessage());
+        if (!Boolean.TRUE.equals(response.get("success"))) {
+            return TcpResponse.error("LOGIN", String.valueOf(response.getOrDefault("error", "로그인 실패")));
         }
+
+        Map<String, Object> userData = (Map<String, Object>) response.get("payload");
+        String resUserId   = String.valueOf(userData.get("userId"));
+        String resUserName = String.valueOf(userData.get("userName"));
+        String resGrade    = String.valueOf(userData.getOrDefault("userGrade", ""));
+
+        // 세션 생성 — spider-link 인증 확인 후 tcp-backend 세션 발급
+        String sessionId = sessionManager.createSession(resUserId, resUserName, resGrade, channel);
+
+        Map<String, Object> data = new LinkedHashMap<>();
+        data.put("userId",    resUserId);
+        data.put("userName",  resUserName);
+        data.put("userGrade", resGrade);
+        data.put("lastLogin", userData.getOrDefault("lastLoginDtime", ""));
+
+        return TcpResponse.okWithSession("LOGIN", sessionId, data);
     }
 
     /**
@@ -100,12 +105,18 @@ public class AuthHandler {
      * @param session 검증된 세션 정보
      * @return 사용자 프로필 응답
      */
+    @SuppressWarnings("unchecked")
     public TcpResponse handleGetProfile(TcpRequest request, SessionInfo session) {
-        try {
-            Map<String, Object> data = authService.getProfile(session.getUserId());
-            return TcpResponse.ok("GET_PROFILE", data);
-        } catch (IllegalArgumentException e) {
-            return TcpResponse.error("GET_PROFILE", e.getMessage());
+        Map<String, Object> reqPayload = new HashMap<>();
+        reqPayload.put("userId", session.getUserId());
+
+        Map<String, Object> response = spiderLinkClient.send("DEMO_AUTH_ME", reqPayload);
+
+        if (!Boolean.TRUE.equals(response.get("success"))) {
+            return TcpResponse.error("GET_PROFILE", String.valueOf(response.getOrDefault("error", "프로필 조회 실패")));
         }
+
+        Map<String, Object> data = (Map<String, Object>) response.get("payload");
+        return TcpResponse.ok("GET_PROFILE", data);
     }
 }

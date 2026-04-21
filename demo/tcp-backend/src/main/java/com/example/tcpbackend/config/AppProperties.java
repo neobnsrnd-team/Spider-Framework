@@ -25,8 +25,12 @@ public class AppProperties {
     @Autowired
     private Auth auth;
 
+    @Autowired
+    private SpiderLink spiderLink;
+
     public Tcp getTcp() { return tcp; }
     public Auth getAuth() { return auth; }
+    public SpiderLink getSpiderLink() { return spiderLink; }
 
     /** TCP 서버 관련 설정 — application.yml의 tcp.* 에 바인딩 */
     @Configuration
@@ -49,6 +53,21 @@ public class AppProperties {
         public void setWorkerThreads(int workerThreads) { this.workerThreads = workerThreads; }
         public int getMaxFrameLength() { return maxFrameLength; }
         public void setMaxFrameLength(int maxFrameLength) { this.maxFrameLength = maxFrameLength; }
+    }
+
+    /** spider-link 미들웨어 접속 정보 — application.yml의 spiderlink.* 에 바인딩 */
+    @Configuration
+    @ConfigurationProperties(prefix = "spiderlink")
+    public static class SpiderLink {
+        /** spider-link TCP 서버 호스트 */
+        private String host = "localhost";
+        /** spider-link TCP 서버 포트 */
+        private int port = 9995;
+
+        public String getHost() { return host; }
+        public void setHost(String host) { this.host = host; }
+        public int getPort() { return port; }
+        public void setPort(int port) { this.port = port; }
     }
 
     /** 인증 관련 설정 — application.yml의 auth.* 에 바인딩 */
