@@ -132,11 +132,20 @@ export async function getCurrentUser(cookieHeader: string): Promise<CurrentUser>
     return GUEST_USER;
   }
 
+  // 말미 슬래시 제거로 URL 이중 슬래시 방지
+  const baseUrl = authEnv.SPIDER_ADMIN_API_URL.replace(/\/$/, '');
+
+  // 5초 타임아웃 — Spider Admin 응답 지연 시 Vite 플러그인 전체가 블로킹되는 것을 방지
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 5_000);
+
   try {
-    const response = await fetch(`${authEnv.SPIDER_ADMIN_API_URL}/api/auth/me`, {
+    const response = await fetch(`${baseUrl}/api/auth/me`, {
       // 요청자의 쿠키(JWT 세션)를 Spider Admin에 그대로 전달해 사용자 식별
       headers: { cookie: cookieHeader },
+      signal: controller.signal,
     });
+    clearTimeout(timeoutId);
 
     if (!response.ok) {
       return GUEST_USER;

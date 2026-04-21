@@ -55,11 +55,6 @@ const router = createBrowserRouter(
           path: "preview",
           element: <PreviewPage />,
         },
-        // 대시보드 추가 예정:
-        // {
-        //   path: "dashboard",
-        //   element: <DashboardPage />,
-        // },
       ],
     },
   ],

@@ -213,6 +213,32 @@ describe('getCurrentUser — AUTH_BYPASS=false', () => {
       expect.objectContaining({ headers: { cookie: 'session=mysession' } }),
     );
   });
+
+  it('SPIDER_ADMIN_API_URL 말미 슬래시를 제거하고 URL을 정규화', async () => {
+    process.env.SPIDER_ADMIN_API_URL = 'http://localhost:8080/';
+    const mockFetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ success: true, data: { userId: 'u4', userName: '테스트', roleId: 'react-user', authorities: [] } }),
+    });
+    vi.stubGlobal('fetch', mockFetch);
+
+    await getCurrentUser('');
+
+    // 말미 슬래시가 제거되어 이중 슬래시 없이 호출되어야 함
+    expect(mockFetch).toHaveBeenCalledWith(
+      'http://localhost:8080/api/auth/me',
+      expect.anything(),
+    );
+  });
+
+  it('타임아웃(AbortError) 발생 시 GUEST 반환', async () => {
+    process.env.SPIDER_ADMIN_API_URL = 'http://localhost:8080';
+    const abortError = new DOMException('The operation was aborted.', 'AbortError');
+    vi.stubGlobal('fetch', vi.fn().mockRejectedValue(abortError));
+
+    const user = await getCurrentUser('');
+    expect(user.roleId).toBe('guest');
+  });
 });
 
 // ── requireCmsRead / requireCmsWrite ─────────────────────────────────────────
