@@ -177,7 +177,7 @@ class CmsDeployServiceTest {
                 .pageId(PAGE_ID)
                 .pageName("테스트 페이지")
                 .createUserName("홍길동")
-                .deployedUrl("http://133.186.135.23:3001/deployed/" + PAGE_ID + ".html")
+                .deployedUrl("http://133.186.135.23:3001/cms/deployed/" + PAGE_ID + ".html")
                 .build();
     }
 

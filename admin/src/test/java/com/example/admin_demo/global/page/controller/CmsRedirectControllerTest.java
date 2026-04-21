@@ -4,6 +4,7 @@ import static org.springframework.security.test.web.servlet.request.SecurityMock
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.view;
 
 import com.example.admin_demo.domain.user.enums.UserState;
 import com.example.admin_demo.global.security.CustomUserDetails;
@@ -27,41 +28,43 @@ class CmsRedirectControllerTest {
     private MockMvc mockMvc;
 
     @Test
-    @DisplayName("cms_admin role redirects /cms to /cms-admin/approvals")
+    @DisplayName("cms_admin role redirects /cms/user-dashboard to /cms-admin/approvals")
     void cmsRoot_cmsAdminRole_redirectsApprovals() throws Exception {
-        mockMvc.perform(get("/cms").with(user(userDetails("admin", "cms_admin", "CMS:W"))))
+        mockMvc.perform(get("/cms/user-dashboard").with(user(userDetails("admin", "cms_admin", "CMS:W"))))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/cms-admin/approvals"));
     }
 
     @Test
-    @DisplayName("ADMIN role redirects /cms to /cms-admin/approvals")
+    @DisplayName("ADMIN role redirects /cms/user-dashboard to /cms-admin/approvals")
     void cmsRoot_adminRole_redirectsApprovals() throws Exception {
-        mockMvc.perform(get("/cms").with(user(userDetails("admin", "ADMIN", "CMS:W"))))
+        mockMvc.perform(get("/cms/user-dashboard").with(user(userDetails("admin", "ADMIN", "CMS:W"))))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/cms-admin/approvals"));
     }
 
     @Test
-    @DisplayName("cms_user role redirects /cms to configured CMS user URL")
-    void cmsRoot_cmsUserRole_redirectsConfiguredCmsUserUrl() throws Exception {
-        mockMvc.perform(get("/cms").with(user(userDetails("worker", "cms_user", "CMS:R"))))
+    @DisplayName("cms_user role — 직접 브라우저 접근 시 CMS_USER_URL로 redirect")
+    void cmsRoot_cmsUserRole_directAccess_redirectsConfiguredCmsUserUrl() throws Exception {
+        mockMvc.perform(get("/cms/user-dashboard").with(user(userDetails("worker", "cms_user", "CMS:R"))))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("http://133.186.135.23:3001/"));
     }
 
     @Test
-    @DisplayName("/cms/ trailing slash follows same role policy")
-    void cmsRootSlash_cmsAdminRole_redirectsApprovals() throws Exception {
-        mockMvc.perform(get("/cms/").with(user(userDetails("admin", "cms_admin", "CMS:W"))))
-                .andExpect(status().is3xxRedirection())
-                .andExpect(redirectedUrl("/cms-admin/approvals"));
+    @DisplayName("cms_user role — 탭 AJAX 요청 시 cms-user-redirect 뷰 반환")
+    void cmsRoot_cmsUserRole_tabRequest_returnsCmsUserRedirectView() throws Exception {
+        mockMvc.perform(get("/cms/user-dashboard")
+                        .header("X-Tab-Request", "true")
+                        .with(user(userDetails("worker", "cms_user", "CMS:R"))))
+                .andExpect(status().isOk())
+                .andExpect(view().name("cms-user-redirect"));
     }
 
     @Test
-    @DisplayName("/cms requires authentication")
+    @DisplayName("/cms/user-dashboard requires authentication")
     void cmsRoot_unauthenticated_returnsUnauthorized() throws Exception {
-        mockMvc.perform(get("/cms")).andExpect(status().isUnauthorized());
+        mockMvc.perform(get("/cms/user-dashboard")).andExpect(status().isUnauthorized());
     }
 
     private CustomUserDetails userDetails(String userId, String roleId, String authority) {
