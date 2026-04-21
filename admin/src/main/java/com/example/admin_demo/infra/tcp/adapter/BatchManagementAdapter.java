@@ -58,9 +58,21 @@ public class BatchManagementAdapter implements ManagementAdapter<ManagementConte
                     .build();
         }
 
-        // FWK_WAS_INSTANCE.PORT는 HTTP 모니터링 포트(8081)를 저장하므로 TCP 포트로 사용하지 않는다.
-        // TCP 포트는 application.yml의 tcp.batch-was.port(기본값 9998) 설정값만 사용한다.
+        // FWK_WAS_INSTANCE.PORT는 TCP 관리 포트(9998)를 저장한다.
+        // 인스턴스별 포트가 설정된 경우 우선 사용, 없으면 전역 설정 포트로 폴백.
+        // (HTTP 모니터링 포트는 BatchRunningService가 별도 설정값 batch.was.http-port로 관리)
         int port = batchWasTcpPort;
+        if (instance.getPort() != null && !instance.getPort().isBlank()) {
+            try {
+                port = Integer.parseInt(instance.getPort().trim());
+            } catch (NumberFormatException e) {
+                log.warn(
+                        "[BatchManagementAdapter] 인스턴스 포트 파싱 실패, 전역 포트({}) 사용: instanceId={}, port={}",
+                        batchWasTcpPort,
+                        ctx.getInstanceId(),
+                        instance.getPort());
+            }
+        }
 
         try {
             log.info("[BatchManagementAdapter] TCP 전송: host={}, port={}, command={}", instance.getIp(), port, command);
