@@ -14,7 +14,7 @@
 import oracledb from 'oracledb';
 import { getConnection, withTransaction, clobBind } from '../connection';
 import type { CmsPage, ViewMode } from '../types';
-import type { CurrentUser } from '../../lib/current-user';
+import type { CurrentUser } from '../../cms-admin/current-user';
 
 const OBJ = { outFormat: oracledb.OUT_FORMAT_OBJECT };
 

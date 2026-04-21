@@ -29,7 +29,7 @@ import {
   canReadCms,
   UnauthorizedError,
   type CurrentUser,
-} from "../admin/current-user";
+} from "../cms-admin/current-user";
 
 // DB 모듈은 dynamic import로 지연 로드합니다.
 // Vite는 vite.config.ts 평가 단계(서버 초기화 전)에 플러그인을 로드하므로,
@@ -209,8 +209,8 @@ export function cmsBankPlugin(options: CmsBankPluginOptions = {}): Plugin {
             // admin 연동 모드(base !== '/')에서만 쓰기 권한 검증
             // 단독 실행 모드(base === '/')에서는 인증 없이 파일 저장 허용
             if (base !== "/") {
-              const user = await requireCmsWrite(getCookieHeader(req));
-              void user; // 현재는 userId를 파일에 기록하지 않음
+              // admin 연동 모드에서만 쓰기 권한 검증 (단독 실행 모드는 인증 없이 파일 저장 허용)
+              await requireCmsWrite(getCookieHeader(req));
             }
             const payload = await readBody(req) as CreatePagePayload;
 

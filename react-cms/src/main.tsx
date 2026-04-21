@@ -19,11 +19,12 @@ import "./index.css";
 import { CMSApp } from "@cms-core";
 import { CMSBuilder } from "@cms-core/CMSBuilder";
 import PreviewPage from "@cms-core/preview/PreviewPage";
-import CmsAuthGuard from "./admin/CmsAuthGuard";
-import NotAuthorizedPage from "./admin/NotAuthorizedPage";
+import CmsAuthGuard from "./cms-admin/CmsAuthGuard";
+import NotAuthorizedPage from "./cms-admin/NotAuthorizedPage";
 import { blocks, overlays, layouts } from "./cms.config";
 import { savePage } from "./savePage";
 import userScopeCSS from "./user-scope.css?inline";
+import { isAdminMode } from "./lib/client-env";
 
 // BASE_URL은 Vite가 vite.config.ts의 base 설정값으로 주입한다.
 // VITE_BASE=/react-cms/ 로 실행 시 '/react-cms/' — nginx 프록시를 거쳐 admin과 연동되는 모드.
@@ -31,9 +32,6 @@ import userScopeCSS from "./user-scope.css?inline";
 const basename = import.meta.env.BASE_URL !== "/"
   ? import.meta.env.BASE_URL.replace(/\/$/, "")
   : undefined;
-
-// admin 연동 모드 여부 — savePage.ts와 동일한 기준으로 판단
-const isAdminMode = import.meta.env.BASE_URL !== "/";
 
 const router = createBrowserRouter(
   [

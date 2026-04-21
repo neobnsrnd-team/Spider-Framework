@@ -15,17 +15,10 @@
  */
 import { generateJSX } from "@cms-core"
 import type { CMSPage, SavePageParams } from "@cms-core"
+import { isAdminMode, cmsBase } from "./lib/client-env"
 
 /** localStorage key: pageName → pageId 매핑 */
 const PAGE_ID_KEY_PREFIX = "cms_page_id_"
-
-// BASE_URL 기준 /__cms/ 접두사 생성.
-// 프록시 모드(BASE_URL=/react-cms/): '/react-cms/__cms' → nginx가 Vite로 라우팅
-// 단독 모드(BASE_URL=/):             '/__cms'           → Vite 직접 처리
-const cmsBase = `${import.meta.env.BASE_URL.replace(/\/$/, "")}/__cms`
-
-// BASE_URL이 '/'가 아니면 nginx 프록시를 거쳐 admin과 연동되는 모드로 판단
-const isAdminMode = import.meta.env.BASE_URL !== "/"
 
 export async function savePage(page: CMSPage, params: SavePageParams): Promise<void> {
   const { pageName, uri } = params
