@@ -349,7 +349,7 @@ public class PageController {
         return resolveView(request, "pages/message-parsing-json/message-parsing-json :: content", model);
     }
 
-    // ── React 플랫폼 ── react_generate, react_generate_his
+    // ── React 플랫폼 ── react_generate, react_generate_his, react_approval, react_cms_admin_approval, react_cms_admin_deployment
 
     @GetMapping("/react-generate")
     public String reactGenerate(HttpServletRequest request, Model model) {
@@ -364,6 +364,17 @@ public class PageController {
     @GetMapping("/react-approval")
     public String reactApproval(HttpServletRequest request, Model model) {
         return resolveView(request, "pages/react-approval/react-approval :: content", model);
+    }
+
+    @GetMapping("/react-cms-admin/approval")
+    public String reactCmsAdminApprovals(HttpServletRequest request, Model model) {
+        model.addAttribute("cmsPreviewUrl", cmsPreviewUrl);
+        return resolveView(request, "pages/react-cms-admin-approval/react-cms-admin-approval :: content", model);
+    }
+
+    @GetMapping("/react-cms-admin/deployments")
+    public String reactCmsAdminDeployments(HttpServletRequest request, Model model) {
+        return resolveView(request, "pages/react-cms-admin-deployment/react-cms-admin-deployment :: content", model);
     }
 
     // ── 서비스 관리 ── v3_neb_service_base_info, v3_neb_biz_component, v3_validator_component,

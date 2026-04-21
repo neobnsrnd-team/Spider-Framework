@@ -652,11 +652,21 @@ VALUES ('v3_react_generate_his', 'v3_react_platform', 2, 'React 코드 생성 �
 INSERT INTO FWK_MENU (MENU_ID, PRIOR_MENU_ID, SORT_ORDER, MENU_NAME, MENU_URL, DISPLAY_YN, USE_YN, LAST_UPDATE_DTIME, LAST_UPDATE_USER_ID)
 VALUES ('v3_react_approval', 'v3_react_platform', 3, 'React 코드 승인 관리', '/react-approval', 'Y', 'Y', TO_CHAR(SYSDATE, 'YYYYMMDDHH24MISS'), 'system');
 
+-- 2depth: React CMS Admin 승인 관리
+INSERT INTO FWK_MENU (MENU_ID, PRIOR_MENU_ID, SORT_ORDER, MENU_NAME, MENU_URL, DISPLAY_YN, USE_YN, LAST_UPDATE_DTIME, LAST_UPDATE_USER_ID)
+VALUES ('v3_react_cms_admin_approval', 'v3_react_platform', 4, 'React CMS Admin 승인 관리', '/react-cms-admin/approval', 'Y', 'Y', TO_CHAR(SYSDATE, 'YYYYMMDDHH24MISS'), 'system');
+
+-- 2depth: React CMS Admin 배포 관리
+INSERT INTO FWK_MENU (MENU_ID, PRIOR_MENU_ID, SORT_ORDER, MENU_NAME, MENU_URL, DISPLAY_YN, USE_YN, LAST_UPDATE_DTIME, LAST_UPDATE_USER_ID)
+VALUES ('v3_react_cms_admin_deployments', 'v3_react_platform', 5, 'React CMS Admin 배포 관리', '/react-cms-admin/deployments', 'Y', 'Y', TO_CHAR(SYSDATE, 'YYYYMMDDHH24MISS'), 'system');
+
 -- ADMIN 역할 권한 등록
 INSERT INTO FWK_ROLE_MENU (ROLE_ID, MENU_ID, AUTH_CODE) VALUES ('ADMIN', 'v3_react_platform', 'W');
 INSERT INTO FWK_ROLE_MENU (ROLE_ID, MENU_ID, AUTH_CODE) VALUES ('ADMIN', 'v3_react_generate', 'W');
 INSERT INTO FWK_ROLE_MENU (ROLE_ID, MENU_ID, AUTH_CODE) VALUES ('ADMIN', 'v3_react_generate_his', 'W');
 INSERT INTO FWK_ROLE_MENU (ROLE_ID, MENU_ID, AUTH_CODE) VALUES ('ADMIN', 'v3_react_approval', 'W');
+INSERT INTO FWK_ROLE_MENU (ROLE_ID, MENU_ID, AUTH_CODE) VALUES ('ADMIN', 'v3_react_cms_admin_approval', 'W');
+INSERT INTO FWK_ROLE_MENU (ROLE_ID, MENU_ID, AUTH_CODE) VALUES ('ADMIN', 'v3_react_cms_admin_deployments', 'W');
 
 
 -- =============================================================
@@ -711,10 +721,6 @@ VALUES ('reactUser01', 'React CMS 제작자', '$2a$10$Wb1dr5GFcbmpYC03AqKMC.8QGl
 INSERT INTO FWK_MENU (MENU_ID, PRIOR_MENU_ID, SORT_ORDER, MENU_NAME, MENU_URL, DISPLAY_YN, USE_YN, LAST_UPDATE_DTIME, LAST_UPDATE_USER_ID)
 VALUES ('v3_react_cms_manage', 'v3_acl_manage', 14, 'React CMS', NULL, 'Y', 'Y', TO_CHAR(SYSDATE, 'YYYYMMDDHH24MISS'), 'system');
 
--- 2depth: 제작자 대시보드
-INSERT INTO FWK_MENU (MENU_ID, PRIOR_MENU_ID, SORT_ORDER, MENU_NAME, MENU_URL, DISPLAY_YN, USE_YN, LAST_UPDATE_DTIME, LAST_UPDATE_USER_ID)
-VALUES ('v3_react_cms_user_dashboard', 'v3_react_cms_manage', 1, 'React CMS 제작자 대시보드', '/react-cms/builder', 'Y', 'Y', TO_CHAR(SYSDATE, 'YYYYMMDDHH24MISS'), 'system');
-
 -- 2depth: 관리자 대시보드
 INSERT INTO FWK_MENU (MENU_ID, PRIOR_MENU_ID, SORT_ORDER, MENU_NAME, MENU_URL, DISPLAY_YN, USE_YN, LAST_UPDATE_DTIME, LAST_UPDATE_USER_ID)
 VALUES ('v3_react_cms_dashboard', 'v3_react_cms_manage', 2, 'React CMS 관리자 대시보드', '/react-cms/builder', 'Y', 'Y', TO_CHAR(SYSDATE, 'YYYYMMDDHH24MISS'), 'system');
@@ -726,33 +732,27 @@ VALUES ('v3_react_cms_admin_approvals', 'v3_react_cms_manage', 3, 'React CMS 승
 -- 4. 역할-메뉴 권한 (FWK_ROLE_MENU)
 -- ADMIN: 전체 W
 INSERT INTO FWK_ROLE_MENU (ROLE_ID, MENU_ID, AUTH_CODE) VALUES ('ADMIN', 'v3_react_cms_manage',          'W');
-INSERT INTO FWK_ROLE_MENU (ROLE_ID, MENU_ID, AUTH_CODE) VALUES ('ADMIN', 'v3_react_cms_user_dashboard',   'W');
 INSERT INTO FWK_ROLE_MENU (ROLE_ID, MENU_ID, AUTH_CODE) VALUES ('ADMIN', 'v3_react_cms_dashboard',        'W');
 INSERT INTO FWK_ROLE_MENU (ROLE_ID, MENU_ID, AUTH_CODE) VALUES ('ADMIN', 'v3_react_cms_admin_approvals',  'W');
 -- react-adm: 전체 W (승인 관리 포함)
 INSERT INTO FWK_ROLE_MENU (ROLE_ID, MENU_ID, AUTH_CODE) VALUES ('react-adm', 'v3_react_cms_manage',          'W');
-INSERT INTO FWK_ROLE_MENU (ROLE_ID, MENU_ID, AUTH_CODE) VALUES ('react-adm', 'v3_react_cms_user_dashboard',   'W');
 INSERT INTO FWK_ROLE_MENU (ROLE_ID, MENU_ID, AUTH_CODE) VALUES ('react-adm', 'v3_react_cms_dashboard',        'W');
 INSERT INTO FWK_ROLE_MENU (ROLE_ID, MENU_ID, AUTH_CODE) VALUES ('react-adm', 'v3_react_cms_admin_approvals',  'W');
 -- react-user: 제작자 대시보드까지만 W (승인 관리 제외)
 INSERT INTO FWK_ROLE_MENU (ROLE_ID, MENU_ID, AUTH_CODE) VALUES ('react-user', 'v3_react_cms_manage',         'W');
-INSERT INTO FWK_ROLE_MENU (ROLE_ID, MENU_ID, AUTH_CODE) VALUES ('react-user', 'v3_react_cms_user_dashboard',  'W');
 
 -- 5. 사용자-메뉴 권한 (FWK_USER_MENU)
 -- admin: React CMS 전체 추가
 INSERT INTO FWK_USER_MENU (USER_ID, MENU_ID, AUTH_CODE, LAST_UPDATE_DTIME, LAST_UPDATE_USER_ID) VALUES ('admin', 'v3_react_cms_manage',         'W', TO_CHAR(SYSDATE, 'YYYYMMDDHH24MISS'), 'system');
-INSERT INTO FWK_USER_MENU (USER_ID, MENU_ID, AUTH_CODE, LAST_UPDATE_DTIME, LAST_UPDATE_USER_ID) VALUES ('admin', 'v3_react_cms_user_dashboard',  'W', TO_CHAR(SYSDATE, 'YYYYMMDDHH24MISS'), 'system');
 INSERT INTO FWK_USER_MENU (USER_ID, MENU_ID, AUTH_CODE, LAST_UPDATE_DTIME, LAST_UPDATE_USER_ID) VALUES ('admin', 'v3_react_cms_dashboard',       'W', TO_CHAR(SYSDATE, 'YYYYMMDDHH24MISS'), 'system');
 INSERT INTO FWK_USER_MENU (USER_ID, MENU_ID, AUTH_CODE, LAST_UPDATE_DTIME, LAST_UPDATE_USER_ID) VALUES ('admin', 'v3_react_cms_admin_approvals', 'W', TO_CHAR(SYSDATE, 'YYYYMMDDHH24MISS'), 'system');
 -- reactAdmin01: v3_acl_manage 접근 + 전체 W
 INSERT INTO FWK_USER_MENU (USER_ID, MENU_ID, AUTH_CODE, LAST_UPDATE_DTIME, LAST_UPDATE_USER_ID) VALUES ('reactAdmin01', 'v3_acl_manage',               'W', TO_CHAR(SYSDATE, 'YYYYMMDDHH24MISS'), 'system');
 INSERT INTO FWK_USER_MENU (USER_ID, MENU_ID, AUTH_CODE, LAST_UPDATE_DTIME, LAST_UPDATE_USER_ID) VALUES ('reactAdmin01', 'v3_react_cms_manage',         'W', TO_CHAR(SYSDATE, 'YYYYMMDDHH24MISS'), 'system');
-INSERT INTO FWK_USER_MENU (USER_ID, MENU_ID, AUTH_CODE, LAST_UPDATE_DTIME, LAST_UPDATE_USER_ID) VALUES ('reactAdmin01', 'v3_react_cms_user_dashboard',  'W', TO_CHAR(SYSDATE, 'YYYYMMDDHH24MISS'), 'system');
 INSERT INTO FWK_USER_MENU (USER_ID, MENU_ID, AUTH_CODE, LAST_UPDATE_DTIME, LAST_UPDATE_USER_ID) VALUES ('reactAdmin01', 'v3_react_cms_dashboard',       'W', TO_CHAR(SYSDATE, 'YYYYMMDDHH24MISS'), 'system');
 INSERT INTO FWK_USER_MENU (USER_ID, MENU_ID, AUTH_CODE, LAST_UPDATE_DTIME, LAST_UPDATE_USER_ID) VALUES ('reactAdmin01', 'v3_react_cms_admin_approvals', 'W', TO_CHAR(SYSDATE, 'YYYYMMDDHH24MISS'), 'system');
 -- reactUser01: v3_acl_manage 접근 + 제작자 대시보드까지만 W
 INSERT INTO FWK_USER_MENU (USER_ID, MENU_ID, AUTH_CODE, LAST_UPDATE_DTIME, LAST_UPDATE_USER_ID) VALUES ('reactUser01', 'v3_acl_manage',               'W', TO_CHAR(SYSDATE, 'YYYYMMDDHH24MISS'), 'system');
 INSERT INTO FWK_USER_MENU (USER_ID, MENU_ID, AUTH_CODE, LAST_UPDATE_DTIME, LAST_UPDATE_USER_ID) VALUES ('reactUser01', 'v3_react_cms_manage',         'W', TO_CHAR(SYSDATE, 'YYYYMMDDHH24MISS'), 'system');
-INSERT INTO FWK_USER_MENU (USER_ID, MENU_ID, AUTH_CODE, LAST_UPDATE_DTIME, LAST_UPDATE_USER_ID) VALUES ('reactUser01', 'v3_react_cms_user_dashboard',  'W', TO_CHAR(SYSDATE, 'YYYYMMDDHH24MISS'), 'system');
 
 COMMIT;

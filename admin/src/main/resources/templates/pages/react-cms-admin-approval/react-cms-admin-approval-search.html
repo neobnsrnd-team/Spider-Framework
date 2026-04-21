@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<!-- React CMS Admin 승인 관리 검색 프래그먼트 -->
+<div th:fragment="search" class="card border p-2 mb-3">
+    <div class="d-flex flex-wrap align-items-center gap-2 mb-1">
+        <label class="form-label mb-0 small fw-medium">승인상태</label>
+        <select id="filterApproveState" class="form-select form-select-sm flex-fixed-130">
+            <option value="">전체</option>
+            <option value="PENDING">승인대기</option>
+            <option value="APPROVED">승인완료</option>
+            <option value="REJECTED">반려</option>
+        </select>
+
+        <input type="text" id="filterSearch" class="form-control form-control-sm flex-fixed-200"
+               placeholder="페이지명 또는 작성자명"
+               onkeypress="if(event.key === 'Enter') ReactCmsAdminApprovalPage.load(1)">
+
+        <div class="flex-grow-1"></div>
+
+        <select id="limitRows" class="form-select form-select-sm sp-limit-select">
+            <option value="10" selected>10</option>
+            <option value="20">20</option>
+            <option value="50">50</option>
+            <option value="100">100</option>
+        </select>
+        <label class="form-label mb-0 small fw-medium ms-1 me-2 fs-xs">건씩</label>
+
+        <button class="btn btn-primary btn-sm" onclick="ReactCmsAdminApprovalPage.load(1)">
+            <i class="bi bi-search"></i> 조회
+        </button>
+        <button class="btn btn-outline-secondary btn-sm" onclick="ReactCmsAdminApprovalPage.reset()">초기화</button>
+    </div>
+</div>
+</body>
+</html>
