@@ -7,7 +7,7 @@
 
 spring:
   profiles:
-    active: default
+    active: oracle
 
 # HTTP 포트 — Actuator 헬스체크용 (/actuator/health)
 server:
@@ -24,6 +24,10 @@ tcp:
   demo-backend:
     host: ${DEMO_BACKEND_TCP_HOST:localhost}
     port: ${DEMO_BACKEND_TCP_PORT:9997}
+  # Demo 전문 처리 TCP 서버 — demo/backend가 이 포트로 전문을 전송한다
+  demo-server:
+    port: ${DEMO_SERVER_TCP_PORT:9995}
+    handler-pool-size: ${DEMO_SERVER_HANDLER_POOL_SIZE:20}
 
 # Actuator 설정 — health 엔드포인트만 노출
 management:
