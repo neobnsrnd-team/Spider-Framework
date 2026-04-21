@@ -1,4 +1,5 @@
 import { defineConfig, loadEnv } from 'vite'
+import type { UserConfig } from 'vitest/config'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite';
 import { resolve, dirname } from 'path';
@@ -14,11 +15,19 @@ export default defineConfig(({ mode }) => {
   // prefix '' = VITE_ 접두사 없는 변수(ORACLE_*)도 포함해 전부 로드한 뒤,
   // ORACLE_ 접두사 키만 선택적으로 주입 — 민감 정보의 불필요한 노출 방지.
   const env = loadEnv(mode, process.cwd(), '');
+  // 서버 사이드 전용 환경변수를 process.env에 선택 주입 (클라이언트 번들 노출 방지)
+  const SERVER_ENV_KEYS = ['AUTH_BYPASS', 'SPIDER_ADMIN_API_URL'];
   Object.keys(env)
-    .filter(k => k.startsWith('ORACLE_'))
+    .filter(k => k.startsWith('ORACLE_') || SERVER_ENV_KEYS.includes(k))
     .forEach(k => { process.env[k] = env[k]; });
 
+  const testConfig: UserConfig['test'] = {
+    environment: 'node', // current-user.ts는 Node.js(Vite 플러그인) 전용 모듈
+    include: ['src/**/*.test.ts'],
+  };
+
   return {
+    test: testConfig,
   // VITE_BASE 환경변수로 base 경로를 제어한다.
   // 프록시 연동 시: VITE_BASE=/react-cms/ npm run dev
   // 단독 개발 시: 기본값 '/' 유지 (평소 동작 그대로)

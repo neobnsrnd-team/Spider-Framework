@@ -1,15 +1,13 @@
 /**
  * @file CMSApp.tsx
- * @description CMS 앱 진입점. 외부 프로젝트가 제공하는 blocks/overlays/layouts를 컨텍스트로 제공합니다.
+ * @description CMS 컨텍스트 프로바이더. 외부 프로젝트가 제공하는 blocks/overlays/layouts를 컨텍스트로 제공합니다.
+ *
+ * Router는 이 컴포넌트 밖(main.tsx)에서 소유합니다.
+ * RouterProvider를 children으로 전달하면 CMS 컨텍스트 안에서 라우팅이 동작합니다.
  */
 import { useMemo } from "react";
-import { createBrowserRouter, RouterProvider, Navigate } from "react-router-dom";
-import { CMSBuilder } from "@cms-core/CMSBuilder";
+import type { ReactNode } from "react";
 import type { BlockDefinition, LayoutTemplate, OverlayTemplate, CMSCodegenConfig } from "./types";
-import type { CMSPage } from "./types";
-import type { SavePageParams } from "@cms-core/SavePageModal";
-import PreviewPage from "@cms-core/preview/PreviewPage";
-import { defaultSave } from "@cms-core/api/defaultSave";
 import {
   BlockRegistryContext,
   BlockMetaContext,
@@ -32,10 +30,6 @@ export interface CMSAppProps {
    * 각 템플릿의 renderer 함수로 레이아웃 크롬(header/footer)을 렌더링합니다.
    */
   layouts?: LayoutTemplate[];
-  /** 페이지 저장 핸들러 */
-  onSave?: (page: CMSPage, params: SavePageParams) => void | Promise<void>;
-  /** React Router basename */
-  basename?: string;
   /**
    * 외부 프로젝트 컴파일된 CSS 문자열 — 캔버스/썸네일/미리보기 영역에만 스코프 적용.
    * 개발 환경에서 Vite의 `?inline` import로 얻은 CSS를 전달합니다. `stylesheet`보다 우선합니다.
@@ -57,39 +51,15 @@ export interface CMSAppProps {
    * 미정의 시 "@neobnsrnd-team/cms-ui"를 기본값으로 사용합니다.
    */
   codegenConfig?: CMSCodegenConfig;
+  /**
+   * RouterProvider를 children으로 전달합니다.
+   * Router는 main.tsx에서 직접 소유하며, CMSApp은 컨텍스트만 제공합니다.
+   */
+  children?: ReactNode;
 }
 
-export function CMSApp({ blocks, overlays = [], layouts = [], onSave, basename, stylesheetContent, stylesheet, stylesheetScope, codegenConfig = {} }: CMSAppProps) {
+export function CMSApp({ blocks, overlays = [], layouts = [], stylesheetContent, stylesheet, stylesheetScope, codegenConfig = {}, children }: CMSAppProps) {
   const { blockMeta, blockRegistry, derivedRenderer } = useCMSContextValues(blocks, layouts);
-
-  const onSaveFn = useMemo(
-    () => onSave ?? defaultSave,
-    [onSave],
-  );
-
-  const router = useMemo(
-    () =>
-      createBrowserRouter(
-        [
-          {
-            path: "/",
-            children: [
-              { index: true, element: <Navigate to="/builder" replace /> },
-              {
-                path: "builder",
-                element: <CMSBuilder onSave={onSaveFn} />,
-              },
-              {
-                path: "preview",
-                element: <PreviewPage />,
-              },
-            ],
-          },
-        ],
-        { basename },
-      ),
-    [basename, onSaveFn],
-  );
 
   const stylesheetConfig = useMemo(
     () => ({ stylesheetContent, stylesheet, stylesheetScope }),
@@ -105,7 +75,7 @@ export function CMSApp({ blocks, overlays = [], layouts = [], onSave, basename, 
               <LayoutTemplatesContext.Provider value={layouts}>
                 <LayoutRendererContext.Provider value={derivedRenderer}>
                   <CodegenConfigContext.Provider value={codegenConfig}>
-                    <RouterProvider router={router} />
+                    {children}
                   </CodegenConfigContext.Provider>
                 </LayoutRendererContext.Provider>
               </LayoutTemplatesContext.Provider>
