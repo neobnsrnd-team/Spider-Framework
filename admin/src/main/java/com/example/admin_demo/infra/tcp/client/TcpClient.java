@@ -2,7 +2,7 @@ package com.example.admin_demo.infra.tcp.client;
 
 import com.example.admin_demo.infra.tcp.model.JsonCommandRequest;
 import com.example.admin_demo.infra.tcp.model.JsonCommandResponse;
-import com.example.admin_demo.infra.tcp.model.ManagementContext;
+import com.example.spiderlink.infra.tcp.model.ManagementContext;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
@@ -70,7 +70,7 @@ public class TcpClient {
                 @Override
                 protected Class<?> resolveClass(ObjectStreamClass desc) throws IOException, ClassNotFoundException {
                     String name = desc.getName();
-                    if (!name.startsWith("com.example.admin_demo.")
+                    if (!name.startsWith("com.example.spiderlink.")
                             && !name.startsWith("java.lang.")
                             && !name.startsWith("java.util.")
                             && !name.startsWith("[")) {

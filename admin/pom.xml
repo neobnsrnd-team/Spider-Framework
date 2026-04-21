@@ -238,6 +238,13 @@
 			<artifactId>select2</artifactId>
 			<version>4.1.0-rc.0</version>
 		</dependency>
+
+		<!-- spider-link 공통 연계엔진 라이브러리 (ManagementContext, TCP 인프라 공유) -->
+		<dependency>
+			<groupId>com.example</groupId>
+			<artifactId>spider-link</artifactId>
+			<version>0.0.1-SNAPSHOT</version>
+		</dependency>
 	</dependencies>
 
 	<build>
