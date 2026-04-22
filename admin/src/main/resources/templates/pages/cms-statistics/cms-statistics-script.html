@@ -179,8 +179,8 @@
             const maxLabelText = maxClick.toLocaleString() + ' (100.0%)';
             const rightPadding = maxLabelText.length * 7 + 12;
 
-            // 데이터 수에 따라 캔버스 높이 동적 설정 (막대 1개당 40px + 상하 여백)
-            const canvasHeight = Math.max(200, data.length * 40 + 60);
+            // 데이터 수에 따라 캔버스 높이 동적 설정 (막대 1개당 28px + 상하 여백)
+            const canvasHeight = Math.max(120, data.length * 28 + 40);
             $('#detailBarChart').css('height', canvasHeight + 'px');
 
             // 막대 끝 레이블 — 별도 플러그인 없이 afterDraw 훅으로 직접 렌더링
@@ -216,7 +216,7 @@
                         data: values,
                         backgroundColor: colors,
                         borderRadius: 3,
-                        barThickness: 20,
+                        barThickness: 14,
                     }]
                 },
                 options: {
