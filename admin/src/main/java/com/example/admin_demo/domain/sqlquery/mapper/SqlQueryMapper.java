@@ -42,4 +42,15 @@ public interface SqlQueryMapper {
 
     List<SqlQueryResponse> findAllForExport(
             @Param("queryId") String queryId, @Param("queryName") String queryName, @Param("useYn") String useYn);
+
+    /**
+     * 수정 직전 현재 상태를 FWK_SQL_QUERY_HIS 테이블에 백업 삽입
+     *
+     * <p>PK: (versionId, queryId) — versionId는 System.currentTimeMillis() 문자열 사용
+     */
+    void insertHistory(
+            @Param("data") SqlQueryResponse data,
+            @Param("versionId") String versionId,
+            @Param("backupDtime") String backupDtime,
+            @Param("backupUserId") String backupUserId);
 }

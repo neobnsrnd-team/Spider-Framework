@@ -549,8 +549,8 @@ save: function () {
 | 1-2 | 에디터 툴바 + 페이징 쿼리 삽입 + 프로시저 호출 | 🔴 | `sqlquery-modal.html` | ✅ |
 | 1-3 | SQL 문법 유효성 검증 | 🔴 | `sqlquery-modal.html` | ✅ |
 | 1-4 | 쿼리 테스트 버튼 | 🔴 | `sqlquery-modal.html` | ✅ |
-| 1-5 | 저장 전 자동 백업 | 🔴 | `sqlquery-modal.html` | 🔄 |
-| 2-1 | 검색 조건 필드 확장 (GROUP ID/명, SQL TYPE) | 🟡 | `sqlquery-manage.html` | 🔲 |
+| 1-5 | 저장 전 자동 백업 | 🔴 | `sqlquery-modal.html` | ✅ |
+| 2-1 | 검색 조건 필드 확장 (GROUP ID/명, SQL TYPE) | 🟡 | `sqlquery-manage.html` | 🔄 |
 | 2-2 | 쿼리 텍스트 검색 (textarea 내 찾기) | 🟡 | `sqlquery-modal.html` | 🔲 |
 | 2-3 | 에디터 확대 / 전체화면 모드 | 🟡 | `sqlquery-modal.html` | 🔲 |
 | 2-4 | 쿼리 복원 모달 (히스토리 버전 관리) | 🟡 | `sqlquery-restore-modal.html` (신규) | 🔲 |
@@ -696,7 +696,7 @@ SQL Query textarea 위에 도구 버튼 툴바를 추가하고, 페이징 쿼리
 
 ### Step 1-5. 저장 전 자동 백업
 
-**상태**: 🔲 대기
+**상태**: ✅ 완료
 
 **목표**  
 기존 쿼리를 수정 저장하기 전에 현재 버전을 자동으로 백업하여 이후 복원이 가능한 이력을 남긴다.
@@ -707,18 +707,18 @@ SQL Query textarea 위에 도구 버튼 툴바를 추가하고, 페이징 쿼리
 - `admin/src/main/resources/templates/pages/sqlquery-manage/sqlquery-modal.html`
 
 **작업 내용**
-- [ ] 백엔드 팀에 백업 API 스펙 확인
-  - 구버전 대응: `POST /FWKSQH03.wsvc { QUERY_ID }`
-  - 신버전 예상: `POST /sql-queries/{queryId}/backup`
-- [ ] `save()` 내 수정 모드(`PUT`) 분기에서 백업 API 선행 호출 후 저장 실행
-  - 백업 실패 시에도 저장은 진행 (`.always()` 사용)
-- [ ] 신규 생성(`POST`) 모드에서는 백업 불필요 (건너뜀)
+- [x] DDL: `FWK_SQL_QUERY_HIS` 테이블 + `SEQ_FWK_SQL_QUERY_HIS` 시퀀스 → `04_alter_tables.sql` 추가 (개발자 직접 실행)
+- [x] Mapper: `SqlQueryMapper.insertHistory()` 메서드 + XML `<insert id="insertHistory">` 구현
+- [x] Service: `SqlQueryService.backupQuery(queryId)` — 현재 상태 조회 후 이력 테이블 삽입
+- [x] Controller: `POST /api/sql-queries/{queryId}/backup` 엔드포인트 추가 (`SQL_QUERY:W` 권한 필요)
+- [x] Frontend: `save()` 내 수정 모드(`PUT`) 분기에서 백업 API 선행 호출 → `.always()` 로 백업 성공/실패 무관하게 저장 진행
+- [x] 신규 생성(`POST`) 모드에서는 백업 호출 없음
 
 **테스트 항목**
-- [ ] 기존 쿼리 내용 수정 후 저장 → 백엔드 히스토리 테이블에 이전 버전 레코드가 생성되는가
-- [ ] 신규 등록 저장 시에는 백업 API 호출이 발생하지 않는가 (네트워크 탭 확인)
-- [ ] 백업 API 호출 실패(네트워크 오류 시뮬레이션) 상황에서도 저장이 정상 진행되는가
-- [ ] 저장 완료 후 목록이 새로고침되는가
+- [x] 기존 쿼리 내용 수정 후 저장 → `FWK_SQL_QUERY_HIS` 테이블에 이전 버전 레코드가 생성되는가
+- [x] 신규 등록 저장 시에는 백업 API 호출이 발생하지 않는가 (네트워크 탭 확인)
+- [x] 백업 API 호출 실패(네트워크 오류 시뮬레이션) 상황에서도 저장이 정상 진행되는가
+- [x] 저장 완료 후 목록이 새로고침되는가
 
 **완료 기준**  
 수정 저장 시 자동 백업이 선행되고, 백업 실패 여부와 관계없이 저장 동작이 완료된다.
@@ -733,7 +733,7 @@ SQL Query textarea 위에 도구 버튼 툴바를 추가하고, 페이징 쿼리
 
 ### Step 2-1. 검색 조건 필드 확장
 
-**상태**: 🔲 대기
+**상태**: 🔄 진행 중
 
 **목표**  
 현재 3개(Query ID, Query명, 사용여부)인 검색 필드를 구버전 수준인 6개로 확장하여 SQL GROUP, DB, SQL TYPE 기반 필터링을 지원한다.

@@ -160,6 +160,39 @@
         </where>
     </select>
 
+    <!--
+        수정 전 현재 상태를 이력 테이블(FWK_SQL_QUERY_HIS)에 백업 삽입
+        PK: (VERSION_ID, QUERY_ID) — VERSION_ID는 System.currentTimeMillis() 문자열
+        QUERY_NAME(50), QUERY_DESC(200) 컬럼 크기 초과 방지를 위해 SUBSTR 적용
+        SQL_QUERY3/4 컬럼은 신버전 DTO에 없으므로 NULL 삽입
+    -->
+    <insert id="insertHistory">
+        INSERT INTO FWK_SQL_QUERY_HIS (
+            VERSION_ID, QUERY_ID, QUERY_NAME, SQL_GROUP_ID, DB_ID,
+            SQL_QUERY, SQL_QUERY2, QUERY_DESC,
+            SQL_TYPE, EXEC_TYPE, CACHE_YN, TIME_OUT, RESULT_TYPE, USE_YN,
+            LAST_UPDATE_DTIME, LAST_UPDATE_USER_ID, HISTORY_REASON
+        ) VALUES (
+            #{versionId},
+            #{data.queryId},
+            SUBSTR(#{data.queryName, jdbcType=VARCHAR}, 1, 50),
+            #{data.sqlGroupId},
+            #{data.dbId},
+            #{data.sqlQuery},
+            #{data.sqlQuery2, jdbcType=VARCHAR},
+            SUBSTR(#{data.queryDesc, jdbcType=VARCHAR}, 1, 200),
+            #{data.sqlType, jdbcType=VARCHAR},
+            #{data.execType, jdbcType=VARCHAR},
+            #{data.cacheYn, jdbcType=VARCHAR},
+            #{data.timeOut, jdbcType=VARCHAR},
+            #{data.resultType, jdbcType=VARCHAR},
+            #{data.useYn, jdbcType=VARCHAR},
+            #{backupDtime},
+            #{backupUserId},
+            '수정전 자동백업'
+        )
+    </insert>
+
     <!-- 엑셀 내보내기용 전체 조회 (페이징 없음, 검색 조건 동일) -->
     <select id="findAllForExport"
             resultType="com.example.admin_demo.domain.sqlquery.dto.SqlQueryResponse">

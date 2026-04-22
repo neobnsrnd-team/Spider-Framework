@@ -103,4 +103,15 @@ ALTER TABLE SPW_CMS_PAGE ADD CONSTRAINT CHK_SPW_PAGE_TYPE
     CHECK (PAGE_TYPE IN ('PAGE', 'TEMPLATE', 'REACT'));
 
 
+-- =============================================================
+-- FWK_SQL_QUERY_HIS — 실제 DB 테이블 확인 결과
+-- =============================================================
+-- 확인일: 2026-04-22
+-- FWK_SQL_QUERY_HIS 테이블은 구버전부터 이미 존재하는 테이블입니다.
+-- PK: (VERSION_ID VARCHAR2(50), QUERY_ID VARCHAR2(50))
+-- 신버전에서는 VERSION_ID = System.currentTimeMillis() 문자열 사용
+-- ※ 잘못 생성된 시퀀스를 아래 쿼리로 제거하세요 (개발자 직접 실행):
+DROP SEQUENCE SEQ_FWK_SQL_QUERY_HIS;
+
+
 COMMIT;

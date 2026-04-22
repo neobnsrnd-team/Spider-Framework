@@ -94,4 +94,12 @@ public class SqlQueryController {
         log.info("POST /api/sql-queries/{}/test", queryId);
         return ResponseEntity.ok(ApiResponse.success(sqlQueryService.testQuery(queryId)));
     }
+
+    @PostMapping("/{queryId}/backup")
+    @PreAuthorize("hasAuthority('SQL_QUERY:W')")
+    public ResponseEntity<ApiResponse<Void>> backupQuery(@PathVariable String queryId) {
+        log.info("POST /api/sql-queries/{}/backup", queryId);
+        sqlQueryService.backupQuery(queryId);
+        return ResponseEntity.ok(ApiResponse.success(null));
+    }
 }

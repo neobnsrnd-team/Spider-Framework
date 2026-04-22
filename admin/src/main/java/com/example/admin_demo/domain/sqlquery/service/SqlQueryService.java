@@ -144,6 +144,22 @@ public class SqlQueryService {
     }
 
     /**
+     * 현재 저장된 SQL Query 상태를 이력 테이블(FWK_SQL_QUERY_HIS)에 백업한다.
+     *
+     * <p>수정 저장 직전 호출되며, 백업 실패 시에도 수정 저장은 계속 진행된다.
+     */
+    @Transactional
+    public void backupQuery(String queryId) {
+        SqlQueryResponse current = sqlQueryMapper.selectResponseById(queryId);
+        if (current == null) {
+            throw new NotFoundException("queryId: " + queryId);
+        }
+        // VERSION_ID: 밀리초 타임스탬프 문자열 — 동일 쿼리의 동시 백업 충돌 방지
+        String versionId = String.valueOf(System.currentTimeMillis());
+        sqlQueryMapper.insertHistory(current, versionId, AuditUtil.now(), AuditUtil.currentUserId());
+    }
+
+    /**
      * 저장된 SQL 쿼리를 어드민 datasource로 실행해 결과를 반환한다.
      *
      * <p>MyBatis #{param} 바인딩 변수는 NULL로 치환하고, 최대 50행으로 제한한다.
