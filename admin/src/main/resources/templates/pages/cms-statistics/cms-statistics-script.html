@@ -9,6 +9,8 @@
         currentPage: 1,
         totalItems: 0,
         itemsPerPage: 10,
+        /** 모달 재오픈 시 destroy 후 재생성하기 위한 Chart.js 인스턴스 참조 */
+        _detailChart: null,
 
         load: function(page) {
             if (page !== undefined) this.currentPage = page;
@@ -124,26 +126,157 @@
 
         openDetailModal: function(pageId, pageName, startDate, endDate) {
             $('#detailPageName').text(pageName);
-            $('#detailTableBody').html('<tr><td colspan="2" class="text-center text-body-secondary">불러오는 중...</td></tr>');
+
+            // 모달 재오픈 시 기존 차트 인스턴스 해제 (캔버스 재사용 시 오류 방지)
+            if (this._detailChart) {
+                this._detailChart.destroy();
+                this._detailChart = null;
+            }
+
+            // 로딩 상태로 초기화
+            $('#detailLoading').show();
+            $('#detailChartWrapper').addClass('d-none');
+            $('#detailSummaryTable').addClass('d-none');
+            $('#detailNoData').addClass('d-none').removeClass('text-danger').text('');
+
             new bootstrap.Modal('#detailModal').show();
 
             const params = new URLSearchParams({ pageId, startDate, endDate });
             fetch('/api/cms-admin/statistics/detail?' + params)
                 .then(r => r.json())
                 .then(res => {
+                    $('#detailLoading').hide();
+
                     if (!res.success || !res.data || res.data.length === 0) {
-                        $('#detailTableBody').html('<tr><td colspan="2" class="text-center text-body-secondary">클릭 데이터가 없습니다.</td></tr>');
+                        $('#detailNoData').removeClass('d-none').text('클릭 데이터가 없습니다.');
                         return;
                     }
-                    const html = res.data.map(d => `<tr>
-                        <td class="text-monospace small">${HtmlUtils.escape(d.componentId || '')}</td>
-                        <td class="text-end">${(d.clickCount || 0).toLocaleString()}</td>
-                    </tr>`).join('');
-                    $('#detailTableBody').html(html);
+
+                    this._renderDetailChart(res.data);
                 })
                 .catch(() => {
-                    $('#detailTableBody').html('<tr><td colspan="2" class="text-center text-danger">상세 조회 실패</td></tr>');
+                    $('#detailLoading').hide();
+                    $('#detailNoData').removeClass('d-none').addClass('text-danger').text('상세 조회 실패');
                 });
+        },
+
+        /**
+         * 컴포넌트별 클릭 수를 가로형 막대 차트 + 요약 테이블로 렌더링한다.
+         * - 최대 클릭 컴포넌트: 강조색(#0d6efd), 나머지: 무채색(#adb5bd)
+         * - 막대 끝 afterDraw 플러그인으로 "클릭수 (비율%)" 레이블 표시
+         * - 레이블 길이에 따라 오른쪽 패딩을 동적 계산하여 잘림 방지
+         * - 데이터 수에 따라 캔버스 높이를 동적 설정하여 막대 간격 균일화
+         */
+        _renderDetailChart: function(data) {
+            const total = data.reduce((sum, d) => sum + (d.clickCount || 0), 0);
+            const maxClick = Math.max(...data.map(d => d.clickCount || 0));
+
+            const labels = data.map(d => d.componentId || '');
+            const values = data.map(d => d.clickCount || 0);
+            const colors = values.map(v => v === maxClick ? '#0d6efd' : '#adb5bd');
+
+            // 막대 끝 레이블 최대 너비 추정 → 오른쪽 패딩 동적 계산 (글자당 약 7px)
+            const maxLabelText = maxClick.toLocaleString() + ' (100.0%)';
+            const rightPadding = maxLabelText.length * 7 + 12;
+
+            // 데이터 수에 따라 캔버스 높이 동적 설정 (막대 1개당 40px + 상하 여백)
+            const canvasHeight = Math.max(200, data.length * 40 + 60);
+            $('#detailBarChart').css('height', canvasHeight + 'px');
+
+            // 막대 끝 레이블 — 별도 플러그인 없이 afterDraw 훅으로 직접 렌더링
+            const datalabelsPlugin = {
+                id: 'cmsStatDatalabels',
+                afterDraw(chart) {
+                    const ctx = chart.ctx;
+                    chart.data.datasets.forEach((dataset, i) => {
+                        chart.getDatasetMeta(i).data.forEach((bar, index) => {
+                            const value = dataset.data[index];
+                            const pct = total > 0 ? ((value / total) * 100).toFixed(1) : '0.0';
+                            ctx.save();
+                            ctx.font = '12px sans-serif';
+                            ctx.fillStyle = '#495057';
+                            ctx.textAlign = 'left';
+                            ctx.textBaseline = 'middle';
+                            ctx.fillText(`${value.toLocaleString()} (${pct}%)`, bar.x + 6, bar.y);
+                            ctx.restore();
+                        });
+                    });
+                }
+            };
+
+            const canvas = document.getElementById('detailBarChart');
+            $('#detailChartWrapper').removeClass('d-none');
+
+            this._detailChart = new Chart(canvas.getContext('2d'), {
+                type: 'bar',
+                plugins: [datalabelsPlugin],
+                data: {
+                    labels,
+                    datasets: [{
+                        data: values,
+                        backgroundColor: colors,
+                        borderRadius: 3,
+                        barThickness: 20,
+                    }]
+                },
+                options: {
+                    indexAxis: 'y',
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            callbacks: {
+                                label: ctx => {
+                                    const pct = total > 0 ? ((ctx.parsed.x / total) * 100).toFixed(1) : '0.0';
+                                    return ` ${ctx.parsed.x.toLocaleString()} (${pct}%)`;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            beginAtZero: true,
+                            grid: { color: 'rgba(0,0,0,0.05)' }
+                        },
+                        y: { grid: { display: false } }
+                    },
+                    layout: { padding: { right: rightPadding } }
+                }
+            });
+
+            // 요약 테이블 렌더링
+            this._renderSummaryTable(data, total, maxClick);
+        },
+
+        /**
+         * 차트 하단 요약 테이블을 렌더링한다.
+         * - 최다 클릭 행에 강조 배지 표시
+         * - 합계 행(tfoot) 추가
+         */
+        _renderSummaryTable: function(data, total, maxClick) {
+            const rows = data.map(d => {
+                const count = d.clickCount || 0;
+                const pct = total > 0 ? ((count / total) * 100).toFixed(1) : '0.0';
+                const badge = count === maxClick
+                    ? ' <span class="badge bg-primary ms-1" style="font-size:10px;">최다</span>'
+                    : '';
+                return `<tr>
+                    <td class="text-monospace small">${HtmlUtils.escape(d.componentId || '')}${badge}</td>
+                    <td class="text-end">${count.toLocaleString()}</td>
+                    <td class="text-end text-body-secondary">${pct}%</td>
+                </tr>`;
+            }).join('');
+
+            $('#detailSummaryBody').html(rows);
+            $('#detailSummaryFoot').html(`
+                <tr>
+                    <td>합계</td>
+                    <td class="text-end">${total.toLocaleString()}</td>
+                    <td class="text-end">100.0%</td>
+                </tr>
+            `);
+            $('#detailSummaryTable').removeClass('d-none');
         },
 
         _today: function() {
