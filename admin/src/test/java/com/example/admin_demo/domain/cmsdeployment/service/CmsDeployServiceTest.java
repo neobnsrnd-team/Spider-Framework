@@ -177,7 +177,7 @@ class CmsDeployServiceTest {
                 .pageId(PAGE_ID)
                 .pageName("테스트 페이지")
                 .createUserName("홍길동")
-                .deployedUrl("http://133.186.135.23:3001/cms/deployed/" + PAGE_ID + ".html")
+                .deployedUrl("http://133.186.135.23:8080/cms/deployed/" + PAGE_ID + ".html")
                 .build();
     }
 
@@ -186,7 +186,7 @@ class CmsDeployServiceTest {
                 .instanceId("INST-001")
                 .instanceName("배포서버-1")
                 .instanceIp("133.186.135.23")
-                .instancePort("3001")
+                .instancePort("8080")
                 .fileId(PAGE_ID + "_v1.html")
                 .fileSize(1024L)
                 .fileCrcValue("abc123def456abcd")
