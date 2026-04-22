@@ -4,7 +4,7 @@
 
 <mapper namespace="com.example.spiderlink.domain.demo.mapper.DemoMapper">
 
-    <select id="selectPocUserByIdAndPassword" resultType="com.example.spiderlink.domain.demo.dto.DemoPocUserResponse">
+    <select id="selectPocUserByIdAndPassword" resultType="java.util.Map">
         SELECT USER_ID,
                USER_NAME,
                USER_GRADE,
@@ -15,7 +15,7 @@
            AND PASSWORD = #{password}
     </select>
 
-    <select id="selectPocUserById" resultType="com.example.spiderlink.domain.demo.dto.DemoPocUserResponse">
+    <select id="selectPocUserById" resultType="java.util.Map">
         SELECT USER_ID,
                USER_NAME,
                USER_GRADE,
@@ -31,7 +31,7 @@
     </update>
 
     <!-- 결제상태코드 9(취소건)는 즉시결제 대상에서 제외 -->
-    <select id="selectPayableAmt" resultType="com.example.spiderlink.domain.demo.dto.DemoPayableAmtResponse">
+    <select id="selectPayableAmt" resultType="java.util.Map">
         SELECT (SELECT NVL(SUM("이용금액" - "누적결제금액"), 0)
                   FROM D_SPIDERLINK.POC_카드사용내역
                  WHERE "이용자"       = #{userId}

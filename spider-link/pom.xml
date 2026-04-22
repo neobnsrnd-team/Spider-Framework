@@ -92,14 +92,17 @@
 
     <build>
         <plugins>
-            <!-- 라이브러리 모듈이므로 spring-boot-maven-plugin repackage(Fat JAR) 제거.
-                 mvn install 로 일반 JAR를 로컬 Maven 저장소에 배포한다. -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
                 <configuration>
                     <encoding>UTF-8</encoding>
                 </configuration>
+            </plugin>
+            <!-- demo/backend Spring Boot 전환 전까지 standalone 실행을 위해 유지 -->
+            <plugin>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
             </plugin>
         </plugins>
     </build>

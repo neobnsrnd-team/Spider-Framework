@@ -28,7 +28,8 @@
             REMARK              AS remark,
             LOG_YN              AS logYn,
             DEFAULT_VALUE       AS defaultValue,
-            FIELD_REPEAT_CNT    AS fieldRepeatCnt
+            FIELD_REPEAT_CNT    AS fieldRepeatCnt,
+            REQUIRED_YN         AS requiredYn
         FROM FWK_MESSAGE_FIELD
         WHERE ORG_ID    = #{orgId}
           AND MESSAGE_ID = #{messageId}
