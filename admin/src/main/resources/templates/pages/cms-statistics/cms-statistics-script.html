@@ -11,6 +11,43 @@
         itemsPerPage: 10,
         /** 모달 재오픈 시 destroy 후 재생성하기 위한 Chart.js 인스턴스 참조 */
         _detailChart: null,
+        /** afterDraw 레이블 계산 시 total 접근용 — _renderDetailChart 실행 시 갱신 */
+        _chartTotal: 0,
+
+        /**
+         * 비율(%) 계산 헬퍼 — afterDraw·tooltip·요약 테이블에서 공통 사용
+         * @param {number} value - 개별 값
+         * @param {number} total - 전체 합계
+         * @returns {string} 소수점 1자리 퍼센트 문자열 (예: "35.3")
+         */
+        _pct: function(value, total) {
+            return total > 0 ? ((value / total) * 100).toFixed(1) : '0.0';
+        },
+
+        /**
+         * 막대 끝 레이블 플러그인 — 함수 호출마다 재생성하지 않도록 객체 수준으로 정의
+         * _chartTotal 을 통해 렌더링 시점의 total 값을 참조한다.
+         */
+        _datalabelsPlugin: {
+            id: 'cmsStatDatalabels',
+            afterDraw(chart) {
+                const ctx = chart.ctx;
+                const total = CmsStatisticsPage._chartTotal;
+                chart.data.datasets.forEach((dataset, i) => {
+                    chart.getDatasetMeta(i).data.forEach((bar, index) => {
+                        const value = dataset.data[index];
+                        const pct = CmsStatisticsPage._pct(value, total);
+                        ctx.save();
+                        ctx.font = '12px sans-serif';
+                        ctx.fillStyle = '#495057';
+                        ctx.textAlign = 'left';
+                        ctx.textBaseline = 'middle';
+                        ctx.fillText(`${value.toLocaleString()} (${pct}%)`, bar.x + 6, bar.y);
+                        ctx.restore();
+                    });
+                });
+            }
+        },
 
         load: function(page) {
             if (page !== undefined) this.currentPage = page;
@@ -139,7 +176,8 @@
             $('#detailSummaryTable').addClass('d-none');
             $('#detailNoData').addClass('d-none').removeClass('text-danger').text('');
 
-            new bootstrap.Modal('#detailModal').show();
+            // getOrCreateInstance — 매 호출마다 새 인스턴스를 생성하지 않아 메모리 누수 방지
+            bootstrap.Modal.getOrCreateInstance('#detailModal').show();
 
             const params = new URLSearchParams({ pageId, startDate, endDate });
             fetch('/api/cms-admin/statistics/detail?' + params)
@@ -171,45 +209,29 @@
             const total = data.reduce((sum, d) => sum + (d.clickCount || 0), 0);
             const maxClick = Math.max(...data.map(d => d.clickCount || 0));
 
+            // afterDraw 플러그인이 클로저 없이 total에 접근할 수 있도록 객체 프로퍼티에 저장
+            this._chartTotal = total;
+
             const labels = data.map(d => d.componentId || '');
             const values = data.map(d => d.clickCount || 0);
             const colors = values.map(v => v === maxClick ? '#0d6efd' : '#adb5bd');
 
-            // 막대 끝 레이블 최대 너비 추정 → 오른쪽 패딩 동적 계산 (글자당 약 7px)
+            // measureText()로 실제 텍스트 픽셀 너비를 측정하여 우측 패딩 계산 (매직 넘버 제거)
             const maxLabelText = maxClick.toLocaleString() + ' (100.0%)';
-            const rightPadding = maxLabelText.length * 7 + 12;
+            const tempCtx = document.createElement('canvas').getContext('2d');
+            tempCtx.font = '12px sans-serif';
+            const rightPadding = tempCtx.measureText(maxLabelText).width + 12;
 
             // 데이터 수에 따라 캔버스 높이 동적 설정 (막대 1개당 22px + 상하 여백)
             const canvasHeight = Math.max(80, data.length * 22 + 30);
             $('#detailBarChart').css('height', canvasHeight + 'px');
-
-            // 막대 끝 레이블 — 별도 플러그인 없이 afterDraw 훅으로 직접 렌더링
-            const datalabelsPlugin = {
-                id: 'cmsStatDatalabels',
-                afterDraw(chart) {
-                    const ctx = chart.ctx;
-                    chart.data.datasets.forEach((dataset, i) => {
-                        chart.getDatasetMeta(i).data.forEach((bar, index) => {
-                            const value = dataset.data[index];
-                            const pct = total > 0 ? ((value / total) * 100).toFixed(1) : '0.0';
-                            ctx.save();
-                            ctx.font = '12px sans-serif';
-                            ctx.fillStyle = '#495057';
-                            ctx.textAlign = 'left';
-                            ctx.textBaseline = 'middle';
-                            ctx.fillText(`${value.toLocaleString()} (${pct}%)`, bar.x + 6, bar.y);
-                            ctx.restore();
-                        });
-                    });
-                }
-            };
 
             const canvas = document.getElementById('detailBarChart');
             $('#detailChartWrapper').removeClass('d-none');
 
             this._detailChart = new Chart(canvas.getContext('2d'), {
                 type: 'bar',
-                plugins: [datalabelsPlugin],
+                plugins: [this._datalabelsPlugin],
                 data: {
                     labels,
                     datasets: [{
@@ -227,10 +249,7 @@
                         legend: { display: false },
                         tooltip: {
                             callbacks: {
-                                label: ctx => {
-                                    const pct = total > 0 ? ((ctx.parsed.x / total) * 100).toFixed(1) : '0.0';
-                                    return ` ${ctx.parsed.x.toLocaleString()} (${pct}%)`;
-                                }
+                                label: ctx => ` ${ctx.parsed.x.toLocaleString()} (${CmsStatisticsPage._pct(ctx.parsed.x, total)}%)`
                             }
                         }
                     },
@@ -257,7 +276,7 @@
         _renderSummaryTable: function(data, total, maxClick) {
             const rows = data.map(d => {
                 const count = d.clickCount || 0;
-                const pct = total > 0 ? ((count / total) * 100).toFixed(1) : '0.0';
+                const pct = this._pct(count, total);
                 const badge = count === maxClick
                     ? ' <span class="badge bg-primary ms-1" style="font-size:10px;">최다</span>'
                     : '';
