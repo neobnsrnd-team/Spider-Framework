@@ -15,7 +15,10 @@
  *
  * @param code - Claude가 생성한 TSX 코드 문자열
  */
-import React, { useEffect, useRef } from 'react'
+// React 19 ESM은 default export가 없으므로 namespace import를 사용한다.
+// `import React from 'react'`는 null을 반환할 수 있어 new Function 파라미터로 전달 시 오류 발생.
+import * as React from 'react'
+import { useEffect, useRef } from 'react'
 import ReactDOM from 'react-dom/client'
 import { ErrorBoundary } from './ErrorBoundary'
 
@@ -44,6 +47,20 @@ function patchImports(src: string): string {
         /import\s+\*\s+as\s+(\w+)\s+from\s+['"][^'"]*['"]/g,
         (_m, name: string) => `const ${name} = window.__components`,
       )
+      // React import 3가지 패턴을 일반 패턴보다 먼저 처리한다.
+      // React는 new Function('React', ...) 매개변수로 주입되므로 window.__components가 아닌 React에서 처리.
+      // 1) import React from 'react' → 제거 (React는 파라미터로 이미 주입, const React = ... 가 파라미터를 가리는 것 방지)
+      .replace(/import\s+React\s+from\s+['"]react['"]\s*;?/g, '')
+      // 2) import React, { useState, ... } from 'react' → const { useState, ... } = React
+      .replace(
+        /import\s+React\s*,\s*\{([^}]+)\}\s+from\s+['"]react['"]/g,
+        (_m, names: string) => `const {${names}} = React`,
+      )
+      // 3) import { useState, ... } from 'react' → const { useState, ... } = React
+      .replace(
+        /import\s+\{([^}]+)\}\s+from\s+['"]react['"]/g,
+        (_m, names: string) => `const {${names}} = React`,
+      )
       // named: import { A, B } from '...' → const { A, B } = window.__components
       .replace(
         /import\s+\{([^}]+)\}\s+from\s+['"][^'"]*['"]/g,
@@ -71,8 +88,15 @@ function patchImports(src: string): string {
 function patchExport(src: string): string {
   return (
     src
-      // export default function Name(...) — 함수 이름 보존
-      .replace(/export\s+default\s+function\s+(\w+)/, 'var __Component = function $1')
+      // export interface Foo / export type Foo → interface Foo / type Foo (타입은 런타임 불필요, export는 new Function 스코프에서 문법 오류)
+      .replace(/\bexport\s+(interface|type)\s/g, '$1 ')
+      // export function / export async function / export const / export class 등 named export → export 키워드 제거
+      // new Function 스코프에서 export는 문법 오류이므로 선언 키워드만 남긴다
+      .replace(/\bexport\s+(async\s+function|function|const|let|var|class)\s/g, '$1 ')
+      // export { A, B } 블록 export 제거 — LLM이 하위 선언을 re-export 할 때 생성될 수 있음
+      .replace(/\bexport\s+\{[^}]+\}\s*;?/g, '')
+      // export default async function Name / export default function Name — async 포함, 함수 이름 보존
+      .replace(/export\s+default\s+(async\s+)?function\s+(\w+)/, 'var __Component = $1function $2')
       // export default class Name — 클래스 이름 보존
       .replace(/export\s+default\s+class\s+(\w+)/, 'var __Component = class $1')
       // export default <expr> — 화살표 함수, 변수 참조 등 나머지 케이스
@@ -111,8 +135,10 @@ export default function Renderer({ code, codeId }: RendererProps) {
       const patched = patchExport(patchImports(code))
 
       // window.Babel: index.html CDN 스크립트로 로드된 @babel/standalone (global.d.ts 참조)
+      // runtime: 'classic' 명시 — 'automatic'이면 require('react/jsx-runtime')를 삽입해
+      // new Function 스코프에서 require가 없어 ReferenceError가 발생한다
       const { code: compiled } = window.Babel.transform(patched, {
-        presets: ['react', 'typescript'],
+        presets: [['react', { runtime: 'classic' }], 'typescript'],
         filename: 'component.tsx',
       })
 
@@ -122,7 +148,15 @@ export default function Renderer({ code, codeId }: RendererProps) {
       const Component = new Function(
         'React',
         `${compiled}\nreturn __Component`,
-      )(React) as React.ComponentType
+      )(React)
+
+      // export default 가 없거나 patchExport가 실패하면 __Component는 undefined가 된다.
+      // as React.ComponentType 타입 단언은 이를 숨기므로, 런타임에 직접 검증한다.
+      if (typeof Component !== 'function') {
+        throw new Error(
+          '__Component를 추출할 수 없습니다. 생성된 코드에 export default가 없거나 patchExport 변환이 실패했을 수 있습니다.',
+        )
+      }
 
       if (!rootRef.current) {
         rootRef.current = ReactDOM.createRoot(container)

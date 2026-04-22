@@ -6,7 +6,7 @@
 ## 사용 규칙
 
 - 아래 컴포넌트만 사용할 것. 목록에 없는 컴포넌트는 존재하지 않음
-- import 경로: `@neobnsrnd-team/reactive-springware`
+- import 경로: `@cl`
 - TypeScript로 작성하고 props interface를 포함할 것
 
 ## Core (원자 컴포넌트 — Button, Input, Badge 등 단일 HTML 요소 수준)
@@ -254,13 +254,15 @@ export interface GridProps {
 
 ```typescript
 import React from 'react';
+import type { BottomNavItem } from '../BottomNav/types';
 
 export interface HomePageLayoutProps extends React.HTMLAttributes<HTMLDivElement> {
   /** 헤더 타이틀 (앱 이름 또는 서비스명, 예: '하나은행') */
   title: string;
   /**
-   * 타이틀 좌측에 표시할 로고 아이콘 슬롯.
-   * 미전달 시 로고 영역 렌더링 안 함
+   * 타이틀 좌측에 표시할 로고 슬롯 (ReactNode).
+   * 아이콘 문자열에서 컴포넌트로의 변환은 호출자(CMS layouts.tsx 등)가 담당한다.
+   * 미전달 시 로고 영역 렌더링 안 함.
    */
   logo?: React.ReactNode;
   /**
@@ -276,6 +278,17 @@ export interface HomePageLayoutProps extends React.HTMLAttributes<HTMLDivElement
   hasNotification?: boolean;
   /** 하단 글로벌 탭바 영역 여백 자동 추가 여부. 기본: true */
   withBottomNav?: boolean;
+  /**
+   * CMS 브리지 전용: 하단 탭바에서 활성화할 탭 ID.
+   * withBottomNav=true일 때만 사용된다.
+   * @default "home"
+   */
+  activeId?: string;
+  /**
+   * 하단 탭바 항목 커스터마이징.
+   * 미전달 시 기본 탭(자산·상품·홈·카드·챗봇)을 사용한다.
+   */
+  bottomNavItems?: BottomNavItem[];
   className?: string;
 }
 ```
@@ -342,6 +355,27 @@ export interface PageLayoutProps extends React.HTMLAttributes<HTMLDivElement> {
    * 마지막 콘텐츠가 고정 바에 가려지지 않는다.
    */
   bottomBar?:    React.ReactNode;
+  /**
+   * CMS 브리지 전용: onBack이 없을 때 뒤로가기 버튼 표시 여부 (noop 핸들러).
+   * onBack이 있으면 무시된다.
+   */
+  showBack?: boolean;
+  /**
+   * CMS 브리지 전용: rightAction이 없을 때 헤더 우측 버튼 종류.
+   * rightAction이 있으면 무시된다.
+   * @default "none"
+   */
+  rightBtnType?: 'close' | 'menu' | 'none';
+  /**
+   * CMS 브리지 전용: bottomBar가 없을 때 하단 버튼 수로 bottomBar를 자동 생성.
+   * bottomBar가 있으면 무시된다.
+   * @default "0"
+   */
+  bottomBtnCnt?: '0' | '1' | '2';
+  /** CMS 브리지 전용: 자동 생성 bottomBar의 첫 번째(primary) 버튼 텍스트. @default "확인" */
+  bottomBtn1Label?: string;
+  /** CMS 브리지 전용: 자동 생성 bottomBar의 두 번째(secondary) 버튼 텍스트. @default "취소" */
+  bottomBtn2Label?: string;
   className?:    string;
 }
 ```
@@ -608,6 +642,23 @@ export interface BottomSheetProps {
    * true로 설정해도 ESC 키·백드롭 클릭 닫기는 유지된다.
    */
   hideCloseButton?: boolean;
+  /**
+   * Portal 렌더링 대상 요소. 기본값: document.body.
+   * CMS 캔버스처럼 특정 컨테이너 안에 오버레이를 가두고 싶을 때 전달한다.
+   * 전달 시 백드롭 포지션이 fixed → absolute로 전환되므로
+   * 컨테이너 요소에 `position: relative`와 `overflow: hidden`이 필요하다.
+   */
+  container?: HTMLElement;
+  /**
+   * CMS 브리지 전용: footer ReactNode가 없을 때 버튼 수를 지정해 footer를 자동 생성한다.
+   * footer prop이 있으면 무시된다.
+   * @default "0"
+   */
+  bottomBtnCnt?: '0' | '1' | '2';
+  /** CMS 브리지 전용: 자동 생성 footer의 첫 번째(primary) 버튼 텍스트. @default "확인" */
+  bottomBtn1Label?: string;
+  /** CMS 브리지 전용: 자동 생성 footer의 두 번째(secondary) 버튼 텍스트. @default "취소" */
+  bottomBtn2Label?: string;
   className?: string;
 }
 ```
@@ -932,12 +983,36 @@ export interface ModalProps {
   /** true이면 배경 클릭으로 닫기 비활성화 */
   disableBackdropClose?: boolean;
   /**
+   * false이면 X 닫기 버튼을 숨기고 ESC 키 닫기도 비활성화한다.
+   * disableBackdropClose와 함께 사용하면 프로그래밍 방식으로만 닫힘.
+   * critical 공지 등 사용자가 강제로 확인해야 하는 경우에 사용한다.
+   * @default true
+   */
+  closeable?: boolean;
+  /**
    * 헤더 타이틀 정렬.
    * - 'left'  (기본): 타이틀 좌측, X 버튼 우측 (일반 확인 모달)
    * - 'center': 타이틀 중앙, X 버튼 절대 우측 (경고·안내 모달)
    * @default 'left'
    */
   titleAlign?:       ModalTitleAlign;
+  /**
+   * Portal 렌더링 대상 요소. 기본값: document.body.
+   * CMS 캔버스처럼 특정 컨테이너 안에 오버레이를 가두고 싶을 때 전달한다.
+   * 전달 시 백드롭 포지션이 fixed → absolute로 전환되므로
+   * 컨테이너 요소에 `position: relative`와 `overflow: hidden`이 필요하다.
+   */
+  container?: HTMLElement;
+  /**
+   * CMS 브리지 전용: footer ReactNode가 없을 때 버튼 수를 지정해 footer를 자동 생성한다.
+   * footer prop이 있으면 무시된다.
+   * @default "0"
+   */
+  bottomBtnCnt?: '0' | '1' | '2';
+  /** CMS 브리지 전용: 자동 생성 footer의 첫 번째(primary) 버튼 텍스트. @default "확인" */
+  bottomBtn1Label?: string;
+  /** CMS 브리지 전용: 자동 생성 footer의 두 번째(secondary) 버튼 텍스트. @default "취소" */
+  bottomBtn2Label?: string;
   className?:        string;
 }
 ```
@@ -1035,13 +1110,19 @@ export interface PinConfirmSheetProps {
   /**
    * PIN 입력 완료 핸들러.
    * pinLength 자리가 모두 입력되면 자동 호출된다.
+   * async 함수를 전달해도 된다 (API 호출 등).
    * @param pin - 입력된 PIN 문자열
    */
-  onConfirm: (pin: string) => void;
+  onConfirm: (pin: string) => void | Promise<void>;
   /** 시트 상단 타이틀. 기본: '비밀번호 입력' */
   title?: string;
   /** PIN 자릿수. 기본: 4 */
   pinLength?: number;
+  /**
+   * 외부에서 주입하는 에러 메시지.
+   * 값이 설정되면 도트 아래에 표시하고 입력된 PIN을 초기화한다.
+   */
+  errorMessage?: string;
 }
 ```
 
@@ -1697,6 +1778,8 @@ export interface CardPaymentSummaryProps {
   onCashAdvance?: () => void;
   /** 날짜(년월) 영역 클릭 핸들러. 전달 시 날짜 선택 모달 등을 열 수 있음 */
   onDateClick?: () => void;
+  /** true이면 년월 선택 버튼(dateYM + ChevronDown)을 숨김. 기본: false */
+  hideDateButton?: boolean;
   className?: string;
 }
 ```

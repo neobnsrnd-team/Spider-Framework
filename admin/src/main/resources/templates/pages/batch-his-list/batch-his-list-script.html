@@ -25,7 +25,10 @@
                dtimeStr.substring(12, 14);
     }
 
-    const BatchHistory = {
+    // window에 할당: 탭 캐시 제거 후 재로딩 시 tabContent.html()이 스크립트를 재실행하는데,
+    // const는 중복 선언 불가(SyntaxError)이고 pagination의 onclick="BatchHistory.xxx()"가
+    // 전역 참조를 요구하므로 window 프로퍼티 재할당 방식을 사용한다.
+    window.BatchHistory = {
         currentPage: 1,
         totalItems: 0,
         itemsPerPage: 10,
