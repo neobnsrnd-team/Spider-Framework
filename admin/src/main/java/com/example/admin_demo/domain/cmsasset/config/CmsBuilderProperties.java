@@ -39,4 +39,7 @@ public class CmsBuilderProperties {
      * Admin HTTP 스레드·사용자 UI 대기 시간을 과다하게 잡기 때문에 짧게 둔다 (Issue #55, Gemini 리뷰 반영).
      */
     private int deployReadTimeoutSeconds = 10;
+
+    /** x-deploy-token 헤더값. 페이지 배포(cms.deploy.secret)와 동일한 CMS DEPLOY_SECRET 을 공유한다. */
+    private String deploySecret;
 }
