@@ -30,12 +30,12 @@
                             <!-- Row 2: SQL Group ID, DB ID -->
                             <div class="row mb-3">
                                 <div class="col-md-6">
-                                    <label class="form-label">SQL 그룹 ID</label>
+                                    <label class="form-label">SQL 그룹 ID <span class="text-danger">*</span></label>
                                     <input type="text" class="form-control" id="sqModalSqlGroupId" name="sqlGroupId"
                                            maxlength="50">
                                 </div>
                                 <div class="col-md-6">
-                                    <label class="form-label">DB ID</label>
+                                    <label class="form-label">DB ID <span class="text-danger">*</span></label>
                                     <input type="text" class="form-control" id="sqModalDbId" name="dbId"
                                            maxlength="50">
                                 </div>
@@ -45,13 +45,23 @@
                             <div class="row mb-3">
                                 <div class="col-md-4">
                                     <label class="form-label">SQL 유형</label>
-                                    <input type="text" class="form-control" id="sqModalSqlType" name="sqlType"
-                                           maxlength="10">
+                                    <select class="form-select" id="sqModalSqlType" name="sqlType">
+                                        <option value="">선택</option>
+                                        <option value="R">R (SELECT)</option>
+                                        <option value="C">C (INSERT)</option>
+                                        <option value="U">U (UPDATE)</option>
+                                        <option value="D">D (DELETE)</option>
+                                        <option value="P">P (PROCEDURE)</option>
+                                        <option value="I">I (SQL)</option>
+                                    </select>
                                 </div>
                                 <div class="col-md-4">
                                     <label class="form-label">실행 유형</label>
-                                    <input type="text" class="form-control" id="sqModalExecType" name="execType"
-                                           maxlength="10">
+                                    <select class="form-select" id="sqModalExecType" name="execType">
+                                        <option value="">선택</option>
+                                        <option value="O">O (ONLINE)</option>
+                                        <option value="B">B (BATCH)</option>
+                                    </select>
                                 </div>
                                 <div class="col-md-4">
                                     <label class="form-label">결과 유형</label>
@@ -87,9 +97,18 @@
                             <!-- Row 5: SQL Query -->
                             <div class="row mb-3">
                                 <div class="col-12">
-                                    <label class="form-label">SQL Query</label>
-                                    <textarea class="form-control resize-vertical" id="sqModalSqlQuery" name="sqlQuery"
-                                              rows="5" maxlength="4000"
+                                    <label class="form-label">SQL Query <span class="text-danger">*</span></label>
+                                    <!-- 에디터 도구 버튼 툴바: 쓰기 권한이 있을 때만 활성화 -->
+                                    <div class="d-flex flex-wrap gap-1 mb-1" id="sqEditorToolbar">
+                                        <button type="button" class="btn btn-outline-secondary btn-sm" id="btnAddPaging">
+                                            <i class="bi bi-layout-text-window"></i> 페이징 쿼리 추가
+                                        </button>
+                                        <button type="button" class="btn btn-outline-secondary btn-sm" id="btnCallProcedure">
+                                            <i class="bi bi-braces"></i> 프로시저 호출
+                                        </button>
+                                    </div>
+                                    <textarea class="form-control font-monospace" id="sqModalSqlQuery" name="sqlQuery"
+                                              rows="5" maxlength="4000" style="resize: vertical;"
                                               placeholder="SQL 쿼리를 입력하세요"></textarea>
                                 </div>
                             </div>
@@ -107,7 +126,7 @@
                             <!-- Row 7: 설명 -->
                             <div class="row mb-3">
                                 <div class="col-12">
-                                    <label class="form-label">설명</label>
+                                    <label class="form-label">설명 <span class="text-danger">*</span></label>
                                     <textarea class="form-control resize-vertical" id="sqModalQueryDesc" name="queryDesc"
                                               rows="2" maxlength="500"></textarea>
                                 </div>
@@ -129,6 +148,11 @@
                 </div>
                 <!-- Modal Footer -->
                 <div class="modal-footer justify-content-end">
+                    <!-- 상세 모드 + 쓰기 권한 시에만 표시 -->
+                    <button th:if="${userAuthorities != null and userAuthorities.contains('SQL_QUERY:W')}"
+                            type="button" class="btn btn-info btn-sm d-hidden" id="btnSqlQueryTest">
+                        <i class="bi bi-play-circle"></i> 쿼리 테스트
+                    </button>
                     <button th:if="${userAuthorities != null and userAuthorities.contains('SQL_QUERY:W')}"
                             type="button" class="btn btn-primary btn-sm d-hidden" id="btnSqlQuerySave">
                         <i class="bi bi-floppy"></i> 저장
@@ -185,6 +209,7 @@
                             }
 
                             $('#sqlQuerySystemInfoRow').removeClass('d-hidden');
+                            $('#btnSqlQueryTest').toggleClass('d-hidden', !hasWrite);
                             $('#btnSqlQuerySave').toggleClass('d-hidden', !hasWrite);
                             $('#btnSqlQueryDelete').toggleClass('d-hidden', !hasWrite);
 
@@ -200,6 +225,7 @@
                             }
 
                             $('#sqlQuerySystemInfoRow').removeClass('d-hidden');
+                            $('#btnSqlQueryTest').toggleClass('d-hidden', !hasWrite);
                             $('#btnSqlQuerySave').toggleClass('d-hidden', !hasWrite);
                             $('#btnSqlQueryDelete').toggleClass('d-hidden', !hasWrite);
 
@@ -221,6 +247,7 @@
                     $('#sqModalQueryId').prop('disabled', false);
 
                     $('#sqlQuerySystemInfoRow').addClass('d-hidden');
+                    $('#btnSqlQueryTest').addClass('d-hidden');
                     $('#btnSqlQuerySave').removeClass('d-hidden');
                     $('#btnSqlQueryDelete').addClass('d-hidden');
 
@@ -250,8 +277,9 @@
                     $('#sqModalQueryName').prop('readonly', readonly);
                     $('#sqModalSqlGroupId').prop('readonly', readonly);
                     $('#sqModalDbId').prop('readonly', readonly);
-                    $('#sqModalSqlType').prop('readonly', readonly);
-                    $('#sqModalExecType').prop('readonly', readonly);
+                    // select 요소는 readonly가 없으므로 disabled로 처리
+                    $('#sqModalSqlType').prop('disabled', readonly);
+                    $('#sqModalExecType').prop('disabled', readonly);
                     $('#sqModalResultType').prop('readonly', readonly);
                     $('#sqModalCacheYn').prop('disabled', readonly);
                     $('#sqModalTimeOut').prop('readonly', readonly);
@@ -259,6 +287,8 @@
                     $('#sqModalSqlQuery').prop('readonly', readonly);
                     $('#sqModalSqlQuery2').prop('readonly', readonly);
                     $('#sqModalQueryDesc').prop('readonly', readonly);
+                    // 에디터 툴바: 읽기 전용 시 버튼 비활성화
+                    $('#sqEditorToolbar button').prop('disabled', readonly);
                 },
 
                 _formatDatetime: function (dateStr) {
@@ -273,6 +303,9 @@
 
                 save: function () {
                     if (!this._validateForm()) {
+                        return;
+                    }
+                    if (!this._validateQuery()) {
                         return;
                     }
 
@@ -363,6 +396,20 @@
                     });
                 },
 
+                addPagingQuery: function () {
+                    const pagingTemplate = `\nSELECT *\nFROM (\n    SELECT ROWNUM AS RNUM, A.*\n    FROM (\n        /* 원본 쿼리를 여기에 작성 */\n        SELECT * FROM DUAL\n    ) A\n    WHERE ROWNUM <= #endRow#\n)\nWHERE RNUM >= #startRow#`;
+                    const $textarea = $('#sqModalSqlQuery');
+                    $textarea.val($textarea.val() + pagingTemplate);
+                    $textarea.focus();
+                },
+
+                callProcedure: function () {
+                    const procedureTemplate = `\nCALL 프로시저명(\n    #param1#,   /* IN 파라미터 */\n    #param2#,   /* IN 파라미터 */\n    {out, jdbcType=VARCHAR, mode=OUT, javaType=java.lang.String, property=outParam1}  /* OUT 파라미터 */\n)`;
+                    const $textarea = $('#sqModalSqlQuery');
+                    $textarea.val($textarea.val() + procedureTemplate);
+                    $textarea.focus();
+                },
+
                 _validateForm: function () {
                     if (this.mode === 'create') {
                         const queryId = $('#sqModalQueryId').val().trim();
@@ -380,9 +427,88 @@
                         return false;
                     }
 
+                    // DB NOT NULL 제약: SQL_GROUP_ID는 반드시 입력해야 함
+                    const sqlGroupId = $('#sqModalSqlGroupId').val().trim();
+                    if (!sqlGroupId) {
+                        Toast.warning('SQL 그룹 ID를 입력해주세요.');
+                        $('#sqModalSqlGroupId').focus();
+                        return false;
+                    }
+
+                    // DB NOT NULL 제약: DB_ID는 반드시 입력해야 함
+                    const dbId = $('#sqModalDbId').val().trim();
+                    if (!dbId) {
+                        Toast.warning('DB ID를 입력해주세요.');
+                        $('#sqModalDbId').focus();
+                        return false;
+                    }
+
+                    // DB NOT NULL 제약: SQL_QUERY는 반드시 입력해야 함
+                    const sqlQuery = $('#sqModalSqlQuery').val().trim();
+                    if (!sqlQuery) {
+                        Toast.warning('SQL Query를 입력해주세요.');
+                        $('#sqModalSqlQuery').focus();
+                        return false;
+                    }
+
+                    // 구버전 기준 필수 입력: 설명
+                    const queryDesc = $('#sqModalQueryDesc').val().trim();
+                    if (!queryDesc) {
+                        Toast.warning('설명을 입력해주세요.');
+                        $('#sqModalQueryDesc').focus();
+                        return false;
+                    }
+
+                    return true;
+                },
+
+                _validateQuery: function () {
+                    const sqlQuery = $('#sqModalSqlQuery').val().trim().toUpperCase();
+                    const sqlType  = $('#sqModalSqlType').val();
+
+                    // iBatis 구문 태그는 MyBatis에서 지원하지 않으므로 저장 차단
+                    const forbiddenTags = [
+                        '<ISNULL>', '<ISNOTNULL>', '<ISEMPTY>', '<ISNOTEMPTY>',
+                        '<ITERATE>', '<![CDATA['
+                    ];
+                    for (const tag of forbiddenTags) {
+                        if (sqlQuery.includes(tag)) {
+                            Toast.warning('iBatis 구문(' + tag + ')은 사용할 수 없습니다.');
+                            $('#sqModalSqlQuery').focus();
+                            return false;
+                        }
+                    }
+
+                    // SQL 유형이 선택된 경우에만 시작 키워드 일치 여부를 검증
+                    if (sqlType && sqlQuery) {
+                        const typeKeywordMap = {
+                            R: ['SELECT'],
+                            C: ['INSERT'],
+                            U: ['UPDATE'],
+                            D: ['DELETE'],
+                            P: ['CALL', 'EXEC'],
+                            I: ['ALTER', 'CREATE', 'DROP', 'GRANT', 'REVOKE']
+                        };
+                        const keywords = typeKeywordMap[sqlType];
+                        if (keywords && !keywords.some(k => sqlQuery.startsWith(k))) {
+                            Toast.warning('SQL 유형[' + sqlType + ']에 맞는 SQL을 작성해주세요.\n시작 키워드: ' + keywords.join(', '));
+                            $('#sqModalSqlQuery').focus();
+                            return false;
+                        }
+                    }
+
                     return true;
                 }
             };
+
+            $(document).off('click', '#btnSqlQueryTest').on('click', '#btnSqlQueryTest', function () {
+                const queryId    = $('#sqModalQueryId').val();
+                const sqlGroupId = $('#sqModalSqlGroupId').val();
+                const dbId       = $('#sqModalDbId').val();
+                if (window.SqlQueryTestModal) {
+                    SqlQueryTestModal.open(queryId, sqlGroupId, dbId);
+                }
+            });
 
             $(document).off('click', '#btnSqlQuerySave').on('click', '#btnSqlQuerySave', function () {
                 SqlQueryModal.save();
@@ -390,6 +516,14 @@
 
             $(document).off('click', '#btnSqlQueryDelete').on('click', '#btnSqlQueryDelete', function () {
                 SqlQueryModal.delete();
+            });
+
+            $(document).off('click', '#btnAddPaging').on('click', '#btnAddPaging', function () {
+                SqlQueryModal.addPagingQuery();
+            });
+
+            $(document).off('click', '#btnCallProcedure').on('click', '#btnCallProcedure', function () {
+                SqlQueryModal.callProcedure();
             });
         })();
     </script>

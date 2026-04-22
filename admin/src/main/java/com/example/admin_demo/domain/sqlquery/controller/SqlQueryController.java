@@ -3,6 +3,7 @@ package com.example.admin_demo.domain.sqlquery.controller;
 import com.example.admin_demo.domain.sqlquery.dto.SqlQueryCreateRequest;
 import com.example.admin_demo.domain.sqlquery.dto.SqlQueryResponse;
 import com.example.admin_demo.domain.sqlquery.dto.SqlQuerySearchRequest;
+import com.example.admin_demo.domain.sqlquery.dto.SqlQueryTestResponse;
 import com.example.admin_demo.domain.sqlquery.dto.SqlQueryUpdateRequest;
 import com.example.admin_demo.domain.sqlquery.service.SqlQueryService;
 import com.example.admin_demo.global.dto.ApiResponse;
@@ -85,5 +86,12 @@ public class SqlQueryController {
         log.info("DELETE /api/sql-queries/{}", queryId);
         sqlQueryService.delete(queryId);
         return ResponseEntity.ok(ApiResponse.success(null));
+    }
+
+    @PostMapping("/{queryId}/test")
+    @PreAuthorize("hasAuthority('SQL_QUERY:W')")
+    public ResponseEntity<ApiResponse<SqlQueryTestResponse>> testQuery(@PathVariable String queryId) {
+        log.info("POST /api/sql-queries/{}/test", queryId);
+        return ResponseEntity.ok(ApiResponse.success(sqlQueryService.testQuery(queryId)));
     }
 }
