@@ -81,6 +81,38 @@
                         width: '100px',
                         placeholder: '전체',
                         options: ComboManager.simple.getList('USE_YN')
+                    },
+                    {
+                        type: 'text',
+                        id: 'sqlGroupId',
+                        label: 'SQL 그룹 ID',
+                        labelStyle: 'min-width: 80px; margin-left: 10px;',
+                        placeholder: 'SQL 그룹 ID',
+                        width: '150px'
+                    },
+                    {
+                        type: 'text',
+                        id: 'sqlGroupName',
+                        label: 'SQL 그룹 명',
+                        labelStyle: 'min-width: 80px; margin-left: 10px;',
+                        placeholder: 'SQL 그룹 명',
+                        width: '150px'
+                    },
+                    {
+                        type: 'select',
+                        id: 'sqlType',
+                        label: 'SQL 유형',
+                        labelStyle: 'min-width: 60px; margin-left: 10px;',
+                        width: '130px',
+                        placeholder: '전체',
+                        options: [
+                            { value: 'R', label: 'R (SELECT)' },
+                            { value: 'C', label: 'C (INSERT)' },
+                            { value: 'U', label: 'U (UPDATE)' },
+                            { value: 'D', label: 'D (DELETE)' },
+                            { value: 'P', label: 'P (PROCEDURE)' },
+                            { value: 'I', label: 'I (SQL)' }
+                        ]
                     }
                 ],
                 limit: { default: 10, showLarge: true }

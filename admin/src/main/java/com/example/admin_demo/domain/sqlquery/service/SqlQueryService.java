@@ -43,12 +43,20 @@ public class SqlQueryService {
         PageRequest pageRequest = searchDTO.toPageRequest();
 
         long total = sqlQueryMapper.countAllWithSearch(
-                searchDTO.getQueryId(), searchDTO.getQueryName(), searchDTO.getUseYn());
+                searchDTO.getQueryId(),
+                searchDTO.getQueryName(),
+                searchDTO.getUseYn(),
+                searchDTO.getSqlGroupId(),
+                searchDTO.getSqlGroupName(),
+                searchDTO.getSqlType());
 
         List<SqlQueryResponse> list = sqlQueryMapper.findAllWithSearch(
                 searchDTO.getQueryId(),
                 searchDTO.getQueryName(),
                 searchDTO.getUseYn(),
+                searchDTO.getSqlGroupId(),
+                searchDTO.getSqlGroupName(),
+                searchDTO.getSqlType(),
                 pageRequest.getSortBy(),
                 pageRequest.getSortDirection(),
                 pageRequest.getOffset(),
@@ -97,8 +105,13 @@ public class SqlQueryService {
     }
 
     public byte[] exportExcel(SqlQuerySearchRequest searchDTO) {
-        List<SqlQueryResponse> data =
-                sqlQueryMapper.findAllForExport(searchDTO.getQueryId(), searchDTO.getQueryName(), searchDTO.getUseYn());
+        List<SqlQueryResponse> data = sqlQueryMapper.findAllForExport(
+                searchDTO.getQueryId(),
+                searchDTO.getQueryName(),
+                searchDTO.getUseYn(),
+                searchDTO.getSqlGroupId(),
+                searchDTO.getSqlGroupName(),
+                searchDTO.getSqlType());
 
         if (!ExcelExportUtil.isWithinLimit(data.size())) {
             throw new InvalidInputException(

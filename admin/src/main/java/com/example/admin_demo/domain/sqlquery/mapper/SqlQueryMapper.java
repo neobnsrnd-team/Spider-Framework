@@ -32,16 +32,29 @@ public interface SqlQueryMapper {
             @Param("queryId") String queryId,
             @Param("queryName") String queryName,
             @Param("useYn") String useYn,
+            @Param("sqlGroupId") String sqlGroupId,
+            @Param("sqlGroupName") String sqlGroupName,
+            @Param("sqlType") String sqlType,
             @Param("sortBy") String sortBy,
             @Param("sortDirection") String sortDirection,
             @Param("offset") int offset,
             @Param("endRow") int endRow);
 
     long countAllWithSearch(
-            @Param("queryId") String queryId, @Param("queryName") String queryName, @Param("useYn") String useYn);
+            @Param("queryId") String queryId,
+            @Param("queryName") String queryName,
+            @Param("useYn") String useYn,
+            @Param("sqlGroupId") String sqlGroupId,
+            @Param("sqlGroupName") String sqlGroupName,
+            @Param("sqlType") String sqlType);
 
     List<SqlQueryResponse> findAllForExport(
-            @Param("queryId") String queryId, @Param("queryName") String queryName, @Param("useYn") String useYn);
+            @Param("queryId") String queryId,
+            @Param("queryName") String queryName,
+            @Param("useYn") String useYn,
+            @Param("sqlGroupId") String sqlGroupId,
+            @Param("sqlGroupName") String sqlGroupName,
+            @Param("sqlType") String sqlType);
 
     /**
      * 수정 직전 현재 상태를 FWK_SQL_QUERY_HIS 테이블에 백업 삽입

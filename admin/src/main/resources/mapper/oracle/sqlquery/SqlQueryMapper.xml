@@ -101,6 +101,15 @@
         <if test="useYn != null and useYn != ''">
             AND TRIM(q.USE_YN) = TRIM(#{useYn})
         </if>
+        <if test="sqlGroupId != null and sqlGroupId != ''">
+            AND TRIM(q.SQL_GROUP_ID) LIKE '%' || TRIM(#{sqlGroupId}) || '%'
+        </if>
+        <if test="sqlGroupName != null and sqlGroupName != ''">
+            AND TRIM(g.SQL_GROUP_NAME) LIKE '%' || TRIM(#{sqlGroupName}) || '%'
+        </if>
+        <if test="sqlType != null and sqlType != ''">
+            AND TRIM(q.SQL_TYPE) = TRIM(#{sqlType})
+        </if>
     </sql>
 
     <!--
@@ -151,10 +160,11 @@
         ) WHERE RNUM > #{offset}
     </select>
 
-    <!-- 전체 건수 조회 (동일한 searchConditions 적용) -->
+    <!-- 전체 건수 조회 (동일한 searchConditions 적용, sqlGroupName 검색을 위해 LEFT JOIN 포함) -->
     <select id="countAllWithSearch" resultType="long">
         SELECT COUNT(*)
         FROM FWK_SQL_QUERY q
+        LEFT JOIN FWK_SQL_GROUP g ON TRIM(q.SQL_GROUP_ID) = TRIM(g.SQL_GROUP_ID)
         <where>
             <include refid="searchConditions"/>
         </where>
