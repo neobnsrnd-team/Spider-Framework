@@ -16,6 +16,13 @@ import java.util.Map;
 
 import jakarta.servlet.http.HttpServletRequest;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import io.swagger.v3.oas.annotations.tags.Tag;
+
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -44,6 +51,8 @@ import com.example.tcpbackend.tcp.session.SessionInfo;
  * { "error": "PIN 번호가 올바르지 않습니다.", "attemptsLeft": 2 }  // HTTP 403
  * }</pre>
  */
+@Tag(name = "카드", description = "카드 목록 조회·즉시결제·PIN 시도 초기화 API")
+@SecurityRequirement(name = "bearerAuth")
 @RestController
 @RequestMapping("/api/cards")
 public class CardController {
@@ -61,6 +70,12 @@ public class CardController {
      *
      * @return { cards: [ { id, name, maskedNumber, balance, paymentBank, paymentAccount, ... } ] }
      */
+    @Operation(summary = "카드 목록 조회", description = "세션 사용자에게 속한 모든 카드를 조회한다.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "조회 성공 — { cards: [...] }"),
+            @ApiResponse(responseCode = "401", description = "인증 필요"),
+            @ApiResponse(responseCode = "500", description = "서버 오류")
+    })
     @GetMapping
     public ResponseEntity<?> getCards(HttpServletRequest request) {
         SessionInfo session = (SessionInfo) request.getAttribute("session");
@@ -79,8 +94,15 @@ public class CardController {
      * @param cardId 카드번호 (URL 경로 변수)
      * @return { payableAmount, creditLimit }
      */
+    @Operation(summary = "즉시결제 가능금액 조회", description = "해당 카드의 즉시결제 가능금액과 신용한도를 반환한다.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "조회 성공 — { payableAmount, creditLimit }"),
+            @ApiResponse(responseCode = "401", description = "인증 필요"),
+            @ApiResponse(responseCode = "500", description = "서버 오류")
+    })
     @GetMapping("/{cardId}/payable-amount")
-    public ResponseEntity<?> getPayableAmount(@PathVariable String cardId,
+    public ResponseEntity<?> getPayableAmount(
+            @Parameter(description = "카드번호", required = true) @PathVariable String cardId,
                                                HttpServletRequest request) {
         SessionInfo session = (SessionInfo) request.getAttribute("session");
         try {
@@ -102,8 +124,17 @@ public class CardController {
      * @param body   { pin, amount, accountNumber }
      * @return { paidAmount, processedCount, completedAt }
      */
+    @Operation(summary = "즉시결제 처리", description = "PIN 인증 후 즉시결제를 수행한다. PIN 오류 시 403과 남은 시도 횟수를 반환한다.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "결제 성공 — { paidAmount, processedCount, completedAt }"),
+            @ApiResponse(responseCode = "400", description = "비즈니스 오류 (잔액 부족, 계좌 미존재 등)"),
+            @ApiResponse(responseCode = "401", description = "인증 필요"),
+            @ApiResponse(responseCode = "403", description = "PIN 오류 — { error, attemptsLeft }"),
+            @ApiResponse(responseCode = "500", description = "서버 오류")
+    })
     @PostMapping("/{cardId}/immediate-pay")
-    public ResponseEntity<?> immediatePay(@PathVariable String cardId,
+    public ResponseEntity<?> immediatePay(
+            @Parameter(description = "카드번호", required = true) @PathVariable String cardId,
                                            @RequestBody ImmediatePayRequest body,
                                            HttpServletRequest request) {
         SessionInfo session = (SessionInfo) request.getAttribute("session");
@@ -135,8 +166,14 @@ public class CardController {
      *
      * @param cardId 카드번호 (URL 경로 변수)
      */
+    @Operation(summary = "PIN 시도 횟수 초기화", description = "PIN 오류 횟수 초과 후 초기화 버튼 클릭 시 호출된다.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "초기화 성공 — { ok: true }"),
+            @ApiResponse(responseCode = "401", description = "인증 필요")
+    })
     @DeleteMapping("/{cardId}/pin-attempts")
-    public ResponseEntity<?> resetPinAttempts(@PathVariable String cardId,
+    public ResponseEntity<?> resetPinAttempts(
+            @Parameter(description = "카드번호", required = true) @PathVariable String cardId,
                                                HttpServletRequest request) {
         SessionInfo session = (SessionInfo) request.getAttribute("session");
         cardService.resetPinAttempts(session.getUserId(), cardId);

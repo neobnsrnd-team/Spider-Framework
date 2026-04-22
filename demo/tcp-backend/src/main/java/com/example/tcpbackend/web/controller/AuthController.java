@@ -19,6 +19,12 @@ import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import io.swagger.v3.oas.annotations.tags.Tag;
+
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -44,6 +50,7 @@ import com.example.tcpbackend.tcp.session.TcpSessionManager;
  *   Cookie: hnc_refresh={sessionId}; HttpOnly; Path=/api/auth; Max-Age=604800
  * }</pre>
  */
+@Tag(name = "인증", description = "로그인·Access Token 갱신·로그아웃·프로필 조회 API")
 @RestController
 @RequestMapping("/api/auth")
 public class AuthController {
@@ -68,6 +75,13 @@ public class AuthController {
      * @param body     { userId, password }
      * @param response Refresh Token 쿠키 설정용
      */
+    @Operation(summary = "로그인",
+            description = "아이디·비밀번호로 인증 후 sessionId(Access Token)를 반환한다. " +
+                    "응답 쿠키 hnc_refresh 에 Refresh Token이 설정된다.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "로그인 성공 — { success, userId, userName, userGrade, token, lastLogin }"),
+            @ApiResponse(responseCode = "401", description = "아이디/비밀번호 오류 또는 비활성 계정")
+    })
     @PostMapping("/login")
     public ResponseEntity<?> login(@RequestBody LoginRequest body, HttpServletResponse response) {
         try {
@@ -102,6 +116,12 @@ public class AuthController {
      *
      * @param request Refresh Token 쿠키 추출용
      */
+    @Operation(summary = "Access Token 갱신",
+            description = "httpOnly 쿠키(hnc_refresh)의 Refresh Token을 검증하고 accessToken을 반환한다.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "갱신 성공 — { accessToken, lastLogin }"),
+            @ApiResponse(responseCode = "401", description = "쿠키 없음 또는 만료된 세션")
+    })
     @PostMapping("/refresh")
     public ResponseEntity<?> refresh(HttpServletRequest request) {
         String refreshToken = extractRefreshCookie(request);
@@ -128,6 +148,9 @@ public class AuthController {
      * 로그아웃 처리.
      * 세션을 무효화하고 Refresh Token 쿠키를 삭제한다.
      */
+    @Operation(summary = "로그아웃", description = "세션을 무효화하고 Refresh Token 쿠키를 삭제한다.")
+    @ApiResponse(responseCode = "200", description = "로그아웃 성공 — { success: true }")
+    @SecurityRequirement(name = "bearerAuth")
     @PostMapping("/logout")
     public ResponseEntity<?> logout(HttpServletRequest request, HttpServletResponse response) {
         String sessionId = (String) request.getAttribute("sessionId");
@@ -143,6 +166,13 @@ public class AuthController {
      * 현재 사용자 프로필 조회.
      * 대시보드 진입 시 lastLogin이 없는 경우를 보완하는 용도로 사용된다.
      */
+    @Operation(summary = "현재 사용자 프로필 조회", description = "세션에 연결된 사용자 정보를 반환한다.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "조회 성공 — { userId, userName, userGrade, lastLogin }"),
+            @ApiResponse(responseCode = "401", description = "인증 필요"),
+            @ApiResponse(responseCode = "404", description = "사용자 없음")
+    })
+    @SecurityRequirement(name = "bearerAuth")
     @GetMapping("/me")
     public ResponseEntity<?> me(HttpServletRequest request) {
         SessionInfo session = (SessionInfo) request.getAttribute("session");

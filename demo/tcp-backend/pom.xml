@@ -73,6 +73,14 @@
       <artifactId>jackson-databind</artifactId>
     </dependency>
 
+    <!-- ── API 문서화 ────────────────────────────────────────────── -->
+    <!-- SpringDoc OpenAPI: Swagger UI 자동 생성 (/swagger-ui.html, /v3/api-docs) -->
+    <dependency>
+      <groupId>org.springdoc</groupId>
+      <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
+      <version>2.5.0</version>
+    </dependency>
+
     <!-- ── 유틸리티 ───────────────────────────────────────────────── -->
     <dependency>
       <groupId>org.projectlombok</groupId>

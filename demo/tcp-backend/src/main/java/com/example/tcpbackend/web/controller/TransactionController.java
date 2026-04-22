@@ -13,6 +13,13 @@ import java.util.Map;
 
 import jakarta.servlet.http.HttpServletRequest;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import io.swagger.v3.oas.annotations.tags.Tag;
+
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -26,6 +33,8 @@ import com.example.tcpbackend.tcp.session.SessionInfo;
 /**
  * 이용내역·결제명세서 컨트롤러.
  */
+@Tag(name = "이용내역·결제명세서", description = "이용내역 조회 및 결제예정금액/명세서 조회 API")
+@SecurityRequirement(name = "bearerAuth")
 @RestController
 @RequestMapping("/api")
 public class TransactionController {
@@ -47,14 +56,20 @@ public class TransactionController {
      * @param usageType   이용 유형: lump | installment | cancel (선택 — 없으면 전체)
      * @return { transactions, totalCount, paymentSummary }
      */
+    @Operation(summary = "이용내역 조회", description = "다양한 필터 조건으로 카드 이용내역을 조회한다.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "조회 성공 — { transactions, totalCount, paymentSummary }"),
+            @ApiResponse(responseCode = "401", description = "인증 필요"),
+            @ApiResponse(responseCode = "500", description = "서버 오류")
+    })
     @GetMapping("/transactions")
     public ResponseEntity<?> getTransactions(
-            @RequestParam(required = false) String cardId,
-            @RequestParam(required = false) String period,
-            @RequestParam(required = false) String customMonth,
-            @RequestParam(required = false) String fromDate,
-            @RequestParam(required = false) String toDate,
-            @RequestParam(required = false) String usageType,
+            @Parameter(description = "카드번호 (미입력 시 전체 카드)") @RequestParam(required = false) String cardId,
+            @Parameter(description = "기간 유형: thisMonth | 1month | 3months | custom") @RequestParam(required = false) String period,
+            @Parameter(description = "period=custom 일 때 조회 월 (YYYY-MM)") @RequestParam(required = false) String customMonth,
+            @Parameter(description = "직접 지정 시작일 (YYYYMMDD)") @RequestParam(required = false) String fromDate,
+            @Parameter(description = "직접 지정 종료일 (YYYYMMDD)") @RequestParam(required = false) String toDate,
+            @Parameter(description = "이용 유형: lump | installment | cancel (미입력 시 전체)") @RequestParam(required = false) String usageType,
             HttpServletRequest request) {
 
         SessionInfo session = (SessionInfo) request.getAttribute("session");
@@ -75,10 +90,17 @@ public class TransactionController {
      * @param paymentDay 결제일 (선택 — 공여기간 기준 계산에 사용)
      * @return { dueDate, totalAmount, items, cardInfo, billingPeriod }
      */
+    @Operation(summary = "결제예정금액/명세서 조회", description = "청구월 기준 결제예정금액과 명세서 항목을 반환한다.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "조회 성공 — { dueDate, totalAmount, items, cardInfo, billingPeriod }"),
+            @ApiResponse(responseCode = "400", description = "비즈니스 오류 (공여기간 계산 실패 등)"),
+            @ApiResponse(responseCode = "401", description = "인증 필요"),
+            @ApiResponse(responseCode = "500", description = "서버 오류")
+    })
     @GetMapping("/payment-statement")
     public ResponseEntity<?> getPaymentStatement(
-            @RequestParam(required = false) String yearMonth,
-            @RequestParam(required = false) String paymentDay,
+            @Parameter(description = "청구월 (YYYY-MM, 미입력 시 이번 달)") @RequestParam(required = false) String yearMonth,
+            @Parameter(description = "결제일 (공여기간 계산에 사용)") @RequestParam(required = false) String paymentDay,
             HttpServletRequest request) {
 
         SessionInfo session = (SessionInfo) request.getAttribute("session");
