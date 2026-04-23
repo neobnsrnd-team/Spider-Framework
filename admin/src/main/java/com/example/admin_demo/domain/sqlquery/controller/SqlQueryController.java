@@ -1,5 +1,6 @@
 package com.example.admin_demo.domain.sqlquery.controller;
 
+import com.example.admin_demo.domain.sqlquery.dto.SqlGroupResponse;
 import com.example.admin_demo.domain.sqlquery.dto.SqlQueryCreateRequest;
 import com.example.admin_demo.domain.sqlquery.dto.SqlQueryHistoryResponse;
 import com.example.admin_demo.domain.sqlquery.dto.SqlQueryResponse;
@@ -131,5 +132,12 @@ public class SqlQueryController {
             @PathVariable String queryId, @PathVariable String versionId) {
         log.info("POST /api/sql-queries/{}/restore/{}", queryId, versionId);
         return ResponseEntity.ok(ApiResponse.success(sqlQueryService.restoreFromHistory(queryId, versionId)));
+    }
+
+    @GetMapping("/group-search")
+    public ResponseEntity<ApiResponse<List<SqlGroupResponse>>> searchGroups(
+            @RequestParam(required = false) String keyword) {
+        log.info("GET /api/sql-queries/group-search - keyword: {}", keyword);
+        return ResponseEntity.ok(ApiResponse.success(sqlQueryService.searchGroups(keyword)));
     }
 }

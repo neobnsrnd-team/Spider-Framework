@@ -31,8 +31,15 @@
                             <div class="row mb-3">
                                 <div class="col-md-6">
                                     <label class="form-label">SQL 그룹 ID <span class="text-danger">*</span></label>
-                                    <input type="text" class="form-control" id="sqModalSqlGroupId" name="sqlGroupId"
-                                           maxlength="50">
+                                    <!-- autocomplete 래퍼: dropdown이 input 바로 아래 절대 위치로 렌더링 -->
+                                    <div class="position-relative" id="sqGroupIdWrapper">
+                                        <input type="text" class="form-control" id="sqModalSqlGroupId" name="sqlGroupId"
+                                               maxlength="50" autocomplete="off">
+                                        <div id="sqGroupIdDropdown"
+                                             class="list-group shadow-sm d-none"
+                                             style="position:absolute;z-index:1060;width:100%;max-height:200px;overflow-y:auto;top:100%;left:0;">
+                                        </div>
+                                    </div>
                                 </div>
                                 <div class="col-md-6">
                                     <label class="form-label">DB ID <span class="text-danger">*</span></label>
@@ -708,6 +715,74 @@
             $(document).off('click', '#btnCallProcedure').on('click', '#btnCallProcedure', function () {
                 SqlQueryModal.callProcedure();
             });
+
+            // ── SQL 그룹 ID autocomplete ─────────────────────────────────
+            (function () {
+                var _debounceTimer = null;
+                var _activeRequest = null;
+
+                function showDropdown(items) {
+                    var $drop = $('#sqGroupIdDropdown');
+                    if (!items || items.length === 0) {
+                        $drop.addClass('d-none').empty();
+                        return;
+                    }
+                    var html = items.map(function (item) {
+                        var escaped = $('<div>').text(item.groupId + ' — ' + (item.groupName || '')).html();
+                        return '<button type="button" class="list-group-item list-group-item-action py-1 px-2 small"'
+                             + ' data-group-id="' + $('<div>').text(item.groupId).html() + '">'
+                             + escaped + '</button>';
+                    }).join('');
+                    $drop.html(html).removeClass('d-none');
+                }
+
+                function hideDropdown() {
+                    $('#sqGroupIdDropdown').addClass('d-none').empty();
+                }
+
+                function fetchGroups(keyword) {
+                    if (_activeRequest) { _activeRequest.abort(); }
+                    _activeRequest = $.ajax({
+                        url: API_BASE_URL + '/sql-queries/group-search',
+                        method: 'GET',
+                        data: keyword ? { keyword: keyword } : {},
+                        success: function (response) {
+                            if (response.success) { showDropdown(response.data); }
+                        }
+                    });
+                }
+
+                // input 이벤트: 300ms 디바운스 후 API 호출
+                $(document).off('input', '#sqModalSqlGroupId').on('input', '#sqModalSqlGroupId', function () {
+                    if ($(this).prop('readonly')) { return; }
+                    var keyword = $(this).val().trim();
+                    clearTimeout(_debounceTimer);
+                    _debounceTimer = setTimeout(function () { fetchGroups(keyword); }, 300);
+                });
+
+                // 포커스 시 드롭다운 열기 (읽기 전용이 아닐 때)
+                $(document).off('focus', '#sqModalSqlGroupId').on('focus', '#sqModalSqlGroupId', function () {
+                    if ($(this).prop('readonly')) { return; }
+                    fetchGroups($(this).val().trim());
+                });
+
+                // 드롭다운 항목 선택 시 input에 groupId 채움
+                $(document).off('click', '#sqGroupIdDropdown button').on('click', '#sqGroupIdDropdown button', function (e) {
+                    e.preventDefault();
+                    $('#sqModalSqlGroupId').val($(this).data('group-id'));
+                    hideDropdown();
+                });
+
+                // 외부 클릭 시 드롭다운 닫기
+                $(document).off('mousedown.sqGroupAc').on('mousedown.sqGroupAc', function (e) {
+                    if (!$(e.target).closest('#sqGroupIdWrapper').length) { hideDropdown(); }
+                });
+
+                // 모달 닫힐 때 드롭다운 정리
+                document.getElementById('sqlQueryModal').addEventListener('hidden.bs.modal', function () {
+                    hideDropdown();
+                }, { once: false });
+            })();
         })();
     </script>
 </div>

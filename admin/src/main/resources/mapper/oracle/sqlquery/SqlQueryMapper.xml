@@ -203,6 +203,28 @@
         )
     </insert>
 
+    <!--
+        SQL 그룹 ID/명 키워드 검색 (autocomplete용)
+        - keyword가 null 또는 빈 문자열이면 전체 최대 20건 반환
+        - GROUP_ID, GROUP_NAME 모두 LIKE 검색
+    -->
+    <select id="searchSqlGroups"
+            resultType="com.example.admin_demo.domain.sqlquery.dto.SqlGroupResponse">
+        SELECT * FROM (
+            SELECT
+                TRIM(SQL_GROUP_ID)   AS groupId,
+                TRIM(SQL_GROUP_NAME) AS groupName
+            FROM FWK_SQL_GROUP
+            <where>
+                <if test="keyword != null and keyword != ''">
+                    AND (TRIM(SQL_GROUP_ID)   LIKE '%' || TRIM(#{keyword}) || '%'
+                      OR TRIM(SQL_GROUP_NAME) LIKE '%' || TRIM(#{keyword}) || '%')
+                </if>
+            </where>
+            ORDER BY SQL_GROUP_ID ASC
+        ) WHERE ROWNUM <![CDATA[<=]]> 20
+    </select>
+
     <!-- USE_YN 단독 업데이트 (목록 인라인 토글용) -->
     <update id="updateUseYn">
         UPDATE FWK_SQL_QUERY

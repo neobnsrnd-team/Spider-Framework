@@ -1,5 +1,6 @@
 package com.example.admin_demo.domain.sqlquery.mapper;
 
+import com.example.admin_demo.domain.sqlquery.dto.SqlGroupResponse;
 import com.example.admin_demo.domain.sqlquery.dto.SqlQueryCreateRequest;
 import com.example.admin_demo.domain.sqlquery.dto.SqlQueryHistoryResponse;
 import com.example.admin_demo.domain.sqlquery.dto.SqlQueryResponse;
@@ -67,6 +68,13 @@ public interface SqlQueryMapper {
             @Param("versionId") String versionId,
             @Param("backupDtime") String backupDtime,
             @Param("backupUserId") String backupUserId);
+
+    /**
+     * SQL 그룹 ID/명 키워드 검색 (autocomplete용, 최대 20건)
+     *
+     * <p>keyword가 null이면 전체 목록을 최대 20건 반환한다.
+     */
+    List<SqlGroupResponse> searchSqlGroups(@Param("keyword") String keyword);
 
     /** USE_YN 단독 업데이트 (인라인 토글용) */
     void updateUseYn(

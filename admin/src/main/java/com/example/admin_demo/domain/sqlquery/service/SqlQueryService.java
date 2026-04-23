@@ -1,5 +1,6 @@
 package com.example.admin_demo.domain.sqlquery.service;
 
+import com.example.admin_demo.domain.sqlquery.dto.SqlGroupResponse;
 import com.example.admin_demo.domain.sqlquery.dto.SqlQueryCreateRequest;
 import com.example.admin_demo.domain.sqlquery.dto.SqlQueryHistoryResponse;
 import com.example.admin_demo.domain.sqlquery.dto.SqlQueryResponse;
@@ -320,6 +321,11 @@ public class SqlQueryService {
 
         sqlQueryMapper.update(queryId, restoreDto, AuditUtil.now(), AuditUtil.currentUserId());
         return sqlQueryMapper.selectResponseById(queryId);
+    }
+
+    /** SQL 그룹 ID/명 키워드 검색 — autocomplete용, 최대 20건 */
+    public List<SqlGroupResponse> searchGroups(String keyword) {
+        return sqlQueryMapper.searchSqlGroups(keyword);
     }
 
     private void validateSqlText(String sqlText) {
