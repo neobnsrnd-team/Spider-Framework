@@ -88,18 +88,31 @@ public class BatchRunningService {
                     url, HttpMethod.GET, null, new ParameterizedTypeReference<List<BatchRunningResponse>>() {});
 
             List<BatchRunningResponse> body = response.getBody();
-            if (body == null) {
-                // 정상 응답이지만 빈 body인 경우 빈 리스트 반환
-                return List.of();
+            if (body == null || body.isEmpty()) {
+                // 연결은 됐지만 실행 중인 배치가 없음 → 인스턴스를 "대기 중" 항목으로 표시
+                return List.of(BatchRunningResponse.builder()
+                        .instanceId(instance.getInstanceId())
+                        .connected(true)
+                        .build());
             }
 
-            // 각 항목에 instanceId와 connected=true 설정
-            body.forEach(item -> {
-                item.setInstanceId(instance.getInstanceId());
-                item.setConnected(true);
-            });
+            // spider-batch가 응답에 자신의 instanceId를 포함하므로,
+            // 응답의 instanceId가 쿼리한 instanceId와 다른 항목은 IP를 공유하는
+            // 다른 WAS 서버의 데이터 → 해당 인스턴스는 대기 중으로 처리한다.
+            String expected = instance.getInstanceId();
+            List<BatchRunningResponse> own = body.stream()
+                    .filter(item -> expected.equals(item.getInstanceId()))
+                    .peek(item -> item.setConnected(true))
+                    .toList();
 
-            return body;
+            if (own.isEmpty()) {
+                return List.of(BatchRunningResponse.builder()
+                        .instanceId(expected)
+                        .connected(true)
+                        .build());
+            }
+
+            return own;
 
         } catch (RestClientException e) {
             // 타임아웃, 연결 거부 등 통신 오류: WARN 로그 후 connected=false 항목 반환

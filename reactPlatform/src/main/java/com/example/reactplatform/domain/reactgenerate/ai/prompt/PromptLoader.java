@@ -16,10 +16,9 @@ import org.springframework.util.StreamUtils;
  *
  * <p>파일 배치 경로: src/main/resources/prompts/
  * <ul>
- *   <li>CLAUDE.md — reactive-springware 컴포넌트 라이브러리 가이드</li>
+ *   <li>CLAUDE.md — 코드 생성 규칙 + Figma → React 컴포넌트 매핑 (generated/CLAUDE.md)</li>
  *   <li>component-types.md — 컴포넌트 TypeScript 인터페이스 레퍼런스</li>
  *   <li>design-tokens.md — CSS 변수 토큰 레퍼런스</li>
- *   <li>component-map.md — Figma → React 매핑 전략</li>
  * </ul>
  */
 @Slf4j
@@ -29,7 +28,6 @@ public class PromptLoader {
     private String claudeMd = "";
     private String componentTypes = "";
     private String designTokens = "";
-    private String componentMap = "";
 
     /**
      * 애플리케이션 시작 시 prompts/ 디렉토리의 모든 파일을 메모리에 로드한다.
@@ -40,14 +38,12 @@ public class PromptLoader {
         claudeMd = readOrEmpty("prompts/CLAUDE.md");
         componentTypes = readOrEmpty("prompts/component-types.md");
         designTokens = readOrEmpty("prompts/design-tokens.md");
-        componentMap = readOrEmpty("prompts/component-map.md");
 
         log.info(
-                "PromptLoader 초기화 완료 — CLAUDE.md={}자, component-types={}자, design-tokens={}자, component-map={}자",
+                "PromptLoader 초기화 완료 — CLAUDE.md={}자, component-types={}자, design-tokens={}자",
                 claudeMd.length(),
                 componentTypes.length(),
-                designTokens.length(),
-                componentMap.length());
+                designTokens.length());
     }
 
     public String loadClaudeMd() {
@@ -60,10 +56,6 @@ public class PromptLoader {
 
     public String loadDesignTokens() {
         return designTokens;
-    }
-
-    public String loadComponentMap() {
-        return componentMap;
     }
 
     /**

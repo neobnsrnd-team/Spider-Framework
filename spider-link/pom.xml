@@ -17,7 +17,7 @@
     <artifactId>spider-link</artifactId>
     <version>0.0.1-SNAPSHOT</version>
     <name>spider-link</name>
-    <description>Spider link 연계엔진 — Admin과 demo/backend 간 TCP 중계 미들웨어</description>
+    <description>Spider link 연계엔진 — 각 AP 서버에 내장되는 공통 연계엔진 Maven 라이브러리</description>
     <packaging>jar</packaging>
 
     <properties>
@@ -29,16 +29,18 @@
     </properties>
 
     <dependencies>
-        <!-- Spring Boot Web (Jackson ObjectMapper 포함) -->
+        <!-- Spring Boot Web (Jackson ObjectMapper 포함) — AP 서버가 제공하지 않을 경우 주입 -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-web</artifactId>
+            <optional>true</optional>
         </dependency>
 
-        <!-- Actuator — /actuator/health 헬스체크 엔드포인트 제공 -->
+        <!-- Actuator — AP 서버가 제공하지 않을 경우 주입 -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-actuator</artifactId>
+            <optional>true</optional>
         </dependency>
 
         <!-- Lombok -->
@@ -56,25 +58,28 @@
             <optional>true</optional>
         </dependency>
 
-        <!-- MyBatis Spring Boot Starter -->
+        <!-- MyBatis Spring Boot Starter — AP 서버가 제공하지 않을 경우 주입 -->
         <dependency>
             <groupId>org.mybatis.spring.boot</groupId>
             <artifactId>mybatis-spring-boot-starter</artifactId>
             <version>${mybatis-spring-boot.version}</version>
+            <optional>true</optional>
         </dependency>
 
-        <!-- Oracle JDBC Driver -->
+        <!-- Oracle JDBC Driver — AP 서버가 제공하지 않을 경우 주입 -->
         <dependency>
             <groupId>com.oracle.database.jdbc</groupId>
             <artifactId>ojdbc11</artifactId>
             <scope>runtime</scope>
+            <optional>true</optional>
         </dependency>
 
-        <!-- Oracle UCP (Universal Connection Pool) -->
+        <!-- Oracle UCP (Universal Connection Pool) — AP 서버가 제공하지 않을 경우 주입 -->
         <dependency>
             <groupId>com.oracle.database.jdbc</groupId>
             <artifactId>ucp</artifactId>
             <scope>runtime</scope>
+            <optional>true</optional>
         </dependency>
 
         <!-- 테스트 -->
@@ -88,21 +93,16 @@
     <build>
         <plugins>
             <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <configuration>
+                    <encoding>UTF-8</encoding>
+                </configuration>
+            </plugin>
+            <!-- demo/backend Spring Boot 전환 전까지 standalone 실행을 위해 유지 -->
+            <plugin>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
-                <configuration>
-                    <excludes>
-                        <exclude>
-                            <groupId>org.projectlombok</groupId>
-                            <artifactId>lombok</artifactId>
-                        </exclude>
-                    </excludes>
-                    <jvmArguments>
-                        -Dfile.encoding=UTF-8
-                        -Dstdout.encoding=UTF-8
-                        -Dstderr.encoding=UTF-8
-                    </jvmArguments>
-                </configuration>
             </plugin>
         </plugins>
     </build>

@@ -1,20 +1,15 @@
 package com.example.spiderlink;
 
-import org.mybatis.spring.annotation.MapperScan;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
 /**
- * Spider link 연계엔진 진입점.
+ * spider-link 연계엔진 실행 진입점.
  *
- * <p>통신 흐름:</p>
- * <ul>
- *   <li>Admin(8080) → spider-link(9996) → demo/backend(9997) : 관리 명령 프록시</li>
- *   <li>demo/backend → spider-link(9999) → Oracle DB : Demo 전문 처리</li>
- * </ul>
+ * <p>demo/backend 전문 처리 TCP 서버(port 9995)를 내장하여 기동한다.
+ * demo/backend가 Spring Boot으로 전환되면 이 standalone 프로세스는 제거 예정.</p>
  */
 @SpringBootApplication
-@MapperScan("com.example.spiderlink.domain")
 public class SpiderLinkApplication {
 
     public static void main(String[] args) {

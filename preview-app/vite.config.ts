@@ -23,6 +23,10 @@ export default defineConfig({
     emptyOutDir: true,
   },
   resolve: {
+    // reactive-springware/node_modules/react 가 별도로 존재하는 모노레포 구조에서
+    // @cl 컴포넌트 내부 훅(useState 등)이 다른 React 인스턴스를 참조해
+    // "null.useState" TypeError가 발생한다. dedupe로 React를 단일 인스턴스로 강제한다.
+    dedupe: ['react', 'react-dom', 'react-dom/client'],
     alias: {
       // component-library 디렉토리 alias — demo/front와 동일
       '@cl': resolve(__dirname, '../reactive-springware/component-library'),

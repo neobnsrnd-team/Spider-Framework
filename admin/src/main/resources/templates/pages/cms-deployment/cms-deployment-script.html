@@ -33,7 +33,8 @@
 
         renderTable: function(rows) {
             const $tbody = $('#deployPageTableBody');
-            const colspan = this.canWrite ? 6 : 5;
+            // canWrite: 배포·만료수동처리 2컬럼 추가 → 8컬럼 / 미권한: 6컬럼
+            const colspan = this.canWrite ? 8 : 6;
 
             if (!rows || rows.length === 0) {
                 $tbody.html(`<tr><td colspan="${colspan}" class="text-center py-4 text-body-secondary">조회된 데이터가 없습니다.</td></tr>`);
@@ -41,6 +42,21 @@
             }
 
             const html = rows.map(row => {
+                const pid          = HtmlUtils.escape(row.pageId || '');
+                const escapedName  = HtmlUtils.escape(row.pageName || '').replace(/'/g, '&#39;');
+
+                // 노출기간 셀 — 만료된 경우 종료일 빨간색 + 만료 뱃지
+                const beginStr = row.beginningDate || '-';
+                const expiredBadge = row.isExpired === 'Y'
+                    ? ' <span class="badge bg-danger ms-1" style="font-size:10px;">만료</span>'
+                    : '';
+                const endStr = row.expiredDate
+                    ? (row.isExpired === 'Y'
+                        ? `<span class="text-danger fw-semibold">${HtmlUtils.escape(row.expiredDate)}</span>${expiredBadge}`
+                        : HtmlUtils.escape(row.expiredDate))
+                    : '-';
+                const periodCell = `<td class="small">${HtmlUtils.escape(beginStr)} ~ ${endStr}</td>`;
+
                 const previewBtn = row.deployedUrl
                     ? `<a href="${HtmlUtils.escape(row.deployedUrl)}" target="_blank" rel="noopener"
                           class="btn btn-outline-info btn-xs"><i class="bi bi-box-arrow-up-right"></i> 보기</a>`
@@ -49,21 +65,35 @@
                 const deployBtn = this.canWrite
                     ? `<td class="text-center">
                            <button class="btn btn-primary btn-xs"
-                                   onclick="CmsDeployPage.confirmPush('${HtmlUtils.escape(row.pageId)}', '${HtmlUtils.escape(row.pageName || '')}')">
+                                   onclick="CmsDeployPage.confirmPush('${pid}', '${escapedName}')">
                                <i class="bi bi-send"></i> 배포
                            </button>
                        </td>`
                     : '';
 
+                // 만료수동처리 버튼 — isExpired='Y' AND isPublic='Y' 인 경우에만 표시
+                const expireBtn = this.canWrite
+                    ? `<td class="text-center">
+                           ${row.isExpired === 'Y' && row.isPublic === 'Y'
+                               ? `<button class="btn btn-outline-danger btn-xs"
+                                          onclick="CmsDeployPage.confirmExpirePush('${pid}', '${escapedName}')">
+                                      <i class="bi bi-slash-circle"></i> 만료처리
+                                  </button>`
+                               : '<span class="text-body-secondary small">-</span>'}
+                       </td>`
+                    : '';
+
                 return `<tr>
-                    <td class="small">${HtmlUtils.escape(row.pageId)}</td>
+                    <td class="small">${pid}</td>
                     <td>${HtmlUtils.escape(row.pageName || '')}</td>
                     <td>${HtmlUtils.escape(row.createUserName || '')}</td>
+                    ${periodCell}
                     <td class="text-center">${previewBtn}</td>
                     ${deployBtn}
+                    ${expireBtn}
                     <td class="text-center">
                         <button class="btn btn-outline-secondary btn-xs"
-                                onclick="CmsDeployPage.openHistoryModal('${HtmlUtils.escape(row.pageId)}', '${HtmlUtils.escape(row.pageName || '')}')">
+                                onclick="CmsDeployPage.openHistoryModal('${pid}', '${escapedName}')">
                             <i class="bi bi-clock-history"></i> 이력
                         </button>
                     </td>
@@ -149,6 +179,28 @@
                     }
                 })
                 .catch(() => Toast.error('배포 중 오류가 발생했습니다.'));
+        },
+
+        // ── 만료수동처리 배포 ──
+
+        confirmExpirePush: function(pageId, pageName) {
+            if (!confirm(`[${pageName}] 만료페이지를 배포하시겠습니까?`)) return;
+
+            fetch('/api/cms-admin/deployments/push-expired', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ pageId }),
+            })
+                .then(r => r.json())
+                .then(res => {
+                    if (res.success) {
+                        Toast.success(res.message);
+                        this.load();
+                    } else {
+                        Toast.error(res.message);
+                    }
+                })
+                .catch(() => Toast.error('만료 배포 중 오류가 발생했습니다.'));
         },
 
         // ── 배포이력 상세 모달 ──

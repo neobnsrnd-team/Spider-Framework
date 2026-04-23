@@ -102,6 +102,33 @@ ALTER TABLE SPW_CMS_PAGE ADD (
 ALTER TABLE SPW_CMS_PAGE ADD CONSTRAINT CHK_SPW_PAGE_TYPE
     CHECK (PAGE_TYPE IN ('PAGE', 'TEMPLATE', 'REACT'));
 
+-- =============================================================
+-- CMS 배포 서버 인스턴스 포트 변경: 3001(Next.js 직접) → 8080(nginx)
+-- =============================================================
+-- 생성일: 2026-04-22
+-- ※ 아래 쿼리는 개발자가 DB에서 직접 실행해야 합니다.
+-- =============================================================
+
+-- 미리보기 URL이 http://{ip}:{INSTANCE_PORT}/cms/deployed/{pageId}.html 형태로 구성되므로
+-- INSTANCE_PORT를 8080으로 변경해야 nginx를 통해 정적 파일에 접근할 수 있다.
+UPDATE FWK_CMS_SERVER_INSTANCE
+SET INSTANCE_PORT = 8080,
+    INSTANCE_DESC = '운영 배포 서버 (133.186.135.23:8080)'
+WHERE INSTANCE_ID = 'prod-operation-01';
+
+COMMIT;
+
+-- =============================================================
+-- #147 CMS 배포 관리 — 만료수동처리 기능 추가
+-- ⚠ 개발자가 DB에서 직접 실행해야 합니다.
+-- =============================================================
+
+-- SPW_CMS_PAGE.BEGINNING_DATE / EXPIRED_DATE / IS_PUBLIC / FILE_PATH_BACK 컬럼은
+-- 01_create_tables.sql 에 이미 정의되어 있으므로 별도 ALTER 불필요.
+-- FWK_CMS_FILE_SEND_HIS 의 만료 전용 이력 조회 예시 (운영 확인용):
+--   SELECT * FROM FWK_CMS_FILE_SEND_HIS
+--   WHERE FILE_ID LIKE '%_expired.html'
+--   ORDER BY LAST_MODIFIED_DTIME DESC;
 
 -- =============================================================
 -- FWK_SQL_QUERY_HIS — 실제 DB 테이블 확인 결과

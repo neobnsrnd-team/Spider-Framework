@@ -238,6 +238,21 @@
 			<artifactId>select2</artifactId>
 			<version>4.1.0-rc.0</version>
 		</dependency>
+		<!-- Chart.js: WebJar 사내 레포 미등록 시 아래 CDN 방식 사용 (cms-statistics.html 참고) -->
+		<!--
+		<dependency>
+			<groupId>org.webjars.npm</groupId>
+			<artifactId>chart.js</artifactId>
+			<version>4.4.2</version>
+		</dependency>
+		-->
+
+		<!-- spider-link 공통 연계엔진 라이브러리 (ManagementContext, TCP 인프라 공유) -->
+		<dependency>
+			<groupId>com.example</groupId>
+			<artifactId>spider-link</artifactId>
+			<version>0.0.1-SNAPSHOT</version>
+		</dependency>
 	</dependencies>
 
 	<build>

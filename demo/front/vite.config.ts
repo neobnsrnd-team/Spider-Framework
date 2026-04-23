@@ -30,7 +30,7 @@ export default defineConfig({
          - CORS 헤더 없이 브라우저 → Vite Dev Server → Backend 흐름으로 처리
          - SSE(EventSource) 포함 모든 API 엔드포인트 커버 */
       '/api': {
-        target:      'http://localhost:9998',
+        target:      'http://localhost:3001',
         changeOrigin: true,
       },
     },

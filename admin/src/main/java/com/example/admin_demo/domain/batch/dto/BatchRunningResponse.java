@@ -10,13 +10,19 @@ import lombok.NoArgsConstructor;
  * @description batch-was 인스턴스에서 조회한 실행 중 배치 정보를 담는 응답 DTO.
  *     <p>batch-was의 GET /api/batch/running 응답을 역직렬화하여 Admin 측 필드를 추가한다.
  *     <p>connected=false 인 경우 WAS와 통신 불가 상태를 나타내며, instanceId 이외의 필드는 null 이다.
- * @example connected=true:
+ *     <p>connected=true 이고 batchAppId 가 null 인 경우 WAS는 정상이나 실행 중인 배치가 없는 "대기 중" 상태다.
+ * @example connected=true, 배치 실행 중:
  *     BatchRunningResponse.builder()
  *         .instanceId("PT11")
  *         .connected(true)
  *         .jobExecutionId(42L)
  *         .batchAppId("BATCH_001")
  *         .status("STARTED")
+ *         .build();
+ * @example connected=true, 대기 중 (실행 중인 배치 없음):
+ *     BatchRunningResponse.builder()
+ *         .instanceId("PT11")
+ *         .connected(true)
  *         .build();
  * @example connected=false (통신 불가):
  *     BatchRunningResponse.builder()

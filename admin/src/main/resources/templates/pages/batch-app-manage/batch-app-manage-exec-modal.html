@@ -140,8 +140,9 @@
         assignedInstances: [],
 
         open: function(batchAppId) {
-            // 오늘 날짜를 기본값으로 설정
-            const today = new Date().toISOString().split('T')[0];
+            // 오늘 날짜를 기본값으로 설정 (toISOString은 UTC 기준이라 KST 오전 9시 이전 실행 시 전날 날짜가 반환됨 → 로컬 날짜 사용)
+            const _d = new Date();
+            const today = `${_d.getFullYear()}-${String(_d.getMonth() + 1).padStart(2, '0')}-${String(_d.getDate()).padStart(2, '0')}`;
             $('#execBatchDate').val(today);
             $('#execParameters').val('');
             $('#execSelectAll').prop('checked', false);
@@ -155,7 +156,10 @@
         },
 
         close: function() {
-            bootstrap.Modal.getInstance(document.getElementById('batchExecModal')).hide();
+            // getInstance는 show() 이전 또는 dispose() 이후 null을 반환하므로 null 체크
+            const el = document.getElementById('batchExecModal');
+            const modal = el && bootstrap.Modal.getInstance(el);
+            if (modal) modal.hide();
         },
 
         loadBatchAppDetail: function(batchAppId) {

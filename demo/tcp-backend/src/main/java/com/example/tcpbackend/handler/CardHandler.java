@@ -5,6 +5,7 @@
  */
 package com.example.tcpbackend.handler;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -13,6 +14,7 @@ import org.springframework.stereotype.Component;
 import com.example.tcpbackend.domain.card.CardService;
 import com.example.tcpbackend.domain.card.CardService.BusinessException;
 import com.example.tcpbackend.domain.card.CardService.PinException;
+import com.example.tcpbackend.tcp.SpiderLinkClient;
 import com.example.tcpbackend.tcp.TcpRequest;
 import com.example.tcpbackend.tcp.TcpResponse;
 import com.example.tcpbackend.tcp.session.SessionInfo;
@@ -25,9 +27,11 @@ import com.fasterxml.jackson.databind.JsonNode;
 public class CardHandler {
 
     private final CardService cardService;
+    private final SpiderLinkClient spiderLinkClient;
 
-    public CardHandler(CardService cardService) {
-        this.cardService = cardService;
+    public CardHandler(CardService cardService, SpiderLinkClient spiderLinkClient) {
+        this.cardService      = cardService;
+        this.spiderLinkClient = spiderLinkClient;
     }
 
     /**
@@ -54,6 +58,7 @@ public class CardHandler {
      * @param session 검증된 세션 정보
      * @return { payableAmount, creditLimit } 응답
      */
+    @SuppressWarnings("unchecked")
     public TcpResponse handleGetPayableAmount(TcpRequest request, SessionInfo session) {
         JsonNode payload = request.getPayload();
         String cardId = payload != null ? payload.path("cardId").asText(null) : null;
@@ -62,12 +67,18 @@ public class CardHandler {
             return TcpResponse.error("GET_PAYABLE_AMOUNT", "cardId가 필요합니다.");
         }
 
-        try {
-            Map<String, Object> data = cardService.getPayableAmount(session.getUserId(), cardId);
-            return TcpResponse.ok("GET_PAYABLE_AMOUNT", data);
-        } catch (Exception e) {
-            return TcpResponse.error("GET_PAYABLE_AMOUNT", "가능금액 조회 중 오류가 발생했습니다.");
+        Map<String, Object> reqPayload = new HashMap<>();
+        reqPayload.put("userId", session.getUserId());
+        reqPayload.put("cardId", cardId);
+
+        Map<String, Object> response = spiderLinkClient.send("DEMO_PAYABLE_AMT", reqPayload);
+
+        if (!Boolean.TRUE.equals(response.get("success"))) {
+            return TcpResponse.error("GET_PAYABLE_AMOUNT", String.valueOf(response.getOrDefault("error", "가능금액 조회 실패")));
         }
+
+        Map<String, Object> data = (Map<String, Object>) response.get("payload");
+        return TcpResponse.ok("GET_PAYABLE_AMOUNT", data);
     }
 
     /**
