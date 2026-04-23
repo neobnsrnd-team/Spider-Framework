@@ -33,6 +33,7 @@
         const figmaUrl = $('#figmaUrlInput').val().trim();
         const brand = $('#brandSelect').val();
         const domain = $('#domainSelect').val() || null;
+        const componentName = $('#componentNameInput').val().trim() || null;
 
         if (!figmaUrl) {
             Toast.warning('Figma URL을 입력해주세요.');
@@ -46,6 +47,10 @@
             Toast.warning('브랜드를 선택해주세요.');
             return;
         }
+        if (componentName && !/^[A-Z][A-Za-z0-9]*$/.test(componentName)) {
+            Toast.warning('컴포넌트명은 PascalCase로 입력해주세요. (예: LoginPage, TransferForm)');
+            return;
+        }
 
         $('#resultSection').addClass('d-none');
         $('#generatingIndicator').removeClass('d-none');
@@ -57,7 +62,7 @@
             url: API_BASE_URL + '/react-generate/generate',
             method: 'POST',
             contentType: 'application/json',
-            data: JSON.stringify({ figmaUrl: figmaUrl, brand: brand, domain: domain }),
+            data: JSON.stringify({ figmaUrl: figmaUrl, brand: brand, domain: domain, componentName: componentName }),
             success: function (res) {
                 if (res.success && res.data) {
                     renderResult(res.data);
@@ -149,6 +154,7 @@
         $('#figmaUrlInput').val('');
         $('#brandSelect').val('');
         $('#domainSelect').val('');
+        $('#componentNameInput').val('');
 
         // 결과 영역 숨김 및 내부 상태 초기화
         $('#resultSection').addClass('d-none');

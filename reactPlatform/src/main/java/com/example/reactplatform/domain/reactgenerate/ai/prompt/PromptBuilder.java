@@ -56,12 +56,16 @@ public class PromptBuilder {
      * <p>brand·domain은 프롬프트 앞단에 명시하여 Claude가 globals.css의
      * 올바른 [data-brand]/[data-domain] 토큰 블록을 선택하도록 안내한다.
      *
-     * @param context Figma API에서 추출한 디자인 컨텍스트
-     * @param brand   적용할 금융 브랜드
-     * @param domain  적용할 금융 도메인
+     * <p>componentName이 주어지면 해당 이름으로 export default function을 생성하도록 명시한다.
+     * null이면 AI가 Figma 컴포넌트명을 기반으로 결정한다.
+     *
+     * @param context       Figma API에서 추출한 디자인 컨텍스트
+     * @param brand         적용할 금융 브랜드
+     * @param domain        적용할 금융 도메인
+     * @param componentName 생성할 컴포넌트 함수명 (null이면 AI가 결정)
      * @return user prompt 문자열
      */
-    public String buildUserPrompt(FigmaDesignContext context, BrandType brand, DomainType domain) {
+    public String buildUserPrompt(FigmaDesignContext context, BrandType brand, DomainType domain, String componentName) {
         StringBuilder sb = new StringBuilder();
 
         sb.append("Generate a React component from the following Figma design.\n\n");
@@ -130,10 +134,18 @@ public class PromptBuilder {
 
         sb.append("\n## Rules\n");
         sb.append("- 반드시 위 컴포넌트 라이브러리의 컴포넌트만 사용할 것\n");
+        sb.append("- import는 JSX에서 실제로 렌더링되는 컴포넌트만 포함할 것 (사용하지 않는 import 금지)\n");
         sb.append("- 디자인 토큰(CSS 변수)을 활용하고 색상·크기 하드코딩 금지\n");
         sb.append("- TypeScript로 작성하고 props interface를 포함할 것\n");
         sb.append("- 접근성(aria 속성)을 고려할 것\n");
-        sb.append("- 반드시 `export default function ComponentName()` 형식으로 컴포넌트를 내보낼 것\n");
+        if (componentName != null && !componentName.isBlank()) {
+            // 명시적 컴포넌트명이 주어진 경우 — AI가 임의로 다른 이름을 사용하지 않도록 강하게 지시
+            sb.append("- 반드시 `export default function ")
+                    .append(componentName)
+                    .append("()` 형식으로 컴포넌트를 내보낼 것 (다른 이름 사용 금지)\n");
+        } else {
+            sb.append("- 반드시 `export default function ComponentName()` 형식으로 컴포넌트를 내보낼 것\n");
+        }
         sb.append("- 응답은 ```tsx ... ``` 코드 블록 하나로만 작성할 것\n");
 
         return sb.toString();

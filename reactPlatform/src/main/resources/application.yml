@@ -76,24 +76,36 @@ logging:
 # 상위 메뉴 ID를 숨기면 하위 메뉴 전체가 함께 숨겨진다
 menu:
   hidden-menu-ids:
-    - acl_manage           # Framework 관리메뉴 (asis spider메뉴)
-    - v3_msg_manage        # 거래전문 관리
-    - v3_interface_manage  # Interface 관리
-    - v3_cd_manage         # Code 관리
-    - v3_opt_manage        # 운영 정보 관리
-    - v3_batch_manage      # 배치 관리
-    - v3_error_manage      # 오류 관리
-    - v3_was_manage        # WAS
-    - v3_admin_monitor     # 관리자 모니터링
-    - v3_BOARD             # 게시판
-    - v3_service_manage    # 서비스관리
-    - v3_emergency_notice  # 긴급공지
-    - v3_cms_manage        # HTML CMS
+    - acl_manage # Framework 관리메뉴 (asis spider메뉴)
+    - v3_msg_manage # 거래전문 관리
+    - v3_interface_manage # Interface 관리
+    - v3_cd_manage # Code 관리
+    - v3_opt_manage # 운영 정보 관리
+    - v3_batch_manage # 배치 관리
+    - v3_error_manage # 오류 관리
+    - v3_was_manage # WAS
+    - v3_admin_monitor # 관리자 모니터링
+    - v3_BOARD # 게시판
+    - v3_service_manage # 서비스관리
+    - v3_emergency_notice # 긴급공지
+    - v3_cms_manage # HTML CMS
 
-# React 코드 승인 시 .tsx 파일을 저장할 디렉토리
-approval:
-  react:
-    output-dir: ${REACT_APPROVAL_OUTPUT_DIR:./generated}
+# React 코드 배포 전략 설정
+# mode: local  — 서버 로컬 파일시스템에 UI 컴포넌트 + Container scaffold 기록
+# mode: git-pr — 대상 GitHub 레포에 브랜치를 생성하고 PR을 자동으로 올림
+react:
+  deploy:
+    mode: ${REACT_DEPLOY_MODE:local}
+    local:
+      component-dir: ${REACT_DEPLOY_LOCAL_COMPONENT_DIR:../demo/front/src/reactplatform/generated}
+      container-dir: ${REACT_DEPLOY_LOCAL_CONTAINER_DIR:../demo/front/src/reactplatform/containers}
+    git-pr:
+      token: ${GITHUB_TOKEN:}
+      owner: ${GITHUB_REPO_OWNER:}
+      repo: ${GITHUB_REPO_NAME:}
+      base-branch: ${GITHUB_BASE_BRANCH:main}
+      component-path: ${GITHUB_COMPONENT_PATH:src/reactplatform/generated}
+      container-path: ${GITHUB_CONTAINER_PATH:src/reactplatform/containers}
 
 # Figma API Configuration
 figma:

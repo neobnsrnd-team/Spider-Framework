@@ -266,6 +266,15 @@
 				</configuration>
 			</plugin>
 
+			<!-- Surefire: JaCoCo argLine + Mockito 5.x inline mock maker (Java 17 byte-buddy agent) -->
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-surefire-plugin</artifactId>
+				<configuration>
+					<argLine>@{argLine} -javaagent:C:/Users/minjee/.m2/repository/net/bytebuddy/byte-buddy-agent/1.15.11/byte-buddy-agent-1.15.11.jar</argLine>
+				</configuration>
+			</plugin>
+
 			<!-- JaCoCo -->
 			<plugin>
 				<groupId>org.jacoco</groupId>

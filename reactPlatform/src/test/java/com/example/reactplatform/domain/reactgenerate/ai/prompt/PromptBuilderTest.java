@@ -88,21 +88,21 @@ class PromptBuilderTest {
     @Test
     @DisplayName("user prompt에 brand 토큰 선택 지시가 포함된다")
     void buildUserPrompt_includesBrandToken() {
-        String result = promptBuilder.buildUserPrompt(minimalContext(), BrandType.HANA, DomainType.BANKING);
+        String result = promptBuilder.buildUserPrompt(minimalContext(), BrandType.HANA, DomainType.BANKING, null);
         assertThat(result).contains("[data-brand=\"hana\"]");
     }
 
     @Test
     @DisplayName("user prompt에 domain 토큰 선택 지시가 포함된다")
     void buildUserPrompt_includesDomainToken() {
-        String result = promptBuilder.buildUserPrompt(minimalContext(), BrandType.KB, DomainType.CARD);
+        String result = promptBuilder.buildUserPrompt(minimalContext(), BrandType.KB, DomainType.CARD, null);
         assertThat(result).contains("[data-domain=\"card\"]");
     }
 
     @Test
     @DisplayName("루트 래퍼에 data-brand·data-domain 속성 지시가 포함된다")
     void buildUserPrompt_includesRootWrapperRule() {
-        String result = promptBuilder.buildUserPrompt(minimalContext(), BrandType.SHINHAN, DomainType.GIRO);
+        String result = promptBuilder.buildUserPrompt(minimalContext(), BrandType.SHINHAN, DomainType.GIRO, null);
         assertThat(result).contains("data-brand=\"shinhan\"");
         assertThat(result).contains("data-domain=\"giro\"");
     }
@@ -122,7 +122,7 @@ class PromptBuilderTest {
                 .children(List.of())
                 .build();
 
-        String result = promptBuilder.buildUserPrompt(context, BrandType.HANA, DomainType.BANKING);
+        String result = promptBuilder.buildUserPrompt(context, BrandType.HANA, DomainType.BANKING, null);
 
         assertThat(result).contains("LoginCard");
         assertThat(result).contains("FRAME");
@@ -142,7 +142,7 @@ class PromptBuilderTest {
                 .children(List.of())
                 .build();
 
-        assertThat(promptBuilder.buildUserPrompt(context, BrandType.HANA, DomainType.BANKING))
+        assertThat(promptBuilder.buildUserPrompt(context, BrandType.HANA, DomainType.BANKING, null))
                 .contains("VERTICAL (Flex Column)");
     }
 
@@ -159,7 +159,7 @@ class PromptBuilderTest {
                 .children(List.of())
                 .build();
 
-        assertThat(promptBuilder.buildUserPrompt(context, BrandType.HANA, DomainType.BANKING))
+        assertThat(promptBuilder.buildUserPrompt(context, BrandType.HANA, DomainType.BANKING, null))
                 .contains("HORIZONTAL (Flex Row)");
     }
 
@@ -183,7 +183,7 @@ class PromptBuilderTest {
                 .children(List.of(child))
                 .build();
 
-        String result = promptBuilder.buildUserPrompt(context, BrandType.HANA, DomainType.BANKING);
+        String result = promptBuilder.buildUserPrompt(context, BrandType.HANA, DomainType.BANKING, null);
 
         assertThat(result).contains("## Element Tree");
         assertThat(result).contains("[INSTANCE] Button");
@@ -201,7 +201,7 @@ class PromptBuilderTest {
                 .children(List.of())
                 .build();
 
-        assertThat(promptBuilder.buildUserPrompt(context, BrandType.HANA, DomainType.BANKING))
+        assertThat(promptBuilder.buildUserPrompt(context, BrandType.HANA, DomainType.BANKING, null))
                 .doesNotContain("## Element Tree");
     }
 
@@ -219,7 +219,7 @@ class PromptBuilderTest {
                 .children(List.of(first, last))
                 .build();
 
-        String result = promptBuilder.buildUserPrompt(context, BrandType.HANA, DomainType.BANKING);
+        String result = promptBuilder.buildUserPrompt(context, BrandType.HANA, DomainType.BANKING, null);
 
         assertThat(result).contains("├─");
         assertThat(result).contains("└─");
@@ -247,7 +247,7 @@ class PromptBuilderTest {
                 .children(List.of(textNode))
                 .build();
 
-        String result = promptBuilder.buildUserPrompt(context, BrandType.HANA, DomainType.BANKING);
+        String result = promptBuilder.buildUserPrompt(context, BrandType.HANA, DomainType.BANKING, null);
 
         assertThat(result).contains("A".repeat(50) + "…");
         assertThat(result).doesNotContain("A".repeat(51));
@@ -273,7 +273,7 @@ class PromptBuilderTest {
                 .children(List.of(textNode))
                 .build();
 
-        assertThat(promptBuilder.buildUserPrompt(context, BrandType.HANA, DomainType.BANKING))
+        assertThat(promptBuilder.buildUserPrompt(context, BrandType.HANA, DomainType.BANKING, null))
                 .contains(shortText)
                 .doesNotContain("…");
     }
@@ -295,7 +295,7 @@ class PromptBuilderTest {
                 .build();
         FigmaDesignContext context = contextWithChild(paddedNode);
 
-        assertThat(promptBuilder.buildUserPrompt(context, BrandType.HANA, DomainType.BANKING))
+        assertThat(promptBuilder.buildUserPrompt(context, BrandType.HANA, DomainType.BANKING, null))
                 .contains("padding:16/24/16/24");
     }
 
@@ -311,7 +311,7 @@ class PromptBuilderTest {
                 .build();
         FigmaDesignContext context = contextWithChild(gappedNode);
 
-        assertThat(promptBuilder.buildUserPrompt(context, BrandType.HANA, DomainType.BANKING))
+        assertThat(promptBuilder.buildUserPrompt(context, BrandType.HANA, DomainType.BANKING, null))
                 .contains("gap:8px");
     }
 
@@ -331,7 +331,7 @@ class PromptBuilderTest {
                 .build();
         FigmaDesignContext context = contextWithChild(node);
 
-        String result = promptBuilder.buildUserPrompt(context, BrandType.HANA, DomainType.BANKING);
+        String result = promptBuilder.buildUserPrompt(context, BrandType.HANA, DomainType.BANKING, null);
         assertThat(result).contains("padding:16/16/16/16");
         assertThat(result).contains("gap:8px");
     }
@@ -349,7 +349,7 @@ class PromptBuilderTest {
                 .cornerRadius(32)
                 .build();
 
-        assertThat(promptBuilder.buildUserPrompt(contextWithChild(node), BrandType.HANA, DomainType.BANKING))
+        assertThat(promptBuilder.buildUserPrompt(contextWithChild(node), BrandType.HANA, DomainType.BANKING, null))
                 .contains("radius:32px");
     }
 
@@ -364,7 +364,7 @@ class PromptBuilderTest {
                 .cornerRadius(0)
                 .build();
 
-        assertThat(promptBuilder.buildUserPrompt(contextWithChild(node), BrandType.HANA, DomainType.BANKING))
+        assertThat(promptBuilder.buildUserPrompt(contextWithChild(node), BrandType.HANA, DomainType.BANKING, null))
                 .doesNotContain("radius:");
     }
 
@@ -382,7 +382,7 @@ class PromptBuilderTest {
                 .mainAxisAlign("SPACE_BETWEEN")
                 .build();
 
-        assertThat(promptBuilder.buildUserPrompt(contextWithChild(node), BrandType.HANA, DomainType.BANKING))
+        assertThat(promptBuilder.buildUserPrompt(contextWithChild(node), BrandType.HANA, DomainType.BANKING, null))
                 .contains("justify:SPACE_BETWEEN");
     }
 
@@ -398,7 +398,7 @@ class PromptBuilderTest {
                 .mainAxisAlign("MIN")
                 .build();
 
-        assertThat(promptBuilder.buildUserPrompt(contextWithChild(node), BrandType.HANA, DomainType.BANKING))
+        assertThat(promptBuilder.buildUserPrompt(contextWithChild(node), BrandType.HANA, DomainType.BANKING, null))
                 .doesNotContain("justify:");
     }
 
@@ -414,7 +414,7 @@ class PromptBuilderTest {
                 .crossAxisAlign("CENTER")
                 .build();
 
-        assertThat(promptBuilder.buildUserPrompt(contextWithChild(node), BrandType.HANA, DomainType.BANKING))
+        assertThat(promptBuilder.buildUserPrompt(contextWithChild(node), BrandType.HANA, DomainType.BANKING, null))
                 .contains("align:CENTER");
     }
 
@@ -432,7 +432,7 @@ class PromptBuilderTest {
                 .sizingV("FIXED")
                 .build();
 
-        assertThat(promptBuilder.buildUserPrompt(contextWithChild(node), BrandType.HANA, DomainType.BANKING))
+        assertThat(promptBuilder.buildUserPrompt(contextWithChild(node), BrandType.HANA, DomainType.BANKING, null))
                 .contains("sizing:FILL/FIXED");
     }
 
@@ -448,7 +448,7 @@ class PromptBuilderTest {
                 .sizingV("FIXED")
                 .build();
 
-        assertThat(promptBuilder.buildUserPrompt(contextWithChild(node), BrandType.HANA, DomainType.BANKING))
+        assertThat(promptBuilder.buildUserPrompt(contextWithChild(node), BrandType.HANA, DomainType.BANKING, null))
                 .doesNotContain("sizing:");
     }
 
@@ -464,7 +464,7 @@ class PromptBuilderTest {
                 .sizingV("HUG")
                 .build();
 
-        assertThat(promptBuilder.buildUserPrompt(contextWithChild(node), BrandType.HANA, DomainType.BANKING))
+        assertThat(promptBuilder.buildUserPrompt(contextWithChild(node), BrandType.HANA, DomainType.BANKING, null))
                 .contains("sizing:FIXED/HUG");
     }
 
@@ -481,7 +481,7 @@ class PromptBuilderTest {
                 .fillColor("#008485")
                 .build();
 
-        assertThat(promptBuilder.buildUserPrompt(contextWithChild(node), BrandType.HANA, DomainType.BANKING))
+        assertThat(promptBuilder.buildUserPrompt(contextWithChild(node), BrandType.HANA, DomainType.BANKING, null))
                 .contains("fill: #008485");
     }
 
@@ -496,7 +496,7 @@ class PromptBuilderTest {
                 .gradientFill("GRADIENT_LINEAR: #0D9488 → #115E59")
                 .build();
 
-        assertThat(promptBuilder.buildUserPrompt(contextWithChild(node), BrandType.HANA, DomainType.BANKING))
+        assertThat(promptBuilder.buildUserPrompt(contextWithChild(node), BrandType.HANA, DomainType.BANKING, null))
                 .contains("fill: GRADIENT_LINEAR: #0D9488 → #115E59");
     }
 
@@ -514,7 +514,7 @@ class PromptBuilderTest {
                 .strokeWeight(4)
                 .build();
 
-        assertThat(promptBuilder.buildUserPrompt(contextWithChild(node), BrandType.HANA, DomainType.BANKING))
+        assertThat(promptBuilder.buildUserPrompt(contextWithChild(node), BrandType.HANA, DomainType.BANKING, null))
                 .contains("stroke: #CAEE5D/4px");
     }
 
@@ -529,7 +529,7 @@ class PromptBuilderTest {
                 .shadow("0px/8px/24px rgba(0,132,133,0.06)")
                 .build();
 
-        assertThat(promptBuilder.buildUserPrompt(contextWithChild(node), BrandType.HANA, DomainType.BANKING))
+        assertThat(promptBuilder.buildUserPrompt(contextWithChild(node), BrandType.HANA, DomainType.BANKING, null))
                 .contains("shadow: 0px/8px/24px rgba(0,132,133,0.06)");
     }
 
@@ -550,7 +550,7 @@ class PromptBuilderTest {
                 .lineHeight(40)
                 .build();
 
-        String result = promptBuilder.buildUserPrompt(contextWithChild(node), BrandType.HANA, DomainType.BANKING);
+        String result = promptBuilder.buildUserPrompt(contextWithChild(node), BrandType.HANA, DomainType.BANKING, null);
 
         assertThat(result).contains("font: 36px/700/Noto Sans KR");
         assertThat(result).contains("lh:40px");
@@ -569,7 +569,7 @@ class PromptBuilderTest {
                 .letterSpacing(-0.9)
                 .build();
 
-        assertThat(promptBuilder.buildUserPrompt(contextWithChild(node), BrandType.HANA, DomainType.BANKING))
+        assertThat(promptBuilder.buildUserPrompt(contextWithChild(node), BrandType.HANA, DomainType.BANKING, null))
                 .contains("ls:-0.9px");
     }
 
@@ -586,7 +586,7 @@ class PromptBuilderTest {
                 .letterSpacing(0.0)
                 .build();
 
-        assertThat(promptBuilder.buildUserPrompt(contextWithChild(node), BrandType.HANA, DomainType.BANKING))
+        assertThat(promptBuilder.buildUserPrompt(contextWithChild(node), BrandType.HANA, DomainType.BANKING, null))
                 .doesNotContain("ls:");
     }
 
@@ -601,7 +601,7 @@ class PromptBuilderTest {
                 .fontSize(0)
                 .build();
 
-        assertThat(promptBuilder.buildUserPrompt(contextWithChild(node), BrandType.HANA, DomainType.BANKING))
+        assertThat(promptBuilder.buildUserPrompt(contextWithChild(node), BrandType.HANA, DomainType.BANKING, null))
                 .doesNotContain("font:");
     }
 
@@ -618,7 +618,7 @@ class PromptBuilderTest {
                 .componentProps(Map.of("prop1", "spending"))
                 .build();
 
-        assertThat(promptBuilder.buildUserPrompt(contextWithChild(node), BrandType.HANA, DomainType.BANKING))
+        assertThat(promptBuilder.buildUserPrompt(contextWithChild(node), BrandType.HANA, DomainType.BANKING, null))
                 .contains("props: {prop1=spending}");
     }
 
@@ -633,7 +633,7 @@ class PromptBuilderTest {
                 .componentProps(null)
                 .build();
 
-        assertThat(promptBuilder.buildUserPrompt(contextWithChild(node), BrandType.HANA, DomainType.BANKING))
+        assertThat(promptBuilder.buildUserPrompt(contextWithChild(node), BrandType.HANA, DomainType.BANKING, null))
                 .doesNotContain("props:");
     }
 

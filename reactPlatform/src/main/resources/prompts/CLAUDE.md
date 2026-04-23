@@ -76,6 +76,9 @@ import 순서: `@cl` → `lucide-react` → `react`
 - `@cl` 이외의 UI 라이브러리 추가 금지
 - HTML 태그 직접 사용 금지 (`div`, `button`, `p`, `h1` 등)
 - 단, `data-brand` 래퍼 역할의 최상위 `div` 1개는 예외 허용
+- **JSX에서 실제로 렌더링되는 컴포넌트만 import할 것. 사용하지 않는 import 금지.**
+  - 먼저 JSX를 완성한 뒤, 사용된 컴포넌트만 import 구문에 포함할 것
+  - component-types.md에 나열된 컴포넌트라도 해당 파일에서 렌더링하지 않으면 import 금지
 
 ---
 
@@ -167,13 +170,18 @@ import 순서: `@cl` → `lucide-react` → `react`
 
 ```tsx
 <div data-brand="hana" data-domain="banking">
-  <HomePageLayout title="하나은행" logo={<Building2 />} withBottomNav>
+  {/* BottomNav는 HomePageLayout이 withBottomNav prop으로 내부에서 렌더링 — 별도 <BottomNav> 추가 금지 */}
+  <HomePageLayout
+    title="하나은행"
+    logo={<Building2 />}
+    withBottomNav
+    activeId="home"
+    bottomNavItems={bottomNavItems}
+  >
     <Stack gap="md">
       {/* 콘텐츠 */}
     </Stack>
   </HomePageLayout>
-  {/* BottomNav는 반드시 HomePageLayout 바깥에 배치 */}
-  <BottomNav items={bottomNavItems} activeId="home" />
 </div>
 ```
 
@@ -292,7 +300,7 @@ const { data } = useQuery({ queryKey: ['accounts'], queryFn: fetchAccounts });
 | 보험 카드 | `InsuranceSummaryCard` | type: `life \| health \| car` |
 | 배너 슬라이더 | `BannerCarousel` | |
 | 그라데이션 배너 | `BrandBanner` | `<Card variant="brand">` 사용 금지 |
-| 바텀 글로벌 탭 | `BottomNav` | `HomePageLayout` 바깥에 배치 |
+| 바텀 글로벌 탭 | `HomePageLayout` props | `withBottomNav`, `activeId`, `bottomNavItems`로 제어. 별도 `<BottomNav>` 추가 금지 |
 | 단계 표시기 | `StepIndicator` | props: `total`, `current` |
 | 검색창 | `SearchInput` | |
 | 은행 선택 그리드 | `BankSelectGrid` | prop명: `columns` (`cols` 아님) |
@@ -370,7 +378,7 @@ const { data } = useQuery({ queryKey: ['accounts'], queryFn: fetchAccounts });
 | `@cl` 이외 UI 라이브러리 추가 | `@cl`이 유일한 UI 소스 |
 | 존재하지 않는 컴포넌트 임의 생성 | 디자인 시스템 이탈 |
 | 파일 분리 (여러 파일 생성) | 단일 tsx 파일이 생성 단위 |
-| BottomNav를 HomePageLayout 안에 배치 | 레이아웃 깨짐 |
+| `HomePageLayout` 사용 시 `<BottomNav>`를 별도로 추가 | `withBottomNav` prop이 내부에서 렌더링하므로 이중 렌더링 발생 |
 | HomePageLayout 내부에 패딩 추가 | 내장 패딩과 중복 |
 | 애니메이션 외부 라이브러리 추가 | 번들 크기·디자인 시스템 일관성 훼손 |
 

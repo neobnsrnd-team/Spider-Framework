@@ -15,6 +15,7 @@ import lombok.NoArgsConstructor;
  * @description React 코드 생성 API 요청 DTO.
  *     Figma URL과 브랜드·도메인 Enum으로 구성되며, 자유 텍스트 입력은 허용하지 않는다.
  *     brand·domain은 Claude가 globals.css의 올바른 디자인 토큰 블록을 선택하는 데 사용된다.
+ *     componentName은 생성될 React 컴포넌트 함수명을 명시적으로 지정한다 (미입력 시 AI가 결정).
  */
 @Data
 @NoArgsConstructor
@@ -38,4 +39,13 @@ public class ReactGenerateRequest {
      * globals.css의 [data-domain] 토큰 블록 선택에 사용된다.
      */
     private DomainType domain;
+
+    /**
+     * 생성할 React 컴포넌트 함수명 (PascalCase). 미입력 시 AI가 Figma 컴포넌트명으로 결정한다.
+     * Container scaffold 파일명도 이 값을 기준으로 생성되므로, 여러 코드 생성 시 충돌 방지를 위해 입력을 권장한다.
+     */
+    @Pattern(
+            regexp = "^[A-Z][A-Za-z0-9]*$",
+            message = "컴포넌트명은 PascalCase로 입력해주세요. (예: LoginPage, TransferForm)")
+    private String componentName;
 }
