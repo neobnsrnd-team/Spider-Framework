@@ -173,7 +173,6 @@
     <!--
         수정 전 현재 상태를 이력 테이블(FWK_SQL_QUERY_HIS)에 백업 삽입
         PK: (VERSION_ID, QUERY_ID) — VERSION_ID는 System.currentTimeMillis() 문자열
-        QUERY_NAME(50), QUERY_DESC(200) 컬럼 크기 초과 방지를 위해 SUBSTR 적용
         SQL_QUERY3/4 컬럼은 신버전 DTO에 없으므로 NULL 삽입
     -->
     <insert id="insertHistory">
@@ -185,12 +184,12 @@
         ) VALUES (
             #{versionId},
             #{data.queryId},
-            SUBSTR(#{data.queryName, jdbcType=VARCHAR}, 1, 50),
+            #{data.queryName, jdbcType=VARCHAR},
             #{data.sqlGroupId},
             #{data.dbId},
             #{data.sqlQuery},
             #{data.sqlQuery2, jdbcType=VARCHAR},
-            SUBSTR(#{data.queryDesc, jdbcType=VARCHAR}, 1, 200),
+            #{data.queryDesc, jdbcType=VARCHAR},
             #{data.sqlType, jdbcType=VARCHAR},
             #{data.execType, jdbcType=VARCHAR},
             #{data.cacheYn, jdbcType=VARCHAR},

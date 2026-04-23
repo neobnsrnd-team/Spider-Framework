@@ -18,7 +18,9 @@ import com.example.admin_demo.global.util.AuditUtil;
 import com.example.admin_demo.global.util.ExcelColumnDefinition;
 import com.example.admin_demo.global.util.ExcelExportUtil;
 import java.io.IOException;
+import java.sql.Clob;
 import java.sql.ResultSetMetaData;
+import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -190,8 +192,14 @@ public class SqlQueryService {
                     .build();
         }
 
-        // 구버전 저장 시 자동 추가된 선행 블록 주석 제거 (예: /*! QUERY_ID:xxx */ SELECT ...)
-        String cleanedSql = rawSql.trim().replaceAll("(?s)^/\\*.*?\\*/\\s*", "").trim();
+        // 선행 블록 주석(/* */), 한 줄 주석(--)을 모두 반복 제거 (복수 주석 대응)
+        String cleanedSql = rawSql.trim();
+        String prev;
+        do {
+            prev = cleanedSql;
+            cleanedSql = cleanedSql.replaceAll("(?s)^/\\*.*?\\*/\\s*", "").trim();
+            cleanedSql = cleanedSql.replaceAll("(?m)^--[^\\r\\n]*[\\r\\n]*", "").trim();
+        } while (!cleanedSql.equals(prev));
 
         // iBatis XML 동적 태그 감지 — 프레임워크 없이는 실행 불가
         if (cleanedSql.matches(
@@ -219,6 +227,9 @@ public class SqlQueryService {
         // MySQL 방언 LIMIT 구문 제거 — Oracle 미지원 (페이징은 ROWNUM으로 처리)
         execSql = execSql.replaceAll("(?i)\\s+LIMIT\\s+\\S+\\s*,\\s*\\S+\\s*$", "");
 
+        // 서브쿼리 감싸기 전 끝 세미콜론 제거 — 있으면 Oracle 문법 오류 발생
+        execSql = execSql.replaceAll(";\\s*$", "");
+
         // Oracle ROWNUM으로 최대 50행 제한
         String limitedSql = "SELECT * FROM (" + execSql + ") WHERE ROWNUM <= 50";
 
@@ -236,7 +247,7 @@ public class SqlQueryService {
                     Map<String, Object> row = new LinkedHashMap<>();
                     for (int i = 1; i <= colCount; i++) {
                         Object val = rs.getObject(i);
-                        row.put(meta.getColumnLabel(i), val != null ? val.toString() : "");
+                        row.put(meta.getColumnLabel(i), toDisplayString(val));
                     }
                     result.add(row);
                 }
@@ -326,6 +337,24 @@ public class SqlQueryService {
     /** SQL 그룹 ID/명 키워드 검색 — autocomplete용, 최대 20건 */
     public List<SqlGroupResponse> searchGroups(String keyword) {
         return sqlQueryMapper.searchSqlGroups(keyword);
+    }
+
+    /** CLOB/BLOB 등 LOB 타입을 안전하게 문자열로 변환 */
+    private String toDisplayString(Object val) {
+        if (val == null) {
+            return "";
+        }
+        if (val instanceof Clob clob) {
+            try {
+                return clob.getSubString(1, (int) clob.length());
+            } catch (SQLException e) {
+                return "[CLOB read error]";
+            }
+        }
+        if (val instanceof java.sql.Blob) {
+            return "[BLOB]";
+        }
+        return val.toString();
     }
 
     private void validateSqlText(String sqlText) {
