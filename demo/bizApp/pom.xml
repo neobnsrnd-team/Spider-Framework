@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0
+         https://maven.apache.org/xsd/maven-4.0.0.xsd">
+
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-parent</artifactId>
+        <version>3.4.7</version>
+        <relativePath/>
+    </parent>
+
+    <groupId>com.example</groupId>
+    <artifactId>biz-app</artifactId>
+    <version>0.0.1-SNAPSHOT</version>
+    <packaging>pom</packaging>
+    <name>biz-app</name>
+    <description>금융 채널·인증·이체·계정계 Mock 통합 프로젝트 (spider-link 내장형 AP 서버군)</description>
+
+    <modules>
+        <module>biz-common</module>
+        <module>mock-core</module>
+        <module>biz-auth</module>
+        <module>biz-transfer</module>
+        <module>biz-channel</module>
+    </modules>
+
+    <properties>
+        <java.version>17</java.version>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+        <spider-link.version>0.0.1-SNAPSHOT</spider-link.version>
+        <lombok.version>1.18.34</lombok.version>
+    </properties>
+
+    <dependencyManagement>
+        <dependencies>
+            <!-- spider-link 연계엔진 — mvn install -f ../../spider-link/pom.xml 로 로컬 저장소에 설치 필요 -->
+            <dependency>
+                <groupId>com.example</groupId>
+                <artifactId>spider-link</artifactId>
+                <version>${spider-link.version}</version>
+            </dependency>
+            <!-- 모듈 간 공통 커맨드 상수 -->
+            <dependency>
+                <groupId>com.example</groupId>
+                <artifactId>biz-common</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+
+    <build>
+        <pluginManagement>
+            <plugins>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-compiler-plugin</artifactId>
+                    <configuration>
+                        <encoding>UTF-8</encoding>
+                        <compilerArgs>
+                            <arg>-parameters</arg>
+                        </compilerArgs>
+                    </configuration>
+                </plugin>
+            </plugins>
+        </pluginManagement>
+    </build>
+</project>

@@ -1,0 +1,24 @@
+spring:
+  application:
+    name: mock-core
+  main:
+    web-application-type: none
+    keep-alive: true
+  datasource:
+    url: ${DB_URL:jdbc:oracle:thin:@neobns.com:11521:XE}
+    username: ${DB_USERNAME:D_SPIDERLINK}
+    password: ${DB_PASSWORD:spider99!}
+    driver-class-name: oracle.jdbc.OracleDriver
+
+tcp:
+  server:
+    # 인바운드 TCP 포트 — 환경변수 TCP_SERVER_PORT로 오버라이드 가능
+    port: ${TCP_SERVER_PORT:19300}
+    # 요청 처리 스레드 풀 크기
+    handler-pool-size: ${TCP_SERVER_HANDLER_POOL_SIZE:10}
+    # 요청 대기 큐 최대 크기
+    queue-capacity: ${TCP_SERVER_QUEUE_CAPACITY:50}
+
+logging:
+  level:
+    com.example.mockcore: DEBUG

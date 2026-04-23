@@ -1,5 +1,6 @@
 package com.example.spiderlink.infra.tcp.client;
 
+import com.example.spiderlink.domain.messageinstance.MessageInstanceRecorder;
 import com.example.spiderlink.infra.tcp.model.JsonCommandRequest;
 import com.example.spiderlink.infra.tcp.model.JsonCommandResponse;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -8,8 +9,9 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.Socket;
-import lombok.RequiredArgsConstructor;
+import java.util.UUID;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.lang.Nullable;
 import org.springframework.stereotype.Component;
 
 /**
@@ -25,10 +27,12 @@ import org.springframework.stereotype.Component;
  *   <li>setKeepAlive(true)</li>
  *   <li>setTcpNoDelay(true)</li>
  * </ul>
+ *
+ * <p>{@link MessageInstanceRecorder}를 주입하면 송신 요청과 수신 응답을
+ * {@code FWK_MESSAGE_INSTANCE} 테이블에 자동 기록한다.</p>
  */
 @Slf4j
 @Component
-@RequiredArgsConstructor
 public class TcpClient {
 
     /** 연결 타임아웃: 레퍼런스(spiderlink_Admin) 기준 2초 */
@@ -42,8 +46,24 @@ public class TcpClient {
 
     private final ObjectMapper objectMapper;
 
+    /** 전문 이력 기록기 — null이면 DB 기록 생략 */
+    @Nullable
+    private final MessageInstanceRecorder recorder;
+
+    /** 기록기 없는 생성자 (하위 호환) */
+    public TcpClient(ObjectMapper objectMapper) {
+        this(objectMapper, null);
+    }
+
+    /** 기록기 포함 생성자 */
+    public TcpClient(ObjectMapper objectMapper, @Nullable MessageInstanceRecorder recorder) {
+        this.objectMapper = objectMapper;
+        this.recorder = recorder;
+    }
+
     /**
      * 대상 TCP 서버에 JsonCommandRequest를 JSON 형식으로 전송하고 응답을 수신한다.
+     * recorder가 설정된 경우 송신 요청과 수신 응답을 FWK_MESSAGE_INSTANCE에 기록한다.
      *
      * @param host 대상 호스트
      * @param port 대상 포트
@@ -53,6 +73,12 @@ public class TcpClient {
      */
     public JsonCommandResponse sendJson(String host, int port, JsonCommandRequest req) throws IOException {
         log.debug("[TcpClient] JSON 전송: host={}, port={}, command={}", host, port, req.getCommand());
+
+        String trxId = UUID.randomUUID().toString();
+        if (recorder != null) {
+            recorder.recordClientRequest(trxId, req, host, port);
+        }
+
         byte[] requestBytes = objectMapper.writeValueAsBytes(req);
 
         try (Socket socket = createSocket(host, port);
@@ -73,6 +99,11 @@ public class TcpClient {
 
             JsonCommandResponse response = objectMapper.readValue(responseBytes, JsonCommandResponse.class);
             log.debug("[TcpClient] JSON 응답 수신: success={}", response.isSuccess());
+
+            if (recorder != null) {
+                recorder.recordClientResponse(trxId, req, response, host, port);
+            }
+
             return response;
         }
     }
