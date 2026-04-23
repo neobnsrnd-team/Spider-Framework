@@ -1,31 +1,31 @@
 spring:
   application:
     name: biz-transfer
+  config:
+    import: optional:file:.env[.properties]
   main:
     # TCP 서버만 사용하므로 내장 웹 서버를 비활성화한다
     web-application-type: none
     keep-alive: true
   datasource:
-    url: ${DB_URL:jdbc:oracle:thin:@localhost:1521:XE}
-    username: ${DB_USERNAME:D_SPIDERLINK}
-    password: ${DB_PASSWORD:password}
+    url: ${DB_URL}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
     driver-class-name: oracle.jdbc.OracleDriver
+    hikari:
+      maximum-pool-size: 2
+      minimum-idle: 1
 
 tcp:
   server:
-    # 인바운드 TCP 포트 — 환경변수 TCP_SERVER_PORT로 오버라이드 가능
-    port: ${TCP_SERVER_PORT:19200}
-    # 요청 처리 스레드 풀 크기
-    handler-pool-size: ${TCP_SERVER_HANDLER_POOL_SIZE:10}
-    # 요청 대기 큐 최대 크기
-    queue-capacity: ${TCP_SERVER_QUEUE_CAPACITY:50}
+    port: ${TCP_SERVER_PORT}
+    handler-pool-size: ${TCP_SERVER_HANDLER_POOL_SIZE}
+    queue-capacity: ${TCP_SERVER_QUEUE_CAPACITY}
 
 mock:
   core:
-    # mock-core 호스트 (환경변수 MOCK_CORE_HOST로 재정의 가능)
-    host: ${MOCK_CORE_HOST:localhost}
-    # mock-core TCP 포트 (환경변수 MOCK_CORE_PORT로 재정의 가능)
-    port: ${MOCK_CORE_PORT:19300}
+    host: ${MOCK_CORE_HOST}
+    port: ${MOCK_CORE_PORT}
 
 logging:
   level:

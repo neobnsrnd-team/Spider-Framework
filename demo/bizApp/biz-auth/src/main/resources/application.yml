@@ -1,30 +1,31 @@
 spring:
   application:
     name: biz-auth
+  config:
+    import: optional:file:.env[.properties]
   main:
     # HTTP 서버 없이 순수 TCP 서버로 동작 (spring-boot-starter 전용)
     web-application-type: none
     keep-alive: true
   datasource:
-    url: ${DB_URL:jdbc:oracle:thin:@localhost:1521:XE}
-    username: ${DB_USERNAME:D_SPIDERLINK}
-    password: ${DB_PASSWORD:password}
+    url: ${DB_URL}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
     driver-class-name: oracle.jdbc.OracleDriver
+    hikari:
+      maximum-pool-size: 2
+      minimum-idle: 1
 
 tcp:
   server:
-    # 인바운드 TCP 포트 — 환경변수 TCP_SERVER_PORT로 오버라이드 가능
-    port: ${TCP_SERVER_PORT:19100}
-    # 요청 처리 스레드 풀 크기
-    handler-pool-size: ${TCP_SERVER_HANDLER_POOL_SIZE:5}
-    # 요청 대기 큐 최대 크기
-    queue-capacity: ${TCP_SERVER_QUEUE_CAPACITY:20}
+    port: ${TCP_SERVER_PORT}
+    handler-pool-size: ${TCP_SERVER_HANDLER_POOL_SIZE}
+    queue-capacity: ${TCP_SERVER_QUEUE_CAPACITY}
 
 mock:
   core:
-    # 계정계 Mock(mock-core) 접속 정보 — 환경변수로 오버라이드 가능
-    host: ${MOCK_CORE_HOST:localhost}
-    port: ${MOCK_CORE_PORT:19300}
+    host: ${MOCK_CORE_HOST}
+    port: ${MOCK_CORE_PORT}
 
 logging:
   level:
