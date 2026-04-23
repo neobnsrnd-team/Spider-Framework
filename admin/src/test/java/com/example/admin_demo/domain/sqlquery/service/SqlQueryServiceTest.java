@@ -277,6 +277,39 @@ class SqlQueryServiceTest {
     }
 
     @Test
+    @DisplayName("[조회] 신규 필터(sqlGroupId, sqlGroupName, sqlType)가 mapper에 전달되어야 한다")
+    void getSqlQueriesWithSearch_withNewFilters_passesNewFiltersToMapper() {
+        SqlQuerySearchRequest searchDTO = SqlQuerySearchRequest.builder()
+                .page(1)
+                .size(10)
+                .sqlGroupId("GRP01")
+                .sqlGroupName("테스트그룹")
+                .sqlType("SELECT")
+                .build();
+
+        given(sqlQueryMapper.countAllWithSearch(null, null, null, "GRP01", "테스트그룹", "SELECT"))
+                .willReturn(1L);
+        given(sqlQueryMapper.findAllWithSearch(
+                        isNull(),
+                        isNull(),
+                        isNull(),
+                        eq("GRP01"),
+                        eq("테스트그룹"),
+                        eq("SELECT"),
+                        any(),
+                        any(),
+                        anyInt(),
+                        anyInt()))
+                .willReturn(List.of(buildResponse("Q001")));
+
+        PageResponse<SqlQueryResponse> result = sqlQueryService.getSqlQueriesWithSearch(searchDTO);
+
+        assertThat(result.getTotalElements()).isEqualTo(1L);
+        assertThat(result.getContent()).hasSize(1);
+        then(sqlQueryMapper).should().countAllWithSearch(null, null, null, "GRP01", "테스트그룹", "SELECT");
+    }
+
+    @Test
     @DisplayName("[조회] 정렬 조건이 pageRequest를 통해 전달되어야 한다")
     void getSqlQueriesWithSearch_withSort_passesSortToMapper() {
         SqlQuerySearchRequest searchDTO = SqlQuerySearchRequest.builder()
