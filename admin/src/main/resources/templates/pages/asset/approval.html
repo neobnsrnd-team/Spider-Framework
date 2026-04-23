@@ -3,6 +3,14 @@
 <body>
 <div th:fragment="content">
 
+    <link rel="stylesheet" th:href="@{/css/asset-requests-content.css}">
+
+    <script th:inline="javascript">
+        /*<![CDATA[*/
+        window.CMS_ASSET_URL_BASE = /*[[${cmsAssetUrlBase}]]*/ '';
+        /*]]>*/
+    </script>
+
     <div class="page-header">
         <h4 class="page-title">
             <i class="bi bi-exclamation-circle-fill text-danger"></i>

@@ -458,13 +458,28 @@ public class PageController {
     @GetMapping("/cms-admin/asset-requests")
     @PreAuthorize("hasAuthority('CMS:W')")
     public String cmsAdminAssetRequests(HttpServletRequest request, Model model) {
+        model.addAttribute("cmsAssetUrlBase", resolveCmsAssetUrlBase());
         return resolveView(request, "pages/asset/request :: content", model);
     }
 
     @GetMapping("/cms-admin/asset-approvals")
     @PreAuthorize("hasAuthority('CMS:W')")
     public String cmsAdminAssetApprovals(HttpServletRequest request, Model model) {
+        model.addAttribute("cmsAssetUrlBase", resolveCmsAssetUrlBase());
         return resolveView(request, "pages/asset/approval :: content", model);
+    }
+
+    /**
+     * CMS 에셋 이미지 URL 접두사.
+     * CMS 가 저장한 assetUrl 은 "/uploads/..." 같은 상대경로이므로,
+     * 브라우저가 CMS origin 으로 로드할 수 있도록 origin 만 추출해 전달한다.
+     * (예: "http://133.186.135.23:3001/" → "http://133.186.135.23:3001")
+     */
+    private String resolveCmsAssetUrlBase() {
+        if (cmsUserUrl == null || cmsUserUrl.isBlank()) {
+            return "";
+        }
+        return cmsUserUrl.replaceAll("/+$", "");
     }
 
     @GetMapping("/cms-admin/ab-tests")
