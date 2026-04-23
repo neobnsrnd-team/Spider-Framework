@@ -355,7 +355,8 @@ public class PageController {
         return resolveView(request, "pages/message-parsing-json/message-parsing-json :: content", model);
     }
 
-    // ── React 플랫폼 ── react_generate, react_generate_his, react_approval, react_cms_admin_approval, react_cms_admin_deployment
+    // ── React 플랫폼 ── react_generate, react_generate_his, react_approval, react_cms_admin_approval,
+    // react_cms_admin_deployment
 
     @GetMapping("/react-generate")
     public String reactGenerate(HttpServletRequest request, Model model) {
@@ -382,7 +383,6 @@ public class PageController {
     public String reactCmsAdminDeployments(HttpServletRequest request, Model model) {
         return resolveView(request, "pages/react-cms-admin-deployment/react-cms-admin-deployment :: content", model);
     }
-
 
     // ── 서비스 관리 ── v3_neb_service_base_info, v3_neb_biz_component, v3_validator_component,
     //                    v3_biz_app, v3_sql_query_manage, v3_sql_dataSource_manage

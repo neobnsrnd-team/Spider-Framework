@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<!-- SqlQuery Page Scripts -->
+<th:block th:fragment="script">
+    <!-- 권한 플래그 (모달 및 버튼 클릭 핸들러에서 사용) -->
+    <script th:inline="javascript">
+        var sql_query_access = /*[[${userAuthorities != null and userAuthorities.contains('SQL_QUERY:W')}]]*/ false;
+    </script>
+
+    <script th:inline="javascript">
+        var PAGE_CONFIG = {
+            pageId: 'sqlQueries',
+            apiEndpoint: API_BASE_URL + '/sql-queries/page',
+
+            search: {
+                fields: [
+                    {
+                        type: 'text',
+                        id: 'queryId',
+                        label: 'Query ID',
+                        labelStyle: 'min-width: 70px;',
+                        placeholder: 'Query ID',
+                        width: '180px'
+                    },
+                    {
+                        type: 'text',
+                        id: 'queryName',
+                        label: 'Query 명',
+                        labelStyle: 'min-width: 70px; margin-left: 10px;',
+                        placeholder: 'Query 명',
+                        width: '180px'
+                    },
+                    {
+                        type: 'select',
+                        id: 'useYn',
+                        label: '사용여부',
+                        labelStyle: 'min-width: 55px; margin-left: 10px;',
+                        width: '100px',
+                        placeholder: '전체',
+                        options: ComboManager.simple.getList('USE_YN')
+                    },
+                    {
+                        type: 'text',
+                        id: 'sqlGroupId',
+                        label: 'SQL 그룹 ID',
+                        labelStyle: 'min-width: 80px; margin-left: 10px;',
+                        placeholder: 'SQL 그룹 ID',
+                        width: '150px'
+                    },
+                    {
+                        type: 'text',
+                        id: 'sqlGroupName',
+                        label: 'SQL 그룹 명',
+                        labelStyle: 'min-width: 80px; margin-left: 10px;',
+                        placeholder: 'SQL 그룹 명',
+                        width: '150px'
+                    },
+                    {
+                        type: 'select',
+                        id: 'sqlType',
+                        label: 'SQL 유형',
+                        labelStyle: 'min-width: 60px; margin-left: 10px;',
+                        width: '130px',
+                        placeholder: '전체',
+                        options: [
+                            { value: 'R', label: 'R (SELECT)' },
+                            { value: 'C', label: 'C (INSERT)' },
+                            { value: 'U', label: 'U (UPDATE)' },
+                            { value: 'D', label: 'D (DELETE)' },
+                            { value: 'P', label: 'P (PROCEDURE)' },
+                            { value: 'I', label: 'I (SQL)' }
+                        ]
+                    }
+                ],
+                limit: { default: 10, showLarge: true }
+            },
+
+            table: {
+                id: 'sqlQueryTable',
+                columns: [
+                    { key: 'queryId', label: 'Query ID', width: '180px', sortable: true },
+                    { key: 'queryName', label: 'Query 명', width: '200px', sortable: true },
+                    { key: 'sqlGroupName', label: 'SQL 그룹', width: '150px', sortable: true },
+                    { key: 'dbName', label: 'DB', width: '120px', sortable: false },
+                    { key: 'sqlType', label: 'SQL 유형', width: '80px', sortable: false },
+                    {
+                        key: 'cacheYn',
+                        label: '캐시',
+                        width: '60px',
+                        sortable: false,
+                        render: (val) => val === 'Y'
+                            ? '<span class="badge text-bg-success">Y</span>'
+                            : '<span class="badge text-bg-secondary">N</span>'
+                    },
+                    {
+                        key: 'useYn',
+                        label: '사용여부',
+                        width: '80px',
+                        sortable: true,
+                        render: (val, row) => {
+                            const color = val === 'Y' ? 'success' : 'secondary';
+                            // 쓰기 권한 보유 시 배지 클릭으로 즉시 토글 가능
+                            if (sql_query_access) {
+                                return `<span class="badge text-bg-${color} use-yn-toggle"
+                                             style="cursor:pointer;"
+                                             data-query-id="${row.queryId}"
+                                             data-use-yn="${val}">${val}</span>`;
+                            }
+                            return `<span class="badge text-bg-${color}">${val}</span>`;
+                        }
+                    },
+                    { key: 'timeOut', label: 'Timeout', width: '80px', sortable: false },
+                    { key: 'lastUpdateDtime', label: '최종수정일시', width: '140px', sortable: false }
+                ],
+                emptyMessage: '조회 버튼을 클릭하여 데이터를 불러오세요.',
+                noDataMessage: '조회된 데이터가 없습니다.'
+            },
+
+            containers: {
+                search: '#searchContainer',
+                table: '#tableContainer',
+                pagination: '#pagination',
+                pageInfo: '#pageInfo'
+            },
+
+            autoLoad: true
+        };
+
+        window.SqlQueryPage = {
+            currentPage: 1,
+            totalItems: 0,
+            itemsPerPage: 10,
+            sortBy: null,
+            sortDirection: null,
+            _preventRowClick: false,  // 사용여부 배지 클릭 시 행 클릭(상세 모달) 방지 플래그
+
+            init: function() {
+                SearchForm.render('#searchContainer', PAGE_CONFIG.search, () => {
+                    this.currentPage = 1;
+                    this.load();
+                });
+
+                const tableConfig = {
+                    ...PAGE_CONFIG.table,
+                    onSort: (sortBy, sortDirection) => {
+                        this.sortBy = sortBy;
+                        this.sortDirection = sortDirection;
+                        this.currentPage = 1;
+                        this.load();
+                    }
+                };
+
+                DataTable.render('#tableContainer', tableConfig, (row) => {
+                    // 사용여부 배지 mousedown 시 플래그를 세워 상세 모달 열기 차단
+                    if (this._preventRowClick) {
+                        this._preventRowClick = false;
+                        return;
+                    }
+                    if (window.SqlQueryModal) {
+                        window.SqlQueryModal.openForDetail(row);
+                    }
+                });
+
+                Pagination.init('#pagination', '#pageInfo', (page) => {
+                    this.currentPage = page;
+                    this.load();
+                });
+
+                $('#btnRefresh').off('click').on('click', () => {
+                    this.load();
+                });
+
+                $('#btnPrint').off('click').on('click', () => {
+                    this.printTable();
+                });
+
+                $('#btnExcel').off('click').on('click', () => {
+                    this.exportExcel();
+                });
+
+                $('#btnAdd').off('click').on('click', () => {
+                    if (window.SqlQueryModal) {
+                        window.SqlQueryModal.openForCreate();
+                    }
+                });
+
+                if (sql_query_access) {
+                    WasSelectReloadModal.init();
+                    $('#btnWasReload').off('click').on('click', () => {
+                        this.openReloadModal();
+                    });
+                }
+
+                // 사용여부 배지 클릭: mousedown에서 플래그를 세워 tr 직접 바인딩(행 클릭)보다 먼저 차단
+                // click 이벤트에서 stopPropagation은 document 위임이 tr 직접 바인딩보다 늦게 발화하여 효과 없음
+                $(document).off('mousedown', '.use-yn-toggle').on('mousedown', '.use-yn-toggle', () => {
+                    this._preventRowClick = true;
+                });
+                $(document).off('click', '.use-yn-toggle').on('click', '.use-yn-toggle', (e) => {
+                    const queryId = $(e.currentTarget).data('query-id');
+                    const useYn   = $(e.currentTarget).data('use-yn');
+                    this.toggleUseYn(String(queryId), String(useYn));
+                });
+
+                if (PAGE_CONFIG.autoLoad) {
+                    this.load();
+                }
+            },
+
+            load: function() {
+                const params = SearchForm.getParams('#searchContainer');
+                params.page = this.currentPage;
+                params.size = params.size || this.itemsPerPage;
+
+                if (this.sortBy) {
+                    params.sortBy = this.sortBy;
+                    params.sortDirection = this.sortDirection || 'ASC';
+                }
+
+                $.ajax({
+                    url: PAGE_CONFIG.apiEndpoint,
+                    method: 'GET',
+                    data: params,
+                    success: (response) => {
+                        if (response.success && response.data) {
+                            const pageData = response.data;
+                            DataTable.setData('#tableContainer', pageData.content || []);
+
+                            this.totalItems = pageData.totalElements || 0;
+                            this.itemsPerPage = params.size;
+
+                            Pagination.update('#pagination', {
+                                currentPage: this.currentPage,
+                                totalItems: this.totalItems,
+                                itemsPerPage: this.itemsPerPage
+                            });
+                        } else {
+                            DataTable.setData('#tableContainer', []);
+                            Pagination.reset('#pagination');
+                        }
+                    },
+                    error: (xhr) => {
+                        console.error('Failed to load sql queries:', xhr);
+                        Toast.error('SQL Query 목록을 불러오는데 실패했습니다.');
+                        DataTable.setData('#tableContainer', []);
+                        Pagination.reset('#pagination');
+                    }
+                });
+            },
+
+            printTable: function() {
+                const printColumns = PAGE_CONFIG.table.columns
+                    .filter(col => !col.render)
+                    .map(col => ({ key: col.key, label: col.label }));
+                const data = DataTable.getData('#tableContainer');
+                PrintUtil.print({ title: 'SQL Query 목록', columns: printColumns, data: data });
+            },
+
+            toggleUseYn: function(queryId, currentVal) {
+                const newVal = currentVal === 'Y' ? 'N' : 'Y';
+                Toast.confirm(`사용여부를 ${currentVal} → ${newVal} 로 변경하시겠습니까?`, () => {
+                    $.ajax({
+                        url: API_BASE_URL + '/sql-queries/' + encodeURIComponent(queryId) + '/use-yn',
+                        method: 'PATCH',
+                        success: (response) => {
+                            if (response.success) {
+                                Toast.success(`사용여부가 ${newVal}(으)로 변경되었습니다.`);
+                                this.load();
+                            } else {
+                                Toast.error(response.message || '사용여부 변경에 실패했습니다.');
+                            }
+                        },
+                        error: (xhr) => {
+                            Toast.error(xhr.responseJSON?.message || '사용여부 변경에 실패했습니다.');
+                        }
+                    });
+                });
+            },
+
+            openReloadModal: function() {
+                WasSelectReloadModal.open({
+                    title: 'SQL Query Reload',
+                    onExecute: (instanceIds) => {
+                        $.ajax({
+                            url: API_BASE_URL + '/reload/execute',
+                            method: 'POST',
+                            contentType: 'application/json',
+                            data: JSON.stringify({ reloadType: 'sql_query', instanceIds }),
+                            success: (response) => {
+                                if (response.success && response.data) {
+                                    WasSelectReloadModal.showResults(response.data.results);
+                                } else {
+                                    WasSelectReloadModal.resetButton();
+                                    Toast.error(response.message || 'Reload 실행에 실패했습니다.');
+                                }
+                            },
+                            error: (xhr) => {
+                                WasSelectReloadModal.resetButton();
+                                Toast.error(xhr.responseJSON?.message || 'Reload 실행 중 오류가 발생했습니다.');
+                            }
+                        });
+                    }
+                });
+            },
+
+            exportExcel: function() {
+                const params = SearchForm.getParams('#searchContainer');
+                const qs = new URLSearchParams();
+                Object.entries(params).forEach(function(entry) {
+                    if (entry[1]) qs.append(entry[0], entry[1]);
+                });
+                var queryString = qs.toString();
+                window.location.href = API_BASE_URL + '/sql-queries/export' + (queryString ? '?' + queryString : '');
+            }
+        };
+
+        $(document).ready(function() {
+            SqlQueryPage.init();
+        });
+    </script>
+</th:block>
+</body>
+</html>

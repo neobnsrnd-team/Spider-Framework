@@ -47,9 +47,7 @@ public interface ReactCmsAdminApprovalMapper {
 
     /** 공개 상태 변경 (IS_PUBLIC: Y / N) */
     void updatePublicState(
-            @Param("pageId") String pageId,
-            @Param("isPublic") String isPublic,
-            @Param("modifierId") String modifierId);
+            @Param("pageId") String pageId, @Param("isPublic") String isPublic, @Param("modifierId") String modifierId);
 
     // ── 이력 스냅샷 ───────────────────────────────────────────────────────────
 

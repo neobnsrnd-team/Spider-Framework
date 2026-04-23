@@ -130,4 +130,24 @@ COMMIT;
 --   WHERE FILE_ID LIKE '%_expired.html'
 --   ORDER BY LAST_MODIFIED_DTIME DESC;
 
+-- =============================================================
+-- FWK_SQL_QUERY_HIS — 실제 DB 테이블 확인 결과
+-- =============================================================
+-- 확인일: 2026-04-22
+-- FWK_SQL_QUERY_HIS 테이블은 구버전부터 이미 존재하는 테이블입니다.
+-- PK: (VERSION_ID VARCHAR2(50), QUERY_ID VARCHAR2(50))
+-- 신버전에서는 VERSION_ID = System.currentTimeMillis() 문자열 사용
+-- ※ 잘못 생성된 시퀀스를 아래 쿼리로 제거하세요 (개발자 직접 실행):
+DROP SEQUENCE SEQ_FWK_SQL_QUERY_HIS;
+
+-- =============================================================
+-- FWK_SQL_QUERY_HIS 컬럼 크기 확장
+-- =============================================================
+-- 배경: 이력 저장 시 QUERY_NAME(50), QUERY_DESC(200) 초과 데이터 유실 방지
+--       메인 테이블(FWK_SQL_QUERY) 기준으로 컬럼 크기를 일치시킴
+-- ※ 개발자가 DB에서 직접 실행해야 합니다.
+ALTER TABLE FWK_SQL_QUERY_HIS MODIFY (QUERY_NAME VARCHAR2(200));
+ALTER TABLE FWK_SQL_QUERY_HIS MODIFY (QUERY_DESC VARCHAR2(500));
+
+
 COMMIT;

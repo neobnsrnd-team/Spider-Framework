@@ -1,8 +1,11 @@
 package com.example.admin_demo.domain.sqlquery.controller;
 
+import com.example.admin_demo.domain.sqlquery.dto.SqlGroupResponse;
 import com.example.admin_demo.domain.sqlquery.dto.SqlQueryCreateRequest;
+import com.example.admin_demo.domain.sqlquery.dto.SqlQueryHistoryResponse;
 import com.example.admin_demo.domain.sqlquery.dto.SqlQueryResponse;
 import com.example.admin_demo.domain.sqlquery.dto.SqlQuerySearchRequest;
+import com.example.admin_demo.domain.sqlquery.dto.SqlQueryTestResponse;
 import com.example.admin_demo.domain.sqlquery.dto.SqlQueryUpdateRequest;
 import com.example.admin_demo.domain.sqlquery.service.SqlQueryService;
 import com.example.admin_demo.global.dto.ApiResponse;
@@ -10,6 +13,7 @@ import com.example.admin_demo.global.dto.PageResponse;
 import com.example.admin_demo.global.util.ExcelExportUtil;
 import jakarta.validation.Valid;
 import java.time.LocalDate;
+import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ContentDisposition;
@@ -85,5 +89,55 @@ public class SqlQueryController {
         log.info("DELETE /api/sql-queries/{}", queryId);
         sqlQueryService.delete(queryId);
         return ResponseEntity.ok(ApiResponse.success(null));
+    }
+
+    @PostMapping("/{queryId}/test")
+    @PreAuthorize("hasAuthority('SQL_QUERY:W')")
+    public ResponseEntity<ApiResponse<SqlQueryTestResponse>> testQuery(@PathVariable String queryId) {
+        log.info("POST /api/sql-queries/{}/test", queryId);
+        return ResponseEntity.ok(ApiResponse.success(sqlQueryService.testQuery(queryId)));
+    }
+
+    @PostMapping("/{queryId}/backup")
+    @PreAuthorize("hasAuthority('SQL_QUERY:W')")
+    public ResponseEntity<ApiResponse<Void>> backupQuery(@PathVariable String queryId) {
+        log.info("POST /api/sql-queries/{}/backup", queryId);
+        sqlQueryService.backupQuery(queryId);
+        return ResponseEntity.ok(ApiResponse.success(null));
+    }
+
+    @PatchMapping("/{queryId}/use-yn")
+    @PreAuthorize("hasAuthority('SQL_QUERY:W')")
+    public ResponseEntity<ApiResponse<SqlQueryResponse>> toggleUseYn(@PathVariable String queryId) {
+        log.info("PATCH /api/sql-queries/{}/use-yn", queryId);
+        return ResponseEntity.ok(ApiResponse.success(sqlQueryService.toggleUseYn(queryId)));
+    }
+
+    @GetMapping("/{queryId}/history")
+    public ResponseEntity<ApiResponse<List<SqlQueryHistoryResponse>>> getHistoryList(@PathVariable String queryId) {
+        log.info("GET /api/sql-queries/{}/history", queryId);
+        return ResponseEntity.ok(ApiResponse.success(sqlQueryService.getHistoryList(queryId)));
+    }
+
+    @GetMapping("/{queryId}/history/{versionId}")
+    public ResponseEntity<ApiResponse<SqlQueryHistoryResponse>> getHistoryDetail(
+            @PathVariable String queryId, @PathVariable String versionId) {
+        log.info("GET /api/sql-queries/{}/history/{}", queryId, versionId);
+        return ResponseEntity.ok(ApiResponse.success(sqlQueryService.getHistoryDetail(queryId, versionId)));
+    }
+
+    @PostMapping("/{queryId}/restore/{versionId}")
+    @PreAuthorize("hasAuthority('SQL_QUERY:W')")
+    public ResponseEntity<ApiResponse<SqlQueryResponse>> restoreFromHistory(
+            @PathVariable String queryId, @PathVariable String versionId) {
+        log.info("POST /api/sql-queries/{}/restore/{}", queryId, versionId);
+        return ResponseEntity.ok(ApiResponse.success(sqlQueryService.restoreFromHistory(queryId, versionId)));
+    }
+
+    @GetMapping("/group-search")
+    public ResponseEntity<ApiResponse<List<SqlGroupResponse>>> searchGroups(
+            @RequestParam(required = false) String keyword) {
+        log.info("GET /api/sql-queries/group-search - keyword: {}", keyword);
+        return ResponseEntity.ok(ApiResponse.success(sqlQueryService.searchGroups(keyword)));
     }
 }
