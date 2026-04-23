@@ -118,4 +118,16 @@ WHERE INSTANCE_ID = 'prod-operation-01';
 
 COMMIT;
 
+-- =============================================================
+-- #147 CMS 배포 관리 — 만료수동처리 기능 추가
+-- ⚠ 개발자가 DB에서 직접 실행해야 합니다.
+-- =============================================================
+
+-- SPW_CMS_PAGE.BEGINNING_DATE / EXPIRED_DATE / IS_PUBLIC / FILE_PATH_BACK 컬럼은
+-- 01_create_tables.sql 에 이미 정의되어 있으므로 별도 ALTER 불필요.
+-- FWK_CMS_FILE_SEND_HIS 의 만료 전용 이력 조회 예시 (운영 확인용):
+--   SELECT * FROM FWK_CMS_FILE_SEND_HIS
+--   WHERE FILE_ID LIKE '%_expired.html'
+--   ORDER BY LAST_MODIFIED_DTIME DESC;
+
 COMMIT;

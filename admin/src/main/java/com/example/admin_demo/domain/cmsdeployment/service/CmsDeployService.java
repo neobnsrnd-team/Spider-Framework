@@ -5,6 +5,7 @@ import com.example.admin_demo.domain.cmsdeployment.dto.CmsDeployHistoryRequest;
 import com.example.admin_demo.domain.cmsdeployment.dto.CmsDeployHistoryResponse;
 import com.example.admin_demo.domain.cmsdeployment.dto.CmsDeployPageRequest;
 import com.example.admin_demo.domain.cmsdeployment.dto.CmsDeployPageResponse;
+import com.example.admin_demo.domain.cmsdeployment.dto.CmsServerInstanceResponse;
 import com.example.admin_demo.domain.cmsdeployment.mapper.CmsDeployMapper;
 import com.example.admin_demo.global.dto.PageRequest;
 import com.example.admin_demo.global.dto.PageResponse;
@@ -68,6 +69,110 @@ public class CmsDeployService {
         // HTML 조립·파일 저장·이력 기록은 CMS push API가 담당
         callCmsPush(pageId, userId);
         log.info("CMS 배포 요청 완료: pageId={}, userId={}", pageId, userId);
+    }
+
+    /**
+     * 만료수동처리 배포.
+     *
+     * <p>CMS 서버에서 page-expired.html을 읽어와 ALIVE_YN='Y' 인 모든 서버에 순차 전송한다.
+     * 전송 성공 후 FWK_CMS_FILE_SEND_HIS에 이력을 기록하고 IS_PUBLIC='N' 으로 상태를 변경한다.</p>
+     *
+     * <p>만료 FILE_ID 패턴: {pageId}_v{version}_expired.html
+     * — 정상 배포 이력({pageId}_v{n}.html)을 덮어쓰지 않도록 별도 키 사용</p>
+     */
+    @Transactional
+    public void pushExpired(String pageId, String userId) {
+        // 1. 만료 처리 대상 검증 (EXPIRED_DATE < SYSDATE AND IS_PUBLIC='Y' AND USE_YN='Y')
+        String filePath = cmsDeployMapper.findExpirableFilePath(pageId);
+        if (filePath == null) {
+            throw new NotFoundException("만료 처리 대상이 아닙니다. pageId=" + pageId);
+        }
+
+        // 2. 최신 배포 FILE_ID에서 버전 추출 → 만료 전용 FILE_ID 조합
+        //    예: PAGE001_v3.html → PAGE001_v3_expired.html
+        //    이력 없으면 v0 폴백 사용
+        String latestFileId = cmsDeployMapper.findLatestDeployedFileId(pageId);
+        String expiredFileId;
+        if (latestFileId != null && latestFileId.endsWith(".html")) {
+            expiredFileId = latestFileId.replace(".html", "_expired.html");
+        } else {
+            expiredFileId = pageId + "_v0_expired.html";
+        }
+
+        // 3. CMS 서버에서 page-expired.html 취득
+        String expiredHtml = fetchExpiredHtml();
+
+        // 4. ALIVE_YN='Y' 서버 목록 조회
+        List<CmsServerInstanceResponse> servers = cmsDeployMapper.findAliveServerInstances();
+        if (servers.isEmpty()) {
+            throw new InternalException("배포 가능한 서버 인스턴스가 없습니다.");
+        }
+
+        // 5. 각 서버에 순차 전송 → 성공 시 이력 UPSERT
+        for (CmsServerInstanceResponse server : servers) {
+            callReceiveApi(server, pageId, expiredHtml);
+            cmsDeployMapper.upsertFileSendHis(
+                    server.getInstanceId(),
+                    expiredFileId,
+                    expiredHtml.length(),
+                    null, // CRC 계산 불필요 — 만료 HTML은 고정 콘텐츠
+                    userId);
+        }
+
+        // 6. 페이지 상태 업데이트: IS_PUBLIC='N', FILE_PATH_BACK=FILE_PATH
+        cmsDeployMapper.expirePage(pageId, userId);
+        log.info("만료 배포 완료: pageId={}, expiredFileId={}, userId={}", pageId, expiredFileId, userId);
+    }
+
+    /** CMS 서버에서 page-expired.html을 HTTP GET으로 취득 */
+    private String fetchExpiredHtml() {
+        try {
+            ResponseEntity<String> response =
+                    restTemplate.getForEntity(deployProperties.getExpiredHtmlUrl(), String.class);
+            String body = response.getBody();
+            if (body == null || body.isBlank()) {
+                throw new InternalException("page-expired.html 응답이 비어있습니다.");
+            }
+            return body;
+        } catch (InternalException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new InternalException("page-expired.html 취득 실패: " + e.getMessage(), e);
+        }
+    }
+
+    /** /cms/api/deploy/receive 호출 — 만료 HTML을 서버 인스턴스에 전송 */
+    private void callReceiveApi(CmsServerInstanceResponse server, String pageId, String html) {
+        String url = "http://" + server.getInstanceIp() + ":" + server.getInstancePort() + "/cms/api/deploy/receive";
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        headers.set("x-deploy-token", deployProperties.getSecret());
+
+        Map<String, Object> body = new HashMap<>();
+        body.put("pageId", pageId);
+        body.put("html", html);
+
+        try {
+            ResponseEntity<Map<String, Object>> response = restTemplate.exchange(
+                    url,
+                    HttpMethod.POST,
+                    new HttpEntity<>(body, headers),
+                    new ParameterizedTypeReference<Map<String, Object>>() {});
+
+            Map<String, Object> responseBody = response.getBody();
+            if (responseBody == null) {
+                throw new InternalException("만료 배포 서버(" + server.getInstanceId() + ")에서 빈 응답을 반환했습니다.");
+            }
+            if (!Boolean.TRUE.equals(responseBody.get("ok"))) {
+                Object error = responseBody.get("error");
+                throw new InternalException("만료 배포 서버(" + server.getInstanceId() + ") 오류: " + error);
+            }
+        } catch (InternalException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new InternalException("만료 배포 서버(" + server.getInstanceId() + ") 전송 오류: " + e.getMessage(), e);
+        }
     }
 
     /** CMS push API 호출 — x-deploy-token 서버 간 인증 사용 */
