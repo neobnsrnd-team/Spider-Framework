@@ -1,6 +1,7 @@
 package com.example.bizchannel.config;
 
 import com.example.bizchannel.web.filter.JwtAuthFilter;
+import com.example.bizchannel.web.interceptor.HttpLoggingInterceptor;
 import com.example.spiderlink.domain.messageinstance.MessageInstanceRecorder;
 import com.example.spiderlink.infra.tcp.client.TcpClient;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -14,6 +15,8 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import org.springframework.web.filter.CorsFilter;
+import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
+import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
 /**
  * 채널AP 공통 설정 클래스.
@@ -31,7 +34,7 @@ import org.springframework.web.filter.CorsFilter;
  */
 @Getter
 @Configuration
-public class BizChannelConfig {
+public class BizChannelConfig implements WebMvcConfigurer {
 
     /** 인증AP(biz-auth) 접속 호스트 */
     @Value("${biz.auth.host:localhost}")
@@ -52,6 +55,18 @@ public class BizChannelConfig {
     /** 공지 관리 API 보호용 어드민 시크릿 키 */
     @Value("${admin.secret:admin-secret}")
     private String adminSecret;
+
+    private final HttpLoggingInterceptor httpLoggingInterceptor;
+
+    public BizChannelConfig(HttpLoggingInterceptor httpLoggingInterceptor) {
+        this.httpLoggingInterceptor = httpLoggingInterceptor;
+    }
+
+    /** /api/** 경로 HTTP 거래 로그 인터셉터 등록 */
+    @Override
+    public void addInterceptors(InterceptorRegistry registry) {
+        registry.addInterceptor(httpLoggingInterceptor).addPathPatterns("/api/**");
+    }
 
     /**
      * spider-link TcpClient 빈 등록.

@@ -52,13 +52,14 @@ public class CardController {
     @GetMapping("/api/cards")
     public ResponseEntity<Map<String, Object>> getCards(HttpServletRequest request) {
         String userId = (String) request.getAttribute("userId");
+        String requestId = (String) request.getAttribute("requestId");
         log.debug("[CardController] 카드 목록 조회: userId={}", userId);
 
         Map<String, Object> payload = new HashMap<>();
         payload.put("userId", userId);
 
         try {
-            JsonCommandResponse resp = bizClient.sendToTransfer(BizCommands.TRANSFER_CARD_LIST, payload);
+            JsonCommandResponse resp = bizClient.sendToTransfer(BizCommands.TRANSFER_CARD_LIST, payload, requestId);
             if (!resp.isSuccess()) {
                 return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                         .body(Map.of("error", resp.getMessage() != null ? resp.getMessage() : "카드 목록 조회 실패"));
@@ -98,6 +99,7 @@ public class CardController {
             @RequestParam(required = false) String toDate) {
 
         String userId = (String) request.getAttribute("userId");
+        String requestId = (String) request.getAttribute("requestId");
         log.debug("[CardController] 이용내역 조회: userId={}, cardId={}, period={}", userId, cardId, period);
 
         Map<String, Object> payload = new HashMap<>();
@@ -111,7 +113,7 @@ public class CardController {
         if (toDate != null)      payload.put("toDate", toDate);
 
         try {
-            JsonCommandResponse resp = bizClient.sendToTransfer(BizCommands.TRANSFER_TRANSACTIONS, payload);
+            JsonCommandResponse resp = bizClient.sendToTransfer(BizCommands.TRANSFER_TRANSACTIONS, payload, requestId);
             if (!resp.isSuccess()) {
                 return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                         .body(Map.of("error", resp.getMessage() != null ? resp.getMessage() : "이용내역 조회 실패"));
@@ -143,6 +145,7 @@ public class CardController {
             @RequestParam(required = false) String paymentDay) {
 
         String userId = (String) request.getAttribute("userId");
+        String requestId = (String) request.getAttribute("requestId");
         log.debug("[CardController] 결제명세서 조회: userId={}, yearMonth={}, paymentDay={}", userId, yearMonth, paymentDay);
 
         Map<String, Object> payload = new HashMap<>();
@@ -151,7 +154,7 @@ public class CardController {
         if (paymentDay != null) payload.put("paymentDay", paymentDay);
 
         try {
-            JsonCommandResponse resp = bizClient.sendToTransfer(BizCommands.TRANSFER_PAYMENT_STMT, payload);
+            JsonCommandResponse resp = bizClient.sendToTransfer(BizCommands.TRANSFER_PAYMENT_STMT, payload, requestId);
             if (!resp.isSuccess()) {
                 return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                         .body(Map.of("error", resp.getMessage() != null ? resp.getMessage() : "명세서 조회 실패"));
@@ -181,6 +184,7 @@ public class CardController {
             @PathVariable String cardId) {
 
         String userId = (String) request.getAttribute("userId");
+        String requestId = (String) request.getAttribute("requestId");
         log.debug("[CardController] 즉시결제 가능금액 조회: userId={}, cardId={}", userId, cardId);
 
         Map<String, Object> payload = new HashMap<>();
@@ -188,7 +192,7 @@ public class CardController {
         payload.put("cardId", cardId);
 
         try {
-            JsonCommandResponse resp = bizClient.sendToTransfer(BizCommands.TRANSFER_PAYABLE_AMT, payload);
+            JsonCommandResponse resp = bizClient.sendToTransfer(BizCommands.TRANSFER_PAYABLE_AMT, payload, requestId);
             if (!resp.isSuccess()) {
                 return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                         .body(Map.of("error", resp.getMessage() != null ? resp.getMessage() : "가능금액 조회 실패"));
@@ -220,6 +224,7 @@ public class CardController {
             @RequestBody Map<String, Object> body) {
 
         String userId = (String) request.getAttribute("userId");
+        String requestId = (String) request.getAttribute("requestId");
         log.info("[CardController] 즉시결제 요청: userId={}, cardId={}", userId, cardId);
 
         Map<String, Object> payload = new HashMap<>();
@@ -230,7 +235,7 @@ public class CardController {
         payload.put("accountNumber", body.get("accountNumber"));
 
         try {
-            JsonCommandResponse resp = bizClient.sendToTransfer(BizCommands.TRANSFER_IMMEDIATE_PAY, payload);
+            JsonCommandResponse resp = bizClient.sendToTransfer(BizCommands.TRANSFER_IMMEDIATE_PAY, payload, requestId);
             if (!resp.isSuccess()) {
                 return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                         .body(Map.of("error", resp.getMessage() != null ? resp.getMessage() : "즉시결제 실패"));

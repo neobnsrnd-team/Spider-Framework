@@ -105,10 +105,13 @@ public class AuthController {
     @PostMapping("/login")
     public ResponseEntity<Map<String, Object>> login(
             @RequestBody Map<String, Object> body,
+            HttpServletRequest request,
             HttpServletResponse response) {
 
         String userId = (String) body.get("userId");
         String password = (String) body.get("password");
+        // HttpLoggingInterceptor가 HTTP 수신 시 생성한 UUID — TCP 구간과 동일한 TRX_TRACKING_NO로 연결
+        String requestId = (String) request.getAttribute("requestId");
 
         log.info("[AuthController] 로그인 요청: userId={}", userId);
 
@@ -117,7 +120,7 @@ public class AuthController {
         payload.put("password", password);
 
         try {
-            JsonCommandResponse authResp = bizClient.sendToAuth(BizCommands.AUTH_LOGIN, payload);
+            JsonCommandResponse authResp = bizClient.sendToAuth(BizCommands.AUTH_LOGIN, payload, requestId);
 
             if (!authResp.isSuccess()) {
                 // 인증AP 가 실패 응답을 반환한 경우 (잘못된 자격증명 등)
@@ -187,13 +190,15 @@ public class AuthController {
     public ResponseEntity<Map<String, Object>> getMe(HttpServletRequest request) {
         // JWT 필터가 request 속성으로 설정한 userId
         String userId = (String) request.getAttribute("userId");
+        // HttpLoggingInterceptor가 HTTP 수신 시 생성한 UUID
+        String requestId = (String) request.getAttribute("requestId");
         log.debug("[AuthController] 사용자 정보 조회: userId={}", userId);
 
         Map<String, Object> payload = new HashMap<>();
         payload.put("userId", userId);
 
         try {
-            JsonCommandResponse authResp = bizClient.sendToAuth(BizCommands.AUTH_ME, payload);
+            JsonCommandResponse authResp = bizClient.sendToAuth(BizCommands.AUTH_ME, payload, requestId);
 
             if (!authResp.isSuccess()) {
                 return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
