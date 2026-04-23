@@ -106,6 +106,27 @@
                                         <button type="button" class="btn btn-outline-secondary btn-sm" id="btnCallProcedure">
                                             <i class="bi bi-braces"></i> 프로시저 호출
                                         </button>
+                                        <button type="button" class="btn btn-outline-secondary btn-sm" id="btnSearchQuery">
+                                            <i class="bi bi-search"></i> 쿼리 검색
+                                        </button>
+                                        <button type="button" class="btn btn-outline-secondary btn-sm" id="btnToggleFullscreen">
+                                            <i class="bi bi-arrows-fullscreen"></i> 확대
+                                        </button>
+                                    </div>
+                                    <!-- 쿼리 내 텍스트 검색 바 (토글) -->
+                                    <div class="d-flex align-items-center gap-1 mb-1 d-hidden" id="sqSearchBar">
+                                        <input type="text" class="form-control form-control-sm"
+                                               id="sqSearchInput" placeholder="검색어 입력" style="max-width: 200px;">
+                                        <span class="text-muted small" id="sqSearchCount"></span>
+                                        <button type="button" class="btn btn-outline-secondary btn-sm" id="btnSearchPrev" title="이전">
+                                            <i class="bi bi-chevron-up"></i>
+                                        </button>
+                                        <button type="button" class="btn btn-outline-secondary btn-sm" id="btnSearchNext" title="다음">
+                                            <i class="bi bi-chevron-down"></i>
+                                        </button>
+                                        <button type="button" class="btn btn-outline-secondary btn-sm" id="btnSearchClose" title="닫기">
+                                            <i class="bi bi-x-lg"></i>
+                                        </button>
                                     </div>
                                     <textarea class="form-control font-monospace" id="sqModalSqlQuery" name="sqlQuery"
                                               rows="5" maxlength="4000" style="resize: vertical;"
@@ -287,8 +308,8 @@
                     $('#sqModalSqlQuery').prop('readonly', readonly);
                     $('#sqModalSqlQuery2').prop('readonly', readonly);
                     $('#sqModalQueryDesc').prop('readonly', readonly);
-                    // 에디터 툴바: 읽기 전용 시 버튼 비활성화
-                    $('#sqEditorToolbar button').prop('disabled', readonly);
+                    // 에디터 툴바: 읽기 전용 시 쿼리 검색 버튼을 제외하고 비활성화
+                    $('#sqEditorToolbar button:not(#btnSearchQuery)').prop('disabled', readonly);
                 },
 
                 _formatDatetime: function (dateStr) {
@@ -402,6 +423,80 @@
                     });
                 },
 
+                // ── 쿼리 내 텍스트 검색 ──────────────────────────────
+                _searchMatches: [],   // 검색어 매칭 위치 배열 [{start, end}]
+                _searchIndex: -1,     // 현재 포커스된 매칭 인덱스
+
+                toggleSearchBar: function () {
+                    const $bar = $('#sqSearchBar');
+                    if ($bar.hasClass('d-hidden')) {
+                        $bar.removeClass('d-hidden');
+                        $('#sqSearchInput').val('').focus();
+                        this._searchMatches = [];
+                        this._searchIndex = -1;
+                        $('#sqSearchCount').text('');
+                    } else {
+                        this._closeSearchBar();
+                    }
+                },
+
+                _closeSearchBar: function () {
+                    $('#sqSearchBar').addClass('d-hidden');
+                    $('#sqSearchInput').val('');
+                    $('#sqSearchCount').text('');
+                    this._searchMatches = [];
+                    this._searchIndex = -1;
+                },
+
+                searchQuery: function (direction) {
+                    const keyword = $('#sqSearchInput').val();
+                    if (!keyword) {
+                        Toast.warning('검색어를 입력해주세요.');
+                        return;
+                    }
+
+                    const text = $('#sqModalSqlQuery').val();
+                    const lower = text.toLowerCase();
+                    const lowerKw = keyword.toLowerCase();
+
+                    // 검색어 변경 시 매칭 목록 재계산
+                    if (this._lastKeyword !== keyword) {
+                        this._lastKeyword = keyword;
+                        this._searchMatches = [];
+                        let pos = 0;
+                        while (true) {
+                            const idx = lower.indexOf(lowerKw, pos);
+                            if (idx === -1) break;
+                            this._searchMatches.push({ start: idx, end: idx + keyword.length });
+                            pos = idx + 1;
+                        }
+                        this._searchIndex = direction === 'prev'
+                            ? this._searchMatches.length - 1
+                            : 0;
+                    } else {
+                        // 동일 검색어: 방향에 따라 인덱스 이동
+                        if (this._searchMatches.length > 0) {
+                            if (direction === 'prev') {
+                                this._searchIndex = (this._searchIndex - 1 + this._searchMatches.length) % this._searchMatches.length;
+                            } else {
+                                this._searchIndex = (this._searchIndex + 1) % this._searchMatches.length;
+                            }
+                        }
+                    }
+
+                    if (this._searchMatches.length === 0) {
+                        Toast.warning('"' + keyword + '" 을(를) 찾을 수 없습니다.');
+                        $('#sqSearchCount').text('결과 없음');
+                        return;
+                    }
+
+                    const match = this._searchMatches[this._searchIndex];
+                    const $ta = $('#sqModalSqlQuery')[0];
+                    $ta.focus();
+                    $ta.setSelectionRange(match.start, match.end);
+                    $('#sqSearchCount').text((this._searchIndex + 1) + ' / ' + this._searchMatches.length);
+                },
+
                 addPagingQuery: function () {
                     const pagingTemplate = `\nSELECT *\nFROM (\n    SELECT ROWNUM AS RNUM, A.*\n    FROM (\n        /* 원본 쿼리를 여기에 작성 */\n        SELECT * FROM DUAL\n    ) A\n    WHERE ROWNUM <= #endRow#\n)\nWHERE RNUM >= #startRow#`;
                     const $textarea = $('#sqModalSqlQuery');
@@ -506,6 +601,42 @@
                     return true;
                 }
             };
+
+            $(document).off('click', '#btnSearchQuery').on('click', '#btnSearchQuery', function () {
+                SqlQueryModal.toggleSearchBar();
+            });
+
+            $(document).off('click', '#btnSearchNext').on('click', '#btnSearchNext', function () {
+                SqlQueryModal.searchQuery('next');
+            });
+
+            $(document).off('click', '#btnSearchPrev').on('click', '#btnSearchPrev', function () {
+                SqlQueryModal.searchQuery('prev');
+            });
+
+            $(document).off('click', '#btnSearchClose').on('click', '#btnSearchClose', function () {
+                SqlQueryModal._closeSearchBar();
+            });
+
+            // Enter 키로 다음 검색, 검색어 변경 시 매칭 초기화
+            $(document).off('keydown', '#sqSearchInput').on('keydown', '#sqSearchInput', function (e) {
+                if (e.key === 'Enter') {
+                    SqlQueryModal.searchQuery('next');
+                } else if (e.key === 'Escape') {
+                    SqlQueryModal._closeSearchBar();
+                }
+            });
+
+            $(document).off('input', '#sqSearchInput').on('input', '#sqSearchInput', function () {
+                // 검색어 변경 시 매칭 목록 초기화 (다음 searchQuery 호출 시 재계산)
+                SqlQueryModal._lastKeyword = null;
+                $('#sqSearchCount').text('');
+            });
+
+            // 모달 닫힐 때 검색 바 초기화
+            document.getElementById('sqlQueryModal').addEventListener('hidden.bs.modal', function () {
+                SqlQueryModal._closeSearchBar();
+            }, { once: false });
 
             $(document).off('click', '#btnSqlQueryTest').on('click', '#btnSqlQueryTest', function () {
                 const queryId    = $('#sqModalQueryId').val();
