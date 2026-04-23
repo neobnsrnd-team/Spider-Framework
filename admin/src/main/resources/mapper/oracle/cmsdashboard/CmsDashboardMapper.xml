@@ -105,12 +105,19 @@
     <insert id="insertPage">
         INSERT INTO SPW_CMS_PAGE (
             PAGE_ID, PAGE_NAME, VIEW_MODE, TEMPLATE_ID,
+            PAGE_HTML,
             CREATE_USER_ID, CREATE_USER_NAME,
             LAST_MODIFIER_ID, LAST_MODIFIER_NAME,
             APPROVE_STATE, USE_YN,
             CREATE_DATE, LAST_MODIFIED_DTIME
         ) VALUES (
             #{pageId}, #{pageName}, #{viewMode}, #{templateId},
+            <!--
+                템플릿 선택 시 PAGE_HTML을 복사하여 에디터가 템플릿 내용으로 시작하도록 한다.
+                templateId가 null이면 WHERE PAGE_ID = NULL → 행 없음 → 스칼라 서브쿼리 NULL 반환 → 빈 페이지.
+                templateId가 유효하면 해당 TEMPLATE 페이지의 PAGE_HTML을 그대로 복사한다.
+            -->
+            (SELECT PAGE_HTML FROM SPW_CMS_PAGE WHERE PAGE_ID = #{templateId}),
             #{userId}, #{userName},
             #{userId}, #{userName},
             'WORK', 'Y',
