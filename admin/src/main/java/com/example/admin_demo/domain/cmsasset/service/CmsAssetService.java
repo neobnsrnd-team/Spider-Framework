@@ -20,7 +20,6 @@ import com.example.admin_demo.global.exception.NotFoundException;
 import com.example.admin_demo.global.exception.base.BaseException;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
-import java.util.Set;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -44,7 +43,6 @@ public class CmsAssetService {
     private static final String USE_N = "N";
     private static final int REJECTED_REASON_MAX_CHARS = 1000;
     private static final int REJECTED_REASON_MAX_BYTES = 1000;
-    private static final Set<String> ALLOWED_ASSET_CATEGORIES = Set.of("COMMON", "CARD", "LOAN", "DEPOSIT");
 
     private final CmsAssetMapper cmsAssetMapper;
     private final CodeService codeService;
@@ -78,9 +76,9 @@ public class CmsAssetService {
 
     @Transactional(readOnly = true)
     public List<CodeResponse> getAssetCategoryCodes() {
+        // 코드그룹의 USE_YN='Y' 항목을 그대로 노출. 카테고리 추가·폐기는 코드그룹 관리로 일원화한다.
         return codeService.getCodesByCodeGroupId(ASSET_CATEGORY_CODE_GROUP_ID).stream()
                 .filter(code -> USE_Y.equalsIgnoreCase(code.getUseYn()))
-                .filter(code -> ALLOWED_ASSET_CATEGORIES.contains(code.getCode()))
                 .toList();
     }
 
@@ -103,25 +101,52 @@ public class CmsAssetService {
         log.info("CMS 이미지 승인 요청: assetId={}, modifierId={}", assetId, modifierId);
     }
 
+    /**
+     * 승인 — PENDING → APPROVED (결재자) + CMS 파일 배포 (Issue #55).
+     *
+     * <p>Saga 패턴으로 DB 와 CMS 를 조율한다. CMS 배포 API 가 호출 시점에 DB 의 {@code ASSET_STATE}
+     * 가 이미 {@code APPROVED} 여야 하므로, 단일 {@code @Transactional} 로 감싸면 CMS 가 커밋 전
+     * PENDING 만 보게 되어 항상 거절된다.
+     *
+     * <h4>흐름</h4>
+     * <ol>
+     *   <li>선검증 + UPDATE(PENDING→APPROVED) — {@code TransactionTemplate} 으로 독립 TX 커밋.</li>
+     *   <li>{@link CmsBuilderClient#deployAsset(String)} 호출.</li>
+     *   <li>성공 → 정상 종료.</li>
+     *   <li>실패 → 보상 UPDATE(APPROVED→PENDING) 을 또 다른 독립 TX 로 커밋 후, 원 {@link BaseException}
+     *       을 그대로 재던져 502 를 전파. 사용자 관점에서는 "둘 다 실패" 로 보인다.</li>
+     * </ol>
+     *
+     * <h4>한계</h4>
+     * <ul>
+     *   <li>메인 TX 커밋과 CMS 호출 사이의 짧은 윈도우에 다른 결재자 화면은 {@code APPROVED} 를 볼 수 있다.</li>
+     *   <li>보상 UPDATE 자체가 실패하는 초희귀 케이스는 error 로그만 남기고 수동 복구 대상으로 삼는다.</li>
+     * </ul>
+     */
     public void approve(String assetId, String modifierId, String modifierName) {
+        // Step 1: 선검증 + 상태 UPDATE 를 독립 TX 로 커밋. CMS 가 APPROVED 를 읽어야 deploy 가 성공한다.
         transactionTemplate.executeWithoutResult(status -> {
             assertTransition(assetId, STATE_PENDING, STATE_APPROVED);
             int updated =
                     cmsAssetMapper.updateState(assetId, STATE_PENDING, STATE_APPROVED, null, modifierId, modifierName);
             if (updated != 1) {
+                // 선검증 통과 후 race 실패 — 예외 던지면 TransactionTemplate 이 롤백.
                 throw new InvalidStateException("이미 처리된 이미지입니다. assetId=" + assetId);
             }
         });
 
+        // Step 2: CMS 파일 배포 시도.
         try {
             cmsBuilderClient.deployAsset(assetId);
             log.info("CMS 이미지 승인 및 배포 완료: assetId={}, modifierId={}", assetId, modifierId);
         } catch (BaseException deployEx) {
+            // Step 3: 배포 실패 — 승인 상태를 PENDING 으로 보상 롤백.
             log.error("CMS 이미지 배포 실패로 승인 상태 롤백 시도: assetId={}, modifierId={}", assetId, modifierId, deployEx);
             try {
                 transactionTemplate.executeWithoutResult(status -> cmsAssetMapper.updateState(
                         assetId, STATE_APPROVED, STATE_PENDING, null, modifierId, modifierName));
             } catch (RuntimeException revertEx) {
+                // 보상 실패는 데이터-파일 불일치 상태를 남기므로 수동 복구 알림 차원의 error 로깅.
                 log.error("승인 롤백 실패. 수동 확인 필요: assetId={}", assetId, revertEx);
             }
             throw deployEx;
