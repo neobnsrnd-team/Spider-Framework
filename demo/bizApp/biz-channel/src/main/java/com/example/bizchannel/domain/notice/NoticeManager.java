@@ -39,8 +39,9 @@ public class NoticeManager {
      * @return 생성된 {@link SseEmitter} 인스턴스
      */
     public SseEmitter addClient() {
-        // 타임아웃 없이 유지 (Long.MAX_VALUE) — 서버 측 종료 또는 클라이언트 연결 해제까지 유지
-        SseEmitter emitter = new SseEmitter(Long.MAX_VALUE);
+        // 30분 타임아웃 — 클라이언트가 비정상 종료되어도 서버 자원이 무한 점유되지 않도록 제한
+        // 프론트엔드에서 EventSource는 연결 종료 시 자동 재연결을 시도한다
+        SseEmitter emitter = new SseEmitter(30 * 60 * 1000L);
 
         emitter.onCompletion(() -> clients.remove(emitter));
         emitter.onTimeout(() -> {

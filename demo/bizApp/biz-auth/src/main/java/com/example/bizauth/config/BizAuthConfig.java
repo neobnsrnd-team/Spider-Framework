@@ -9,6 +9,7 @@ import com.example.spiderlink.infra.tcp.model.JsonCommandRequest;
 import com.example.spiderlink.infra.tcp.model.JsonCommandResponse;
 import com.example.spiderlink.infra.tcp.server.SpiderTcpServer;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -30,6 +31,18 @@ import java.util.Optional;
  */
 @Configuration
 public class BizAuthConfig {
+
+    /** 인바운드 TCP 포트 (기본값: 19100) */
+    @Value("${tcp.server.port:19100}")
+    private int tcpServerPort;
+
+    /** 요청 처리 스레드 풀 크기 (기본값: 5) */
+    @Value("${tcp.server.handler-pool-size:5}")
+    private int handlerPoolSize;
+
+    /** 요청 대기 큐 최대 크기 (기본값: 20) */
+    @Value("${tcp.server.queue-capacity:20}")
+    private int queueCapacity;
 
     /**
      * spider-link TcpClient 빈 등록.
@@ -58,7 +71,7 @@ public class BizAuthConfig {
      * @param objectMapper JSON 직렬화·역직렬화에 사용할 ObjectMapper
      * @param handlers     스프링 컨텍스트에 등록된 모든 CommandHandler 구현체 목록
      * @param recorder     전문 이력 기록기 (JdbcTemplate 빈이 없으면 empty)
-     * @return port 19100 에서 수신 대기하는 SpiderTcpServer 인스턴스
+     * @return {@code tcp.server.port} 에서 수신 대기하는 SpiderTcpServer 인스턴스
      */
     @Bean
     public SpiderTcpServer<JsonCommandRequest, JsonCommandResponse> bizAuthTcpServer(
@@ -69,8 +82,7 @@ public class BizAuthConfig {
         CommandDispatcher<JsonCommandRequest, JsonCommandResponse> dispatcher =
                 new CommandDispatcher<>(handlers);
 
-        // port=19100, handlerPoolSize=5, queueCapacity=20
-        return new SpiderTcpServer<>(19100, 5, 20, new JsonMessageCodec(objectMapper), dispatcher,
-                recorder.orElse(null));
+        return new SpiderTcpServer<>(tcpServerPort, handlerPoolSize, queueCapacity,
+                new JsonMessageCodec(objectMapper), dispatcher, recorder.orElse(null));
     }
 }

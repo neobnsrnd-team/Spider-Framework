@@ -9,6 +9,7 @@ import com.example.spiderlink.infra.tcp.model.JsonCommandRequest;
 import com.example.spiderlink.infra.tcp.model.JsonCommandResponse;
 import com.example.spiderlink.infra.tcp.server.SpiderTcpServer;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -29,6 +30,18 @@ import java.util.Optional;
  */
 @Configuration
 public class BizTransferConfig {
+
+    /** 인바운드 TCP 포트 (기본값: 19200) */
+    @Value("${tcp.server.port:19200}")
+    private int tcpServerPort;
+
+    /** 요청 처리 스레드 풀 크기 (기본값: 10) */
+    @Value("${tcp.server.handler-pool-size:10}")
+    private int handlerPoolSize;
+
+    /** 요청 대기 큐 최대 크기 (기본값: 50) */
+    @Value("${tcp.server.queue-capacity:50}")
+    private int queueCapacity;
 
     /**
      * spider-link TcpClient 빈 등록.
@@ -67,8 +80,7 @@ public class BizTransferConfig {
         CommandDispatcher<JsonCommandRequest, JsonCommandResponse> dispatcher =
                 new CommandDispatcher<>(handlers);
 
-        // 포트 19200, corePoolSize=10, maxPoolSize=50
-        return new SpiderTcpServer<>(19200, 10, 50, new JsonMessageCodec(objectMapper), dispatcher,
-                recorder.orElse(null));
+        return new SpiderTcpServer<>(tcpServerPort, handlerPoolSize, queueCapacity,
+                new JsonMessageCodec(objectMapper), dispatcher, recorder.orElse(null));
     }
 }

@@ -1370,3 +1370,26 @@ COMMENT ON COLUMN FWK_MESSAGE_INSTANCE.TRX_DTIME      IS '거래 발생 시각 (
 COMMENT ON COLUMN FWK_MESSAGE_INSTANCE.CHANNEL_TYPE   IS '채널 구분 (TCP)';
 COMMENT ON COLUMN FWK_MESSAGE_INSTANCE.URI            IS '커맨드명 (MESSAGE_ID와 동일)';
 COMMENT ON COLUMN FWK_MESSAGE_INSTANCE.SUCCESS_YN     IS 'Y=성공, N=실패';
+
+
+-- =============================================================
+-- bizApp — POC_USER 비밀번호 BCrypt 마이그레이션
+-- 추가일: 2026-04-23
+-- 주의: 개발자가 DB에서 직접 실행해야 한다
+-- BCrypt 강도(strength): 10
+--
+-- [해시 생성 방법]
+-- mock-core 기동 후 아래 Java 코드로 각 평문 비밀번호의 BCrypt 해시를 생성한다.
+--   String hash = new org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder()
+--                     .encode("test12!");
+--   System.out.println(hash);
+-- 출력된 해시값을 아래 UPDATE 문의 '<BCrypt hash of test12!>' 자리에 넣고 실행한다.
+-- =============================================================
+
+-- test12! 를 사용하는 모든 사용자 비밀번호를 BCrypt 해시로 교체
+-- <BCrypt hash of test12!> 를 실제 생성된 해시값으로 교체 후 실행할 것
+UPDATE D_SPIDERLINK.POC_USER
+SET PASSWORD = '<BCrypt hash of test12!>'
+WHERE PASSWORD = 'test12!';
+
+COMMIT;

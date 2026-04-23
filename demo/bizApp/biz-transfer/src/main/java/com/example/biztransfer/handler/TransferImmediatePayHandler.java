@@ -10,6 +10,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -73,7 +74,8 @@ public class TransferImmediatePayHandler implements CommandHandler<JsonCommandRe
         }
 
         // 유효 PIN: 오늘 날짜의 MMDD (월·일 모두 두 자리 zero-padding)
-        LocalDate today = LocalDate.now();
+        // 서버 기본 시간대가 달라도 한국 시간 기준으로 PIN을 검증하기 위해 시간대 명시
+        LocalDate today = LocalDate.now(ZoneId.of("Asia/Seoul"));
         String validPin = String.format("%02d%02d", today.getMonthValue(), today.getDayOfMonth());
 
         if (!validPin.equals(pin)) {

@@ -15,7 +15,7 @@
     <artifactId>biz-channel</artifactId>
     <packaging>jar</packaging>
     <name>biz-channel</name>
-    <description>채널AP — HTTP port 9998, React 프론트엔드 요청을 수신하여 인증AP/이체AP 로 중계하는 Spring Boot 웹 서버</description>
+    <description>채널AP — HTTP port 18080, React 프론트엔드 요청을 수신하여 인증AP/이체AP 로 중계하는 Spring Boot 웹 서버</description>
 
     <dependencies>
         <!-- HTTP 서버 (내장 Tomcat + Jackson 포함) -->

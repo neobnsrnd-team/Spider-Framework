@@ -136,6 +136,7 @@ public class JwtAuthFilter implements Filter {
         response.setStatus(HttpStatus.UNAUTHORIZED.value());
         response.setContentType(MediaType.APPLICATION_JSON_VALUE);
         response.setCharacterEncoding(StandardCharsets.UTF_8.name());
-        response.getWriter().write("{\"error\":\"" + message + "\"}");
+        // 메시지에 큰따옴표가 포함될 경우 JSON이 깨지지 않도록 이스케이프 처리
+        response.getWriter().write(String.format("{\"error\":\"%s\"}", message.replace("\"", "\\\"")));
     }
 }

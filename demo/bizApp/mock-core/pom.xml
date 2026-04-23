@@ -61,6 +61,12 @@
             <scope>runtime</scope>
         </dependency>
 
+        <!-- BCrypt 비밀번호 해싱 — spring-security-core 없이 crypto 모듈만 사용 -->
+        <dependency>
+            <groupId>org.springframework.security</groupId>
+            <artifactId>spring-security-crypto</artifactId>
+        </dependency>
+
         <!-- Lombok — 보일러플레이트 제거 (컴파일 타임 전용) -->
         <dependency>
             <groupId>org.projectlombok</groupId>

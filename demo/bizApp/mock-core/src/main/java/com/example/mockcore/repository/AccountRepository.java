@@ -3,9 +3,12 @@ package com.example.mockcore.repository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.format.DateTimeFormatter;
+import java.time.YearMonth;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -23,6 +26,7 @@ import java.util.Map;
 public class AccountRepository {
 
     private final JdbcTemplate jdbcTemplate;
+    private final PasswordEncoder passwordEncoder;
 
     // ──────────────────────────────────────────────────────────────────────────
     // 사용자 관련
@@ -31,8 +35,11 @@ public class AccountRepository {
     /**
      * 사용자 ID·비밀번호로 인증하고, 성공 시 LAST_LOGIN_DTIME을 현재 시각으로 갱신한다.
      *
+     * <p>DB에는 BCrypt 해시가 저장되어 있어야 한다.
+     * 테스트 데이터 마이그레이션은 admin/docs/sql/oracle/01_create_tables.sql 참고.</p>
+     *
      * @param userId   사용자 ID
-     * @param password 입력 비밀번호 (평문 — DB 값과 직접 비교)
+     * @param password 입력 비밀번호 (평문 — BCrypt matches()로 해시와 비교)
      * @return userId, userName, userGrade, lastLoginDtime 를 담은 Map
      * @throws IllegalArgumentException 사용자 미존재 또는 비밀번호 불일치 시
      */
@@ -48,8 +55,8 @@ public class AccountRepository {
         Map<String, Object> row = rows.get(0);
         String storedPassword = row.get("PASSWORD") != null ? row.get("PASSWORD").toString() : "";
 
-        // 비밀번호 일치 여부 검증
-        if (!storedPassword.equals(password)) {
+        // BCrypt 해시와 입력 평문 비밀번호 비교
+        if (!passwordEncoder.matches(password, storedPassword)) {
             throw new IllegalArgumentException("비밀번호가 일치하지 않습니다.");
         }
 
@@ -579,22 +586,24 @@ public class AccountRepository {
         }
     }
 
+    private static final DateTimeFormatter YEAR_MONTH_FMT = DateTimeFormatter.ofPattern("yyyyMM");
+    private static final DateTimeFormatter DATE_FMT = DateTimeFormatter.ofPattern("yyyyMMdd");
+
     /**
      * YYYYMM 기준으로 전달의 특정 일자(DD)를 YYYYMMDD 형태로 반환한다.
      *
+     * <p>java.time을 사용하므로 2월처럼 해당 월의 마지막 날보다 큰 day 값이 입력되어도
+     * 자동으로 해당 월의 마지막 날짜로 보정된다 (예: 2월 26일 → 2월 28/29일).</p>
+     *
      * @param yearMonth YYYYMM
-     * @param day       일자 (DD)
+     * @param day       일자 문자열 (DD)
      * @return 전달의 해당 일자 (YYYYMMDD)
      */
     private String getPrevMonthDay(String yearMonth, String day) {
-        int year = Integer.parseInt(yearMonth.substring(0, 4));
-        int month = Integer.parseInt(yearMonth.substring(4, 6));
-        // 전달 계산
-        month--;
-        if (month == 0) {
-            month = 12;
-            year--;
-        }
-        return String.format("%04d%02d%s", year, month, day);
+        YearMonth ym = YearMonth.parse(yearMonth, YEAR_MONTH_FMT);
+        YearMonth prevYm = ym.minusMonths(1);
+        // 전달에 존재하지 않는 일자(예: 2월 30일)는 해당 월 마지막 날로 보정
+        int actualDay = Math.min(Integer.parseInt(day), prevYm.lengthOfMonth());
+        return prevYm.atDay(actualDay).format(DATE_FMT);
     }
 }
