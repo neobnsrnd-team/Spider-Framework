@@ -23,6 +23,9 @@ public class CmsAssetApprovalListRequest {
     /** 업무 카테고리 필터 (BUSINESS_CATEGORY) */
     private String businessCategory;
 
+    /** 노출 여부 필터 (USE_YN) */
+    private String useYn;
+
     /** 검색어 — CREATE_USER_NAME / CREATE_USER_ID / ASSET_NAME LIKE */
     private String search;
 
