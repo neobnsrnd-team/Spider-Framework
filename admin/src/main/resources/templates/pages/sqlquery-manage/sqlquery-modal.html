@@ -171,6 +171,10 @@
                 <div class="modal-footer justify-content-end">
                     <!-- 상세 모드 + 쓰기 권한 시에만 표시 -->
                     <button th:if="${userAuthorities != null and userAuthorities.contains('SQL_QUERY:W')}"
+                            type="button" class="btn btn-outline-secondary btn-sm d-hidden" id="btnSqlQueryHistory">
+                        <i class="bi bi-clock-history"></i> 이력/복원
+                    </button>
+                    <button th:if="${userAuthorities != null and userAuthorities.contains('SQL_QUERY:W')}"
                             type="button" class="btn btn-info btn-sm d-hidden" id="btnSqlQueryTest">
                         <i class="bi bi-play-circle"></i> 쿼리 테스트
                     </button>
@@ -230,6 +234,7 @@
                             }
 
                             $('#sqlQuerySystemInfoRow').removeClass('d-hidden');
+                            $('#btnSqlQueryHistory').toggleClass('d-hidden', !hasWrite);
                             $('#btnSqlQueryTest').toggleClass('d-hidden', !hasWrite);
                             $('#btnSqlQuerySave').toggleClass('d-hidden', !hasWrite);
                             $('#btnSqlQueryDelete').toggleClass('d-hidden', !hasWrite);
@@ -246,6 +251,7 @@
                             }
 
                             $('#sqlQuerySystemInfoRow').removeClass('d-hidden');
+                            $('#btnSqlQueryHistory').toggleClass('d-hidden', !hasWrite);
                             $('#btnSqlQueryTest').toggleClass('d-hidden', !hasWrite);
                             $('#btnSqlQuerySave').toggleClass('d-hidden', !hasWrite);
                             $('#btnSqlQueryDelete').toggleClass('d-hidden', !hasWrite);
@@ -268,6 +274,7 @@
                     $('#sqModalQueryId').prop('disabled', false);
 
                     $('#sqlQuerySystemInfoRow').addClass('d-hidden');
+                    $('#btnSqlQueryHistory').addClass('d-hidden');
                     $('#btnSqlQueryTest').addClass('d-hidden');
                     $('#btnSqlQuerySave').removeClass('d-hidden');
                     $('#btnSqlQueryDelete').addClass('d-hidden');
@@ -667,6 +674,14 @@
 
             $(document).off('click', '#btnToggleFullscreen').on('click', '#btnToggleFullscreen', function () {
                 SqlQueryModal.toggleFullscreen();
+            });
+
+            $(document).off('click', '#btnSqlQueryHistory').on('click', '#btnSqlQueryHistory', function () {
+                const queryId = $('#sqModalQueryId').val();
+                const currentSql = $('#sqModalSqlQuery').val();
+                if (window.SqlQueryRestoreModal) {
+                    SqlQueryRestoreModal.open(queryId, currentSql);
+                }
             });
 
             $(document).off('click', '#btnSqlQueryTest').on('click', '#btnSqlQueryTest', function () {

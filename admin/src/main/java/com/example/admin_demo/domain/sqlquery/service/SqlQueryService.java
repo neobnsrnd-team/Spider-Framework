@@ -1,6 +1,7 @@
 package com.example.admin_demo.domain.sqlquery.service;
 
 import com.example.admin_demo.domain.sqlquery.dto.SqlQueryCreateRequest;
+import com.example.admin_demo.domain.sqlquery.dto.SqlQueryHistoryResponse;
 import com.example.admin_demo.domain.sqlquery.dto.SqlQueryResponse;
 import com.example.admin_demo.domain.sqlquery.dto.SqlQuerySearchRequest;
 import com.example.admin_demo.domain.sqlquery.dto.SqlQueryTestResponse;
@@ -254,6 +255,59 @@ public class SqlQueryService {
                     .errorMessage(e.getMessage())
                     .build();
         }
+    }
+
+    public List<SqlQueryHistoryResponse> getHistoryList(String queryId) {
+        if (sqlQueryMapper.countByQueryId(queryId) == 0) {
+            throw new NotFoundException("queryId: " + queryId);
+        }
+        return sqlQueryMapper.findHistoryList(queryId);
+    }
+
+    public SqlQueryHistoryResponse getHistoryDetail(String queryId, String versionId) {
+        SqlQueryHistoryResponse response = sqlQueryMapper.findHistoryByVersion(queryId, versionId);
+        if (response == null) {
+            throw new NotFoundException("queryId: " + queryId + ", versionId: " + versionId);
+        }
+        return response;
+    }
+
+    /**
+     * 특정 이력 버전으로 쿼리를 복원한다.
+     *
+     * <p>복원 전 현재 상태를 이력 테이블에 자동 백업하여 복원 취소가 가능하도록 한다.
+     */
+    @Transactional
+    public SqlQueryResponse restoreFromHistory(String queryId, String versionId) {
+        SqlQueryHistoryResponse history = sqlQueryMapper.findHistoryByVersion(queryId, versionId);
+        if (history == null) {
+            throw new NotFoundException("queryId: " + queryId + ", versionId: " + versionId);
+        }
+
+        // 복원 전 현재 상태 백업 — 복원 자체를 되돌릴 수 있도록 보관
+        SqlQueryResponse current = sqlQueryMapper.selectResponseById(queryId);
+        if (current != null) {
+            String backupVersionId = String.valueOf(System.currentTimeMillis());
+            sqlQueryMapper.insertHistory(current, backupVersionId, AuditUtil.now(), AuditUtil.currentUserId());
+        }
+
+        SqlQueryUpdateRequest restoreDto = SqlQueryUpdateRequest.builder()
+                .queryName(history.getQueryName())
+                .sqlGroupId(history.getSqlGroupId())
+                .dbId(history.getDbId())
+                .sqlType(history.getSqlType())
+                .execType(history.getExecType())
+                .cacheYn(history.getCacheYn())
+                .timeOut(history.getTimeOut())
+                .resultType(history.getResultType())
+                .useYn(history.getUseYn())
+                .sqlQuery(history.getSqlQuery())
+                .sqlQuery2(history.getSqlQuery2())
+                .queryDesc(history.getQueryDesc())
+                .build();
+
+        sqlQueryMapper.update(queryId, restoreDto, AuditUtil.now(), AuditUtil.currentUserId());
+        return sqlQueryMapper.selectResponseById(queryId);
     }
 
     private void validateSqlText(String sqlText) {

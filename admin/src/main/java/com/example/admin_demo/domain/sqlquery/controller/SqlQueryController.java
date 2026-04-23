@@ -1,6 +1,7 @@
 package com.example.admin_demo.domain.sqlquery.controller;
 
 import com.example.admin_demo.domain.sqlquery.dto.SqlQueryCreateRequest;
+import com.example.admin_demo.domain.sqlquery.dto.SqlQueryHistoryResponse;
 import com.example.admin_demo.domain.sqlquery.dto.SqlQueryResponse;
 import com.example.admin_demo.domain.sqlquery.dto.SqlQuerySearchRequest;
 import com.example.admin_demo.domain.sqlquery.dto.SqlQueryTestResponse;
@@ -11,6 +12,7 @@ import com.example.admin_demo.global.dto.PageResponse;
 import com.example.admin_demo.global.util.ExcelExportUtil;
 import jakarta.validation.Valid;
 import java.time.LocalDate;
+import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ContentDisposition;
@@ -101,5 +103,26 @@ public class SqlQueryController {
         log.info("POST /api/sql-queries/{}/backup", queryId);
         sqlQueryService.backupQuery(queryId);
         return ResponseEntity.ok(ApiResponse.success(null));
+    }
+
+    @GetMapping("/{queryId}/history")
+    public ResponseEntity<ApiResponse<List<SqlQueryHistoryResponse>>> getHistoryList(@PathVariable String queryId) {
+        log.info("GET /api/sql-queries/{}/history", queryId);
+        return ResponseEntity.ok(ApiResponse.success(sqlQueryService.getHistoryList(queryId)));
+    }
+
+    @GetMapping("/{queryId}/history/{versionId}")
+    public ResponseEntity<ApiResponse<SqlQueryHistoryResponse>> getHistoryDetail(
+            @PathVariable String queryId, @PathVariable String versionId) {
+        log.info("GET /api/sql-queries/{}/history/{}", queryId, versionId);
+        return ResponseEntity.ok(ApiResponse.success(sqlQueryService.getHistoryDetail(queryId, versionId)));
+    }
+
+    @PostMapping("/{queryId}/restore/{versionId}")
+    @PreAuthorize("hasAuthority('SQL_QUERY:W')")
+    public ResponseEntity<ApiResponse<SqlQueryResponse>> restoreFromHistory(
+            @PathVariable String queryId, @PathVariable String versionId) {
+        log.info("POST /api/sql-queries/{}/restore/{}", queryId, versionId);
+        return ResponseEntity.ok(ApiResponse.success(sqlQueryService.restoreFromHistory(queryId, versionId)));
     }
 }

@@ -1,6 +1,7 @@
 package com.example.admin_demo.domain.sqlquery.mapper;
 
 import com.example.admin_demo.domain.sqlquery.dto.SqlQueryCreateRequest;
+import com.example.admin_demo.domain.sqlquery.dto.SqlQueryHistoryResponse;
 import com.example.admin_demo.domain.sqlquery.dto.SqlQueryResponse;
 import com.example.admin_demo.domain.sqlquery.dto.SqlQueryUpdateRequest;
 import java.util.List;
@@ -66,4 +67,11 @@ public interface SqlQueryMapper {
             @Param("versionId") String versionId,
             @Param("backupDtime") String backupDtime,
             @Param("backupUserId") String backupUserId);
+
+    /** queryId에 해당하는 이력 목록 최신순 조회 */
+    List<SqlQueryHistoryResponse> findHistoryList(@Param("queryId") String queryId);
+
+    /** 특정 VERSION_ID의 이력 단건 조회 */
+    SqlQueryHistoryResponse findHistoryByVersion(
+            @Param("queryId") String queryId, @Param("versionId") String versionId);
 }

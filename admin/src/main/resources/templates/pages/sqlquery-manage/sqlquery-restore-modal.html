@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<div th:fragment="modal">
+    <!-- SQL Query 이력 / 복원 모달 -->
+    <div class="modal fade" id="sqlQueryRestoreModal" tabindex="-1" aria-labelledby="sqlQueryRestoreModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-xl">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="sqlQueryRestoreModalLabel">
+                        <i class="bi bi-clock-history"></i> SQL Query 이력 / 복원
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <!-- Query ID 표시 -->
+                    <div class="mb-3 d-flex align-items-center gap-2">
+                        <span class="fw-semibold text-muted small">Query ID:</span>
+                        <span class="font-monospace fw-bold" id="restoreModalQueryId"></span>
+                    </div>
+
+                    <!-- 이력 목록 테이블 -->
+                    <div class="mb-3">
+                        <h6 class="fw-semibold mb-2">이력 목록</h6>
+
+                        <!-- 로딩 표시 -->
+                        <div id="historyLoadingRow" class="text-center py-2 d-none">
+                            <div class="spinner-border spinner-border-sm text-primary" role="status">
+                                <span class="visually-hidden">로딩중...</span>
+                            </div>
+                        </div>
+
+                        <div class="table-responsive" style="max-height: 200px; overflow-y: auto;">
+                            <table class="table table-bordered table-hover table-sm mb-0">
+                                <thead class="table-dark sticky-top">
+                                    <tr>
+                                        <th style="width: 160px;">백업일시</th>
+                                        <th>사유</th>
+                                        <th style="width: 100px;">수정자</th>
+                                        <th style="width: 50px;"></th>
+                                    </tr>
+                                </thead>
+                                <tbody id="historyListBody"></tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- SQL 비교 (이력 선택 시 표시) -->
+                    <div id="historyCompareSection" class="d-none">
+                        <h6 class="fw-semibold mb-2">SQL 비교</h6>
+                        <div class="row g-2">
+                            <div class="col-6">
+                                <label class="form-label small fw-semibold text-secondary">현재 SQL</label>
+                                <textarea class="form-control font-monospace" id="restoreCurrentSql"
+                                          rows="12" readonly
+                                          style="resize: vertical; font-size: 0.8rem;"></textarea>
+                            </div>
+                            <div class="col-6">
+                                <label class="form-label small fw-semibold text-primary" id="restoreHistoryLabel">
+                                    이력 SQL
+                                </label>
+                                <textarea class="form-control font-monospace border-primary" id="restoreHistorySql"
+                                          rows="12" readonly
+                                          style="resize: vertical; font-size: 0.8rem;"></textarea>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer justify-content-between">
+                    <small class="text-muted">* 복원 시 현재 상태가 이력에 자동 저장됩니다.</small>
+                    <div>
+                        <button type="button" class="btn btn-warning btn-sm d-none" id="btnRestoreConfirm">
+                            <i class="bi bi-arrow-counterclockwise"></i> 복원
+                        </button>
+                        <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">
+                            <i class="bi bi-x-lg"></i> 닫기
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        (function () {
+            window.SqlQueryRestoreModal = {
+                currentQueryId: null,
+                currentSqlQuery: null,
+                selectedVersionId: null,
+
+                open: function (queryId, currentSqlQuery) {
+                    this.currentQueryId = queryId;
+                    this.currentSqlQuery = currentSqlQuery;
+                    this.selectedVersionId = null;
+
+                    $('#restoreModalQueryId').text(queryId || '');
+                    $('#restoreCurrentSql').val(currentSqlQuery || '');
+                    $('#historyListBody').empty();
+                    $('#historyCompareSection').addClass('d-none');
+                    $('#btnRestoreConfirm').addClass('d-none');
+                    $('#restoreHistorySql').val('');
+                    $('#restoreHistoryLabel').text('이력 SQL');
+
+                    this._loadHistory();
+
+                    const modal = bootstrap.Modal.getOrCreateInstance(document.getElementById('sqlQueryRestoreModal'));
+                    modal.show();
+                },
+
+                _loadHistory: function () {
+                    const self = this;
+                    $('#historyLoadingRow').removeClass('d-none');
+
+                    $.ajax({
+                        url: API_BASE_URL + '/sql-queries/' + encodeURIComponent(this.currentQueryId) + '/history',
+                        method: 'GET',
+                        success: function (response) {
+                            $('#historyLoadingRow').addClass('d-none');
+                            if (response.success && response.data) {
+                                self._renderHistoryList(response.data);
+                            } else {
+                                Toast.error('이력 목록을 불러오는데 실패했습니다.');
+                            }
+                        },
+                        error: function (xhr) {
+                            $('#historyLoadingRow').addClass('d-none');
+                            Toast.error(xhr.responseJSON?.message || '이력 목록을 불러오는데 실패했습니다.');
+                        }
+                    });
+                },
+
+                _renderHistoryList: function (list) {
+                    const $body = $('#historyListBody').empty();
+
+                    if (!list || list.length === 0) {
+                        $body.append(
+                            '<tr><td colspan="4" class="text-center text-muted">저장된 이력이 없습니다.</td></tr>'
+                        );
+                        return;
+                    }
+
+                    list.forEach(item => {
+                        const $tr = $('<tr>').css('cursor', 'pointer').attr('data-version-id', item.versionId);
+                        $tr.append($('<td>').text(this._formatVersionId(item.versionId)));
+                        $tr.append($('<td>').text(item.historyReason || ''));
+                        $tr.append($('<td>').text(item.lastUpdateUserId || ''));
+                        $tr.append(
+                            $('<td class="text-center">').html(
+                                '<button class="btn btn-outline-primary btn-sm py-0 px-1" type="button">선택</button>'
+                            )
+                        );
+                        $body.append($tr);
+                    });
+                },
+
+                _selectVersion: function (versionId) {
+                    const self = this;
+                    this.selectedVersionId = versionId;
+
+                    // 행 하이라이트
+                    $('#historyListBody tr').removeClass('table-primary');
+                    $('#historyListBody tr[data-version-id="' + versionId + '"]').addClass('table-primary');
+
+                    $.ajax({
+                        url: API_BASE_URL + '/sql-queries/' + encodeURIComponent(this.currentQueryId)
+                             + '/history/' + encodeURIComponent(versionId),
+                        method: 'GET',
+                        success: function (response) {
+                            if (response.success && response.data) {
+                                const his = response.data;
+                                $('#restoreHistorySql').val(his.sqlQuery || '');
+                                $('#restoreHistoryLabel').text(
+                                    '이력 SQL [' + self._formatVersionId(versionId) + ']'
+                                );
+                                $('#historyCompareSection').removeClass('d-none');
+                                $('#btnRestoreConfirm').removeClass('d-none');
+                            } else {
+                                Toast.error('이력 상세를 불러오는데 실패했습니다.');
+                            }
+                        },
+                        error: function (xhr) {
+                            Toast.error(xhr.responseJSON?.message || '이력 상세를 불러오는데 실패했습니다.');
+                        }
+                    });
+                },
+
+                restore: function () {
+                    if (!this.selectedVersionId) {
+                        Toast.warning('복원할 이력을 선택해주세요.');
+                        return;
+                    }
+
+                    const self = this;
+                    Toast.confirm(
+                        '선택한 이력으로 복원하시겠습니까?\n현재 상태는 이력에 자동 저장됩니다.',
+                        () => {
+                            $.ajax({
+                                url: API_BASE_URL + '/sql-queries/' + encodeURIComponent(self.currentQueryId)
+                                     + '/restore/' + encodeURIComponent(self.selectedVersionId),
+                                method: 'POST',
+                                success: function (response) {
+                                    if (response.success) {
+                                        Toast.success('이전 버전으로 복원되었습니다.');
+
+                                        // 복원 모달 닫기
+                                        const restoreModal = bootstrap.Modal.getInstance(
+                                            document.getElementById('sqlQueryRestoreModal')
+                                        );
+                                        if (restoreModal) restoreModal.hide();
+
+                                        // 상세 모달 닫기
+                                        const detailModal = bootstrap.Modal.getInstance(
+                                            document.getElementById('sqlQueryModal')
+                                        );
+                                        if (detailModal) detailModal.hide();
+
+                                        // 목록 새로고침
+                                        if (window.SqlQueryPage) {
+                                            SqlQueryPage.load();
+                                        }
+                                    } else {
+                                        Toast.error(response.message || '복원에 실패했습니다.');
+                                    }
+                                },
+                                error: function (xhr) {
+                                    Toast.error(xhr.responseJSON?.message || '복원에 실패했습니다.');
+                                }
+                            });
+                        }
+                    );
+                },
+
+                // VERSION_ID는 System.currentTimeMillis() 13자리 숫자 문자열
+                _formatVersionId: function (versionId) {
+                    if (!versionId || isNaN(versionId)) return versionId || '';
+                    const d = new Date(parseInt(versionId));
+                    return d.getFullYear() + '/' +
+                           String(d.getMonth() + 1).padStart(2, '0') + '/' +
+                           String(d.getDate()).padStart(2, '0') + ' ' +
+                           String(d.getHours()).padStart(2, '0') + ':' +
+                           String(d.getMinutes()).padStart(2, '0') + ':' +
+                           String(d.getSeconds()).padStart(2, '0');
+                }
+            };
+
+            // 이력 행 [선택] 버튼 클릭 (이벤트 위임)
+            $(document).off('click', '#historyListBody tr').on('click', '#historyListBody tr', function () {
+                const versionId = $(this).data('version-id');
+                if (versionId) {
+                    SqlQueryRestoreModal._selectVersion(String(versionId));
+                }
+            });
+
+            $(document).off('click', '#btnRestoreConfirm').on('click', '#btnRestoreConfirm', function () {
+                SqlQueryRestoreModal.restore();
+            });
+        })();
+    </script>
+</div>
+</body>
+</html>
