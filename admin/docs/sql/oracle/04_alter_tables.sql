@@ -102,5 +102,25 @@ ALTER TABLE SPW_CMS_PAGE ADD (
 ALTER TABLE SPW_CMS_PAGE ADD CONSTRAINT CHK_SPW_PAGE_TYPE
     CHECK (PAGE_TYPE IN ('PAGE', 'TEMPLATE', 'REACT'));
 
+-- =============================================================
+-- bizApp — POC_USER 비밀번호 BCrypt 마이그레이션
+-- 추가일: 2026-04-23
+-- 주의: 개발자가 DB에서 직접 실행해야 한다
+-- BCrypt 강도(strength): 10, 해시 길이: 60자
+--
+-- [순서]
+-- 1. PASSWORD 컬럼 크기를 60자로 확장 (BCrypt 해시 길이 수용)
+-- 2. BCrypt 해시 생성: new BCryptPasswordEncoder().encode("test12!") 실행 후 출력값 복사
+-- 3. 아래 UPDATE 문의 '<BCrypt hash of test12!>' 를 실제 해시값으로 교체 후 실행
+-- =============================================================
+
+-- Step 1: PASSWORD 컬럼 크기 확장 (VARCHAR2(20) → VARCHAR2(60))
+ALTER TABLE D_SPIDERLINK.POC_USER MODIFY PASSWORD VARCHAR2(60);
+
+-- Step 2: 평문 비밀번호를 BCrypt 해시로 교체
+-- '<BCrypt hash of test12!>' 를 실제 생성된 해시값(60자)으로 교체 후 실행
+UPDATE D_SPIDERLINK.POC_USER
+SET PASSWORD = '<BCrypt hash of test12!>'
+WHERE PASSWORD = 'test12!';
 
 COMMIT;
