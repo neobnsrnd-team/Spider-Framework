@@ -204,3 +204,16 @@ INSERT INTO FWK_COMPONENT (
 );
 
 COMMIT;
+
+-- =============================================================
+-- #169 FWK_MESSAGE_INSTANCE TRX_TRACKING_NO / MESSAGE_SNO 컬럼 길이 확장
+-- =============================================================
+-- 배경: MessageInstanceRecorder 가 requestId(UUID, 36자)를 TRX_TRACKING_NO 에 그대로 저장하는데
+--       컬럼이 VARCHAR2(30) 으로 정의되어 있어 6자리가 잘려서 저장됨.
+--       → REQ/RES 거래 체인 추적 오류 및 Admin 거래추적로그조회 불일치 발생 가능.
+--       MESSAGE_SNO 는 현재 시퀀스(NEXTVAL) 사용으로 즉각 문제는 없으나 향후 UUID 전환 대비 함께 확장.
+-- ⚠ 개발자가 DB에서 직접 실행해야 합니다.
+ALTER TABLE FWK_MESSAGE_INSTANCE MODIFY TRX_TRACKING_NO VARCHAR2(36);
+ALTER TABLE FWK_MESSAGE_INSTANCE MODIFY MESSAGE_SNO     VARCHAR2(36);
+
+COMMIT;
