@@ -62,6 +62,63 @@ public class MessageInstanceRecorder {
     }
 
     /**
+     * HTTP 인바운드 요청 기록 (IO_TYPE=I, REQ_RES_TYPE=REQ).
+     *
+     * <p>Front → biz-channel HTTP 수신 시점에 호출한다.
+     * {@code requestId}는 이 시점에 생성된 UUID를 사용하여 후속 TCP 구간과 동일한
+     * {@code TRX_TRACKING_NO}로 연결된다.</p>
+     *
+     * @param requestId 거래 추적 UUID (HTTP 수신 시 생성)
+     * @param uri       요청 URI (예: /api/auth/login)
+     * @param data      요청 바디 JSON 문자열
+     * @param port      서버 포트
+     */
+    public void recordHttpRequest(String requestId, String uri, String data, int port) {
+        insertHttp(requestId, "I", "REQ", uri, data, true, port);
+    }
+
+    /**
+     * HTTP 아웃바운드 응답 기록 (IO_TYPE=O, REQ_RES_TYPE=RES).
+     *
+     * <p>biz-channel → Front HTTP 응답 시점에 호출한다.</p>
+     *
+     * @param requestId  거래 추적 UUID (요청 시 생성한 값과 동일)
+     * @param uri        요청 URI
+     * @param data       응답 바디 JSON 문자열
+     * @param success    HTTP 응답 성공 여부 (2xx → true)
+     * @param port       서버 포트
+     */
+    public void recordHttpResponse(String requestId, String uri, String data, boolean success, int port) {
+        insertHttp(requestId, "O", "RES", uri, data, success, port);
+    }
+
+    /** HTTP 로그 전용 insert — CHANNEL_TYPE=HTTP, MESSAGE_ID=URI */
+    private void insertHttp(String requestId, String ioType, String reqResType,
+                            String uri, String data, boolean success, int port) {
+        try {
+            String dtime = LocalDateTime.now().format(DTIME_FMT);
+            String instanceId = appName + ":" + port;
+            jdbcTemplate.update(
+                    "INSERT INTO FWK_MESSAGE_INSTANCE (" +
+                    "  MESSAGE_SNO, TRX_ID, ORG_ID, IO_TYPE, REQ_RES_TYPE, MESSAGE_ID," +
+                    "  TRX_TRACKING_NO, LOG_DTIME, LAST_LOG_DTIME, LAST_RT_CODE," +
+                    "  INSTANCE_ID, RETRY_TRX_YN, MESSAGE_DATA, TRX_DTIME, CHANNEL_TYPE, URI, SUCCESS_YN" +
+                    ") VALUES (" +
+                    "  FWK_MESSAGE_INSTANCE_SEQ.NEXTVAL,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?" +
+                    ")",
+                    requestId, appName, ioType, reqResType, uri,
+                    requestId, dtime, dtime,
+                    success ? "SUCCESS" : "FAIL",
+                    instanceId, "N",
+                    data, dtime, "HTTP", uri,
+                    success ? "Y" : "N"
+            );
+        } catch (Exception e) {
+            log.warn("[MessageInstanceRecorder] HTTP 로그 기록 실패 — uri={}: {}", uri, e.getMessage());
+        }
+    }
+
+    /**
      * TcpClient 아웃바운드 요청 기록 (IO_TYPE=O, REQ_RES_TYPE=REQ).
      *
      * @param trxId   거래 ID (UUID)
