@@ -331,6 +331,117 @@
         },
     };
 
+    (function extendCmsAssetApprovalPage(page) {
+        const useYnBadge = (useYn) =>
+            useYn === 'Y'
+                ? '<span class="badge bg-primary">Y</span>'
+                : '<span class="badge bg-secondary">N</span>';
+
+        page.ensureUseYnColumn = function() {
+            const $headerRow = $('#assetApprovalTable thead tr');
+            if ($headerRow.find('[data-col="useYn"]').length === 0) {
+                $('<th class="col-w-140" data-col="useYn">노출여부</th>').insertAfter($headerRow.find('th[data-sort="assetState"]'));
+            }
+        };
+
+        page.renderUseYnCells = function(rows) {
+            this.ensureUseYnColumn();
+
+            const $rows = $('#assetApprovalTableBody tr');
+            if (!rows || rows.length === 0) {
+                $rows.find('td[colspan="8"]').attr('colspan', '9');
+                return;
+            }
+
+            $rows.each((index, tr) => {
+                const row = rows[index];
+                if (!row) return;
+
+                const useYn = (row.useYn || 'Y').toUpperCase();
+                const assetId = HtmlUtils.escape(row.assetId);
+                const cellHtml = window.HAS_CMS_WRITE
+                    ? `<select class="form-select form-select-sm asset-useyn-combo"
+                               data-asset-id="${assetId}"
+                               data-current-use-yn="${useYn}"
+                               data-use-yn="${useYn}"
+                               onchange="CmsAssetApprovalPage.handleVisibilityChange(this)">
+                           <option value="Y" ${useYn === 'Y' ? 'selected' : ''}>Y (노출)</option>
+                           <option value="N" ${useYn === 'N' ? 'selected' : ''}>N (숨김)</option>
+                       </select>`
+                    : useYnBadge(useYn);
+
+                const $tr = $(tr);
+                $tr.find('td[data-col="useYn"]').remove();
+                $(`<td class="text-center" data-col="useYn">${cellHtml}</td>`).insertAfter($tr.children().eq(5));
+            });
+        };
+
+        const originalRenderTable = page.renderTable;
+        page.renderTable = function(rows) {
+            originalRenderTable.call(this, rows);
+            this.renderUseYnCells(rows);
+        };
+
+        page.handleVisibilityChange = function(selectEl) {
+            const $select = $(selectEl);
+            const assetId = $select.data('assetId');
+            const currentUseYn = String($select.data('currentUseYn') || '').trim().toUpperCase();
+            const nextUseYn = String($select.val() || '').trim().toUpperCase();
+
+            if (currentUseYn === nextUseYn) {
+                return;
+            }
+
+            const label = nextUseYn === 'Y' ? '노출(Y)' : '숨김(N)';
+            if (!confirm(`노출 여부를 ${label}로 변경하시겠습니까?`)) {
+                $select.val(currentUseYn);
+                return;
+            }
+
+            $select.attr('data-use-yn', nextUseYn);
+            this.updateVisibility(assetId, nextUseYn, $select);
+        };
+
+        page.updateVisibility = function(assetId, useYn, $select) {
+            LoadingOverlay.show('노출 여부 변경 중...');
+            if ($select) {
+                $select.prop('disabled', true);
+            }
+
+            fetch(`/api/cms-admin/asset-approvals/${encodeURIComponent(assetId)}/visibility`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ useYn }),
+            })
+                .then((r) => r.json())
+                .then((res) => {
+                    if (res.success) {
+                        Toast.success(res.message || '노출 여부가 변경되었습니다.');
+                        this.load(this.currentPage);
+                    } else {
+                        if ($select) {
+                            const rollback = $select.data('currentUseYn');
+                            $select.val(rollback).attr('data-use-yn', rollback);
+                        }
+                        Toast.error(res.message || '노출 여부 변경 중 오류가 발생했습니다.');
+                    }
+                })
+                .catch(() => {
+                    if ($select) {
+                        const rollback = $select.data('currentUseYn');
+                        $select.val(rollback).attr('data-use-yn', rollback);
+                    }
+                    Toast.error('노출 여부 변경 중 오류가 발생했습니다.');
+                })
+                .finally(() => {
+                    if ($select) {
+                        $select.prop('disabled', false);
+                    }
+                    LoadingOverlay.hide();
+                });
+        };
+    })(window.CmsAssetApprovalPage);
+
     window.CmsAssetApprovalUploadModal = {
         MAX_FILE_SIZE: 20 * 1024 * 1024,
         ALLOWED_MIME: ['image/png', 'image/jpeg', 'image/gif', 'image/webp'],

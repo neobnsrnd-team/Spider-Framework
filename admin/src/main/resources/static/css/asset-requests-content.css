@@ -78,3 +78,23 @@
     object-fit: contain;
     background-color: #f8f9fa;
 }
+
+/* ==================== Use Y/N 콤보 ==================== */
+.asset-useyn-combo {
+    max-width: 110px;
+    margin-left: auto;
+    margin-right: auto;
+    font-weight: 500;
+}
+
+.asset-useyn-combo[data-use-yn="Y"] {
+    color: #0a58ca;
+    border-color: #9ec5fe;
+    background-color: #f5faff;
+}
+
+.asset-useyn-combo[data-use-yn="N"] {
+    color: #6c757d;
+    border-color: #ced4da;
+    background-color: #f8f9fa;
+}
