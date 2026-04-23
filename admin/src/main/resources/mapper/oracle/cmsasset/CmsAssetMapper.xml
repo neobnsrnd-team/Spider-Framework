@@ -175,7 +175,6 @@
         SELECT COUNT(*)
         FROM SPW_CMS_ASSET
         WHERE ASSET_ID = #{assetId}
-          AND USE_YN   = 'Y'
     </select>
 
     <select id="findAssetStateById" resultType="string">
