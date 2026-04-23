@@ -423,6 +423,32 @@
                     });
                 },
 
+                // ── 에디터 확대 모드 (구버전 방식: textarea height 확대) ─
+                _isExpanded: false,
+
+                toggleFullscreen: function () {
+                    const $btn = $('#btnToggleFullscreen');
+                    const $ta = $('#sqModalSqlQuery');
+
+                    if (this._isExpanded) {
+                        this._isExpanded = false;
+                        $btn.html('<i class="bi bi-arrows-fullscreen"></i> 확대');
+                        $ta.css('height', '');  // rows="5" 기본값으로 복귀
+                    } else {
+                        this._isExpanded = true;
+                        $btn.html('<i class="bi bi-fullscreen-exit"></i> 축소');
+                        $ta.css('height', '500px');
+                    }
+                },
+
+                _exitFullscreen: function () {
+                    if (this._isExpanded) {
+                        this._isExpanded = false;
+                        $('#btnToggleFullscreen').html('<i class="bi bi-arrows-fullscreen"></i> 확대');
+                        $('#sqModalSqlQuery').css('height', '');
+                    }
+                },
+
                 // ── 쿼리 내 텍스트 검색 ──────────────────────────────
                 _searchMatches: [],   // 검색어 매칭 위치 배열 [{start, end}]
                 _searchIndex: -1,     // 현재 포커스된 매칭 인덱스
@@ -633,10 +659,15 @@
                 $('#sqSearchCount').text('');
             });
 
-            // 모달 닫힐 때 검색 바 초기화
+            // 모달 닫힐 때 검색 바 및 전체화면 초기화
             document.getElementById('sqlQueryModal').addEventListener('hidden.bs.modal', function () {
                 SqlQueryModal._closeSearchBar();
+                SqlQueryModal._exitFullscreen();
             }, { once: false });
+
+            $(document).off('click', '#btnToggleFullscreen').on('click', '#btnToggleFullscreen', function () {
+                SqlQueryModal.toggleFullscreen();
+            });
 
             $(document).off('click', '#btnSqlQueryTest').on('click', '#btnSqlQueryTest', function () {
                 const queryId    = $('#sqModalQueryId').val();
