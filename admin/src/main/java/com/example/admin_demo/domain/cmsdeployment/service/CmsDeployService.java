@@ -17,6 +17,8 @@ import java.util.List;
 import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
@@ -24,6 +26,7 @@ import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestTemplate;
 
@@ -37,6 +40,15 @@ public class CmsDeployService {
     private final CmsDeployMapper cmsDeployMapper;
     private final RestTemplate restTemplate;
     private final CmsDeployProperties deployProperties;
+
+    /**
+     * 자기 자신의 프록시 참조 — self-invocation 문제 해결용.
+     * {@code this.saveExpiredResult()} 직접 호출 시 AOP 프록시가 우회돼 {@code @Transactional}이
+     * 적용되지 않으므로, {@code @Lazy}로 주입받은 프록시를 통해 호출한다.
+     */
+    @Lazy
+    @Autowired
+    private CmsDeployService self;
 
     /** 배포 대상 페이지 목록 조회 (APPROVE_STATE = 'APPROVED') */
     public PageResponse<CmsDeployPageResponse> findApprovedPageList(CmsDeployPageRequest req, PageRequest pageRequest) {
@@ -81,10 +93,11 @@ public class CmsDeployService {
      * <p>만료 FILE_ID 패턴: {pageId}_v{version}_expired.html
      * — 정상 배포 이력({pageId}_v{n}.html)을 덮어쓰지 않도록 별도 키 사용</p>
      *
-     * <p>@Transactional 미적용 — 외부 HTTP 통신(fetchExpiredHtml, callReceiveApi)을 트랜잭션 밖에서
-     * 수행해 DB 커넥션 장시간 점유를 방지한다. DB 쓰기(upsertFileSendHis, expirePage)는
-     * saveExpiredResult()에서 별도 트랜잭션으로 처리한다.</p>
+     * <p>클래스 레벨 {@code readOnly=true} 트랜잭션을 중단(NOT_SUPPORTED)하고 비트랜잭션 상태로
+     * HTTP 통신을 수행한다. DB 쓰기는 {@code self.saveExpiredResult()}를 프록시로 호출해
+     * 별도 쓰기 트랜잭션을 시작한다 (self-invocation 우회).</p>
      */
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
     public void pushExpired(String pageId, String userId) {
         // 1. 만료 처리 대상 검증 (EXPIRED_DATE < SYSDATE AND IS_PUBLIC='Y' AND USE_YN='Y')
         String result = cmsDeployMapper.findExpirableFilePath(pageId);
@@ -119,8 +132,8 @@ public class CmsDeployService {
             callReceiveApi(server, pageId, expiredHtml);
         }
 
-        // 6. 전송 완료 후 DB 반영 — 별도 트랜잭션으로 커넥션 점유 최소화
-        saveExpiredResult(pageId, expiredFileId, htmlByteSize, userId);
+        // 6. 전송 완료 후 DB 반영 — self 프록시를 통해 쓰기 트랜잭션 시작 (self-invocation 우회)
+        self.saveExpiredResult(pageId, expiredFileId, htmlByteSize, userId);
         log.info("만료 배포 완료: pageId={}, expiredFileId={}, userId={}", pageId, expiredFileId, userId);
     }
 
