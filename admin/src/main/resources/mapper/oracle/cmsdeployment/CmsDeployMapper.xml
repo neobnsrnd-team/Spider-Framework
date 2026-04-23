@@ -134,12 +134,13 @@
     <!-- ==================== 만료수동처리 ==================== -->
 
     <!--
-        만료 처리 대상 검증 및 FILE_PATH 반환.
+        만료 처리 대상 검증.
         조건: EXPIRED_DATE < SYSDATE AND IS_PUBLIC='Y' AND USE_YN='Y'
-        조건 미충족 시 null 반환 → 서비스에서 NotFoundException 처리.
+        조건 충족 시 'Y' 반환, 미충족(row 없음) 시 null 반환 → 서비스에서 NotFoundException 처리.
+        FILE_PATH 가 NULL 인 미배포 페이지도 만료 처리 가능하므로 SELECT 'Y' 로 존재 여부만 확인한다.
     -->
     <select id="findExpirableFilePath" resultType="string">
-        SELECT FILE_PATH
+        SELECT 'Y'
         FROM SPW_CMS_PAGE
         WHERE PAGE_ID      = #{pageId}
           AND USE_YN       = 'Y'
