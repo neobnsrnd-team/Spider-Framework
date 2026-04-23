@@ -64,13 +64,18 @@
                     if (!res.success || !Array.isArray(res.data)) return;
 
                     const searchSelect = $('#filterBusinessCategory');
+                    const uploadSelect = $('#assetUploadCategory');
+
                     searchSelect.find('option:not(:first)').remove();
+                    uploadSelect.empty();
 
                     res.data.forEach(item => {
                         this.categoryMap[item.code] = item.codeName;
                         searchSelect.append(`<option value="${HtmlUtils.escape(item.code)}">${HtmlUtils.escape(item.codeName)}</option>`);
+                        uploadSelect.append(`<option value="${HtmlUtils.escape(item.code)}">${HtmlUtils.escape(item.codeName)}</option>`);
                     });
 
+                    uploadSelect.val('COMMON');
                     this.categoryOptionsLoaded = true;
                 })
                 .catch(() => {});
@@ -306,6 +311,146 @@
         },
     };
 
+    window.CmsAssetApprovalUploadModal = {
+        MAX_FILE_SIZE: 20 * 1024 * 1024,
+        ALLOWED_MIME: ['image/png', 'image/jpeg', 'image/gif', 'image/webp'],
+        selectedFile: null,
+
+        init: function() {
+            this._bindOpenButton();
+            this._bindDropzone();
+            this._bindFileInput();
+            this._bindSubmit();
+            this._bindClear();
+        },
+
+        _bindOpenButton: function() {
+            $(document).off('click.assetApprovalUploadOpen', '#btnOpenAssetUpload')
+                .on('click.assetApprovalUploadOpen', '#btnOpenAssetUpload', () => this.open());
+        },
+
+        _bindDropzone: function() {
+            const $dz = $('#assetUploadDropzone');
+            $dz.off('click.assetApprovalUpload').on('click.assetApprovalUpload', () => {
+                const input = document.getElementById('assetUploadFileInput');
+                if (input) input.click();
+            });
+            $dz.off('dragover.assetApprovalUpload').on('dragover.assetApprovalUpload', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                $dz.addClass('is-dragover');
+            });
+            $dz.off('dragleave.assetApprovalUpload').on('dragleave.assetApprovalUpload', () => $dz.removeClass('is-dragover'));
+            $dz.off('drop.assetApprovalUpload').on('drop.assetApprovalUpload', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                $dz.removeClass('is-dragover');
+                const files = e.originalEvent.dataTransfer && e.originalEvent.dataTransfer.files;
+                if (files && files.length > 0) {
+                    this._onFileSelected(files[0]);
+                }
+            });
+        },
+
+        _bindFileInput: function() {
+            $('#assetUploadFileInput').off('change.assetApprovalUpload').on('change.assetApprovalUpload', (e) => {
+                if (e.target.files && e.target.files.length > 0) {
+                    this._onFileSelected(e.target.files[0]);
+                }
+            });
+        },
+
+        _bindSubmit: function() {
+            $('#btnAssetUploadSubmit').off('click.assetApprovalUpload').on('click.assetApprovalUpload', () => this._submit());
+        },
+
+        _bindClear: function() {
+            $('#btnAssetUploadClear').off('click.assetApprovalUpload').on('click.assetApprovalUpload', () => this._clearFile());
+        },
+
+        open: function() {
+            this._clearFile();
+            $('#assetUploadCategory').val('COMMON');
+            $('#assetUploadDesc').val('');
+            new bootstrap.Modal('#assetUploadModal').show();
+        },
+
+        _onFileSelected: function(file) {
+            if (!this.ALLOWED_MIME.includes(file.type)) {
+                Toast.error('지원되지 않는 파일 형식입니다. (PNG, JPG, JPEG, GIF, WebP)');
+                return;
+            }
+            if (file.size > this.MAX_FILE_SIZE) {
+                Toast.error('파일 크기는 20MB 이하로 업로드해 주세요.');
+                return;
+            }
+
+            this.selectedFile = file;
+            $('#assetUploadPreviewWrap').removeClass('d-none');
+            $('#assetUploadPreviewName').text(file.name);
+            $('#assetUploadPreviewSize').text(this._formatSize(file.size));
+            $('#assetUploadPreviewType').text(file.type);
+
+            const reader = new FileReader();
+            reader.onload = (ev) => $('#assetUploadPreview').attr('src', ev.target.result);
+            reader.readAsDataURL(file);
+
+            $('#btnAssetUploadSubmit').prop('disabled', false);
+        },
+
+        _clearFile: function() {
+            this.selectedFile = null;
+            $('#assetUploadFileInput').val('');
+            $('#assetUploadPreviewWrap').addClass('d-none');
+            $('#assetUploadPreview').attr('src', '');
+            $('#btnAssetUploadSubmit').prop('disabled', true);
+        },
+
+        _submit: function() {
+            if (!this.selectedFile) {
+                Toast.warning('업로드할 파일을 선택해 주세요.');
+                return;
+            }
+
+            const fd = new FormData();
+            fd.append('file', this.selectedFile);
+            fd.append('businessCategory', (($('#assetUploadCategory').val() || 'COMMON').trim() || 'COMMON'));
+
+            const desc = $('#assetUploadDesc').val().trim();
+            if (desc) fd.append('assetDesc', desc);
+
+            this._setSubmitting(true);
+
+            fetch('/api/cms-admin/asset-approvals/upload', {
+                method: 'POST',
+                body: fd,
+            })
+                .then(r => r.json().then(body => ({ status: r.status, body })))
+                .then(({ status, body }) => {
+                    if (status >= 200 && status < 300 && body.success) {
+                        Toast.success(body.message || '이미지 업로드가 완료되었습니다.');
+                        bootstrap.Modal.getInstance('#assetUploadModal').hide();
+                        CmsAssetApprovalPage.load(1);
+                    } else {
+                        Toast.error(body.message || '업로드 처리 중 오류가 발생했습니다.');
+                    }
+                })
+                .catch(() => Toast.error('업로드 처리 중 오류가 발생했습니다.'))
+                .finally(() => this._setSubmitting(false));
+        },
+
+        _setSubmitting: function(submitting) {
+            $('#btnAssetUploadSubmit').prop('disabled', submitting || !this.selectedFile);
+            $('#assetUploadSpinner').toggleClass('d-none', !submitting);
+        },
+
+        _formatSize: function(bytes) {
+            if (bytes < 1024) return bytes + ' B';
+            if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+            return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+        },
+    };
+
     $(document).ready(function() {
         CmsAssetApprovalPage.itemsPerPage = parseInt($('#limitRows').val()) || 10;
         CmsAssetApprovalPage.attachSortHandlers();
@@ -317,6 +462,10 @@
         });
 
         $('#btnRejectConfirm').on('click', function() { CmsAssetApprovalPage._submitReject(); });
+
+        if (window.HAS_CMS_WRITE) {
+            CmsAssetApprovalUploadModal.init();
+        }
     });
 </script>
 </th:block>

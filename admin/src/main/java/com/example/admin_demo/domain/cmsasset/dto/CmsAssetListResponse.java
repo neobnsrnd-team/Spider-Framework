@@ -21,6 +21,7 @@ public class CmsAssetListResponse {
     private Long fileSize;
     private String assetUrl;
     private String assetState;
+    private String useYn;
     private String createUserId;
     private String createUserName;
     private String rejectedReason;

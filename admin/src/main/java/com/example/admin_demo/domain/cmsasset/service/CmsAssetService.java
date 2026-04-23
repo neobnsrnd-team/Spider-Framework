@@ -40,6 +40,8 @@ public class CmsAssetService {
     private static final String STATE_PENDING = "PENDING";
     private static final String STATE_APPROVED = "APPROVED";
     private static final String STATE_REJECTED = "REJECTED";
+    private static final String USE_Y = "Y";
+    private static final String USE_N = "N";
     private static final int REJECTED_REASON_MAX_CHARS = 1000;
     private static final int REJECTED_REASON_MAX_BYTES = 1000;
     private static final Set<String> ALLOWED_ASSET_CATEGORIES = Set.of("COMMON", "CARD", "LOAN", "DEPOSIT");
@@ -77,7 +79,7 @@ public class CmsAssetService {
     @Transactional(readOnly = true)
     public List<CodeResponse> getAssetCategoryCodes() {
         return codeService.getCodesByCodeGroupId(ASSET_CATEGORY_CODE_GROUP_ID).stream()
-                .filter(code -> "Y".equalsIgnoreCase(code.getUseYn()))
+                .filter(code -> USE_Y.equalsIgnoreCase(code.getUseYn()))
                 .filter(code -> ALLOWED_ASSET_CATEGORIES.contains(code.getCode()))
                 .toList();
     }
@@ -113,14 +115,14 @@ public class CmsAssetService {
 
         try {
             cmsBuilderClient.deployAsset(assetId);
-            log.info("CMS 이미지 승인 + 파일 배포 완료: assetId={}, modifierId={}", assetId, modifierId);
+            log.info("CMS 이미지 승인 및 배포 완료: assetId={}, modifierId={}", assetId, modifierId);
         } catch (BaseException deployEx) {
-            log.error("CMS 배포 실패 후 승인 상태 보상 롤백 시도. assetId={}, modifierId={}", assetId, modifierId, deployEx);
+            log.error("CMS 이미지 배포 실패로 승인 상태 롤백 시도: assetId={}, modifierId={}", assetId, modifierId, deployEx);
             try {
                 transactionTemplate.executeWithoutResult(status -> cmsAssetMapper.updateState(
                         assetId, STATE_APPROVED, STATE_PENDING, null, modifierId, modifierName));
             } catch (RuntimeException revertEx) {
-                log.error("보상 롤백 실패. 수동 확인 필요. assetId={}", assetId, revertEx);
+                log.error("승인 롤백 실패. 수동 확인 필요: assetId={}", assetId, revertEx);
             }
             throw deployEx;
         }
@@ -137,6 +139,37 @@ public class CmsAssetService {
                 .assetId(cmsResponse.getAssetId())
                 .url(cmsResponse.getUrl())
                 .build();
+    }
+
+    public CmsAssetUploadResponse uploadApprovedAsset(
+            MultipartFile file, String businessCategory, String assetDesc, String uploaderId, String uploaderName) {
+
+        CmsAssetUploadResponse response = uploadAsset(file, businessCategory, assetDesc, uploaderId, uploaderName);
+
+        transactionTemplate.executeWithoutResult(status -> {
+            assertTransition(response.getAssetId(), STATE_WORK, STATE_APPROVED);
+            int updated = cmsAssetMapper.updateState(
+                    response.getAssetId(), STATE_WORK, STATE_APPROVED, null, uploaderId, uploaderName);
+            if (updated != 1) {
+                throw new InvalidStateException("이미 처리된 이미지입니다. assetId=" + response.getAssetId());
+            }
+        });
+
+        try {
+            cmsBuilderClient.deployAsset(response.getAssetId());
+            log.info("CMS 관리자 이미지 즉시 승인 업로드 완료: assetId={}, uploaderId={}", response.getAssetId(), uploaderId);
+            return response;
+        } catch (BaseException deployEx) {
+            log.error("CMS 관리자 이미지 즉시 승인 배포 실패. WORK 복구 시도: assetId={}, uploaderId={}",
+                    response.getAssetId(), uploaderId, deployEx);
+            try {
+                transactionTemplate.executeWithoutResult(status -> cmsAssetMapper.updateState(
+                        response.getAssetId(), STATE_APPROVED, STATE_WORK, null, uploaderId, uploaderName));
+            } catch (RuntimeException revertEx) {
+                log.error("관리자 업로드 롤백 실패. 수동 확인 필요: assetId={}", response.getAssetId(), revertEx);
+            }
+            throw deployEx;
+        }
     }
 
     public void deleteMyAsset(String assetId, String userId) {
@@ -171,6 +204,17 @@ public class CmsAssetService {
         log.info("CMS 이미지 반려 완료: assetId={}, modifierId={}", assetId, modifierId);
     }
 
+    @Transactional
+    public void updateVisibility(String assetId, String useYn, String modifierId, String modifierName) {
+        ensureAssetExists(assetId);
+        String normalizedUseYn = normalizeUseYn(useYn);
+        int updated = cmsAssetMapper.updateUseYn(assetId, normalizedUseYn, modifierId, modifierName);
+        if (updated != 1) {
+            throw new InvalidStateException("이미 처리된 이미지입니다. assetId=" + assetId);
+        }
+        log.info("CMS 이미지 노출 여부 변경: assetId={}, useYn={}, modifierId={}", assetId, normalizedUseYn, modifierId);
+    }
+
     private void assertTransition(String assetId, String expectedFrom, String target) {
         String current = cmsAssetMapper.findAssetStateById(assetId);
         if (current == null) {
@@ -178,7 +222,13 @@ public class CmsAssetService {
         }
         if (!expectedFrom.equals(current)) {
             throw new InvalidStateException(
-                    String.format("현재 상태(%s)에서 %s 전이를 수행할 수 없습니다. 필요 상태=%s", current, target, expectedFrom));
+                    String.format("현재 상태(%s)에서는 %s 전이를 수행할 수 없습니다. 필요 상태=%s", current, target, expectedFrom));
+        }
+    }
+
+    private void ensureAssetExists(String assetId) {
+        if (cmsAssetMapper.existsByAssetId(assetId) != 1) {
+            throw new NotFoundException("이미지를 찾을 수 없습니다. assetId=" + assetId);
         }
     }
 
@@ -207,6 +257,17 @@ public class CmsAssetService {
         boolean exists = getAssetCategoryCodes().stream().anyMatch(code -> normalized.equals(code.getCode()));
         if (!exists) {
             throw new InvalidInputException("유효하지 않은 이미지 카테고리입니다.");
+        }
+        return normalized;
+    }
+
+    private String normalizeUseYn(String useYn) {
+        if (useYn == null || useYn.isBlank()) {
+            throw new InvalidInputException("노출 여부 값이 필요합니다.");
+        }
+        String normalized = useYn.trim().toUpperCase();
+        if (!USE_Y.equals(normalized) && !USE_N.equals(normalized)) {
+            throw new InvalidInputException("유효하지 않은 노출 여부 값입니다.");
         }
         return normalized;
     }

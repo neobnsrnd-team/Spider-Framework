@@ -23,6 +23,7 @@ public class CmsAssetDetailResponse {
     private String assetUrl;
     private String assetDesc;
     private String assetState;
+    private String useYn;
     private String rejectedReason;
     private String createUserId;
     private String createUserName;
