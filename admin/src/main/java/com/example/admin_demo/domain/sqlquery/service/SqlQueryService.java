@@ -257,6 +257,18 @@ public class SqlQueryService {
         }
     }
 
+    /** 사용여부(USE_YN) Y↔N 반전 — 목록 인라인 토글에서 호출 */
+    @Transactional
+    public SqlQueryResponse toggleUseYn(String queryId) {
+        SqlQueryResponse current = sqlQueryMapper.selectResponseById(queryId);
+        if (current == null) {
+            throw new NotFoundException("queryId: " + queryId);
+        }
+        String newUseYn = "Y".equals(current.getUseYn()) ? "N" : "Y";
+        sqlQueryMapper.updateUseYn(queryId, newUseYn, AuditUtil.now(), AuditUtil.currentUserId());
+        return sqlQueryMapper.selectResponseById(queryId);
+    }
+
     public List<SqlQueryHistoryResponse> getHistoryList(String queryId) {
         if (sqlQueryMapper.countByQueryId(queryId) == 0) {
             throw new NotFoundException("queryId: " + queryId);

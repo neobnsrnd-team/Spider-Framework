@@ -143,9 +143,17 @@
                         label: '사용여부',
                         width: '80px',
                         sortable: true,
-                        render: (val) => val === 'Y'
-                            ? '<span class="badge text-bg-success">Y</span>'
-                            : '<span class="badge text-bg-secondary">N</span>'
+                        render: (val, row) => {
+                            const color = val === 'Y' ? 'success' : 'secondary';
+                            // 쓰기 권한 보유 시 배지 클릭으로 즉시 토글 가능
+                            if (sql_query_access) {
+                                return `<span class="badge text-bg-${color} use-yn-toggle"
+                                             style="cursor:pointer;"
+                                             data-query-id="${row.queryId}"
+                                             data-use-yn="${val}">${val}</span>`;
+                            }
+                            return `<span class="badge text-bg-${color}">${val}</span>`;
+                        }
                     },
                     { key: 'lastUpdateDtime', label: '최종수정일시', width: '140px', sortable: false }
                 ],
@@ -169,6 +177,7 @@
             itemsPerPage: 10,
             sortBy: null,
             sortDirection: null,
+            _preventRowClick: false,  // 사용여부 배지 클릭 시 행 클릭(상세 모달) 방지 플래그
 
             init: function() {
                 SearchForm.render('#searchContainer', PAGE_CONFIG.search, () => {
@@ -187,6 +196,11 @@
                 };
 
                 DataTable.render('#tableContainer', tableConfig, (row) => {
+                    // 사용여부 배지 mousedown 시 플래그를 세워 상세 모달 열기 차단
+                    if (this._preventRowClick) {
+                        this._preventRowClick = false;
+                        return;
+                    }
                     if (window.SqlQueryModal) {
                         window.SqlQueryModal.openForDetail(row);
                     }
@@ -213,6 +227,17 @@
                     if (window.SqlQueryModal) {
                         window.SqlQueryModal.openForCreate();
                     }
+                });
+
+                // 사용여부 배지 클릭: mousedown에서 플래그를 세워 tr 직접 바인딩(행 클릭)보다 먼저 차단
+                // click 이벤트에서 stopPropagation은 document 위임이 tr 직접 바인딩보다 늦게 발화하여 효과 없음
+                $(document).off('mousedown', '.use-yn-toggle').on('mousedown', '.use-yn-toggle', () => {
+                    this._preventRowClick = true;
+                });
+                $(document).off('click', '.use-yn-toggle').on('click', '.use-yn-toggle', (e) => {
+                    const queryId = $(e.currentTarget).data('query-id');
+                    const useYn   = $(e.currentTarget).data('use-yn');
+                    this.toggleUseYn(String(queryId), String(useYn));
                 });
 
                 if (PAGE_CONFIG.autoLoad) {
@@ -267,6 +292,27 @@
                     .map(col => ({ key: col.key, label: col.label }));
                 const data = DataTable.getData('#tableContainer');
                 PrintUtil.print({ title: 'SQL Query 목록', columns: printColumns, data: data });
+            },
+
+            toggleUseYn: function(queryId, currentVal) {
+                const newVal = currentVal === 'Y' ? 'N' : 'Y';
+                Toast.confirm(`사용여부를 ${currentVal} → ${newVal} 로 변경하시겠습니까?`, () => {
+                    $.ajax({
+                        url: API_BASE_URL + '/sql-queries/' + encodeURIComponent(queryId) + '/use-yn',
+                        method: 'PATCH',
+                        success: (response) => {
+                            if (response.success) {
+                                Toast.success(`사용여부가 ${newVal}(으)로 변경되었습니다.`);
+                                this.load();
+                            } else {
+                                Toast.error(response.message || '사용여부 변경에 실패했습니다.');
+                            }
+                        },
+                        error: (xhr) => {
+                            Toast.error(xhr.responseJSON?.message || '사용여부 변경에 실패했습니다.');
+                        }
+                    });
+                });
             },
 
             exportExcel: function() {

@@ -203,6 +203,15 @@
         )
     </insert>
 
+    <!-- USE_YN 단독 업데이트 (목록 인라인 토글용) -->
+    <update id="updateUseYn">
+        UPDATE FWK_SQL_QUERY
+        SET USE_YN              = #{useYn},
+            LAST_UPDATE_DTIME   = #{lastUpdateDtime},
+            LAST_UPDATE_USER_ID = #{lastUpdateUserId}
+        WHERE TRIM(QUERY_ID) = TRIM(#{queryId})
+    </update>
+
     <!-- 이력 목록 조회: VERSION_ID(=millis timestamp) 내림차순으로 최신 이력 먼저 반환 -->
     <select id="findHistoryList"
             resultType="com.example.admin_demo.domain.sqlquery.dto.SqlQueryHistoryResponse">

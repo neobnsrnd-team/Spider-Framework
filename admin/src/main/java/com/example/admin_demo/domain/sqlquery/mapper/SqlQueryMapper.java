@@ -68,6 +68,13 @@ public interface SqlQueryMapper {
             @Param("backupDtime") String backupDtime,
             @Param("backupUserId") String backupUserId);
 
+    /** USE_YN 단독 업데이트 (인라인 토글용) */
+    void updateUseYn(
+            @Param("queryId") String queryId,
+            @Param("useYn") String useYn,
+            @Param("lastUpdateDtime") String lastUpdateDtime,
+            @Param("lastUpdateUserId") String lastUpdateUserId);
+
     /** queryId에 해당하는 이력 목록 최신순 조회 */
     List<SqlQueryHistoryResponse> findHistoryList(@Param("queryId") String queryId);
 

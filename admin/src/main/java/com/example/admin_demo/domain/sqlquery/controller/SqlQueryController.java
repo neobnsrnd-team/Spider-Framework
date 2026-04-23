@@ -105,6 +105,13 @@ public class SqlQueryController {
         return ResponseEntity.ok(ApiResponse.success(null));
     }
 
+    @PatchMapping("/{queryId}/use-yn")
+    @PreAuthorize("hasAuthority('SQL_QUERY:W')")
+    public ResponseEntity<ApiResponse<SqlQueryResponse>> toggleUseYn(@PathVariable String queryId) {
+        log.info("PATCH /api/sql-queries/{}/use-yn", queryId);
+        return ResponseEntity.ok(ApiResponse.success(sqlQueryService.toggleUseYn(queryId)));
+    }
+
     @GetMapping("/{queryId}/history")
     public ResponseEntity<ApiResponse<List<SqlQueryHistoryResponse>>> getHistoryList(@PathVariable String queryId) {
         log.info("GET /api/sql-queries/{}/history", queryId);
