@@ -28,6 +28,10 @@ tcp:
   demo-server:
     port: ${DEMO_SERVER_TCP_PORT:9995}
     handler-pool-size: ${DEMO_SERVER_HANDLER_POOL_SIZE:20}
+  # 외부시스템 TCP 연동 설정 — ComponentType='B' + TcpCallBiz 사용 시 접속 대상
+  ext:
+    host: ${TCP_EXT_HOST:localhost}
+    port: ${TCP_EXT_PORT:19100}
 
 # Actuator 설정 — health 엔드포인트만 노출
 management:

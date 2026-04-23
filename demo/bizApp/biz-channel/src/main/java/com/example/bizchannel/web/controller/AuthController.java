@@ -127,6 +127,13 @@ public class AuthController {
                 return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(result);
             }
 
+            // isSuccess=true 이지만 payload가 null인 경우 방어 (인증AP 버그 또는 빈 응답)
+            if (authResp.getPayload() == null) {
+                log.warn("[AuthController] 인증AP 응답 payload null: userId={}", userId);
+                return ResponseEntity.status(HttpStatus.BAD_GATEWAY)
+                        .body(Map.of("error", "인증 서버 응답 오류"));
+            }
+
             Map<String, Object> authPayload = authResp.getPayload();
             String userName = (String) authPayload.getOrDefault("userName", "");
             String userGrade = (String) authPayload.getOrDefault("userGrade", "");
@@ -191,6 +198,13 @@ public class AuthController {
             if (!authResp.isSuccess()) {
                 return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                         .body(Map.of("error", authResp.getMessage()));
+            }
+
+            // isSuccess=true 이지만 payload가 null인 경우 방어
+            if (authResp.getPayload() == null) {
+                log.warn("[AuthController] 인증AP 응답 payload null (me): userId={}", userId);
+                return ResponseEntity.status(HttpStatus.BAD_GATEWAY)
+                        .body(Map.of("error", "인증 서버 응답 오류"));
             }
 
             Map<String, Object> authPayload = authResp.getPayload();

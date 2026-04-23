@@ -101,7 +101,7 @@ public class MessageInstanceRecorder {
                         boolean success, String host, int port) {
         try {
             String dtime = LocalDateTime.now().format(DTIME_FMT);
-            String instanceId = appName + ":" + port;
+            String instanceId = host + ":" + port;
             jdbcTemplate.update(
                     "INSERT INTO FWK_MESSAGE_INSTANCE (" +
                     "  MESSAGE_SNO, TRX_ID, ORG_ID, IO_TYPE, REQ_RES_TYPE, MESSAGE_ID," +

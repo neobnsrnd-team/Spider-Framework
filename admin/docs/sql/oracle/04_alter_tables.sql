@@ -188,3 +188,49 @@ ALTER TABLE FWK_SQL_QUERY_HIS MODIFY (QUERY_NAME VARCHAR2(200));
 ALTER TABLE FWK_SQL_QUERY_HIS MODIFY (QUERY_DESC VARCHAR2(500));
 
 COMMIT;
+
+-- =============================================================
+-- #150 MetaDrivenCommandHandler Biz 타입('B') 데모 컴포넌트 데이터
+-- =============================================================
+-- 배경: MetaDrivenCommandHandler 에 Biz 클래스 리플렉션 호출(COMPONENT_TYPE='B') 추가.
+--       외부시스템 TCP 호출이 필요한 서비스 스텝은 아래와 같이 FWK_COMPONENT 에 등록한다.
+-- ⚠ 개발자가 DB에서 직접 실행해야 합니다.
+--
+-- COMPONENT_TYPE 값 정리:
+--   S = SELECT (MyBatis selectOne)
+--   U = UPDATE/INSERT/DELETE (MyBatis update, auto-commit)
+--   B = Biz 클래스 리플렉션 호출 (COMPONENT_CLASS_NAME = 스프링 빈 클래스 전체 경로)
+--
+-- TcpCallBiz 사용 시 접속 대상은 spider-link application.yml 의 tcp.ext.host / tcp.ext.port 로 설정.
+
+-- 외부 인증AP(biz-auth) 로그인 TCP 호출 컴포넌트 예시
+INSERT INTO FWK_COMPONENT (
+    COMPONENT_ID, COMPONENT_NAME, COMPONENT_DESC,
+    COMPONENT_TYPE, COMPONENT_CLASS_NAME, COMPONENT_METHOD_NAME,
+    USE_YN, LAST_UPDATE_DTIME, LAST_UPDATE_USER_ID
+) VALUES (
+    'EXT_TCP_AUTH_LOGIN',
+    '외부 인증AP 로그인 TCP 호출',
+    'TcpCallBiz 를 통해 biz-auth(포트 19100)로 AUTH_LOGIN 커맨드 전송',
+    'B',
+    'com.example.spiderlink.infra.tcp.biz.TcpCallBiz',
+    'AUTH_LOGIN',
+    'Y',
+    TO_CHAR(SYSDATE, 'YYYYMMDDHH24MISS'),
+    'Admin'
+);
+
+COMMIT;
+
+-- =============================================================
+-- #169 FWK_MESSAGE_INSTANCE TRX_TRACKING_NO / MESSAGE_SNO 컬럼 길이 확장
+-- =============================================================
+-- 배경: MessageInstanceRecorder 가 requestId(UUID, 36자)를 TRX_TRACKING_NO 에 그대로 저장하는데
+--       컬럼이 VARCHAR2(30) 으로 정의되어 있어 6자리가 잘려서 저장됨.
+--       → REQ/RES 거래 체인 추적 오류 및 Admin 거래추적로그조회 불일치 발생 가능.
+--       MESSAGE_SNO 는 현재 시퀀스(NEXTVAL) 사용으로 즉각 문제는 없으나 향후 UUID 전환 대비 함께 확장.
+-- ⚠ 개발자가 DB에서 직접 실행해야 합니다.
+ALTER TABLE FWK_MESSAGE_INSTANCE MODIFY TRX_TRACKING_NO VARCHAR2(36);
+ALTER TABLE FWK_MESSAGE_INSTANCE MODIFY MESSAGE_SNO     VARCHAR2(36);
+
+COMMIT;

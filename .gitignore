@@ -47,6 +47,7 @@ tmpclaude-*
 .claude/settings.local.json
 .claude/settings.json
 .claude/ralph-loop.local.md
+.claude/CLAUDE.md
 
 ### Uploads ###
 uploads/
