@@ -33,4 +33,11 @@ public class CmsDeployProperties {
      * 운영 환경에 따라 경로가 다를 경우 변경
      */
     private String deployedPathPrefix = "/deployed";
+
+    /**
+     * 만료 배포 시 전송할 page-expired.html URL
+     * CMS Next.js 서버의 public/system/page-expired.html을 HTTP로 읽어온다.
+     * Admin 내부에 파일을 복사하지 않아 단일 소스를 유지한다.
+     */
+    private String expiredHtmlUrl;
 }
