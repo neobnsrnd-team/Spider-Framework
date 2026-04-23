@@ -409,7 +409,7 @@
             CmsDashboardPage.selectCreateViewMode($(this).data('view-mode'));
         });
         // 이벤트 위임 — _loadTemplates()로 동적 추가된 버튼에도 적용
-        $(document).on('click', '.cms-create-template', function() {
+        $('.cms-create-template-list').on('click', '.cms-create-template', function() {
             CmsDashboardPage.selectCreateTemplate($(this).data('template-id'));
         });
         $('#createPageName').on('input', function() {
