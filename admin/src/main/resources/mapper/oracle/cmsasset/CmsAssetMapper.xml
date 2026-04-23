@@ -16,6 +16,7 @@
         a.ASSET_ID                                                      AS assetId,
         a.ASSET_NAME                                                    AS assetName,
         a.BUSINESS_CATEGORY                                             AS businessCategory,
+        c.CODE_NAME                                                     AS businessCategoryName,
         a.MIME_TYPE                                                     AS mimeType,
         a.FILE_SIZE                                                     AS fileSize,
         a.ASSET_URL                                                     AS assetUrl,
@@ -115,6 +116,10 @@
                 SELECT
                 <include refid="listColumns"/>
                 FROM SPW_CMS_ASSET a
+                LEFT JOIN FWK_CODE c
+                  ON c.CODE_GROUP_ID = 'CMS00001'
+                 AND c.CODE = a.BUSINESS_CATEGORY
+                 AND c.USE_YN = 'Y'
                 <include refid="myListWhere"/>
                 <include refid="orderBy"/>
             ) INNER_QRY
@@ -125,6 +130,10 @@
     <select id="countMyList" resultType="long">
         SELECT COUNT(*)
         FROM SPW_CMS_ASSET a
+        LEFT JOIN FWK_CODE c
+          ON c.CODE_GROUP_ID = 'CMS00001'
+         AND c.CODE = a.BUSINESS_CATEGORY
+         AND c.USE_YN = 'Y'
         <include refid="myListWhere"/>
     </select>
 
@@ -136,6 +145,10 @@
                 SELECT
                 <include refid="listColumns"/>
                 FROM SPW_CMS_ASSET a
+                LEFT JOIN FWK_CODE c
+                  ON c.CODE_GROUP_ID = 'CMS00001'
+                 AND c.CODE = a.BUSINESS_CATEGORY
+                 AND c.USE_YN = 'Y'
                 <include refid="approvalListWhere"/>
                 <include refid="orderBy"/>
             ) INNER_QRY
@@ -146,6 +159,10 @@
     <select id="countApprovalList" resultType="long">
         SELECT COUNT(*)
         FROM SPW_CMS_ASSET a
+        LEFT JOIN FWK_CODE c
+          ON c.CODE_GROUP_ID = 'CMS00001'
+         AND c.CODE = a.BUSINESS_CATEGORY
+         AND c.USE_YN = 'Y'
         <include refid="approvalListWhere"/>
     </select>
 
@@ -179,6 +196,7 @@
             a.ASSET_ID                                                  AS assetId,
             a.ASSET_NAME                                                AS assetName,
             a.BUSINESS_CATEGORY                                         AS businessCategory,
+            c.CODE_NAME                                                 AS businessCategoryName,
             a.MIME_TYPE                                                 AS mimeType,
             a.FILE_SIZE                                                 AS fileSize,
             a.ASSET_PATH                                                AS assetPath,
@@ -192,6 +210,10 @@
             TO_CHAR(a.CREATE_DATE, 'YYYY-MM-DD HH24:MI:SS')             AS createDate,
             TO_CHAR(a.LAST_MODIFIED_DTIME, 'YYYY-MM-DD HH24:MI:SS')     AS lastModifiedDtime
         FROM SPW_CMS_ASSET a
+        LEFT JOIN FWK_CODE c
+          ON c.CODE_GROUP_ID = 'CMS00001'
+         AND c.CODE = a.BUSINESS_CATEGORY
+         AND c.USE_YN = 'Y'
         WHERE a.ASSET_ID = #{assetId}
           AND a.USE_YN   = 'Y'
     </select>
