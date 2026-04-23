@@ -58,7 +58,8 @@ public class CmsAssetApprovalController {
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "10") int size) {
 
-        PageRequest pageRequest = PageRequest.builder().page(Math.max(0, page - 1)).size(size).build();
+        PageRequest pageRequest =
+                PageRequest.builder().page(Math.max(0, page - 1)).size(size).build();
         return ResponseEntity.ok(ApiResponse.success(cmsAssetService.findApprovalList(req, pageRequest)));
     }
 
@@ -118,7 +119,8 @@ public class CmsAssetApprovalController {
             @RequestBody CmsAssetVisibilityUpdateRequest req,
             @AuthenticationPrincipal CustomUserDetails userDetails) {
 
-        cmsAssetService.updateVisibility(assetId, req.getUseYn(), userDetails.getUserId(), userDetails.getDisplayName());
+        cmsAssetService.updateVisibility(
+                assetId, req.getUseYn(), userDetails.getUserId(), userDetails.getDisplayName());
         return ResponseEntity.ok(ApiResponse.success("노출 여부가 변경되었습니다.", null));
     }
 
@@ -133,7 +135,6 @@ public class CmsAssetApprovalController {
         CmsAssetUploadResponse response = cmsAssetService.uploadApprovedAsset(
                 file, businessCategory, assetDesc, userDetails.getUserId(), userDetails.getDisplayName());
 
-        return ResponseEntity.status(HttpStatus.CREATED)
-                .body(ApiResponse.success("관리자 이미지 업로드가 완료되었습니다.", response));
+        return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.success("관리자 이미지 업로드가 완료되었습니다.", response));
     }
 }

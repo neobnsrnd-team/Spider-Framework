@@ -1,7 +1,5 @@
 package com.example.admin_demo.domain.cmsasset.service;
 
-import com.example.admin_demo.domain.code.dto.CodeResponse;
-import com.example.admin_demo.domain.code.service.CodeService;
 import com.example.admin_demo.domain.cmsasset.client.CmsBuilderClient;
 import com.example.admin_demo.domain.cmsasset.client.dto.CmsBuilderUploadApiResponse;
 import com.example.admin_demo.domain.cmsasset.dto.CmsAssetApprovalListRequest;
@@ -11,6 +9,8 @@ import com.example.admin_demo.domain.cmsasset.dto.CmsAssetRequestListRequest;
 import com.example.admin_demo.domain.cmsasset.dto.CmsAssetUploadResponse;
 import com.example.admin_demo.domain.cmsasset.mapper.CmsAssetMapper;
 import com.example.admin_demo.domain.cmsasset.validator.AssetUploadValidator;
+import com.example.admin_demo.domain.code.dto.CodeResponse;
+import com.example.admin_demo.domain.code.service.CodeService;
 import com.example.admin_demo.global.dto.PageRequest;
 import com.example.admin_demo.global.dto.PageResponse;
 import com.example.admin_demo.global.exception.ErrorType;
@@ -160,8 +160,11 @@ public class CmsAssetService {
             log.info("CMS 관리자 이미지 즉시 승인 업로드 완료: assetId={}, uploaderId={}", response.getAssetId(), uploaderId);
             return response;
         } catch (BaseException deployEx) {
-            log.error("CMS 관리자 이미지 즉시 승인 배포 실패. WORK 복구 시도: assetId={}, uploaderId={}",
-                    response.getAssetId(), uploaderId, deployEx);
+            log.error(
+                    "CMS 관리자 이미지 즉시 승인 배포 실패. WORK 복구 시도: assetId={}, uploaderId={}",
+                    response.getAssetId(),
+                    uploaderId,
+                    deployEx);
             try {
                 transactionTemplate.executeWithoutResult(status -> cmsAssetMapper.updateState(
                         response.getAssetId(), STATE_APPROVED, STATE_WORK, null, uploaderId, uploaderName));
