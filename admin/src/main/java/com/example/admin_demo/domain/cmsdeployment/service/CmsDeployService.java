@@ -149,7 +149,7 @@ public class CmsDeployService {
                     server.getInstanceId(),
                     expiredFileId,
                     htmlByteSize,
-                    null, // CRC 계산 불필요 — 만료 HTML은 고정 콘텐츠
+                    ".", // 만료 HTML은 CRC 계산 불필요 — NOT NULL 제약 대응 플레이스홀더
                     userId);
         }
         // IS_PUBLIC='N', FILE_PATH_BACK=FILE_PATH

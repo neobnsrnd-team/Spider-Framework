@@ -194,12 +194,12 @@
         WHEN MATCHED THEN
             UPDATE SET
                 FILE_SIZE           = #{fileSize},
-                FILE_CRC_VALUE      = #{crcValue, jdbcType=VARCHAR},
+                FILE_CRC_VALUE      = #{crcValue},
                 LAST_MODIFIED_DTIME = TO_CHAR(SYSDATE, 'YYYYMMDDHH24MISS'),
                 LAST_MODIFIER_ID    = #{userId}
         WHEN NOT MATCHED THEN
             INSERT (INSTANCE_ID, FILE_ID, FILE_SIZE, FILE_CRC_VALUE, LAST_MODIFIED_DTIME, LAST_MODIFIER_ID)
-            VALUES (#{instanceId}, #{fileId}, #{fileSize}, #{crcValue, jdbcType=VARCHAR}, TO_CHAR(SYSDATE, 'YYYYMMDDHH24MISS'), #{userId})
+            VALUES (#{instanceId}, #{fileId}, #{fileSize}, #{crcValue}, TO_CHAR(SYSDATE, 'YYYYMMDDHH24MISS'), #{userId})
     </insert>
 
     <!--
