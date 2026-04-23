@@ -4,6 +4,7 @@ import com.example.spiderlink.domain.meta.dto.ComponentInfo;
 import com.example.spiderlink.domain.meta.dto.RelationParam;
 import com.example.spiderlink.domain.meta.dto.ServiceStep;
 import com.example.spiderlink.domain.meta.mapper.MetaRoutingMapper;
+import com.example.spiderlink.infra.tcp.biz.Biz;
 import com.example.spiderlink.infra.tcp.model.JsonCommandRequest;
 import com.example.spiderlink.infra.tcp.model.JsonCommandResponse;
 import com.example.spiderlink.infra.tcp.parser.JsonMessageParser;
@@ -19,6 +20,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.ibatis.session.SqlSession;
 import org.apache.ibatis.session.SqlSessionFactory;
+import org.springframework.context.ApplicationContext;
 import org.springframework.stereotype.Component;
 
 /**
@@ -34,7 +36,9 @@ import org.springframework.stereotype.Component;
  *   <li>COMPONENT_TYPE='S' (SELECT) 결과가 null 이면 이후 스텝을 중단하고 실패 응답 반환</li>
  *   <li>SELECT 결과는 컨텍스트에 병합되어 다음 스텝 파라미터로 활용 가능</li>
  *   <li>COMPONENT_TYPE='U' (UPDATE/INSERT/DELETE) 는 auto-commit으로 즉시 반영</li>
- *   <li>마지막 SELECT 결과를 응답 payload로 반환</li>
+ *   <li>COMPONENT_TYPE='B' (Biz 클래스) 는 COMPONENT_CLASS_NAME 스프링 빈을 리플렉션으로 호출,
+ *       응답 맵을 컨텍스트에 병합. TCP·REST 등 외부 연동은 이 방식으로 확장한다.</li>
+ *   <li>마지막 SELECT 또는 Biz 결과를 응답 payload로 반환</li>
  * </ul>
  * </p>
  */
@@ -53,6 +57,8 @@ public class MetaDrivenCommandHandler implements CommandHandler<JsonCommandReque
     private final ObjectMapper objectMapper;
     /** FWK_MESSAGE_FIELD 기반 민감 필드 마스킹 — 거래 로그 INSERT 전 적용 */
     private final JsonMessageParser jsonMessageParser;
+    /** Biz 타입 컴포넌트 리플렉션 호출 시 스프링 빈 조회용 */
+    private final ApplicationContext applicationContext;
 
     /** 시작 시 FWK_LISTENER_TRX_MESSAGE에서 등록된 커맨드 목록 캐싱 — DB 조회 최소화 */
     private Set<String> supportedCommands = new HashSet<>();
@@ -102,10 +108,11 @@ public class MetaDrivenCommandHandler implements CommandHandler<JsonCommandReque
                         paramMap.put(rp.getParamKey(), context.getOrDefault(rp.getParamValue(), ""));
                     }
 
-                    String statementId = comp.getComponentClassName() + "." + comp.getComponentMethodName();
-                    log.debug("[MetaDrivenCommandHandler] step={} statement={} params={}", step.getServiceSeqNo(), statementId, paramMap.keySet());
+                    log.debug("[MetaDrivenCommandHandler] step={} type={} params={}",
+                            step.getServiceSeqNo(), comp.getComponentType(), paramMap.keySet());
 
                     if ("S".equals(comp.getComponentType())) {
+                        String statementId = comp.getComponentClassName() + "." + comp.getComponentMethodName();
                         Object result = sqlSession.selectOne(statementId, paramMap);
                         if (result == null) {
                             // SELECT 결과 없음 → 중단, 실패 응답
@@ -117,9 +124,22 @@ public class MetaDrivenCommandHandler implements CommandHandler<JsonCommandReque
                         // DTO → Map 변환 후 컨텍스트 병합 (다음 스텝에서 참조 가능)
                         lastSelectResult = objectMapper.convertValue(result, Map.class);
                         context.putAll(lastSelectResult);
-                    } else {
+                    } else if ("U".equals(comp.getComponentType())) {
                         // UPDATE / INSERT / DELETE (auto-commit)
+                        String statementId = comp.getComponentClassName() + "." + comp.getComponentMethodName();
                         sqlSession.update(statementId, paramMap);
+                    } else {
+                        // Biz 클래스 리플렉션 호출 — TCP·REST 등 외부 연동
+                        // COMPONENT_CLASS_NAME = 스프링 빈 클래스명, COMPONENT_METHOD_NAME = 메서드/커맨드명
+                        @SuppressWarnings("unchecked")
+                        Class<? extends Biz> bizClass =
+                                (Class<? extends Biz>) Class.forName(comp.getComponentClassName());
+                        Biz biz = applicationContext.getBean(bizClass);
+                        Map<String, Object> bizResult = biz.execute(comp.getComponentMethodName(), paramMap);
+                        if (!bizResult.isEmpty()) {
+                            lastSelectResult = new HashMap<>(bizResult);
+                            context.putAll(lastSelectResult);
+                        }
                     }
                 }
             }
