@@ -27,4 +27,19 @@ public class CmsDeployPageResponse {
 
     /** 최근 배포된 파일 URL (배포 이력 없으면 null) */
     private String deployedUrl;
+
+    /** 노출 시작일 (yyyy-MM-dd, null 가능) */
+    private String beginningDate;
+
+    /** 노출 종료일 (yyyy-MM-dd, null 가능) */
+    private String expiredDate;
+
+    /**
+     * 만료 여부 — "Y": EXPIRED_DATE &lt; SYSDATE AND IS_PUBLIC='Y', 그 외 "N"
+     * 만료수동처리 버튼 표시 조건으로 사용
+     */
+    private String isExpired;
+
+    /** 공개 여부 — "Y"/"N" (SPW_CMS_PAGE.IS_PUBLIC) */
+    private String isPublic;
 }

@@ -18,19 +18,6 @@
         categoryMap: { COMMON: '공통', CARD: '카드', LOAN: '여신', DEPOSIT: '수신' },
         PLACEHOLDER_SRC: '/images/asset-placeholder.svg',
 
-        /**
-         * CMS 가 저장한 assetUrl("/uploads/...", "/static/...", "/deployed/...")은
-         * Admin 서버가 서빙하지 않으므로, CMS origin 을 앞에 붙여 브라우저가 CMS 로부터
-         * 직접 이미지를 받도록 한다. 이미 절대경로(http[s]://)거나 data: URL 이면 그대로 사용.
-         */
-        resolveAssetUrl: function(url) {
-            if (!url) return this.PLACEHOLDER_SRC;
-            if (/^(https?:)?\/\//i.test(url) || /^data:/i.test(url)) return url;
-            const base = (window.CMS_ASSET_URL_BASE || '').replace(/\/+$/, '');
-            if (!base) return url; // base 설정이 없으면 원본 그대로 (최소 fallback)
-            return base + (url.startsWith('/') ? url : '/' + url);
-        },
-
         STATE_BADGE: {
             WORK: '<span class="badge bg-secondary">작업중</span>',
             PENDING: '<span class="badge bg-warning text-dark">승인대기</span>',
@@ -140,7 +127,6 @@
                 const aid = HtmlUtils.escape(row.assetId);
                 const fileSize = this._formatFileSize(row.fileSize);
                 const categoryName = row.businessCategoryName || this.categoryMap[row.businessCategory] || row.businessCategory || '-';
-                const thumbSrc = HtmlUtils.escape(this.resolveAssetUrl(row.assetUrl));
 
                 const tdApproval = (window.HAS_CMS_WRITE && row.assetState === 'PENDING')
                     ? `<div class="d-flex flex-column gap-1">
@@ -151,7 +137,8 @@
 
                 return `<tr>
                     <td class="text-center">
-                        <img src="${thumbSrc}" alt="${HtmlUtils.escape(row.assetName || '')}" class="asset-thumb"
+                        <img src="/api/cms-admin/asset-approvals/${aid}/image"
+                             alt="${HtmlUtils.escape(row.assetName || '')}" class="asset-thumb"
                              onclick="CmsAssetApprovalPage.openPreview('${aid}')"
                              onerror="this.onerror=null;this.src='${this.PLACEHOLDER_SRC}'"/>
                     </td>
@@ -250,7 +237,7 @@
             $('#previewCreateDate').text('-');
             const placeholder = this.PLACEHOLDER_SRC;
             $('#previewImg')
-                .attr('src', placeholder)
+                .attr('src', `/api/cms-admin/asset-approvals/${encodeURIComponent(assetId)}/image`)
                 .off('error.assetPreview')
                 .on('error.assetPreview', function() {
                     $(this).off('error.assetPreview').attr('src', placeholder);
@@ -271,7 +258,6 @@
                     $('#previewAssetState').html(this.STATE_BADGE[d.assetState] || HtmlUtils.escape(d.assetState || ''));
                     $('#previewCreateUser').text((d.createUserName || '-') + ' (' + (d.createUserId || '-') + ')');
                     $('#previewCreateDate').text(d.createDate || '-');
-                    $('#previewImg').attr('src', this.resolveAssetUrl(d.assetUrl));
                 })
                 .catch(() => Toast.error('상세 조회 중 오류가 발생했습니다.'));
         },

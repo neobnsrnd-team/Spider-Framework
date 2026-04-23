@@ -5,12 +5,6 @@
 
     <link rel="stylesheet" th:href="@{/css/asset-requests-content.css}">
 
-    <script th:inline="javascript">
-        /*<![CDATA[*/
-        window.CMS_ASSET_URL_BASE = /*[[${cmsAssetUrlBase}]]*/ '';
-        /*]]>*/
-    </script>
-
     <div class="page-header">
         <h4 class="page-title">
             <i class="bi bi-exclamation-circle-fill text-danger"></i>
@@ -51,7 +45,8 @@
                         <div class="col-md-5 text-center">
                             <img id="previewImg" src="/images/asset-placeholder.svg" alt="preview"
                                  class="img-fluid border rounded"
-                                 style="max-height:320px;object-fit:contain;background:#f8f9fa;"/>
+                                 style="max-height:320px;object-fit:contain;background:#f8f9fa;"
+                                 onerror="this.src='/images/asset-placeholder.svg'; this.onerror=null;"/>
                         </div>
                         <div class="col-md-7">
                             <table class="table table-sm mb-0">
