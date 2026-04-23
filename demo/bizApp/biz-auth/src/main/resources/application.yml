@@ -1,0 +1,22 @@
+spring:
+  application:
+    name: biz-auth
+  main:
+    # HTTP 서버 없이 순수 TCP 서버로 동작 (spring-boot-starter 전용)
+    web-application-type: none
+    keep-alive: true
+  datasource:
+    url: ${DB_URL:jdbc:oracle:thin:@localhost:1521:XE}
+    username: ${DB_USERNAME:D_SPIDERLINK}
+    password: ${DB_PASSWORD:password}
+    driver-class-name: oracle.jdbc.OracleDriver
+
+mock:
+  core:
+    # 계정계 Mock(mock-core) 접속 정보 — 환경변수로 오버라이드 가능
+    host: ${MOCK_CORE_HOST:localhost}
+    port: ${MOCK_CORE_PORT:19300}
+
+logging:
+  level:
+    com.example.bizauth: DEBUG

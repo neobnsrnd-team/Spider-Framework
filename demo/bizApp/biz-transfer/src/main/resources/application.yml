@@ -1,0 +1,23 @@
+spring:
+  application:
+    name: biz-transfer
+  main:
+    # TCP 서버만 사용하므로 내장 웹 서버를 비활성화한다
+    web-application-type: none
+    keep-alive: true
+  datasource:
+    url: ${DB_URL:jdbc:oracle:thin:@localhost:1521:XE}
+    username: ${DB_USERNAME:D_SPIDERLINK}
+    password: ${DB_PASSWORD:password}
+    driver-class-name: oracle.jdbc.OracleDriver
+
+mock:
+  core:
+    # mock-core 호스트 (환경변수 MOCK_CORE_HOST로 재정의 가능)
+    host: ${MOCK_CORE_HOST:localhost}
+    # mock-core TCP 포트 (환경변수 MOCK_CORE_PORT로 재정의 가능)
+    port: ${MOCK_CORE_PORT:19300}
+
+logging:
+  level:
+    com.example.biztransfer: DEBUG
