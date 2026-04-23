@@ -19,7 +19,6 @@
         itemsPerPage: 10,
         sortBy: null,
         sortDirection: null,
-        // 썸네일은 #53 범위에서 placeholder 사용
         PLACEHOLDER_SRC: '/images/asset-placeholder.svg',
 
         STATE_BADGE: {
@@ -117,7 +116,7 @@
 
                 return `<tr>
                     <td class="text-center">
-                        <img src="${placeholder}" alt="placeholder" class="asset-thumb"
+                        <img src="/api/cms-admin/asset-approvals/${aid}/image" alt="미리보기" class="asset-thumb"
                              style="width:48px;height:48px;object-fit:cover;border-radius:4px;cursor:pointer;"
                              onclick="CmsAssetApprovalPage.openPreview('${aid}')"
                              onerror="this.src='${placeholder}'"/>
@@ -216,7 +215,7 @@
             $('#previewAssetState').text('-');
             $('#previewCreateUser').text('-');
             $('#previewCreateDate').text('-');
-            $('#previewImg').attr('src', this.PLACEHOLDER_SRC);
+            $('#previewImg').attr('src', `/api/cms-admin/asset-approvals/${encodeURIComponent(assetId)}/image`);
 
             new bootstrap.Modal('#assetPreviewModal').show();
 
@@ -233,7 +232,6 @@
                     $('#previewAssetState').html(this.STATE_BADGE[d.assetState] || HtmlUtils.escape(d.assetState || ''));
                     $('#previewCreateUser').text((d.createUserName || '-') + ' (' + (d.createUserId || '-') + ')');
                     $('#previewCreateDate').text(d.createDate || '-');
-                    // ASSET_URL 연동은 후속 이슈 — 현재는 placeholder 유지
                 })
                 .catch(() => Toast.error('상세 조회 중 오류가 발생했습니다.'));
         },

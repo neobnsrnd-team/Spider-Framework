@@ -134,7 +134,7 @@
                     <when test="sortBy == 'orgId'">ORDER BY m.ORG_ID <if test="sortDirection == 'DESC'">DESC</if></when>
                     <when test="sortBy == 'userId'">ORDER BY m.USER_ID <if test="sortDirection == 'DESC'">DESC</if></when>
                     <when test="sortBy == 'lastRtCode'">ORDER BY m.LAST_RT_CODE <if test="sortDirection == 'DESC'">DESC</if></when>
-                    <otherwise>ORDER BY m.TRX_TRACKING_NO DESC, m.LOG_DTIME DESC</otherwise>
+                    <otherwise>ORDER BY m.TRX_DTIME DESC, m.LOG_DTIME DESC</otherwise>
                 </choose>
             ) INNER_QRY
             WHERE ROWNUM <![CDATA[<=]]> #{endRow}

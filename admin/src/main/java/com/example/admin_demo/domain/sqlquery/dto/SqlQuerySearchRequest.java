@@ -24,6 +24,9 @@ public class SqlQuerySearchRequest {
     private String queryId;
     private String queryName;
     private String useYn;
+    private String sqlGroupId;
+    private String sqlGroupName;
+    private String sqlType;
 
     public PageRequest toPageRequest() {
         return PageRequest.builder()

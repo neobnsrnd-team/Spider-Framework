@@ -30,12 +30,19 @@
                             <!-- Row 2: SQL Group ID, DB ID -->
                             <div class="row mb-3">
                                 <div class="col-md-6">
-                                    <label class="form-label">SQL 그룹 ID</label>
-                                    <input type="text" class="form-control" id="sqModalSqlGroupId" name="sqlGroupId"
-                                           maxlength="50">
+                                    <label class="form-label">SQL 그룹 ID <span class="text-danger">*</span></label>
+                                    <!-- autocomplete 래퍼: dropdown이 input 바로 아래 절대 위치로 렌더링 -->
+                                    <div class="position-relative" id="sqGroupIdWrapper">
+                                        <input type="text" class="form-control" id="sqModalSqlGroupId" name="sqlGroupId"
+                                               maxlength="50" autocomplete="off">
+                                        <div id="sqGroupIdDropdown"
+                                             class="list-group shadow-sm d-none"
+                                             style="position:absolute;z-index:1060;width:100%;max-height:200px;overflow-y:auto;top:100%;left:0;">
+                                        </div>
+                                    </div>
                                 </div>
                                 <div class="col-md-6">
-                                    <label class="form-label">DB ID</label>
+                                    <label class="form-label">DB ID <span class="text-danger">*</span></label>
                                     <input type="text" class="form-control" id="sqModalDbId" name="dbId"
                                            maxlength="50">
                                 </div>
@@ -45,13 +52,23 @@
                             <div class="row mb-3">
                                 <div class="col-md-4">
                                     <label class="form-label">SQL 유형</label>
-                                    <input type="text" class="form-control" id="sqModalSqlType" name="sqlType"
-                                           maxlength="10">
+                                    <select class="form-select" id="sqModalSqlType" name="sqlType">
+                                        <option value="">선택</option>
+                                        <option value="R">R (SELECT)</option>
+                                        <option value="C">C (INSERT)</option>
+                                        <option value="U">U (UPDATE)</option>
+                                        <option value="D">D (DELETE)</option>
+                                        <option value="P">P (PROCEDURE)</option>
+                                        <option value="I">I (SQL)</option>
+                                    </select>
                                 </div>
                                 <div class="col-md-4">
                                     <label class="form-label">실행 유형</label>
-                                    <input type="text" class="form-control" id="sqModalExecType" name="execType"
-                                           maxlength="10">
+                                    <select class="form-select" id="sqModalExecType" name="execType">
+                                        <option value="">선택</option>
+                                        <option value="O">O (ONLINE)</option>
+                                        <option value="B">B (BATCH)</option>
+                                    </select>
                                 </div>
                                 <div class="col-md-4">
                                     <label class="form-label">결과 유형</label>
@@ -87,9 +104,39 @@
                             <!-- Row 5: SQL Query -->
                             <div class="row mb-3">
                                 <div class="col-12">
-                                    <label class="form-label">SQL Query</label>
-                                    <textarea class="form-control resize-vertical" id="sqModalSqlQuery" name="sqlQuery"
-                                              rows="5" maxlength="4000"
+                                    <label class="form-label">SQL Query <span class="text-danger">*</span></label>
+                                    <!-- 에디터 도구 버튼 툴바: 쓰기 권한이 있을 때만 활성화 -->
+                                    <div class="d-flex flex-wrap gap-1 mb-1" id="sqEditorToolbar">
+                                        <button type="button" class="btn btn-outline-secondary btn-sm" id="btnAddPaging">
+                                            <i class="bi bi-layout-text-window"></i> 페이징 쿼리 추가
+                                        </button>
+                                        <button type="button" class="btn btn-outline-secondary btn-sm" id="btnCallProcedure">
+                                            <i class="bi bi-braces"></i> 프로시저 호출
+                                        </button>
+                                        <button type="button" class="btn btn-outline-secondary btn-sm" id="btnSearchQuery">
+                                            <i class="bi bi-search"></i> 쿼리 검색
+                                        </button>
+                                        <button type="button" class="btn btn-outline-secondary btn-sm" id="btnToggleFullscreen">
+                                            <i class="bi bi-arrows-fullscreen"></i> 확대
+                                        </button>
+                                    </div>
+                                    <!-- 쿼리 내 텍스트 검색 바 (토글) -->
+                                    <div class="d-flex align-items-center gap-1 mb-1 d-hidden" id="sqSearchBar">
+                                        <input type="text" class="form-control form-control-sm"
+                                               id="sqSearchInput" placeholder="검색어 입력" style="max-width: 200px;">
+                                        <span class="text-muted small" id="sqSearchCount"></span>
+                                        <button type="button" class="btn btn-outline-secondary btn-sm" id="btnSearchPrev" title="이전">
+                                            <i class="bi bi-chevron-up"></i>
+                                        </button>
+                                        <button type="button" class="btn btn-outline-secondary btn-sm" id="btnSearchNext" title="다음">
+                                            <i class="bi bi-chevron-down"></i>
+                                        </button>
+                                        <button type="button" class="btn btn-outline-secondary btn-sm" id="btnSearchClose" title="닫기">
+                                            <i class="bi bi-x-lg"></i>
+                                        </button>
+                                    </div>
+                                    <textarea class="form-control font-monospace" id="sqModalSqlQuery" name="sqlQuery"
+                                              rows="5" maxlength="4000" style="resize: vertical;"
                                               placeholder="SQL 쿼리를 입력하세요"></textarea>
                                 </div>
                             </div>
@@ -107,7 +154,7 @@
                             <!-- Row 7: 설명 -->
                             <div class="row mb-3">
                                 <div class="col-12">
-                                    <label class="form-label">설명</label>
+                                    <label class="form-label">설명 <span class="text-danger">*</span></label>
                                     <textarea class="form-control resize-vertical" id="sqModalQueryDesc" name="queryDesc"
                                               rows="2" maxlength="500"></textarea>
                                 </div>
@@ -129,6 +176,15 @@
                 </div>
                 <!-- Modal Footer -->
                 <div class="modal-footer justify-content-end">
+                    <!-- 상세 모드 + 쓰기 권한 시에만 표시 -->
+                    <button th:if="${userAuthorities != null and userAuthorities.contains('SQL_QUERY:W')}"
+                            type="button" class="btn btn-outline-secondary btn-sm d-hidden" id="btnSqlQueryHistory">
+                        <i class="bi bi-clock-history"></i> 이력/복원
+                    </button>
+                    <button th:if="${userAuthorities != null and userAuthorities.contains('SQL_QUERY:W')}"
+                            type="button" class="btn btn-info btn-sm d-hidden" id="btnSqlQueryTest">
+                        <i class="bi bi-play-circle"></i> 쿼리 테스트
+                    </button>
                     <button th:if="${userAuthorities != null and userAuthorities.contains('SQL_QUERY:W')}"
                             type="button" class="btn btn-primary btn-sm d-hidden" id="btnSqlQuerySave">
                         <i class="bi bi-floppy"></i> 저장
@@ -185,6 +241,8 @@
                             }
 
                             $('#sqlQuerySystemInfoRow').removeClass('d-hidden');
+                            $('#btnSqlQueryHistory').toggleClass('d-hidden', !hasWrite);
+                            $('#btnSqlQueryTest').toggleClass('d-hidden', !hasWrite);
                             $('#btnSqlQuerySave').toggleClass('d-hidden', !hasWrite);
                             $('#btnSqlQueryDelete').toggleClass('d-hidden', !hasWrite);
 
@@ -200,6 +258,8 @@
                             }
 
                             $('#sqlQuerySystemInfoRow').removeClass('d-hidden');
+                            $('#btnSqlQueryHistory').toggleClass('d-hidden', !hasWrite);
+                            $('#btnSqlQueryTest').toggleClass('d-hidden', !hasWrite);
                             $('#btnSqlQuerySave').toggleClass('d-hidden', !hasWrite);
                             $('#btnSqlQueryDelete').toggleClass('d-hidden', !hasWrite);
 
@@ -221,6 +281,8 @@
                     $('#sqModalQueryId').prop('disabled', false);
 
                     $('#sqlQuerySystemInfoRow').addClass('d-hidden');
+                    $('#btnSqlQueryHistory').addClass('d-hidden');
+                    $('#btnSqlQueryTest').addClass('d-hidden');
                     $('#btnSqlQuerySave').removeClass('d-hidden');
                     $('#btnSqlQueryDelete').addClass('d-hidden');
 
@@ -250,8 +312,9 @@
                     $('#sqModalQueryName').prop('readonly', readonly);
                     $('#sqModalSqlGroupId').prop('readonly', readonly);
                     $('#sqModalDbId').prop('readonly', readonly);
-                    $('#sqModalSqlType').prop('readonly', readonly);
-                    $('#sqModalExecType').prop('readonly', readonly);
+                    // select 요소는 readonly가 없으므로 disabled로 처리
+                    $('#sqModalSqlType').prop('disabled', readonly);
+                    $('#sqModalExecType').prop('disabled', readonly);
                     $('#sqModalResultType').prop('readonly', readonly);
                     $('#sqModalCacheYn').prop('disabled', readonly);
                     $('#sqModalTimeOut').prop('readonly', readonly);
@@ -259,6 +322,8 @@
                     $('#sqModalSqlQuery').prop('readonly', readonly);
                     $('#sqModalSqlQuery2').prop('readonly', readonly);
                     $('#sqModalQueryDesc').prop('readonly', readonly);
+                    // 에디터 툴바: 읽기 전용 시 쿼리 검색 버튼을 제외하고 비활성화
+                    $('#sqEditorToolbar button:not(#btnSearchQuery)').prop('disabled', readonly);
                 },
 
                 _formatDatetime: function (dateStr) {
@@ -273,6 +338,9 @@
 
                 save: function () {
                     if (!this._validateForm()) {
+                        return;
+                    }
+                    if (!this._validateQuery()) {
                         return;
                     }
 
@@ -315,26 +383,32 @@
                             }
                         });
                     } else {
+                        // 수정 저장 전 현재 상태를 이력 테이블에 백업 — 실패해도 저장은 계속 진행
                         $.ajax({
-                            url: API_BASE_URL + '/sql-queries/' + encodeURIComponent(this.currentQueryId),
-                            method: 'PUT',
-                            contentType: 'application/json',
-                            data: JSON.stringify(formData),
-                            success: (response) => {
-                                if (response.success) {
-                                    Toast.success('SQL Query가 수정되었습니다.');
-                                    this._hideModal();
-                                    if (window.SqlQueryPage) {
-                                        SqlQueryPage.load();
+                            url: API_BASE_URL + '/sql-queries/' + encodeURIComponent(this.currentQueryId) + '/backup',
+                            method: 'POST'
+                        }).always(() => {
+                            $.ajax({
+                                url: API_BASE_URL + '/sql-queries/' + encodeURIComponent(this.currentQueryId),
+                                method: 'PUT',
+                                contentType: 'application/json',
+                                data: JSON.stringify(formData),
+                                success: (response) => {
+                                    if (response.success) {
+                                        Toast.success('SQL Query가 수정되었습니다.');
+                                        this._hideModal();
+                                        if (window.SqlQueryPage) {
+                                            SqlQueryPage.load();
+                                        }
+                                    } else {
+                                        Toast.error(response.message || 'SQL Query 수정에 실패했습니다.');
                                     }
-                                } else {
-                                    Toast.error(response.message || 'SQL Query 수정에 실패했습니다.');
+                                },
+                                error: (xhr) => {
+                                    const errorMsg = xhr.responseJSON?.message || 'SQL Query 수정에 실패했습니다.';
+                                    Toast.error(errorMsg);
                                 }
-                            },
-                            error: (xhr) => {
-                                const errorMsg = xhr.responseJSON?.message || 'SQL Query 수정에 실패했습니다.';
-                                Toast.error(errorMsg);
-                            }
+                            });
                         });
                     }
                 },
@@ -363,6 +437,120 @@
                     });
                 },
 
+                // ── 에디터 확대 모드 (구버전 방식: textarea height 확대) ─
+                _isExpanded: false,
+
+                toggleFullscreen: function () {
+                    const $btn = $('#btnToggleFullscreen');
+                    const $ta = $('#sqModalSqlQuery');
+
+                    if (this._isExpanded) {
+                        this._isExpanded = false;
+                        $btn.html('<i class="bi bi-arrows-fullscreen"></i> 확대');
+                        $ta.css('height', '');  // rows="5" 기본값으로 복귀
+                    } else {
+                        this._isExpanded = true;
+                        $btn.html('<i class="bi bi-fullscreen-exit"></i> 축소');
+                        $ta.css('height', '500px');
+                    }
+                },
+
+                _exitFullscreen: function () {
+                    if (this._isExpanded) {
+                        this._isExpanded = false;
+                        $('#btnToggleFullscreen').html('<i class="bi bi-arrows-fullscreen"></i> 확대');
+                        $('#sqModalSqlQuery').css('height', '');
+                    }
+                },
+
+                // ── 쿼리 내 텍스트 검색 ──────────────────────────────
+                _searchMatches: [],   // 검색어 매칭 위치 배열 [{start, end}]
+                _searchIndex: -1,     // 현재 포커스된 매칭 인덱스
+
+                toggleSearchBar: function () {
+                    const $bar = $('#sqSearchBar');
+                    if ($bar.hasClass('d-hidden')) {
+                        $bar.removeClass('d-hidden');
+                        $('#sqSearchInput').val('').focus();
+                        this._searchMatches = [];
+                        this._searchIndex = -1;
+                        $('#sqSearchCount').text('');
+                    } else {
+                        this._closeSearchBar();
+                    }
+                },
+
+                _closeSearchBar: function () {
+                    $('#sqSearchBar').addClass('d-hidden');
+                    $('#sqSearchInput').val('');
+                    $('#sqSearchCount').text('');
+                    this._searchMatches = [];
+                    this._searchIndex = -1;
+                },
+
+                searchQuery: function (direction) {
+                    const keyword = $('#sqSearchInput').val();
+                    if (!keyword) {
+                        Toast.warning('검색어를 입력해주세요.');
+                        return;
+                    }
+
+                    const text = $('#sqModalSqlQuery').val();
+                    const lower = text.toLowerCase();
+                    const lowerKw = keyword.toLowerCase();
+
+                    // 검색어 변경 시 매칭 목록 재계산
+                    if (this._lastKeyword !== keyword) {
+                        this._lastKeyword = keyword;
+                        this._searchMatches = [];
+                        let pos = 0;
+                        while (true) {
+                            const idx = lower.indexOf(lowerKw, pos);
+                            if (idx === -1) break;
+                            this._searchMatches.push({ start: idx, end: idx + keyword.length });
+                            pos = idx + 1;
+                        }
+                        this._searchIndex = direction === 'prev'
+                            ? this._searchMatches.length - 1
+                            : 0;
+                    } else {
+                        // 동일 검색어: 방향에 따라 인덱스 이동
+                        if (this._searchMatches.length > 0) {
+                            if (direction === 'prev') {
+                                this._searchIndex = (this._searchIndex - 1 + this._searchMatches.length) % this._searchMatches.length;
+                            } else {
+                                this._searchIndex = (this._searchIndex + 1) % this._searchMatches.length;
+                            }
+                        }
+                    }
+
+                    if (this._searchMatches.length === 0) {
+                        Toast.warning('"' + keyword + '" 을(를) 찾을 수 없습니다.');
+                        $('#sqSearchCount').text('결과 없음');
+                        return;
+                    }
+
+                    const match = this._searchMatches[this._searchIndex];
+                    const $ta = $('#sqModalSqlQuery')[0];
+                    $ta.focus();
+                    $ta.setSelectionRange(match.start, match.end);
+                    $('#sqSearchCount').text((this._searchIndex + 1) + ' / ' + this._searchMatches.length);
+                },
+
+                addPagingQuery: function () {
+                    const pagingTemplate = `\nSELECT *\nFROM (\n    SELECT ROWNUM AS RNUM, A.*\n    FROM (\n        /* 원본 쿼리를 여기에 작성 */\n        SELECT * FROM DUAL\n    ) A\n    WHERE ROWNUM <= #endRow#\n)\nWHERE RNUM >= #startRow#`;
+                    const $textarea = $('#sqModalSqlQuery');
+                    $textarea.val($textarea.val() + pagingTemplate);
+                    $textarea.focus();
+                },
+
+                callProcedure: function () {
+                    const procedureTemplate = `\nCALL 프로시저명(\n    #param1#,   /* IN 파라미터 */\n    #param2#,   /* IN 파라미터 */\n    {out, jdbcType=VARCHAR, mode=OUT, javaType=java.lang.String, property=outParam1}  /* OUT 파라미터 */\n)`;
+                    const $textarea = $('#sqModalSqlQuery');
+                    $textarea.val($textarea.val() + procedureTemplate);
+                    $textarea.focus();
+                },
+
                 _validateForm: function () {
                     if (this.mode === 'create') {
                         const queryId = $('#sqModalQueryId').val().trim();
@@ -380,9 +568,137 @@
                         return false;
                     }
 
+                    // DB NOT NULL 제약: SQL_GROUP_ID는 반드시 입력해야 함
+                    const sqlGroupId = $('#sqModalSqlGroupId').val().trim();
+                    if (!sqlGroupId) {
+                        Toast.warning('SQL 그룹 ID를 입력해주세요.');
+                        $('#sqModalSqlGroupId').focus();
+                        return false;
+                    }
+
+                    // DB NOT NULL 제약: DB_ID는 반드시 입력해야 함
+                    const dbId = $('#sqModalDbId').val().trim();
+                    if (!dbId) {
+                        Toast.warning('DB ID를 입력해주세요.');
+                        $('#sqModalDbId').focus();
+                        return false;
+                    }
+
+                    // DB NOT NULL 제약: SQL_QUERY는 반드시 입력해야 함
+                    const sqlQuery = $('#sqModalSqlQuery').val().trim();
+                    if (!sqlQuery) {
+                        Toast.warning('SQL Query를 입력해주세요.');
+                        $('#sqModalSqlQuery').focus();
+                        return false;
+                    }
+
+                    // 구버전 기준 필수 입력: 설명
+                    const queryDesc = $('#sqModalQueryDesc').val().trim();
+                    if (!queryDesc) {
+                        Toast.warning('설명을 입력해주세요.');
+                        $('#sqModalQueryDesc').focus();
+                        return false;
+                    }
+
+                    return true;
+                },
+
+                _validateQuery: function () {
+                    const sqlQuery = $('#sqModalSqlQuery').val().trim().toUpperCase();
+                    const sqlType  = $('#sqModalSqlType').val();
+
+                    // iBatis 구문 태그는 MyBatis에서 지원하지 않으므로 저장 차단
+                    const forbiddenTags = [
+                        '<ISNULL>', '<ISNOTNULL>', '<ISEMPTY>', '<ISNOTEMPTY>',
+                        '<ITERATE>', '<![CDATA['
+                    ];
+                    for (const tag of forbiddenTags) {
+                        if (sqlQuery.includes(tag)) {
+                            Toast.warning('iBatis 구문(' + tag + ')은 사용할 수 없습니다.');
+                            $('#sqModalSqlQuery').focus();
+                            return false;
+                        }
+                    }
+
+                    // SQL 유형이 선택된 경우에만 시작 키워드 일치 여부를 검증
+                    if (sqlType && sqlQuery) {
+                        const typeKeywordMap = {
+                            R: ['SELECT'],
+                            C: ['INSERT'],
+                            U: ['UPDATE'],
+                            D: ['DELETE'],
+                            P: ['CALL', 'EXEC'],
+                            I: ['ALTER', 'CREATE', 'DROP', 'GRANT', 'REVOKE']
+                        };
+                        const keywords = typeKeywordMap[sqlType];
+                        if (keywords && !keywords.some(k => sqlQuery.startsWith(k))) {
+                            Toast.warning('SQL 유형[' + sqlType + ']에 맞는 SQL을 작성해주세요.\n시작 키워드: ' + keywords.join(', '));
+                            $('#sqModalSqlQuery').focus();
+                            return false;
+                        }
+                    }
+
                     return true;
                 }
             };
+
+            $(document).off('click', '#btnSearchQuery').on('click', '#btnSearchQuery', function () {
+                SqlQueryModal.toggleSearchBar();
+            });
+
+            $(document).off('click', '#btnSearchNext').on('click', '#btnSearchNext', function () {
+                SqlQueryModal.searchQuery('next');
+            });
+
+            $(document).off('click', '#btnSearchPrev').on('click', '#btnSearchPrev', function () {
+                SqlQueryModal.searchQuery('prev');
+            });
+
+            $(document).off('click', '#btnSearchClose').on('click', '#btnSearchClose', function () {
+                SqlQueryModal._closeSearchBar();
+            });
+
+            // Enter 키로 다음 검색, 검색어 변경 시 매칭 초기화
+            $(document).off('keydown', '#sqSearchInput').on('keydown', '#sqSearchInput', function (e) {
+                if (e.key === 'Enter') {
+                    SqlQueryModal.searchQuery('next');
+                } else if (e.key === 'Escape') {
+                    SqlQueryModal._closeSearchBar();
+                }
+            });
+
+            $(document).off('input', '#sqSearchInput').on('input', '#sqSearchInput', function () {
+                // 검색어 변경 시 매칭 목록 초기화 (다음 searchQuery 호출 시 재계산)
+                SqlQueryModal._lastKeyword = null;
+                $('#sqSearchCount').text('');
+            });
+
+            // 모달 닫힐 때 검색 바 및 전체화면 초기화
+            document.getElementById('sqlQueryModal').addEventListener('hidden.bs.modal', function () {
+                SqlQueryModal._closeSearchBar();
+                SqlQueryModal._exitFullscreen();
+            }, { once: false });
+
+            $(document).off('click', '#btnToggleFullscreen').on('click', '#btnToggleFullscreen', function () {
+                SqlQueryModal.toggleFullscreen();
+            });
+
+            $(document).off('click', '#btnSqlQueryHistory').on('click', '#btnSqlQueryHistory', function () {
+                const queryId = $('#sqModalQueryId').val();
+                const currentSql = $('#sqModalSqlQuery').val();
+                if (window.SqlQueryRestoreModal) {
+                    SqlQueryRestoreModal.open(queryId, currentSql);
+                }
+            });
+
+            $(document).off('click', '#btnSqlQueryTest').on('click', '#btnSqlQueryTest', function () {
+                const queryId    = $('#sqModalQueryId').val();
+                const sqlGroupId = $('#sqModalSqlGroupId').val();
+                const dbId       = $('#sqModalDbId').val();
+                if (window.SqlQueryTestModal) {
+                    SqlQueryTestModal.open(queryId, sqlGroupId, dbId);
+                }
+            });
 
             $(document).off('click', '#btnSqlQuerySave').on('click', '#btnSqlQuerySave', function () {
                 SqlQueryModal.save();
@@ -391,6 +707,82 @@
             $(document).off('click', '#btnSqlQueryDelete').on('click', '#btnSqlQueryDelete', function () {
                 SqlQueryModal.delete();
             });
+
+            $(document).off('click', '#btnAddPaging').on('click', '#btnAddPaging', function () {
+                SqlQueryModal.addPagingQuery();
+            });
+
+            $(document).off('click', '#btnCallProcedure').on('click', '#btnCallProcedure', function () {
+                SqlQueryModal.callProcedure();
+            });
+
+            // ── SQL 그룹 ID autocomplete ─────────────────────────────────
+            (function () {
+                var _debounceTimer = null;
+                var _activeRequest = null;
+
+                function showDropdown(items) {
+                    var $drop = $('#sqGroupIdDropdown');
+                    if (!items || items.length === 0) {
+                        $drop.addClass('d-none').empty();
+                        return;
+                    }
+                    var html = items.map(function (item) {
+                        var escaped = $('<div>').text(item.groupId + ' — ' + (item.groupName || '')).html();
+                        return '<button type="button" class="list-group-item list-group-item-action py-1 px-2 small"'
+                             + ' data-group-id="' + $('<div>').text(item.groupId).html() + '">'
+                             + escaped + '</button>';
+                    }).join('');
+                    $drop.html(html).removeClass('d-none');
+                }
+
+                function hideDropdown() {
+                    $('#sqGroupIdDropdown').addClass('d-none').empty();
+                }
+
+                function fetchGroups(keyword) {
+                    if (_activeRequest) { _activeRequest.abort(); }
+                    _activeRequest = $.ajax({
+                        url: API_BASE_URL + '/sql-queries/group-search',
+                        method: 'GET',
+                        data: keyword ? { keyword: keyword } : {},
+                        success: function (response) {
+                            if (response.success) { showDropdown(response.data); }
+                        }
+                    });
+                }
+
+                // input 이벤트: 300ms 디바운스 후 API 호출
+                $(document).off('input', '#sqModalSqlGroupId').on('input', '#sqModalSqlGroupId', function () {
+                    if ($(this).prop('readonly')) { return; }
+                    var keyword = $(this).val().trim();
+                    clearTimeout(_debounceTimer);
+                    _debounceTimer = setTimeout(function () { fetchGroups(keyword); }, 300);
+                });
+
+                // 포커스 시 드롭다운 열기 (읽기 전용이 아닐 때)
+                $(document).off('focus', '#sqModalSqlGroupId').on('focus', '#sqModalSqlGroupId', function () {
+                    if ($(this).prop('readonly')) { return; }
+                    fetchGroups($(this).val().trim());
+                });
+
+                // 드롭다운 항목 선택 시 input에 groupId 채움
+                $(document).off('click', '#sqGroupIdDropdown button').on('click', '#sqGroupIdDropdown button', function (e) {
+                    e.preventDefault();
+                    $('#sqModalSqlGroupId').val($(this).data('group-id'));
+                    hideDropdown();
+                });
+
+                // 외부 클릭 시 드롭다운 닫기
+                $(document).off('mousedown.sqGroupAc').on('mousedown.sqGroupAc', function (e) {
+                    if (!$(e.target).closest('#sqGroupIdWrapper').length) { hideDropdown(); }
+                });
+
+                // 모달 닫힐 때 드롭다운 정리
+                document.getElementById('sqlQueryModal').addEventListener('hidden.bs.modal', function () {
+                    hideDropdown();
+                }, { once: false });
+            })();
         })();
     </script>
 </div>

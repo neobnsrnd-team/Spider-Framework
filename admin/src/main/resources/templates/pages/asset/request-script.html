@@ -18,7 +18,6 @@
         itemsPerPage: 10,
         sortBy: null,
         sortDirection: null,
-        // 썸네일은 #53 범위에서 placeholder 사용 — 실제 ASSET_URL 연동은 후속 이슈
         PLACEHOLDER_SRC: '/images/asset-placeholder.svg',
 
         STATE_BADGE: {
@@ -121,7 +120,7 @@
 
                 return `<tr>
                     <td class="text-center">
-                        <img src="${placeholder}" alt="placeholder" class="asset-thumb"
+                        <img src="/api/cms-admin/asset-approvals/${aid}/image" alt="미리보기" class="asset-thumb"
                              style="width:48px;height:48px;object-fit:cover;border-radius:4px;"
                              onerror="this.src='${placeholder}'"/>
                     </td>

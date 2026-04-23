@@ -28,9 +28,10 @@ import org.springframework.web.bind.annotation.RestController;
  *
  * <h4>API 엔드포인트:</h4>
  * <ul>
- *   <li>GET  /api/cms-admin/deployments/pages  — 배포 대상 페이지 목록 (APPROVED)</li>
- *   <li>GET  /api/cms-admin/deployments        — 배포 이력 조회 (모달용)</li>
- *   <li>POST /api/cms-admin/deployments/push   — 배포 실행</li>
+ *   <li>GET  /api/cms-admin/deployments/pages         — 배포 대상 페이지 목록 (APPROVED)</li>
+ *   <li>GET  /api/cms-admin/deployments               — 배포 이력 조회 (모달용)</li>
+ *   <li>POST /api/cms-admin/deployments/push          — 배포 실행</li>
+ *   <li>POST /api/cms-admin/deployments/push-expired  — 만료수동처리 배포</li>
  * </ul>
  */
 @Slf4j
@@ -76,5 +77,15 @@ public class CmsDeployController {
 
         cmsDeployService.push(req.getPageId(), userDetails.getUserId());
         return ResponseEntity.ok(ApiResponse.success("배포가 완료되었습니다.", null));
+    }
+
+    /** 만료수동처리 배포 — EXPIRED_DATE 경과 페이지에 page-expired.html 전송 (CMS:W) */
+    @PostMapping("/api/cms-admin/deployments/push-expired")
+    @PreAuthorize("hasAuthority('CMS:W')")
+    public ResponseEntity<ApiResponse<Void>> pushExpired(
+            @Valid @RequestBody CmsDeployPushRequest req, @AuthenticationPrincipal CustomUserDetails userDetails) {
+
+        cmsDeployService.pushExpired(req.getPageId(), userDetails.getUserId());
+        return ResponseEntity.ok(ApiResponse.success("만료 배포가 완료되었습니다.", null));
     }
 }

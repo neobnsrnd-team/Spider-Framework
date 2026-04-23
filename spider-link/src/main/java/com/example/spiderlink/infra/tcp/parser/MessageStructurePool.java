@@ -154,7 +154,8 @@ public class MessageStructurePool {
                 meta.getAlign() != null ? meta.getAlign() : MessageField.LEFT,
                 resolveFillerChar(meta.getFiller()),
                 meta.getRemark(),
-                "Y".equalsIgnoreCase(meta.getLogYn())
+                "Y".equalsIgnoreCase(meta.getLogYn()),
+                "Y".equalsIgnoreCase(meta.getRequiredYn())
         );
     }
 

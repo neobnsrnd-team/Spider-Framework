@@ -2,6 +2,7 @@ package com.example.admin_demo.domain.cmsdashboard.mapper;
 
 import com.example.admin_demo.domain.cmsdashboard.dto.CmsDashboardListRequest;
 import com.example.admin_demo.domain.cmsdashboard.dto.CmsDashboardPageResponse;
+import com.example.admin_demo.domain.cmsdashboard.dto.CmsTemplateResponse;
 import java.util.List;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
@@ -33,6 +34,18 @@ public interface CmsDashboardMapper {
             @Param("templateId") String templateId,
             @Param("userId") String userId,
             @Param("userName") String userName);
+
+    /**
+     * 템플릿 목록 조회 — PAGE_TYPE = 'TEMPLATE', USE_YN = 'Y'
+     * 페이지 생성 모달의 템플릿 선택 목록에 사용된다.
+     */
+    List<CmsTemplateResponse> findTemplateList();
+
+    /**
+     * 템플릿 존재 여부 확인 — createPage 시 templateId 유효성 검증용.
+     * PAGE_TYPE = 'TEMPLATE' AND USE_YN = 'Y' 인 페이지인지 확인한다.
+     */
+    int existsTemplate(@Param("templateId") String templateId);
 
     /** 이력 존재 여부 확인 — 삭제 분기(하드/소프트)에 사용 */
     int hasHistory(@Param("pageId") String pageId);
