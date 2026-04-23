@@ -43,7 +43,7 @@ public class MessageInstanceRecorder {
     public void recordServerRequest(String trxId, Object request, int port) {
         String command = command(request);
         String trackingNo = trackingNo(request, trxId);
-        insert(trxId, "I", "REQ", command, trackingNo, toJson(request), true, port);
+        insert(trxId, "I", "REQ", command, trackingNo, userId(request), toJson(request), true, port);
     }
 
     /**
@@ -58,7 +58,7 @@ public class MessageInstanceRecorder {
         String command = command(request);
         String trackingNo = trackingNo(request, trxId);
         boolean success = response instanceof JsonCommandResponse r ? r.isSuccess() : true;
-        insert(trxId, "O", "RES", command, trackingNo, toJson(response), success, port);
+        insert(trxId, "O", "RES", command, trackingNo, userId(request), toJson(response), success, port);
     }
 
     /**
@@ -71,7 +71,7 @@ public class MessageInstanceRecorder {
      */
     public void recordClientRequest(String trxId, JsonCommandRequest request, String host, int port) {
         insert(trxId, "O", "REQ", request.getCommand(), request.getRequestId(),
-                toJson(request), true, host, port);
+                userId(request), toJson(request), true, host, port);
     }
 
     /**
@@ -86,32 +86,32 @@ public class MessageInstanceRecorder {
     public void recordClientResponse(String trxId, JsonCommandRequest request,
                                      JsonCommandResponse response, String host, int port) {
         insert(trxId, "I", "RES", request.getCommand(), request.getRequestId(),
-                toJson(response), response.isSuccess(), host, port);
+                userId(request), toJson(response), response.isSuccess(), host, port);
     }
 
     /** 서버 포트 기준 INSTANCE_ID 생성 후 insert 위임 */
     private void insert(String trxId, String ioType, String reqResType,
-                        String command, String trackingNo, String data,
+                        String command, String trackingNo, String userId, String data,
                         boolean success, int port) {
-        insert(trxId, ioType, reqResType, command, trackingNo, data, success, appName, port);
+        insert(trxId, ioType, reqResType, command, trackingNo, userId, data, success, appName, port);
     }
 
     private void insert(String trxId, String ioType, String reqResType,
-                        String command, String trackingNo, String data,
+                        String command, String trackingNo, String userId, String data,
                         boolean success, String host, int port) {
         try {
             String dtime = LocalDateTime.now().format(DTIME_FMT);
-            String instanceId = appName + ":" + port;
+            String instanceId = host + ":" + port;
             jdbcTemplate.update(
                     "INSERT INTO FWK_MESSAGE_INSTANCE (" +
                     "  MESSAGE_SNO, TRX_ID, ORG_ID, IO_TYPE, REQ_RES_TYPE, MESSAGE_ID," +
-                    "  TRX_TRACKING_NO, LOG_DTIME, LAST_LOG_DTIME, LAST_RT_CODE," +
+                    "  TRX_TRACKING_NO, USER_ID, LOG_DTIME, LAST_LOG_DTIME, LAST_RT_CODE," +
                     "  INSTANCE_ID, RETRY_TRX_YN, MESSAGE_DATA, TRX_DTIME, CHANNEL_TYPE, URI, SUCCESS_YN" +
                     ") VALUES (" +
-                    "  FWK_MESSAGE_INSTANCE_SEQ.NEXTVAL,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?" +
+                    "  FWK_MESSAGE_INSTANCE_SEQ.NEXTVAL,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?" +
                     ")",
                     trxId, appName, ioType, reqResType, command,
-                    trackingNo, dtime, dtime,
+                    trackingNo, userId, dtime, dtime,
                     success ? "SUCCESS" : "FAIL",
                     instanceId, "N",
                     data, dtime, "TCP", command,
@@ -128,6 +128,17 @@ public class MessageInstanceRecorder {
 
     private String trackingNo(Object request, String fallback) {
         return request instanceof CommandRequest<?> cr ? cr.getRequestId() : fallback;
+    }
+
+    /** 요청 payload에서 userId를 추출한다. 없으면 "SYSTEM"을 반환한다. */
+    private String userId(Object request) {
+        if (request instanceof JsonCommandRequest jr && jr.getPayload() != null) {
+            Object val = jr.getPayload().get("userId");
+            if (val instanceof String s && !s.isBlank()) {
+                return s;
+            }
+        }
+        return "SYSTEM";
     }
 
     private String toJson(Object obj) {
