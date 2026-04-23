@@ -8,6 +8,7 @@ import com.example.reactplatform.domain.reactgenerate.enums.DomainType;
 import com.example.reactplatform.domain.reactgenerate.figma.FigmaDesignContext;
 import com.example.reactplatform.domain.reactgenerate.figma.FigmaNodeSummary;
 import java.util.List;
+import java.util.Map;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -333,6 +334,307 @@ class PromptBuilderTest {
         String result = promptBuilder.buildUserPrompt(context, BrandType.HANA, DomainType.BANKING);
         assertThat(result).contains("padding:16/16/16/16");
         assertThat(result).contains("gap:8px");
+    }
+
+    // ========== buildUserPrompt — 모서리 반경 ==========
+
+    @Test
+    @DisplayName("cornerRadius > 0인 노드는 radius:Npx 형식으로 표시된다")
+    void buildUserPrompt_formatsCornerRadius() {
+        FigmaNodeSummary node = FigmaNodeSummary.builder()
+                .name("Card")
+                .type("FRAME")
+                .width(342)
+                .height(191)
+                .cornerRadius(32)
+                .build();
+
+        assertThat(promptBuilder.buildUserPrompt(contextWithChild(node), BrandType.HANA, DomainType.BANKING))
+                .contains("radius:32px");
+    }
+
+    @Test
+    @DisplayName("cornerRadius가 0이면 radius 정보가 출력되지 않는다")
+    void buildUserPrompt_zeroCornerRadius_omitted() {
+        FigmaNodeSummary node = FigmaNodeSummary.builder()
+                .name("Box")
+                .type("FRAME")
+                .width(100)
+                .height(50)
+                .cornerRadius(0)
+                .build();
+
+        assertThat(promptBuilder.buildUserPrompt(contextWithChild(node), BrandType.HANA, DomainType.BANKING))
+                .doesNotContain("radius:");
+    }
+
+    // ========== buildUserPrompt — 정렬 ==========
+
+    @Test
+    @DisplayName("mainAxisAlign이 SPACE_BETWEEN이면 justify:SPACE_BETWEEN으로 표시된다")
+    void buildUserPrompt_formatsMainAxisAlign() {
+        FigmaNodeSummary node = FigmaNodeSummary.builder()
+                .name("Row")
+                .type("FRAME")
+                .width(360)
+                .height(56)
+                .layoutMode("HORIZONTAL")
+                .mainAxisAlign("SPACE_BETWEEN")
+                .build();
+
+        assertThat(promptBuilder.buildUserPrompt(contextWithChild(node), BrandType.HANA, DomainType.BANKING))
+                .contains("justify:SPACE_BETWEEN");
+    }
+
+    @Test
+    @DisplayName("mainAxisAlign이 MIN이면 justify 정보가 출력되지 않는다 — 기본값 노이즈 방지")
+    void buildUserPrompt_mainAxisAlignMin_omitted() {
+        FigmaNodeSummary node = FigmaNodeSummary.builder()
+                .name("Row")
+                .type("FRAME")
+                .width(360)
+                .height(56)
+                .layoutMode("HORIZONTAL")
+                .mainAxisAlign("MIN")
+                .build();
+
+        assertThat(promptBuilder.buildUserPrompt(contextWithChild(node), BrandType.HANA, DomainType.BANKING))
+                .doesNotContain("justify:");
+    }
+
+    @Test
+    @DisplayName("crossAxisAlign이 CENTER이면 align:CENTER로 표시된다")
+    void buildUserPrompt_formatsCrossAxisAlign() {
+        FigmaNodeSummary node = FigmaNodeSummary.builder()
+                .name("Row")
+                .type("FRAME")
+                .width(360)
+                .height(56)
+                .layoutMode("HORIZONTAL")
+                .crossAxisAlign("CENTER")
+                .build();
+
+        assertThat(promptBuilder.buildUserPrompt(contextWithChild(node), BrandType.HANA, DomainType.BANKING))
+                .contains("align:CENTER");
+    }
+
+    // ========== buildUserPrompt — 크기 결정 방식 ==========
+
+    @Test
+    @DisplayName("sizingH가 FILL이면 sizing:FILL/FIXED 형식으로 표시된다")
+    void buildUserPrompt_formatsSizingH_fill() {
+        FigmaNodeSummary node = FigmaNodeSummary.builder()
+                .name("StretchBox")
+                .type("FRAME")
+                .width(100)
+                .height(50)
+                .sizingH("FILL")
+                .sizingV("FIXED")
+                .build();
+
+        assertThat(promptBuilder.buildUserPrompt(contextWithChild(node), BrandType.HANA, DomainType.BANKING))
+                .contains("sizing:FILL/FIXED");
+    }
+
+    @Test
+    @DisplayName("sizingH·sizingV가 모두 FIXED이면 sizing 정보가 출력되지 않는다")
+    void buildUserPrompt_bothSizingFixed_omitted() {
+        FigmaNodeSummary node = FigmaNodeSummary.builder()
+                .name("FixedBox")
+                .type("FRAME")
+                .width(100)
+                .height(50)
+                .sizingH("FIXED")
+                .sizingV("FIXED")
+                .build();
+
+        assertThat(promptBuilder.buildUserPrompt(contextWithChild(node), BrandType.HANA, DomainType.BANKING))
+                .doesNotContain("sizing:");
+    }
+
+    @Test
+    @DisplayName("sizingV가 HUG이면 sizing:FIXED/HUG 형식으로 표시된다")
+    void buildUserPrompt_formatsSizingV_hug() {
+        FigmaNodeSummary node = FigmaNodeSummary.builder()
+                .name("HugBox")
+                .type("FRAME")
+                .width(100)
+                .height(50)
+                .sizingH("FIXED")
+                .sizingV("HUG")
+                .build();
+
+        assertThat(promptBuilder.buildUserPrompt(contextWithChild(node), BrandType.HANA, DomainType.BANKING))
+                .contains("sizing:FIXED/HUG");
+    }
+
+    // ========== buildUserPrompt — 채우기·그라디언트 ==========
+
+    @Test
+    @DisplayName("fillColor가 있으면 fill: #색상 형식으로 표시된다")
+    void buildUserPrompt_formatsFillColor() {
+        FigmaNodeSummary node = FigmaNodeSummary.builder()
+                .name("GreenCard")
+                .type("FRAME")
+                .width(342)
+                .height(189)
+                .fillColor("#008485")
+                .build();
+
+        assertThat(promptBuilder.buildUserPrompt(contextWithChild(node), BrandType.HANA, DomainType.BANKING))
+                .contains("fill: #008485");
+    }
+
+    @Test
+    @DisplayName("fillColor가 null이고 gradientFill이 있으면 그라디언트 설명이 fill: 형식으로 표시된다")
+    void buildUserPrompt_gradientFill_whenNoSolid() {
+        FigmaNodeSummary node = FigmaNodeSummary.builder()
+                .name("Banner")
+                .type("FRAME")
+                .width(280)
+                .height(128)
+                .gradientFill("GRADIENT_LINEAR: #0D9488 → #115E59")
+                .build();
+
+        assertThat(promptBuilder.buildUserPrompt(contextWithChild(node), BrandType.HANA, DomainType.BANKING))
+                .contains("fill: GRADIENT_LINEAR: #0D9488 → #115E59");
+    }
+
+    // ========== buildUserPrompt — 테두리·그림자 ==========
+
+    @Test
+    @DisplayName("strokeColor와 strokeWeight가 있으면 stroke: 색상/두께px 형식으로 표시된다")
+    void buildUserPrompt_formatsStroke() {
+        FigmaNodeSummary node = FigmaNodeSummary.builder()
+                .name("AccentCard")
+                .type("FRAME")
+                .width(342)
+                .height(191)
+                .strokeColor("#CAEE5D")
+                .strokeWeight(4)
+                .build();
+
+        assertThat(promptBuilder.buildUserPrompt(contextWithChild(node), BrandType.HANA, DomainType.BANKING))
+                .contains("stroke: #CAEE5D/4px");
+    }
+
+    @Test
+    @DisplayName("shadow가 있으면 shadow: 형식으로 표시된다")
+    void buildUserPrompt_formatsShadow() {
+        FigmaNodeSummary node = FigmaNodeSummary.builder()
+                .name("ShadowCard")
+                .type("FRAME")
+                .width(342)
+                .height(191)
+                .shadow("0px/8px/24px rgba(0,132,133,0.06)")
+                .build();
+
+        assertThat(promptBuilder.buildUserPrompt(contextWithChild(node), BrandType.HANA, DomainType.BANKING))
+                .contains("shadow: 0px/8px/24px rgba(0,132,133,0.06)");
+    }
+
+    // ========== buildUserPrompt — 타이포그래피 ==========
+
+    @Test
+    @DisplayName("fontSize가 있으면 font: 크기px/굵기/패밀리 형식으로 표시된다")
+    void buildUserPrompt_formatsTypography() {
+        FigmaNodeSummary node = FigmaNodeSummary.builder()
+                .name("Amount")
+                .type("TEXT")
+                .width(182)
+                .height(40)
+                .text("1,250,000")
+                .fontSize(36)
+                .fontWeight(700)
+                .fontFamily("Noto Sans KR")
+                .lineHeight(40)
+                .build();
+
+        String result = promptBuilder.buildUserPrompt(contextWithChild(node), BrandType.HANA, DomainType.BANKING);
+
+        assertThat(result).contains("font: 36px/700/Noto Sans KR");
+        assertThat(result).contains("lh:40px");
+    }
+
+    @Test
+    @DisplayName("letterSpacing이 0이 아니면 ls:X.Xpx 형식으로 표시된다")
+    void buildUserPrompt_formatsLetterSpacing() {
+        FigmaNodeSummary node = FigmaNodeSummary.builder()
+                .name("Heading")
+                .type("TEXT")
+                .width(200)
+                .height(40)
+                .text("하나카드")
+                .fontSize(36)
+                .letterSpacing(-0.9)
+                .build();
+
+        assertThat(promptBuilder.buildUserPrompt(contextWithChild(node), BrandType.HANA, DomainType.BANKING))
+                .contains("ls:-0.9px");
+    }
+
+    @Test
+    @DisplayName("letterSpacing이 0.0이면 ls: 정보가 출력되지 않는다")
+    void buildUserPrompt_zeroLetterSpacing_omitted() {
+        FigmaNodeSummary node = FigmaNodeSummary.builder()
+                .name("Label")
+                .type("TEXT")
+                .width(100)
+                .height(20)
+                .text("텍스트")
+                .fontSize(14)
+                .letterSpacing(0.0)
+                .build();
+
+        assertThat(promptBuilder.buildUserPrompt(contextWithChild(node), BrandType.HANA, DomainType.BANKING))
+                .doesNotContain("ls:");
+    }
+
+    @Test
+    @DisplayName("fontSize가 0이면 font 정보가 출력되지 않는다")
+    void buildUserPrompt_zeroFontSize_omitted() {
+        FigmaNodeSummary node = FigmaNodeSummary.builder()
+                .name("Box")
+                .type("FRAME")
+                .width(100)
+                .height(50)
+                .fontSize(0)
+                .build();
+
+        assertThat(promptBuilder.buildUserPrompt(contextWithChild(node), BrandType.HANA, DomainType.BANKING))
+                .doesNotContain("font:");
+    }
+
+    // ========== buildUserPrompt — INSTANCE 컴포넌트 속성 ==========
+
+    @Test
+    @DisplayName("INSTANCE 노드에 componentProps가 있으면 props: {key=value} 형식으로 표시된다")
+    void buildUserPrompt_formatsComponentProps() {
+        FigmaNodeSummary node = FigmaNodeSummary.builder()
+                .name("SummaryCard")
+                .type("INSTANCE")
+                .width(342)
+                .height(191)
+                .componentProps(Map.of("prop1", "spending"))
+                .build();
+
+        assertThat(promptBuilder.buildUserPrompt(contextWithChild(node), BrandType.HANA, DomainType.BANKING))
+                .contains("props: {prop1=spending}");
+    }
+
+    @Test
+    @DisplayName("componentProps가 null이면 props 정보가 출력되지 않는다")
+    void buildUserPrompt_nullComponentProps_omitted() {
+        FigmaNodeSummary node = FigmaNodeSummary.builder()
+                .name("Card")
+                .type("INSTANCE")
+                .width(342)
+                .height(191)
+                .componentProps(null)
+                .build();
+
+        assertThat(promptBuilder.buildUserPrompt(contextWithChild(node), BrandType.HANA, DomainType.BANKING))
+                .doesNotContain("props:");
     }
 
     // ========== helpers ==========
