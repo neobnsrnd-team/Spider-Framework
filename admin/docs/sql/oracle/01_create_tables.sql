@@ -1376,18 +1376,19 @@ COMMENT ON COLUMN FWK_MESSAGE_INSTANCE.SUCCESS_YN     IS 'Y=성공, N=실패';
 -- bizApp — POC_USER 비밀번호 BCrypt 마이그레이션
 -- 추가일: 2026-04-23
 -- 주의: 개발자가 DB에서 직접 실행해야 한다
--- BCrypt 강도(strength): 10
+-- BCrypt 강도(strength): 10, 해시 길이: 60자
 --
--- [해시 생성 방법]
--- mock-core 기동 후 아래 Java 코드로 각 평문 비밀번호의 BCrypt 해시를 생성한다.
---   String hash = new org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder()
---                     .encode("test12!");
---   System.out.println(hash);
--- 출력된 해시값을 아래 UPDATE 문의 '<BCrypt hash of test12!>' 자리에 넣고 실행한다.
+-- [순서]
+-- 1. PASSWORD 컬럼 크기를 60자로 확장 (BCrypt 해시 길이 수용)
+-- 2. BCrypt 해시 생성: new BCryptPasswordEncoder().encode("test12!") 실행 후 출력값 복사
+-- 3. 아래 UPDATE 문의 '<BCrypt hash of test12!>' 를 실제 해시값으로 교체 후 실행
 -- =============================================================
 
--- test12! 를 사용하는 모든 사용자 비밀번호를 BCrypt 해시로 교체
--- <BCrypt hash of test12!> 를 실제 생성된 해시값으로 교체 후 실행할 것
+-- Step 1: PASSWORD 컬럼 크기 확장 (VARCHAR2(20) → VARCHAR2(60))
+ALTER TABLE D_SPIDERLINK.POC_USER MODIFY PASSWORD VARCHAR2(60);
+
+-- Step 2: 평문 비밀번호를 BCrypt 해시로 교체
+-- '<BCrypt hash of test12!>' 를 실제 생성된 해시값(60자)으로 교체 후 실행
 UPDATE D_SPIDERLINK.POC_USER
 SET PASSWORD = '<BCrypt hash of test12!>'
 WHERE PASSWORD = 'test12!';
