@@ -507,30 +507,35 @@ save: function () {
 
 ---
 
-### 변경 파일 요약
+### 변경 파일 요약 (최종)
 
 | 파일 | 변경 유형 | 주요 변경 내용 |
 |------|:-------:|-------------|
-| `sqlquery-modal.html` | **수정** | 도구 버튼 툴바, 테스트·복원 버튼, SQL 유효성 검증, 백업 로직, 드롭다운 전환, 검색 기능 |
-| `sqlquery-manage.html` | **수정** | 검색 필드 3개 추가, TIME_OUT 컬럼 추가, useYn 인라인 토글 |
-| `sqlquery-restore-modal.html` | **신규** | 쿼리 복원 전용 모달 (구버전 `query_restore.jsp` 이식) |
+| `sqlquery-modal.html` | **수정** | 드롭다운 전환, 도구 버튼 툴바, SQL 유효성 검증, 백업 로직, 쿼리 검색, 에디터 확대, 이력/복원 버튼, SQL 그룹 autocomplete |
+| `sqlquery-manage.html` | **수정** | 검색 필드 3개 추가, TIME_OUT 컬럼 추가, useYn 인라인 토글, WAS Reload 버튼 |
+| `sqlquery-restore-modal.html` | **신규** | 쿼리 복원 전용 모달 (이력 목록 + SQL 비교 + 복원) |
+| `SqlQueryHistoryResponse.java` | **신규** | 이력 조회 응답 DTO |
+| `SqlGroupResponse.java` | **신규** | SQL 그룹 검색 응답 DTO |
+| `SqlQueryMapper.java` | **수정** | `findHistoryList`, `findHistoryByVersion`, `insertHistory`, `updateUseYn`, `searchSqlGroups` 추가 |
+| `SqlQueryMapper.xml` | **수정** | 이력 조회/삽입, 사용여부 단독 업데이트, SQL 그룹 검색 SQL 추가 |
+| `SqlQueryService.java` | **수정** | `backupQuery`, `toggleUseYn`, `getHistoryList`, `getHistoryDetail`, `restoreFromHistory`, `searchGroups` 추가 |
+| `SqlQueryController.java` | **수정** | `/backup`, `/use-yn`, `/history`, `/restore`, `/group-search` 엔드포인트 추가 |
+| `ReloadType.java` | **수정** | `SQL_QUERY("sql_query")` enum 값 추가 |
 
 ---
 
-## 4. 백엔드 확인 필요 API 목록
+## 4. 백엔드 API 구현 현황
 
-신버전 구현 전 아래 엔드포인트의 **존재 여부 및 스펙 확인** 필요
-
-| API | Method | 용도 | 구버전 대응 엔드포인트 |
-|-----|:------:|------|----------------------|
-| `/sql-queries/test` | GET | 쿼리 테스트 팝업 | `/nebsoa.admin.sql.SqlTest.web` |
-| `/sql-queries/{id}/backup` | POST | 저장 전 버전 백업 | `/FWKSQH03.wsvc` |
-| `/sql-queries/{id}/history` | GET | 히스토리 버전 목록 조회 | `ComboManager QUERY_HISTORY_VERSION` |
-| `/sql-queries/{id}/history/{seq}` | GET | 특정 버전 쿼리 상세 조회 | `/FWKSQH02.wsvc` |
-| `/sql-queries/{id}/restore/{seq}` | POST | 특정 버전으로 복원 | `/FWKSQH04.wsvc` |
-| `/sql-queries/{id}/reload` | POST | WAS Reload | `wasReload()` 내부 호출 |
-
-> **참고**: 위 API가 백엔드에 없는 경우 백엔드 구현을 함께 진행해야 합니다.
+| API | Method | 용도 | 구버전 대응 | 상태 |
+|-----|:------:|------|------------|:---:|
+| `GET /api/sql-queries/{id}/test` | POST | 쿼리 테스트 (모달 내) | `/nebsoa.admin.sql.SqlTest.web` | ✅ 구현완료 |
+| `POST /api/sql-queries/{id}/backup` | POST | 저장 전 버전 백업 | `/FWKSQH03.wsvc` | ✅ 구현완료 |
+| `GET /api/sql-queries/{id}/history` | GET | 히스토리 버전 목록 조회 | `ComboManager QUERY_HISTORY_VERSION` | ✅ 구현완료 |
+| `GET /api/sql-queries/{id}/history/{versionId}` | GET | 특정 버전 쿼리 상세 조회 | `/FWKSQH02.wsvc` | ✅ 구현완료 |
+| `POST /api/sql-queries/{id}/restore/{versionId}` | POST | 특정 버전으로 복원 | `/FWKSQH04.wsvc` | ✅ 구현완료 |
+| `PATCH /api/sql-queries/{id}/use-yn` | PATCH | 사용여부 인라인 토글 | `changeUseYn()` | ✅ 구현완료 |
+| `GET /api/sql-queries/group-search` | GET | SQL 그룹 검색 (autocomplete) | `sqlGroupSearch.jsp` 팝업 | ✅ 구현완료 |
+| `POST /api/reload/execute` (reloadType: sql_query) | POST | WAS Reload | `wasReload()` 내부 호출 | ✅ 구현완료 |
 
 ---
 
@@ -557,7 +562,7 @@ save: function () {
 | 2-5 | 사용여부 인라인 토글 | 🟡 | `sqlquery-manage.html` | ✅ |
 | 3-1 | 목록 컬럼 TIME_OUT 추가 | 🟢 | `sqlquery-manage.html` | ✅ |
 | 3-2 | SQL 그룹 검색 autocomplete | 🟢 | `sqlquery-modal.html` | ✅ |
-| 3-3 | WAS Reload 버튼 (WasSelectReloadModal 활용) | 🟢 | `sqlquery-manage.html` | 🔲 |
+| 3-3 | WAS Reload 버튼 (WasSelectReloadModal 활용) | 🟢 | `sqlquery-manage.html` | ✅ |
 
 ---
 
@@ -976,27 +981,29 @@ SQL 그룹 ID를 타이핑으로 검색하고 선택할 수 있다.
 
 ### Step 3-3. WAS Reload 버튼
 
-**상태**: 🔲 대기
+**상태**: ✅ 완료
 
 **목표**  
-쿼리 변경 후 WAS 서버에 즉시 반영(Reload)을 요청할 수 있는 버튼을 목록 페이지 툴바에 추가한다.
+쿼리 변경 후 WAS 서버에 즉시 반영(Reload)을 요청할 수 있는 버튼을 목록 페이지 하단에 추가한다.
 
 > 💡 **참고**: 프로젝트에 이미 `WasSelectReloadModal` 공통 컴포넌트가 존재함  
 > 경로: `admin/src/main/resources/static/js/components/WasSelectReloadModal`
 
 **변경 파일**
 - `admin/src/main/resources/templates/pages/sqlquery-manage/sqlquery-manage.html`
+- `admin/src/main/java/com/example/admin_demo/domain/reload/enums/ReloadType.java`
 
 **작업 내용**
-- [ ] `WasSelectReloadModal` 컴포넌트 사용법 확인 (다른 페이지 참고)
-- [ ] 목록 페이지 툴바에 `[WAS Reload]` 버튼 추가 (쓰기 권한 시에만 표시)
-- [ ] 버튼 클릭 → `WasSelectReloadModal.open()` 호출
-- [ ] Reload 대상 API 확인: `POST /sql-queries/{id}/reload` 또는 공통 Reload API
+- [x] `ReloadType` enum에 `SQL_QUERY("sql_query", "SQL Query 정보", ...)` 추가
+- [x] 하단 `bottom-actions`에 `[WAS Reload]` 버튼 추가 (쓰기 권한 시에만 표시)
+- [x] `<div th:replace="~{modals/was-reload-modal :: modal}">` include 추가
+- [x] `WasSelectReloadModal.init()` 초기화 (쓰기 권한 시에만)
+- [x] `SqlQueryPage.openReloadModal()` 구현 — `reloadType: 'sql_query'` 로 `POST /api/reload/execute` 호출
 
 **테스트 항목**
-- [ ] `[WAS Reload]` 버튼 클릭 → WAS 목록 선택 모달이 열리는가
-- [ ] WAS 서버 선택 후 Reload 실행 → 성공 메시지가 표시되는가
-- [ ] 읽기 권한 계정에서 버튼이 숨겨지는가
+- [x] `[WAS Reload]` 버튼 클릭 → WAS 목록 선택 모달이 열리는가
+- [x] WAS 서버 선택 후 Reload 실행 → 성공 메시지가 표시되는가
+- [x] 읽기 권한 계정에서 버튼이 숨겨지는가
 
 **완료 기준**  
 `WasSelectReloadModal` 을 통해 WAS Reload를 정상적으로 실행할 수 있다.

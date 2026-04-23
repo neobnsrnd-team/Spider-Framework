@@ -33,6 +33,9 @@
 
     <!-- Bottom Action Buttons -->
     <div class="bottom-actions" th:if="${userAuthorities != null and userAuthorities.contains('SQL_QUERY:W')}">
+        <button class="btn btn-warning btn-sm" id="btnWasReload">
+            <i class="bi bi-arrow-clockwise"></i> WAS Reload
+        </button>
         <button class="btn btn-primary btn-sm" id="btnAdd">
             + 등록
         </button>
@@ -51,6 +54,9 @@
 
     <!-- SqlQuery Restore Modal -->
     <div th:replace="~{pages/sqlquery-manage/sqlquery-restore-modal :: modal}"></div>
+
+    <!-- WAS Reload Modal (공용 컴포넌트) -->
+    <div th:replace="~{modals/was-reload-modal :: modal}"></div>
 
     <!-- Page Script -->
     <script th:inline="javascript">
@@ -230,6 +236,13 @@
                     }
                 });
 
+                if (sql_query_access) {
+                    WasSelectReloadModal.init();
+                    $('#btnWasReload').off('click').on('click', () => {
+                        this.openReloadModal();
+                    });
+                }
+
                 // 사용여부 배지 클릭: mousedown에서 플래그를 세워 tr 직접 바인딩(행 클릭)보다 먼저 차단
                 // click 이벤트에서 stopPropagation은 document 위임이 tr 직접 바인딩보다 늦게 발화하여 효과 없음
                 $(document).off('mousedown', '.use-yn-toggle').on('mousedown', '.use-yn-toggle', () => {
@@ -313,6 +326,32 @@
                             Toast.error(xhr.responseJSON?.message || '사용여부 변경에 실패했습니다.');
                         }
                     });
+                });
+            },
+
+            openReloadModal: function() {
+                WasSelectReloadModal.open({
+                    title: 'SQL Query Reload',
+                    onExecute: (instanceIds) => {
+                        $.ajax({
+                            url: API_BASE_URL + '/reload/execute',
+                            method: 'POST',
+                            contentType: 'application/json',
+                            data: JSON.stringify({ reloadType: 'sql_query', instanceIds }),
+                            success: (response) => {
+                                if (response.success && response.data) {
+                                    WasSelectReloadModal.showResults(response.data.results);
+                                } else {
+                                    WasSelectReloadModal.resetButton();
+                                    Toast.error(response.message || 'Reload 실행에 실패했습니다.');
+                                }
+                            },
+                            error: (xhr) => {
+                                WasSelectReloadModal.resetButton();
+                                Toast.error(xhr.responseJSON?.message || 'Reload 실행 중 오류가 발생했습니다.');
+                            }
+                        });
+                    }
                 });
             },
 
