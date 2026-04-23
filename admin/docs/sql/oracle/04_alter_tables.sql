@@ -118,9 +118,9 @@ ALTER TABLE SPW_CMS_PAGE ADD CONSTRAINT CHK_SPW_PAGE_TYPE
 ALTER TABLE D_SPIDERLINK.POC_USER MODIFY PASSWORD VARCHAR2(60);
 
 -- Step 2: 평문 비밀번호를 BCrypt 해시로 교체
--- '<BCrypt hash of test12!>' 를 실제 생성된 해시값(60자)으로 교체 후 실행
+-- BCryptPasswordEncoder(strength=10).encode("test12!") 생성값
 UPDATE D_SPIDERLINK.POC_USER
-SET PASSWORD = '<BCrypt hash of test12!>'
+SET PASSWORD = '$2a$10$fTvJ5wu/HMA8gkiVez/M/um83ToooOeUG2fhmZVfRCTgABTHZFLIu'
 WHERE PASSWORD = 'test12!';
 
 -- =============================================================
@@ -160,6 +160,23 @@ COMMIT;
 -- 신버전에서는 VERSION_ID = System.currentTimeMillis() 문자열 사용
 -- ※ 잘못 생성된 시퀀스를 아래 쿼리로 제거하세요 (개발자 직접 실행):
 DROP SEQUENCE SEQ_FWK_SQL_QUERY_HIS;
+
+-- =============================================================
+-- #148 FWK_MESSAGE_INSTANCE — 컬럼 크기 일괄 수정
+-- ⚠ 개발자가 DB에서 직접 실행해야 합니다.
+-- =============================================================
+-- ORG_ID         VARCHAR2(10) → VARCHAR2(20) : "biz-transfer"(12자) 등 appName 수용
+-- REQ_RES_TYPE   VARCHAR2(1)  → VARCHAR2(3)  : "REQ"/"RES" 3자 수용
+-- TRX_TRACKING_NO VARCHAR2(30) → VARCHAR2(40) : UUID(36자) 수용, TRX_ID와 통일
+-- INSTANCE_ID    VARCHAR2(4)  → VARCHAR2(20) : "biz-transfer:19200"(16자) 수용
+ALTER TABLE FWK_MESSAGE_INSTANCE MODIFY (
+    ORG_ID          VARCHAR2(20),
+    REQ_RES_TYPE    VARCHAR2(3),
+    TRX_TRACKING_NO VARCHAR2(40),
+    INSTANCE_ID     VARCHAR2(20)
+);
+
+COMMIT;
 
 -- =============================================================
 -- FWK_SQL_QUERY_HIS 컬럼 크기 확장
