@@ -4,6 +4,7 @@ import com.example.admin_demo.domain.cmsdashboard.dto.CmsDashboardApproveRequest
 import com.example.admin_demo.domain.cmsdashboard.dto.CmsDashboardCreateRequest;
 import com.example.admin_demo.domain.cmsdashboard.dto.CmsDashboardListRequest;
 import com.example.admin_demo.domain.cmsdashboard.dto.CmsDashboardPageResponse;
+import com.example.admin_demo.domain.cmsdashboard.dto.CmsTemplateResponse;
 import com.example.admin_demo.domain.cmsdashboard.mapper.CmsDashboardMapper;
 import com.example.admin_demo.global.dto.PageRequest;
 import com.example.admin_demo.global.dto.PageResponse;
@@ -29,6 +30,11 @@ public class CmsDashboardService {
 
     private final CmsDashboardMapper cmsDashboardMapper;
 
+    /** 템플릿 목록 조회 — PAGE_TYPE = 'TEMPLATE', USE_YN = 'Y' */
+    public List<CmsTemplateResponse> findTemplateList() {
+        return cmsDashboardMapper.findTemplateList();
+    }
+
     /** 내 페이지 목록 조회 */
     public PageResponse<CmsDashboardPageResponse> findMyPageList(
             CmsDashboardListRequest req, String userId, PageRequest pageRequest) {
@@ -52,6 +58,12 @@ public class CmsDashboardService {
         // CMS 원본(crypto.randomUUID())과 동일한 UUID 방식으로 생성
         String pageId = UUID.randomUUID().toString();
         String templateId = "blank".equals(req.getTemplateId()) ? null : req.getTemplateId();
+
+        // 클라이언트 전달값 검증 — PAGE_TYPE='TEMPLATE' AND USE_YN='Y' 인 페이지인지 확인 (임의 pageId 주입 방지)
+        if (templateId != null && cmsDashboardMapper.existsTemplate(templateId) == 0) {
+            throw new NotFoundException("유효하지 않은 템플릿입니다. templateId=" + templateId);
+        }
+
         cmsDashboardMapper.insertPage(pageId, req.getPageName(), req.getViewMode(), templateId, userId, userName);
         log.info("CMS 페이지 생성: pageId={}, userId={}", pageId, userId);
         return pageId;
