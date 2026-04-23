@@ -103,6 +103,27 @@ ALTER TABLE SPW_CMS_PAGE ADD CONSTRAINT CHK_SPW_PAGE_TYPE
     CHECK (PAGE_TYPE IN ('PAGE', 'TEMPLATE', 'REACT'));
 
 -- =============================================================
+-- bizApp — POC_USER 비밀번호 BCrypt 마이그레이션
+-- 추가일: 2026-04-23
+-- 주의: 개발자가 DB에서 직접 실행해야 한다
+-- BCrypt 강도(strength): 10, 해시 길이: 60자
+--
+-- [순서]
+-- 1. PASSWORD 컬럼 크기를 60자로 확장 (BCrypt 해시 길이 수용)
+-- 2. BCrypt 해시 생성: new BCryptPasswordEncoder().encode("test12!") 실행 후 출력값 복사
+-- 3. 아래 UPDATE 문의 '<BCrypt hash of test12!>' 를 실제 해시값으로 교체 후 실행
+-- =============================================================
+
+-- Step 1: PASSWORD 컬럼 크기 확장 (VARCHAR2(20) → VARCHAR2(60))
+ALTER TABLE D_SPIDERLINK.POC_USER MODIFY PASSWORD VARCHAR2(60);
+
+-- Step 2: 평문 비밀번호를 BCrypt 해시로 교체
+-- '<BCrypt hash of test12!>' 를 실제 생성된 해시값(60자)으로 교체 후 실행
+UPDATE D_SPIDERLINK.POC_USER
+SET PASSWORD = '<BCrypt hash of test12!>'
+WHERE PASSWORD = 'test12!';
+
+-- =============================================================
 -- CMS 배포 서버 인스턴스 포트 변경: 3001(Next.js 직접) → 8080(nginx)
 -- =============================================================
 -- 생성일: 2026-04-22
@@ -129,5 +150,24 @@ COMMIT;
 --   SELECT * FROM FWK_CMS_FILE_SEND_HIS
 --   WHERE FILE_ID LIKE '%_expired.html'
 --   ORDER BY LAST_MODIFIED_DTIME DESC;
+
+-- =============================================================
+-- FWK_SQL_QUERY_HIS — 실제 DB 테이블 확인 결과
+-- =============================================================
+-- 확인일: 2026-04-22
+-- FWK_SQL_QUERY_HIS 테이블은 구버전부터 이미 존재하는 테이블입니다.
+-- PK: (VERSION_ID VARCHAR2(50), QUERY_ID VARCHAR2(50))
+-- 신버전에서는 VERSION_ID = System.currentTimeMillis() 문자열 사용
+-- ※ 잘못 생성된 시퀀스를 아래 쿼리로 제거하세요 (개발자 직접 실행):
+DROP SEQUENCE SEQ_FWK_SQL_QUERY_HIS;
+
+-- =============================================================
+-- FWK_SQL_QUERY_HIS 컬럼 크기 확장
+-- =============================================================
+-- 배경: 이력 저장 시 QUERY_NAME(50), QUERY_DESC(200) 초과 데이터 유실 방지
+--       메인 테이블(FWK_SQL_QUERY) 기준으로 컬럼 크기를 일치시킴
+-- ※ 개발자가 DB에서 직접 실행해야 합니다.
+ALTER TABLE FWK_SQL_QUERY_HIS MODIFY (QUERY_NAME VARCHAR2(200));
+ALTER TABLE FWK_SQL_QUERY_HIS MODIFY (QUERY_DESC VARCHAR2(500));
 
 COMMIT;

@@ -7,12 +7,14 @@
  *   POST   /api/auth/login                       로그인
  *   POST   /api/auth/refresh                     Access Token 재발급
  *   POST   /api/auth/logout                      로그아웃
+ *
  *   GET    /api/cards                            카드 목록 (슬라이더·드롭다운용)
  *   GET    /api/transactions                     카드 이용내역
  *   GET    /api/payment-statement                결제예정금액 / 이용대금명세서
  *   GET    /api/cards/:cardId/payable-amount     즉시결제 가능금액
  *   POST   /api/cards/:cardId/immediate-pay      즉시결제 처리
  *   DELETE /api/cards/:cardId/pin-attempts       PIN 실패 횟수 초기화
+ *
  *   GET    /api/notices/sse                      긴급공지 SSE 스트림 (Demo Frontend 구독)
  *   POST   /api/notices/sync                     긴급공지 배포 동기화 (Admin 호출)
  *   POST   /api/notices/end                      긴급공지 배포 종료 (Admin 호출)

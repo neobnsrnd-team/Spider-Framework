@@ -5,11 +5,13 @@ import com.example.admin_demo.domain.cmsdashboard.dto.CmsDashboardCreateRequest;
 import com.example.admin_demo.domain.cmsdashboard.dto.CmsDashboardCreateResponse;
 import com.example.admin_demo.domain.cmsdashboard.dto.CmsDashboardListRequest;
 import com.example.admin_demo.domain.cmsdashboard.dto.CmsDashboardPageResponse;
+import com.example.admin_demo.domain.cmsdashboard.dto.CmsTemplateResponse;
 import com.example.admin_demo.domain.cmsdashboard.service.CmsDashboardService;
 import com.example.admin_demo.global.dto.ApiResponse;
 import com.example.admin_demo.global.dto.PageRequest;
 import com.example.admin_demo.global.dto.PageResponse;
 import com.example.admin_demo.global.security.CustomUserDetails;
+import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -31,6 +33,7 @@ import org.springframework.web.bind.annotation.RestController;
  *
  * <h4>API 엔드포인트:</h4>
  * <ul>
+ *   <li>GET    /api/cms-dashboard/templates                          — 템플릿 목록</li>
  *   <li>GET    /api/cms-dashboard/pages                              — 내 페이지 목록</li>
  *   <li>POST   /api/cms-dashboard/pages                              — 새 페이지 생성</li>
  *   <li>DELETE /api/cms-dashboard/pages/{pageId}                     — 페이지 삭제</li>
@@ -46,6 +49,13 @@ public class CmsDashboardController {
 
     @Value("${cms.user-url}")
     private String cmsUserUrl;
+
+    /** 템플릿 목록 조회 — 페이지 생성 모달 선택 목록용 (PAGE_TYPE = 'TEMPLATE', USE_YN = 'Y') */
+    @GetMapping("/api/cms-dashboard/templates")
+    @PreAuthorize("hasAuthority('CMS:R')")
+    public ResponseEntity<ApiResponse<List<CmsTemplateResponse>>> findTemplateList() {
+        return ResponseEntity.ok(ApiResponse.success(cmsDashboardService.findTemplateList()));
+    }
 
     /** 내 페이지 목록 조회 (CMS:R 권한 보유 사용자) */
     @GetMapping("/api/cms-dashboard/pages")

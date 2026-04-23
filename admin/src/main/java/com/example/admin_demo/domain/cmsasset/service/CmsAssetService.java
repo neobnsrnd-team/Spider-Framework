@@ -9,6 +9,8 @@ import com.example.admin_demo.domain.cmsasset.dto.CmsAssetRequestListRequest;
 import com.example.admin_demo.domain.cmsasset.dto.CmsAssetUploadResponse;
 import com.example.admin_demo.domain.cmsasset.mapper.CmsAssetMapper;
 import com.example.admin_demo.domain.cmsasset.validator.AssetUploadValidator;
+import com.example.admin_demo.domain.code.dto.CodeResponse;
+import com.example.admin_demo.domain.code.service.CodeService;
 import com.example.admin_demo.global.dto.PageRequest;
 import com.example.admin_demo.global.dto.PageResponse;
 import com.example.admin_demo.global.exception.ErrorType;
@@ -25,51 +27,29 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.web.multipart.MultipartFile;
 
-/**
- * CMS 이미지(에셋) 승인 관리 서비스.
- *
- * <p>상태 전이(WORK → PENDING → APPROVED / REJECTED)는 두 단계로 방어한다.
- * <ol>
- *   <li>선검증 — 현재 상태가 {@code expectedFrom}인지 확인하고 아니면 {@link InvalidStateException}</li>
- *   <li>WHERE 가드 — UPDATE 문에 {@code ASSET_STATE = expectedFrom}을 포함하여 동시 실행 레이스 차단.
- *       0행이 갱신되면 {@link InvalidStateException}</li>
- * </ol>
- */
 @Slf4j
 @Service
 @RequiredArgsConstructor
 public class CmsAssetService {
 
+    public static final String ASSET_CATEGORY_CODE_GROUP_ID = "CMS00001";
+    public static final String DEFAULT_BUSINESS_CATEGORY = "COMMON";
+
     private static final String STATE_WORK = "WORK";
     private static final String STATE_PENDING = "PENDING";
     private static final String STATE_APPROVED = "APPROVED";
     private static final String STATE_REJECTED = "REJECTED";
-
-    /** REJECTED_REASON 컬럼의 최대 문자 수. 운영 DDL 변경 시 동기화 필요. */
+    private static final String USE_Y = "Y";
+    private static final String USE_N = "N";
     private static final int REJECTED_REASON_MAX_CHARS = 1000;
-
-    /**
-     * REJECTED_REASON 컬럼의 최대 바이트 수 (UTF-8 기준).
-     * DB가 {@code VARCHAR2(1000 BYTE)} 로 생성된 환경에서도 ORA-12899 방지를 위해 바이트 상한을 함께 검증.
-     */
     private static final int REJECTED_REASON_MAX_BYTES = 1000;
 
     private final CmsAssetMapper cmsAssetMapper;
+    private final CodeService codeService;
     private final CmsBuilderClient cmsBuilderClient;
     private final AssetUploadValidator assetUploadValidator;
-
-    /**
-     * 승인 saga 용 — 상태 UPDATE 를 CMS 호출 전에 독립적으로 커밋하기 위한 TransactionTemplate.
-     * CMS 가 DB 의 {@code APPROVED} 상태를 읽어 검증하므로 Admin 의 UPDATE 가 READ_COMMITTED 관점에서
-     * CMS 에 가시화되어야 한다.
-     */
     private final TransactionTemplate transactionTemplate;
 
-    /**
-     * 현업 본인 업로드 이미지 목록 조회.
-     *
-     * <p>클라이언트가 보낸 {@code createUserId}는 신뢰하지 않고 인증 주체의 ID로 덮어쓴다.
-     */
     @Transactional(readOnly = true)
     public PageResponse<CmsAssetListResponse> findMyRequestList(
             String currentUserId, CmsAssetRequestListRequest req, PageRequest pageRequest) {
@@ -83,7 +63,6 @@ public class CmsAssetService {
         return PageResponse.of(list, total, pageRequest.getPage(), pageRequest.getSize());
     }
 
-    /** 결재자 승인 관리 목록 조회 (기본 PENDING 필터는 Mapper XML에서 처리) */
     @Transactional(readOnly = true)
     public PageResponse<CmsAssetListResponse> findApprovalList(
             CmsAssetApprovalListRequest req, PageRequest pageRequest) {
@@ -95,7 +74,14 @@ public class CmsAssetService {
         return PageResponse.of(list, total, pageRequest.getPage(), pageRequest.getSize());
     }
 
-    /** 이미지 상세 조회 (모달 프리뷰) */
+    @Transactional(readOnly = true)
+    public List<CodeResponse> getAssetCategoryCodes() {
+        // 코드그룹의 USE_YN='Y' 항목을 그대로 노출. 카테고리 추가·폐기는 코드그룹 관리로 일원화한다.
+        return codeService.getCodesByCodeGroupId(ASSET_CATEGORY_CODE_GROUP_ID).stream()
+                .filter(code -> USE_Y.equalsIgnoreCase(code.getUseYn()))
+                .toList();
+    }
+
     @Transactional(readOnly = true)
     public CmsAssetDetailResponse findById(String assetId) {
         CmsAssetDetailResponse detail = cmsAssetMapper.findDetailById(assetId);
@@ -105,13 +91,11 @@ public class CmsAssetService {
         return detail;
     }
 
-    /** 승인 요청 — WORK → PENDING (현업이 본인 이미지에 대해 수행) */
     @Transactional
     public void requestApproval(String assetId, String modifierId, String modifierName) {
         assertTransition(assetId, STATE_WORK, STATE_PENDING);
         int updated = cmsAssetMapper.updateState(assetId, STATE_WORK, STATE_PENDING, null, modifierId, modifierName);
         if (updated != 1) {
-            // 선검증 통과 후에도 race 실패 가능 — UPDATE 가드 미커밋 동시 실행 방지
             throw new InvalidStateException("이미 처리된 이미지입니다. assetId=" + assetId);
         }
         log.info("CMS 이미지 승인 요청: assetId={}, modifierId={}", assetId, modifierId);
@@ -154,88 +138,88 @@ public class CmsAssetService {
         // Step 2: CMS 파일 배포 시도.
         try {
             cmsBuilderClient.deployAsset(assetId);
-            log.info("CMS 이미지 승인 + 파일 배포 완료: assetId={}, modifierId={}", assetId, modifierId);
+            log.info("CMS 이미지 승인 및 배포 완료: assetId={}, modifierId={}", assetId, modifierId);
         } catch (BaseException deployEx) {
             // Step 3: 배포 실패 — 승인 상태를 PENDING 으로 보상 롤백.
-            log.error("CMS 배포 실패 — 승인 상태 보상 롤백 시도. assetId={}, modifierId={}", assetId, modifierId, deployEx);
+            log.error("CMS 이미지 배포 실패로 승인 상태 롤백 시도: assetId={}, modifierId={}", assetId, modifierId, deployEx);
             try {
                 transactionTemplate.executeWithoutResult(status -> cmsAssetMapper.updateState(
                         assetId, STATE_APPROVED, STATE_PENDING, null, modifierId, modifierName));
             } catch (RuntimeException revertEx) {
                 // 보상 실패는 데이터-파일 불일치 상태를 남기므로 수동 복구 알림 차원의 error 로깅.
-                log.error("보상 롤백 실패 — 수동 확인 필요. assetId={}", assetId, revertEx);
+                log.error("승인 롤백 실패. 수동 확인 필요: assetId={}", assetId, revertEx);
             }
             throw deployEx;
         }
     }
 
-    /**
-     * 이미지 업로드 — Issue #65.
-     *
-     * <p>Admin 은 파일을 저장하지 않고 CMS Builder 로 포워딩한다.
-     * CMS 가 파일 저장 + {@code SPW_CMS_ASSET} INSERT (ASSET_STATE='WORK') 까지 수행하며,
-     * Admin 은 응답만 그대로 전달한다.
-     *
-     * <p>업로더 정보({@code uploaderId/Name})는 {@code @AuthenticationPrincipal} 에서 추출된 값이어야 하며,
-     * 클라이언트가 보낸 값은 신뢰하지 않는다 (컨트롤러에서 강제).
-     */
     public CmsAssetUploadResponse uploadAsset(
             MultipartFile file, String businessCategory, String assetDesc, String uploaderId, String uploaderName) {
 
         assetUploadValidator.validate(file);
+        String normalizedCategory = normalizeBusinessCategory(businessCategory);
         CmsBuilderUploadApiResponse cmsResponse =
-                cmsBuilderClient.upload(file, uploaderId, uploaderName, businessCategory, assetDesc);
+                cmsBuilderClient.upload(file, uploaderId, uploaderName, normalizedCategory, assetDesc);
         return CmsAssetUploadResponse.builder()
                 .assetId(cmsResponse.getAssetId())
                 .url(cmsResponse.getUrl())
                 .build();
     }
 
-    /**
-     * 이미지 자산 삭제 — Issue #88.
-     *
-     * <p>다음 3단계 검증을 수행한다:
-     * <ol>
-     *   <li>존재 확인 — 미존재 시 {@link NotFoundException}</li>
-     *   <li>소유자 확인 — 업로더가 아닌 경우 {@link BaseException} (HTTP 403 FORBIDDEN).
-     *       악의적 직접 호출로 타인 자산을 삭제하는 IDOR 공격 차단.</li>
-     *   <li>상태 가드 — {@code WORK}/{@code REJECTED} 만 허용, 그 외는 {@link InvalidStateException}</li>
-     * </ol>
-     *
-     * <p>Admin 은 DB 를 직접 건드리지 않고 CMS 의 DELETE API 로 위임한다.
-     * CMS 가 물리 파일과 {@code SPW_CMS_ASSET} 행을 모두 제거하므로 Admin 측 DB 조작은 없다.
-     *
-     * <p>관리자(결재자) 우회 삭제 권한은 본 이슈 범위 외 (후속 이슈). 현재 권한 체계상
-     * {@code CMS:W} 만으로는 현업·결재자를 구분할 수 없어, 별도 권한 체계 도입과 함께 다룬다.
-     *
-     * @param assetId 삭제 대상 자산 ID
-     * @param userId  삭제 수행자 ID (로그용 + 소유자 검증용)
-     * @throws NotFoundException     존재하지 않는 자산
-     * @throws BaseException         소유자가 아닌 경우 (FORBIDDEN → 403)
-     * @throws InvalidStateException 삭제 불가 상태 (PENDING/APPROVED → 409)
-     */
+    public CmsAssetUploadResponse uploadApprovedAsset(
+            MultipartFile file, String businessCategory, String assetDesc, String uploaderId, String uploaderName) {
+
+        CmsAssetUploadResponse response = uploadAsset(file, businessCategory, assetDesc, uploaderId, uploaderName);
+
+        transactionTemplate.executeWithoutResult(status -> {
+            assertTransition(response.getAssetId(), STATE_WORK, STATE_APPROVED);
+            int updated = cmsAssetMapper.updateState(
+                    response.getAssetId(), STATE_WORK, STATE_APPROVED, null, uploaderId, uploaderName);
+            if (updated != 1) {
+                throw new InvalidStateException("이미 처리된 이미지입니다. assetId=" + response.getAssetId());
+            }
+        });
+
+        try {
+            cmsBuilderClient.deployAsset(response.getAssetId());
+            log.info("CMS 관리자 이미지 즉시 승인 업로드 완료: assetId={}, uploaderId={}", response.getAssetId(), uploaderId);
+            return response;
+        } catch (BaseException deployEx) {
+            log.error(
+                    "CMS 관리자 이미지 즉시 승인 배포 실패. WORK 복구 시도: assetId={}, uploaderId={}",
+                    response.getAssetId(),
+                    uploaderId,
+                    deployEx);
+            try {
+                transactionTemplate.executeWithoutResult(status -> cmsAssetMapper.updateState(
+                        response.getAssetId(), STATE_APPROVED, STATE_WORK, null, uploaderId, uploaderName));
+            } catch (RuntimeException revertEx) {
+                log.error("관리자 업로드 롤백 실패. 수동 확인 필요: assetId={}", response.getAssetId(), revertEx);
+            }
+            throw deployEx;
+        }
+    }
+
     public void deleteMyAsset(String assetId, String userId) {
         String createUserId = cmsAssetMapper.findCreateUserIdByAssetId(assetId);
         if (createUserId == null) {
             throw new NotFoundException("이미지를 찾을 수 없습니다. assetId=" + assetId);
         }
         if (!createUserId.equals(userId)) {
-            // 로그에는 실제 시도자 ID 를 남기되, 예외 메시지에는 소유자 정보를 노출하지 않는다 (정보 누출 방지).
-            log.warn("CMS 이미지 삭제 권한 없음 — 소유자 불일치. assetId={}, owner={}, requester={}", assetId, createUserId, userId);
+            log.warn("CMS 이미지 삭제 권한 없음. assetId={}, owner={}, requester={}", assetId, createUserId, userId);
             throw new BaseException(ErrorType.FORBIDDEN, "본인이 업로드한 이미지만 삭제할 수 있습니다.");
         }
 
         String currentState = cmsAssetMapper.findAssetStateById(assetId);
         if (!STATE_WORK.equals(currentState) && !STATE_REJECTED.equals(currentState)) {
             throw new InvalidStateException(
-                    String.format("현재 상태(%s)에서는 삭제할 수 없습니다. 허용 상태=WORK 또는 REJECTED", currentState));
+                    String.format("현재 상태(%s)에서는 삭제할 수 없습니다. 허용 상태는 WORK 또는 REJECTED 입니다.", currentState));
         }
 
         cmsBuilderClient.delete(assetId, userId);
         log.info("CMS 이미지 삭제 요청 완료: assetId={}, prevState={}, userId={}", assetId, currentState, userId);
     }
 
-    /** 반려 — PENDING → REJECTED (결재자). 반려 사유는 선택 */
     @Transactional
     public void reject(String assetId, String rejectedReason, String modifierId, String modifierName) {
         assertTransition(assetId, STATE_PENDING, STATE_REJECTED);
@@ -248,10 +232,17 @@ public class CmsAssetService {
         log.info("CMS 이미지 반려 완료: assetId={}, modifierId={}", assetId, modifierId);
     }
 
-    /**
-     * 현재 상태가 {@code expectedFrom}과 일치하는지 선검증.
-     * 존재하지 않으면 {@link NotFoundException}, 상태 불일치이면 {@link InvalidStateException}.
-     */
+    @Transactional
+    public void updateVisibility(String assetId, String useYn, String modifierId, String modifierName) {
+        ensureAssetExists(assetId);
+        String normalizedUseYn = normalizeUseYn(useYn);
+        int updated = cmsAssetMapper.updateUseYn(assetId, normalizedUseYn, modifierId, modifierName);
+        if (updated != 1) {
+            throw new InvalidStateException("이미 처리된 이미지입니다. assetId=" + assetId);
+        }
+        log.info("CMS 이미지 노출 여부 변경: assetId={}, useYn={}, modifierId={}", assetId, normalizedUseYn, modifierId);
+    }
+
     private void assertTransition(String assetId, String expectedFrom, String target) {
         String current = cmsAssetMapper.findAssetStateById(assetId);
         if (current == null) {
@@ -259,16 +250,16 @@ public class CmsAssetService {
         }
         if (!expectedFrom.equals(current)) {
             throw new InvalidStateException(
-                    String.format("현재 상태(%s)에서 %s 전이를 수행할 수 없습니다. 필요 상태=%s", current, target, expectedFrom));
+                    String.format("현재 상태(%s)에서는 %s 전이를 수행할 수 없습니다. 필요 상태=%s", current, target, expectedFrom));
         }
     }
 
-    /**
-     * 반려 사유 정규화.
-     *
-     * <p>공백만 있는 문자열은 {@code null}로 취급하고, 문자 수·바이트 수 두 축으로 상한을 검증한다.
-     * 바이트 검증은 DB 컬럼이 {@code VARCHAR2(1000 BYTE)} 로 생성된 환경에서도 ORA-12899 를 사전 차단하기 위함.
-     */
+    private void ensureAssetExists(String assetId) {
+        if (cmsAssetMapper.existsByAssetId(assetId) != 1) {
+            throw new NotFoundException("이미지를 찾을 수 없습니다. assetId=" + assetId);
+        }
+    }
+
     private String normalizeReason(String rejectedReason) {
         if (rejectedReason == null) {
             return null;
@@ -278,11 +269,34 @@ public class CmsAssetService {
             return null;
         }
         if (trimmed.length() > REJECTED_REASON_MAX_CHARS) {
-            throw new InvalidInputException("반려 사유는 " + REJECTED_REASON_MAX_CHARS + "자 이하로 입력하세요.");
+            throw new InvalidInputException("반려 사유는 " + REJECTED_REASON_MAX_CHARS + "자 이하로 입력해 주세요.");
         }
         if (trimmed.getBytes(StandardCharsets.UTF_8).length > REJECTED_REASON_MAX_BYTES) {
-            throw new InvalidInputException("반려 사유는 UTF-8 기준 " + REJECTED_REASON_MAX_BYTES + "바이트 이하로 입력하세요.");
+            throw new InvalidInputException("반려 사유는 UTF-8 기준 " + REJECTED_REASON_MAX_BYTES + "바이트 이하로 입력해 주세요.");
         }
         return trimmed;
+    }
+
+    private String normalizeBusinessCategory(String businessCategory) {
+        String normalized = (businessCategory == null || businessCategory.isBlank())
+                ? DEFAULT_BUSINESS_CATEGORY
+                : businessCategory.trim();
+
+        boolean exists = getAssetCategoryCodes().stream().anyMatch(code -> normalized.equals(code.getCode()));
+        if (!exists) {
+            throw new InvalidInputException("유효하지 않은 이미지 카테고리입니다.");
+        }
+        return normalized;
+    }
+
+    private String normalizeUseYn(String useYn) {
+        if (useYn == null || useYn.isBlank()) {
+            throw new InvalidInputException("노출 여부 값이 필요합니다.");
+        }
+        String normalized = useYn.trim().toUpperCase();
+        if (!USE_Y.equals(normalized) && !USE_N.equals(normalized)) {
+            throw new InvalidInputException("유효하지 않은 노출 여부 값입니다.");
+        }
+        return normalized;
     }
 }

@@ -49,9 +49,8 @@ public class ReactCmsAdminDeployService {
         String pathPrefix = deployProperties.getDeployedPathPrefix();
         list.forEach(item -> {
             if (item.getInstanceIp() != null && item.getInstancePort() != null) {
-                item.setDeployedUrl(
-                        protocol + "://" + item.getInstanceIp() + ":" + item.getInstancePort()
-                        + pathPrefix + "/" + item.getPageId() + ".html");
+                item.setDeployedUrl(protocol + "://" + item.getInstanceIp() + ":" + item.getInstancePort() + pathPrefix
+                        + "/" + item.getPageId() + ".html");
             }
         });
 

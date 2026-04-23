@@ -1,0 +1,96 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0
+         https://maven.apache.org/xsd/maven-4.0.0.xsd">
+
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>com.example</groupId>
+        <artifactId>biz-app</artifactId>
+        <version>0.0.1-SNAPSHOT</version>
+    </parent>
+
+    <artifactId>biz-auth</artifactId>
+    <packaging>jar</packaging>
+    <name>biz-auth</name>
+    <description>인증AP — SpiderTcpServer(port 19100) 기반 로그인·사용자 조회 서비스</description>
+
+    <dependencies>
+        <!-- 비Web 스탠드얼론 Spring Boot 앱 — Tomcat 불포함 -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter</artifactId>
+        </dependency>
+
+        <!-- Jackson — ObjectMapper 빈 자동 구성 (JsonMessageCodec, TcpClient 의존) -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-json</artifactId>
+        </dependency>
+
+        <!-- spider-link 연계엔진 (버전은 부모 dependencyManagement 에서 관리) -->
+        <dependency>
+            <groupId>com.example</groupId>
+            <artifactId>spider-link</artifactId>
+        </dependency>
+
+        <!-- AP 서버 간 공통 커맨드 상수 (버전은 부모 dependencyManagement 에서 관리) -->
+        <dependency>
+            <groupId>com.example</groupId>
+            <artifactId>biz-common</artifactId>
+        </dependency>
+
+        <!-- JDBC + Oracle — FWK_MESSAGE_INSTANCE 전문 이력 기록 -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-jdbc</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.oracle.database.jdbc</groupId>
+            <artifactId>ojdbc11</artifactId>
+            <scope>runtime</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.oracle.database.jdbc</groupId>
+            <artifactId>ucp</artifactId>
+            <scope>runtime</scope>
+        </dependency>
+
+        <!-- Lombok — 컴파일 타임 코드 생성, 런타임 불필요 -->
+        <dependency>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+            <version>${lombok.version}</version>
+            <optional>true</optional>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <!-- 실행 가능한 Fat JAR 생성 -->
+            <plugin>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>repackage</id>
+                        <goals>
+                            <goal>repackage</goal>
+                        </goals>
+                    </execution>
+                </executions>
+                <configuration>
+                    <!-- Lombok 은 런타임 불필요 — Fat JAR 에서 제외 -->
+                    <excludes>
+                        <exclude>
+                            <groupId>org.projectlombok</groupId>
+                            <artifactId>lombok</artifactId>
+                        </exclude>
+                    </excludes>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+</project>

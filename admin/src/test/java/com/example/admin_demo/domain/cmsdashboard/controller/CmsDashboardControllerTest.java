@@ -14,6 +14,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.example.admin_demo.domain.cmsdashboard.dto.CmsDashboardPageResponse;
+import com.example.admin_demo.domain.cmsdashboard.dto.CmsTemplateResponse;
 import com.example.admin_demo.domain.cmsdashboard.service.CmsDashboardService;
 import com.example.admin_demo.domain.user.enums.UserState;
 import com.example.admin_demo.global.dto.PageResponse;
@@ -52,6 +53,46 @@ class CmsDashboardControllerTest {
 
     @MockitoBean
     private CmsDashboardService cmsDashboardService;
+
+    @Test
+    @DisplayName("[템플릿] CMS:R 권한으로 템플릿 목록 조회 시 200과 목록을 반환한다")
+    void findTemplateList_withCmsR_returns200() throws Exception {
+        given(cmsDashboardService.findTemplateList())
+                .willReturn(List.of(
+                        CmsTemplateResponse.builder()
+                                .pageId("tmpl-1")
+                                .pageName("기본 템플릿")
+                                .build(),
+                        CmsTemplateResponse.builder()
+                                .pageId("tmpl-2")
+                                .pageName("이벤트 템플릿")
+                                .build()));
+
+        mockMvc.perform(get("/api/cms-dashboard/templates").with(user(customUser("cmsUser01", "cms_user", "CMS:R"))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.length()").value(2))
+                .andExpect(jsonPath("$.data[0].pageId").value("tmpl-1"))
+                .andExpect(jsonPath("$.data[0].pageName").value("기본 템플릿"));
+    }
+
+    @Test
+    @DisplayName("[템플릿] 템플릿이 없을 경우 빈 배열을 반환한다")
+    void findTemplateList_empty_returnsEmptyList() throws Exception {
+        given(cmsDashboardService.findTemplateList()).willReturn(List.of());
+
+        mockMvc.perform(get("/api/cms-dashboard/templates").with(user(customUser("cmsUser01", "cms_user", "CMS:R"))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.length()").value(0));
+    }
+
+    @Test
+    @DisplayName("[템플릿] CMS:W 권한으로 템플릿 목록 조회 시 403을 반환한다")
+    void findTemplateList_withCmsW_returns403() throws Exception {
+        mockMvc.perform(get("/api/cms-dashboard/templates").with(user(customUser("cmsAdmin01", "cms_admin", "CMS:W"))))
+                .andExpect(status().isForbidden());
+    }
 
     @Test
     @DisplayName("[조회] CMS:R 권한으로 내 페이지 목록 조회 시 200을 반환한다")

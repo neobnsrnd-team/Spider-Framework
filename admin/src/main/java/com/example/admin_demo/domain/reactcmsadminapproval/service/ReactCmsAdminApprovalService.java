@@ -91,13 +91,16 @@ public class ReactCmsAdminApprovalService {
         checkPageExists(pageId);
         Map<String, Object> history = reactCmsAdminApprovalMapper.findHistoryByVersion(pageId, req.getVersion());
         if (history == null) {
-            throw new NotFoundException(
-                    "해당 버전의 이력을 찾을 수 없습니다. pageId=" + pageId + ", version=" + req.getVersion());
+            throw new NotFoundException("해당 버전의 이력을 찾을 수 없습니다. pageId=" + pageId + ", version=" + req.getVersion());
         }
         String pageHtml = (String) history.get("PAGE_HTML");
         String filePath = (String) history.get("FILE_PATH");
         reactCmsAdminApprovalMapper.rollback(pageId, pageHtml, filePath, modifierId);
-        log.info("React CMS Admin 페이지 롤백 완료: pageId={}, version={}, modifierId={}", pageId, req.getVersion(), modifierId);
+        log.info(
+                "React CMS Admin 페이지 롤백 완료: pageId={}, version={}, modifierId={}",
+                pageId,
+                req.getVersion(),
+                modifierId);
     }
 
     private void checkPageExists(String pageId) {

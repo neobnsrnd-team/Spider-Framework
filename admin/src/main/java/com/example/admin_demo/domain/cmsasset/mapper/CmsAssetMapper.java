@@ -64,4 +64,10 @@ public interface CmsAssetMapper {
             @Param("rejectedReason") String rejectedReason,
             @Param("modifierId") String modifierId,
             @Param("modifierName") String modifierName);
+
+    int updateUseYn(
+            @Param("assetId") String assetId,
+            @Param("useYn") String useYn,
+            @Param("modifierId") String modifierId,
+            @Param("modifierName") String modifierName);
 }
