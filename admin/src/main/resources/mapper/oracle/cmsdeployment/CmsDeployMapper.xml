@@ -159,8 +159,8 @@
         FROM (
             SELECT FILE_ID
             FROM FWK_CMS_FILE_SEND_HIS
-            WHERE FILE_ID LIKE #{pageId} || '_v%.html'
-              AND FILE_ID NOT LIKE '%_expired.html'
+            WHERE FILE_ID LIKE #{pageId} || '\_v%.html' ESCAPE '\'
+              AND FILE_ID NOT LIKE '%\_expired.html' ESCAPE '\'
             ORDER BY LAST_MODIFIED_DTIME DESC
         )
         WHERE ROWNUM = 1

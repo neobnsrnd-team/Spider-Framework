@@ -11,6 +11,7 @@ import com.example.admin_demo.global.dto.PageRequest;
 import com.example.admin_demo.global.dto.PageResponse;
 import com.example.admin_demo.global.exception.InternalException;
 import com.example.admin_demo.global.exception.NotFoundException;
+import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -79,12 +80,15 @@ public class CmsDeployService {
      *
      * <p>만료 FILE_ID 패턴: {pageId}_v{version}_expired.html
      * — 정상 배포 이력({pageId}_v{n}.html)을 덮어쓰지 않도록 별도 키 사용</p>
+     *
+     * <p>@Transactional 미적용 — 외부 HTTP 통신(fetchExpiredHtml, callReceiveApi)을 트랜잭션 밖에서
+     * 수행해 DB 커넥션 장시간 점유를 방지한다. DB 쓰기(upsertFileSendHis, expirePage)는
+     * saveExpiredResult()에서 별도 트랜잭션으로 처리한다.</p>
      */
-    @Transactional
     public void pushExpired(String pageId, String userId) {
         // 1. 만료 처리 대상 검증 (EXPIRED_DATE < SYSDATE AND IS_PUBLIC='Y' AND USE_YN='Y')
-        String filePath = cmsDeployMapper.findExpirableFilePath(pageId);
-        if (filePath == null) {
+        String result = cmsDeployMapper.findExpirableFilePath(pageId);
+        if (result == null) {
             throw new NotFoundException("만료 처리 대상이 아닙니다. pageId=" + pageId);
         }
 
@@ -99,8 +103,10 @@ public class CmsDeployService {
             expiredFileId = pageId + "_v0_expired.html";
         }
 
-        // 3. CMS 서버에서 page-expired.html 취득
+        // 3. CMS 서버에서 page-expired.html 취득 (트랜잭션 외부 — HTTP 통신)
         String expiredHtml = fetchExpiredHtml();
+        // UTF-8 바이트 길이로 실제 파일 크기 계산 (멀티바이트 문자 포함 HTML 대비)
+        long htmlByteSize = expiredHtml.getBytes(StandardCharsets.UTF_8).length;
 
         // 4. ALIVE_YN='Y' 서버 목록 조회
         List<CmsServerInstanceResponse> servers = cmsDeployMapper.findAliveServerInstances();
@@ -108,20 +114,33 @@ public class CmsDeployService {
             throw new InternalException("배포 가능한 서버 인스턴스가 없습니다.");
         }
 
-        // 5. 각 서버에 순차 전송 → 성공 시 이력 UPSERT
+        // 5. 각 서버에 순차 전송 (트랜잭션 외부 — HTTP 통신)
         for (CmsServerInstanceResponse server : servers) {
             callReceiveApi(server, pageId, expiredHtml);
+        }
+
+        // 6. 전송 완료 후 DB 반영 — 별도 트랜잭션으로 커넥션 점유 최소화
+        saveExpiredResult(pageId, expiredFileId, htmlByteSize, userId);
+        log.info("만료 배포 완료: pageId={}, expiredFileId={}, userId={}", pageId, expiredFileId, userId);
+    }
+
+    /**
+     * 만료 배포 완료 후 DB 반영 — 이력 UPSERT + 페이지 상태 업데이트.
+     * HTTP 통신과 분리하여 DB 커넥션 점유를 최소화한다.
+     */
+    @Transactional
+    public void saveExpiredResult(String pageId, String expiredFileId, long htmlByteSize, String userId) {
+        List<CmsServerInstanceResponse> servers = cmsDeployMapper.findAliveServerInstances();
+        for (CmsServerInstanceResponse server : servers) {
             cmsDeployMapper.upsertFileSendHis(
                     server.getInstanceId(),
                     expiredFileId,
-                    expiredHtml.length(),
+                    htmlByteSize,
                     null, // CRC 계산 불필요 — 만료 HTML은 고정 콘텐츠
                     userId);
         }
-
-        // 6. 페이지 상태 업데이트: IS_PUBLIC='N', FILE_PATH_BACK=FILE_PATH
+        // IS_PUBLIC='N', FILE_PATH_BACK=FILE_PATH
         cmsDeployMapper.expirePage(pageId, userId);
-        log.info("만료 배포 완료: pageId={}, expiredFileId={}, userId={}", pageId, expiredFileId, userId);
     }
 
     /** CMS 서버에서 page-expired.html을 HTTP GET으로 취득 */
