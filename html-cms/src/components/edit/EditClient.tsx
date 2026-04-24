@@ -1919,6 +1919,10 @@ export default function EditClient({
         return detach;
     }, [imagePickerOpen]);
 
+    // picker iframe 참조 — message 리스너에서 event.source 비교로 "이 모달에서 온 메시지"인지 식별
+    // (DOM 존재 여부 판별은 리스너 실행 순서·DOM 조작 타이밍 레이스에 취약 → event.source 비교가 안전)
+    const imagePickerIframeRef = useRef<HTMLIFrameElement>(null);
+
     useEffect(() => {
         const handleFileInputClick = (e: MouseEvent) => {
             const target = e.target as HTMLElement;
@@ -1946,47 +1950,55 @@ export default function EditClient({
     // - ASSET_SELECTED: 단건 삽입 (하위 호환)
     // - ASSETS_SELECTED: 다건 — 완료 버튼 경유
     //   · 교체 모드 (imageReplaceTargetRef 가 있을 때): 첫 URL 로 activeImage src 교체
-    //   · 삽입 모드: selectAsset 루프 호출
+    //   · 삽입 모드: selectAsset 루프 호출 (ContentBuilder 내장 filePicker/imageSelect 경로)
     // - PICKER_CLOSE: iframe 모달 내부 닫기 버튼에서 부모에게 모달 종료 요청
     //
-    // cms-file-picker 유틸(EventBanner/PopupBanner 등 6개 에디터가 사용)이 동시에
-    // 같은 메시지를 수신하므로, 유틸 모달이 활성이면 이 리스너는 개입하지 않는다.
-    // (그렇지 않으면 슬라이드 업데이트 + 캔버스에 이미지가 추가 삽입되는 이중 처리 발생)
+    // 메시지 출처 식별은 event.source 비교로 처리한다. 이전에는 cms-file-picker 유틸 모달의
+    // DOM 존재 여부(getElementById)로 스킵 판단을 했는데, 이는 리스너 실행 순서·DOM 조작
+    // 타이밍 레이스에 취약해 안전하지 않다. 현재 구현은:
+    //   1) event.source 가 cms-file-picker 유틸 iframe 이면 즉시 스킵 (유틸 자체 리스너가 처리)
+    //   2) isOwnPicker 플래그(이 EditClient 의 React 모달 iframe 에서 온 메시지인지)로
+    //      모달 상태 변경(setImagePickerOpen)·PICKER_CLOSE 처리를 범위 한정
+    //   3) ASSETS_SELECTED 의 selectAsset 삽입 로직은 ContentBuilder 내장 filePicker 에서
+    //      온 경우에도 동작해야 하므로 소스를 더 좁히지 않는다
     useEffect(() => {
-        const isCmsFilePickerActive = () => document.getElementById('spw-cms-file-picker-modal') !== null;
-
         const handleMessage = (event: MessageEvent) => {
+            // cms-file-picker 유틸 모달의 iframe 에서 온 메시지는 유틸이 단독 처리 — 여기서는 무시
+            const utilModalEl = document.getElementById('spw-cms-file-picker-modal');
+            const utilIframe = utilModalEl?.querySelector('iframe') as HTMLIFrameElement | null;
+            if (utilIframe && event.source === utilIframe.contentWindow) return;
+
+            // 이 모달(EditClient) 의 iframe 에서 온 메시지인지 — setImagePickerOpen·PICKER_CLOSE 범위 한정용
+            const isOwnPicker = event.source === imagePickerIframeRef.current?.contentWindow;
+
             switch (event.data.type) {
                 case 'ASSET_SELECTED':
-                    if (isCmsFilePickerActive()) break;
                     builderRef.current?.selectAsset(event.data.url);
-                    setImagePickerOpen(false);
+                    if (isOwnPicker) setImagePickerOpen(false);
                     window.focus();
                     break;
                 case 'ASSETS_SELECTED': {
-                    if (isCmsFilePickerActive()) break;
                     const urls: string[] = Array.isArray(event.data.urls) ? event.data.urls : [];
                     const replaceTarget = imageReplaceTargetRef.current;
 
                     if (replaceTarget && urls[0]) {
-                        // 이미지 교체 모드
+                        // 이미지 교체 모드 — #fileEmbedImage 인터셉트로 연 EditClient 모달 경로
                         replaceTarget.setAttribute('src', urls[0]);
                         imageReplaceTargetRef.current = null;
                         // eslint-disable-next-line @typescript-eslint/no-explicit-any -- ContentBuilder 내부 onChange
                         const onChange = (builderRef.current as any)?.opts?.onChange;
                         if (typeof onChange === 'function') onChange();
                     } else {
-                        // 일반 삽입 모드
+                        // 일반 삽입 모드 — ContentBuilder 내장 filePicker/imageSelect 경유 또는 activeImg 부재 케이스
                         urls.forEach((url) => builderRef.current?.selectAsset(url));
                     }
-                    setImagePickerOpen(false);
+                    if (isOwnPicker) setImagePickerOpen(false);
                     window.focus();
                     break;
                 }
                 case 'PICKER_CLOSE':
-                    // iframe 내부 AssetBrowser의 닫기(X) 버튼 → 모달 종료
-                    // 유틸 모달이면 유틸이 자체 cleanup하므로 개입하지 않는다.
-                    if (isCmsFilePickerActive()) break;
+                    // iframe 내부 AssetBrowser 의 X 버튼 → 이 모달에 한해서만 종료 처리
+                    if (!isOwnPicker) break;
                     imageReplaceTargetRef.current = null;
                     setImagePickerOpen(false);
                     break;
@@ -2903,7 +2915,12 @@ export default function EditClient({
                         // 절대 위치 + 초기 중앙 배치는 useEffect에서 계산
                         className="absolute overflow-hidden rounded-lg bg-white shadow-xl"
                     >
-                        <iframe src={nextApi('/files')} className="h-full w-full border-0" title="이미지 선택" />
+                        <iframe
+                            ref={imagePickerIframeRef}
+                            src={nextApi('/files')}
+                            className="h-full w-full border-0"
+                            title="이미지 선택"
+                        />
                     </div>
                 </div>
             )}
