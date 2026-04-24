@@ -1,0 +1,2543 @@
+﻿/* @import url("../ionicons/css/ionicons.min.css");  */
+@import url("https://cdnjs.cloudflare.com/ajax/libs/ionicons/2.0.0/css/ionicons.min.css");
+
+/* @import url("../icons/bootstrap-icons.min.css");  */
+@import url("https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css"); 
+
+.display { margin-bottom: 0.5rem;  }
+.display h1 {
+    font-weight: 800;
+    font-size: 3rem;
+    line-height:1.4;
+}
+.display p {
+    font-size: 1.3rem;
+}
+
+@media all and (max-width: 1024px) {
+    .display h1 { font-size: 2.2rem; }
+    .display p { font-size: 1.1rem; }
+}
+
+a {color: inherit;} 
+a[role="button"] i { color:inherit; }
+.is-dark-text a[role="button"] i, .is-light-text a[role="button"] i, a[role="button"] i { color:inherit; }
+hr {background:none;background-color: transparent;border:none;border-top: rgba(0, 0, 0, 0.18) 1px solid;margin: 30px 0 25px;padding: 5px;}    
+img {max-width:100%;}
+figure {margin:0}
+table td {padding:12px;}
+pre {
+    font-family: courier;
+    font-size: 1rem;
+    white-space: pre-wrap;
+    line-height: 1.4;
+    padding: 15px;
+    background: rgba(0, 0, 0, 0.03);
+}
+blockquote {margin:16px 40px;}
+b, strong {
+    font-weight: 600;
+}
+sup {
+    vertical-align: super;
+}
+sub {
+    vertical-align: sub;
+}
+[type='text'],
+[type='email'],
+[type='url'],
+[type='password'],
+[type='number'],
+[type='date'],
+[type='datetime-local'],
+[type='month'],
+[type='search'],
+[type='tel'],
+[type='time'],
+[type='week'],
+textarea {
+    box-sizing: border-box;
+}
+button,
+a {
+    box-sizing: border-box;
+}
+
+/* Built-in Grid (used temporary during section add before converted to tailwind grid) */
+.column {
+    position: relative;
+    box-sizing: border-box;
+    width: 100%;
+}
+
+/* Responsive Utility */
+@media all and (max-width: 760px) { /*970px*/
+    .flow-reverse { display: flex; flex-direction: column-reverse; } 
+    .w-full,
+    .container > div /* in needed, container class here can be changed with your own class */ { 
+        min-width: 100%; /* If there is column's inline width, this will make the column full-width in mobile */
+        min-height: unset !important;
+    }
+}
+
+@media (max-width: 760px) {
+    body:not(.data-editor) .xs-hidden {display:none !important}
+    body.data-editor .xs-hidden {opacity:0.6}
+}
+@media (min-width: 761px) and (max-width: 970px) {
+    body:not(.data-editor) .sm-hidden {display:none !important}
+    body.data-editor .sm-hidden {opacity:0.6}
+    .sm-autofit > div:not(.is-row-overlay):not(.is-row-tool):not(.is-col-tool) {
+        width: 100% !important;
+        flex: auto !important;
+    }
+}
+@media (min-width: 971px) and (max-width: 1280px) {
+    body:not(.data-editor) .md-hidden {display:none !important}
+    body.data-editor .md-hidden {opacity:0.6}
+    .md-autofit > div:not(.is-row-overlay):not(.is-row-tool):not(.is-col-tool) {
+        width: 100% !important;
+        flex: auto !important;
+    }
+}
+@media (min-width: 1281px) { /* Use: body:not(.data-editor) to prevent hidden during editing */
+    body:not(.data-editor) .desktop-hidden {display:none !important}
+    body.data-editor .desktop-hidden {opacity:0.6}
+    body:not(.data-editor) .desktop-autofit:not(.desktop-items-1):not(.desktop-items-2):not(.desktop-items-3):not(.desktop-items-4):not(.desktop-items-5):not(.desktop-items-6) > div:not(.is-row-overlay):not(.is-row-tool):not(.is-col-tool) {
+        width: 100% !important;
+        flex: auto !important;
+    }
+}
+
+/* wrap & reverse columns */
+@media (max-width: 760px) {
+    .xs-items-6, .xs-items-5, .xs-items-4, .xs-items-3, .xs-items-2, .xs-items-1 { 
+        display: flex !important; flex-flow: wrap; justify-content: space-between;
+    }
+    .xs-items-6 > div:not(.is-tool,.is-rowadd-tool,.is-row-overlay) { width: calc(100% * (1/6)) !important; max-width: unset !important; flex: 1 0 auto !important; min-width: unset !important; padding-right:15px; }
+    .xs-items-5 > div:not(.is-tool,.is-rowadd-tool,.is-row-overlay) { width: calc(100% * (1/5)) !important; max-width: unset !important; flex: 1 0 auto !important; min-width: unset !important; padding-right:15px; }
+    .xs-items-4 > div:not(.is-tool,.is-rowadd-tool,.is-row-overlay) { width: calc(100% * (1/4)) !important; max-width: unset !important; flex: 1 0 auto !important; min-width: unset !important; padding-right:15px; }
+    .xs-items-3 > div:not(.is-tool,.is-rowadd-tool,.is-row-overlay) { width: calc(100% * (1/3)) !important; max-width: unset !important; flex: 1 0 auto !important; min-width: unset !important; padding-right:15px; }
+    .xs-items-2 > div:not(.is-tool,.is-rowadd-tool,.is-row-overlay) { width: calc(100% * (1/2)) !important; max-width: unset !important; flex: 1 0 auto !important; min-width: unset !important; padding-right:15px; }
+    .xs-items-1 > div:not(.is-tool,.is-rowadd-tool,.is-row-overlay) { width: calc(100% * (1/1)) !important; max-width: unset !important; flex: 1 0 auto !important; min-width: unset !important; }
+    /* no class (not set) = xs-items-1 */
+
+    .xs-column-reverse { display: flex; flex-direction: column-reverse !important; } 
+    .xs-column-reverse.xs-items-1 { flex-direction: column-reverse !important; } 
+    .xs-column-reverse.xs-items-2 { flex-direction: row-reverse !important; } 
+    .xs-column-reverse.xs-items-3 { flex-direction: row-reverse !important; } 
+    .xs-column-reverse.xs-items-4 { flex-direction: row-reverse !important; } 
+    .xs-column-reverse.xs-items-5 { flex-direction: row-reverse !important; } 
+    .xs-column-reverse.xs-items-6 { flex-direction: row-reverse !important; } 
+}
+@media (min-width: 761px) and (max-width: 970px) {
+    .sm-items-6, .sm-items-5, .sm-items-4, .sm-items-3, .sm-items-2, .sm-items-1 { 
+        display: flex !important; flex-flow: wrap; justify-content: space-between;
+    }
+    .sm-items-6 > div:not(.is-tool,.is-rowadd-tool,.is-row-overlay) { width: calc(100% * (1/6)) !important; max-width: unset !important; flex: 1 0 auto !important; margin: 0; padding-left: 15px;padding-right: 15px; }
+    .sm-items-5 > div:not(.is-tool,.is-rowadd-tool,.is-row-overlay) { width: calc(100% * (1/5)) !important; max-width: unset !important; flex: 1 0 auto !important; margin: 0; padding-left: 15px;padding-right: 15px; }
+    .sm-items-4 > div:not(.is-tool,.is-rowadd-tool,.is-row-overlay) { width: calc(100% * (1/4)) !important; max-width: unset !important; flex: 1 0 auto !important; margin: 0; padding-left: 15px;padding-right: 15px; }
+    .sm-items-3 > div:not(.is-tool,.is-rowadd-tool,.is-row-overlay) { width: calc(100% * (1/3)) !important; max-width: unset !important; flex: 1 0 auto !important; margin: 0; padding-left: 15px;padding-right: 15px; }
+    .sm-items-2 > div:not(.is-tool,.is-rowadd-tool,.is-row-overlay) { width: calc(100% * (1/2)) !important; max-width: unset !important; flex: 1 0 auto !important; margin: 0; padding-left: 15px;padding-right: 15px; }
+    .sm-items-1 > div:not(.is-tool,.is-rowadd-tool,.is-row-overlay) { width: calc(100% * (1/1)) !important; max-width: unset !important; flex: 1 0 auto !important; margin: 0; padding-left: 15px;padding-right: 15px; }
+    /* no class (not set) => use default (all columns in one line) */
+    
+    .sm-column-reverse { display: flex; flex-direction: row-reverse !important; } 
+    .sm-column-reverse.sm-items-1 { flex-direction: column-reverse !important; } 
+}
+@media (min-width: 971px) and (max-width: 1280px) {
+    .md-items-6, .md-items-5, .md-items-4, .md-items-3, .md-items-2, .md-items-1 { 
+        display: flex !important; flex-flow: wrap; justify-content: space-between;
+    }
+    .md-items-6 > div:not(.is-tool,.is-rowadd-tool,.is-row-overlay) { width: calc(100% * (1/6)) !important; max-width: unset !important; flex: 1 0 auto !important; margin: 0; padding-left: 15px;padding-right: 15px; }
+    .md-items-5 > div:not(.is-tool,.is-rowadd-tool,.is-row-overlay) { width: calc(100% * (1/5)) !important; max-width: unset !important; flex: 1 0 auto !important; margin: 0; padding-left: 15px;padding-right: 15px; }
+    .md-items-4 > div:not(.is-tool,.is-rowadd-tool,.is-row-overlay) { width: calc(100% * (1/4)) !important; max-width: unset !important; flex: 1 0 auto !important; margin: 0; padding-left: 15px;padding-right: 15px; }
+    .md-items-3 > div:not(.is-tool,.is-rowadd-tool,.is-row-overlay) { width: calc(100% * (1/3)) !important; max-width: unset !important; flex: 1 0 auto !important; margin: 0; padding-left: 15px;padding-right: 15px; }
+    .md-items-2 > div:not(.is-tool,.is-rowadd-tool,.is-row-overlay) { width: calc(100% * (1/2)) !important; max-width: unset !important; flex: 1 0 auto !important; margin: 0; padding-left: 15px;padding-right: 15px; }
+    .md-items-1 > div:not(.is-tool,.is-rowadd-tool,.is-row-overlay) { width: calc(100% * (1/1)) !important; max-width: unset !important; flex: 1 0 auto !important; margin: 0; padding-left: 15px;padding-right: 15px; }
+    /* no class (not set) => use default (all columns in one line) */
+
+    .md-column-reverse { display: flex; flex-direction: row-reverse !important; } 
+    .md-column-reverse.md-items-1 { flex-direction: column-reverse !important; } 
+}
+@media (min-width: 1281px) {
+    .desktop-items-6, .desktop-items-5, .desktop-items-4, .desktop-items-3, .desktop-items-2, .desktop-items-1 { 
+        display: flex !important; flex-flow: wrap; justify-content: space-between;
+    }
+    .desktop-items-6 > div:not(.is-tool,.is-rowadd-tool,.is-row-overlay) { width: calc(100% * (1/6)) !important; max-width: unset !important; flex: 1 0 auto !important; margin: 0; padding-left: 15px;padding-right: 15px; }
+    .desktop-items-5 > div:not(.is-tool,.is-rowadd-tool,.is-row-overlay) { width: calc(100% * (1/5)) !important; max-width: unset !important; flex: 1 0 auto !important; margin: 0; padding-left: 15px;padding-right: 15px; }
+    .desktop-items-4 > div:not(.is-tool,.is-rowadd-tool,.is-row-overlay) { width: calc(100% * (1/4)) !important; max-width: unset !important; flex: 1 0 auto !important; margin: 0; padding-left: 15px;padding-right: 15px; }
+    .desktop-items-3 > div:not(.is-tool,.is-rowadd-tool,.is-row-overlay) { width: calc(100% * (1/3)) !important; max-width: unset !important; flex: 1 0 auto !important; margin: 0; padding-left: 15px;padding-right: 15px; }
+    .desktop-items-2 > div:not(.is-tool,.is-rowadd-tool,.is-row-overlay) { width: calc(100% * (1/2)) !important; max-width: unset !important; flex: 1 0 auto !important; margin: 0; padding-left: 15px;padding-right: 15px; }
+    .desktop-items-1 > div:not(.is-tool,.is-rowadd-tool,.is-row-overlay) { width: calc(100% * (1/1)) !important; max-width: unset !important; flex: 1 0 auto !important; margin: 0; padding-left: 15px;padding-right: 15px; }
+    /* no class (not set) => use default (all columns in one line) */
+
+    .desktop-column-reverse { display: flex; flex-direction: row-reverse !important; } 
+    .desktop-column-reverse.desktop-items-1 { flex-direction: column-reverse !important; } 
+}
+/* /Responsive Utility */
+
+.spacer {width:100%}
+.center {text-align:center}
+.right {text-align:right}
+.left {text-align:left}
+.img-circular {display:inline-block; width: 200px; height: 200px; position: relative; overflow: hidden; border-radius: 50%;}
+.img-circular img {display: inline;margin:0 auto; height: 100%; width: auto; max-width: none; min-width: 100%; min-height: 100%;}
+
+.padding-0 {padding:0px !important;box-sizing: border-box;}
+.padding-10 {padding:10px !important;box-sizing: border-box;}
+.padding-20 {padding:20px !important;box-sizing: border-box;}
+.padding-30 {padding:30px !important;box-sizing: border-box;}
+.padding-40 {padding:40px !important;box-sizing: border-box;}
+.padding-50 {padding:50px !important;box-sizing: border-box;}
+.padding-60 {padding:60px !important;box-sizing: border-box;}
+
+@media all and (max-width: 540px) {
+    .padding-0 {padding:0px !important;}
+    .padding-10 {padding:5px !important;}
+    .padding-20 {padding:10px !important;}
+    .padding-30 {padding:15px !important;}
+    .padding-40 {padding:20px !important;}
+    .padding-50 {padding:25px !important;}
+    .padding-60 {padding:30px !important;}
+}
+
+.margin-0 {margin:0 !important} 
+.margin-20 {margin:20px !important} 
+.margin-25 {margin:25px !important} 
+.margin-30 {margin:30px !important} 
+.margin-35 {margin:35px !important} 
+.margin-40 {margin:40px !important}
+.is-card { display:table; background-color:#fff;  }
+.is-card > * { display:table; }
+.is-card-circle { width:280px; height: 280px; border-radius:500px; padding:70px; margin:0 auto; }
+@media all and (max-width: 540px) {
+    .is-card-circle { zoom:0.7; transform: scale(0.7); }
+}
+.is-card-content-centered { display:table-cell;vertical-align:middle;text-align:center; }
+.max-390 { max-width:390px;margin:0 auto; }
+.box-border	{ box-sizing: border-box; }
+.shadow-1 {
+    box-shadow: 0 0 #0000, 0 0 #0000, 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+}
+.shadow-2 { /* screenshot */
+    -webkit-box-shadow: 0 30px 50px rgba(0, 0, 0, 0.15);
+    -moz-box-shadow: 0 30px 50px rgba(0, 0, 0, 0.15);
+    box-shadow: 0 30px 50px rgba(0, 0, 0, 0.15);
+}
+.shadow-3 { /* highlight */
+    -webkit-box-shadow: 0 0px 100px rgba(0, 0, 0, 0.2); 
+    -moz-box-shadow: 0 0px 100px rgba(0, 0, 0, 0.2); 
+    box-shadow: 0 0px 100px rgba(0, 0, 0, 0.2); 
+}
+
+img.circle {border-radius:500px;margin-top:0;}
+img.bordered {border: #ccc 1px solid;}
+
+.embed-responsive {position: relative;display:block;width:100%;height:0;padding:0;overflow:hidden;margin-top: 1.4em;margin-bottom: 1em;} 
+.embed-responsive.embed-responsive-16by9 {padding-bottom: 56.25%;}
+.embed-responsive.embed-responsive-4by3 {padding-bottom: 75%;}
+.embed-responsive iframe {position: absolute;top:0;bottom:0;left:0;width:100%;height:100%;border:0;}
+
+.list {position:relative;margin:1.5em 0;box-shadow:none;}
+.list > i {position:absolute;left:-3px;top:6px;font-size:1.7em;line-height:1;} 
+.list > h2, .list > h3 {margin: 0 0 0 50px !important; line-height: 1.2 !important;}
+.list > p {margin: 5px 0 0 50px !important}
+
+.list.larger > i {position:absolute;left:-3px;top:0;font-size:1.7em;line-height:1;} 
+.list.larger > h2, .list.larger > h3 {margin: 0 0 0 70px !important; line-height: 1.2 !important;}
+.list.larger > p {margin: 5px 0 0 70px !important}
+
+.quote {position:relative;margin:1.5em 0;}
+.quote > i {position: absolute;top: -10px; left: -7px;font-size: 2em;}
+.quote > small {margin-left:50px;opacity: 0.7;font-size: 1em;}
+.quote > p {margin-left:50px;font-size: 1.5em;}
+@media all and (max-width: 540px) {
+    .quote > i {left: -15px;font-size:1.5em;}
+    .quote > small {margin-left:20px;font-size: 1em;}
+    .quote > p {margin-left:20px !important;font-size: 1.2em;}
+}
+
+.left .is-social { justify-content: flex-start }
+.center .is-social { justify-content: center }
+.right .is-social { justify-content: flex-end }
+
+.is-social { display: flex; gap: 2.2rem; margin:1.2rem 0 0.8rem; }
+.is-social a > i {font-size: 1.2em;}
+.is-social.text-left { justify-content: flex-start }
+.is-social.text-right { justify-content: flex-end }
+.is-social.text-center { justify-content: center }
+.is-social.text-justify { justify-content: space-around }
+
+.height-20 {height:20px;flex:none;}
+.height-40 {height:40px;flex:none;}
+.height-60 {height:60px;flex:none;}
+.height-80 {height:80px;flex:none;}
+.height-100 {height:100px;flex:none;}
+.height-120 {height:120px;flex:none;}
+.height-140 {height:140px;flex:none;}
+.height-160 {height:160px;flex:none;}
+.height-180 {height:180px;flex:none;}
+.height-200 {height:200px;flex:none;}
+.height-220 {height:220px;flex:none;}
+.height-240 {height:240px;flex:none;}
+.height-260 {height:260px;flex:none;}
+.height-280 {height:280px;flex:none;}
+.height-300 {height:300px;flex:none;}
+
+@media (min-width: 1921px) {
+    .v2:not(.v3) .height-20 {height:2.5vh}
+    .v2:not(.v3) .height-40 {height:5vh}
+    .v2:not(.v3) .height-60 {height:7.5vh}
+    .v2:not(.v3) .height-80 {height:10vh}
+    .v2:not(.v3) .height-100 {height:12.5vh}
+    .v2:not(.v3) .height-120 {height:15vh}
+    .v2:not(.v3) .height-140 {height:17.5vh}
+    .v2:not(.v3) .height-160 {height:20vh}
+    .v2:not(.v3) .height-180 {height:22.5vh}
+    .v2:not(.v3) .height-200 {height:25vh}
+    .v2:not(.v3) .height-220 {height:27.5vh}
+    .v2:not(.v3) .height-240 {height:30vh}
+    .v2:not(.v3) .height-260 {height:32.5vh}
+    .v2:not(.v3) .height-280 {height:35vh}
+    .v2:not(.v3) .height-300 {height:37.5vh}
+}
+@media (max-width: 1440px) {
+    .v2:not(.v3) .height-20 {height:10px}
+    .v2:not(.v3) .height-40 {height:20px}
+    .v2:not(.v3) .height-60 {height:30px}
+    .v2:not(.v3) .height-80 {height:40px}
+    .v2:not(.v3) .height-100 {height:50px}
+    .v2:not(.v3) .height-120 {height:60px}
+    .v2:not(.v3) .height-140 {height:70px}
+    .v2:not(.v3) .height-160 {height:80px}
+    .v2:not(.v3) .height-180 {height:90px}
+    .v2:not(.v3) .height-200 {height:100px}
+    .v2:not(.v3) .height-220 {height:110px}
+    .v2:not(.v3) .height-240 {height:120px}
+    .v2:not(.v3) .height-260 {height:130px}
+    .v2:not(.v3) .height-280 {height:140px}
+    .v2:not(.v3) .height-300 {height:150px}
+}
+
+@media (max-width: 760px) {
+    .xs-height-20 {height:20px !important;flex:none;}
+    .xs-height-40 {height:40px !important;flex:none;}
+    .xs-height-60 {height:60px !important;flex:none;}
+    .xs-height-80 {height:80px !important;flex:none;}
+    .xs-height-100 {height:100px !important;flex:none;}
+    .xs-height-120 {height:120px !important;flex:none;}
+    .xs-height-140 {height:140px !important;flex:none;}
+    .xs-height-160 {height:160px !important;flex:none;}
+    .xs-height-180 {height:180px !important;flex:none;}
+    .xs-height-200 {height:200px !important;flex:none;}
+    .xs-height-220 {height:220px !important;flex:none;}
+    .xs-height-240 {height:240px !important;flex:none;}
+    .xs-height-260 {height:260px !important;flex:none;}
+    .xs-height-280 {height:280px !important;flex:none;}
+    .xs-height-300 {height:300px !important;flex:none;}
+}
+@media (min-width: 761px) and (max-width: 970px) {
+    .sm-height-20 {height:20px !important;flex:none;}
+    .sm-height-40 {height:40px !important;flex:none;}
+    .sm-height-60 {height:60px !important;flex:none;}
+    .sm-height-80 {height:80px !important;flex:none;}
+    .sm-height-100 {height:100px !important;flex:none;}
+    .sm-height-120 {height:120px !important;flex:none;}
+    .sm-height-140 {height:140px !important;flex:none;}
+    .sm-height-160 {height:160px !important;flex:none;}
+    .sm-height-180 {height:180px !important;flex:none;}
+    .sm-height-200 {height:200px !important;flex:none;}
+    .sm-height-220 {height:220px !important;flex:none;}
+    .sm-height-240 {height:240px !important;flex:none;}
+    .sm-height-260 {height:260px !important;flex:none;}
+    .sm-height-280 {height:280px !important;flex:none;}
+    .sm-height-300 {height:300px !important;flex:none;}
+}
+@media (min-width: 971px) and (max-width: 1280px) {
+    .md-height-20 {height:20px !important;flex:none;}
+    .md-height-40 {height:40px !important;flex:none;}
+    .md-height-60 {height:60px !important;flex:none;}
+    .md-height-80 {height:80px !important;flex:none;}
+    .md-height-100 {height:100px !important;flex:none;}
+    .md-height-120 {height:120px !important;flex:none;}
+    .md-height-140 {height:140px !important;flex:none;}
+    .md-height-160 {height:160px !important;flex:none;}
+    .md-height-180 {height:180px !important;flex:none;}
+    .md-height-200 {height:200px !important;flex:none;}
+    .md-height-220 {height:220px !important;flex:none;}
+    .md-height-240 {height:240px !important;flex:none;}
+    .md-height-260 {height:260px !important;flex:none;}
+    .md-height-280 {height:280px !important;flex:none;}
+    .md-height-300 {height:300px !important;flex:none;}
+}
+
+.size-12 {font-size:12px !important}
+.size-13 {font-size:13px !important}
+.size-14 {font-size:14px !important}
+.size-15 {font-size:15px !important}
+.size-16 {font-size:16px !important}
+.size-17 {font-size:17px !important}
+.size-18 {font-size:18px !important}
+.size-19 {font-size:19px !important}
+.size-20 {font-size:20px !important}
+.size-21 {font-size:21px !important}
+.size-24 {font-size:24px !important}
+.size-28 {font-size:28px !important}
+.size-32 {font-size:32px !important}
+.size-35 {font-size:35px !important}
+.size-38 {font-size:38px !important}
+.size-42 {font-size:42px !important}
+.size-46 {font-size:46px !important}
+.size-48 {font-size:48px !important}
+.size-50 {font-size:50px !important}
+.size-54 {font-size:54px !important}
+.size-60 {font-size:60px !important}
+.size-64 {font-size:64px !important}
+.size-68 {font-size:68px !important}
+.size-72 {font-size:72px !important}
+.size-76 {font-size:76px !important}
+.size-80 {font-size:80px !important}
+.size-84 {font-size:84px !important}
+.size-88 {font-size:88px !important}
+.size-92 {font-size:92px !important}
+.size-96 {font-size:96px !important}
+.size-100 {font-size:100px !important}
+.size-104 {font-size:104px !important}
+.size-108 {font-size:108px !important}
+.size-112 {font-size:112px !important}
+.size-116 {font-size:116px !important}
+.size-120 {font-size:120px !important}
+.size-124 {font-size:124px !important}
+.size-128 {font-size:128px !important}
+.size-132 {font-size:132px !important}
+.size-136 {font-size:136px !important}
+.size-140 {font-size:140px !important}
+.size-144 {font-size:144px !important}
+.size-148 {font-size:148px !important}
+.size-152 {font-size:152px !important}
+.size-156 {font-size:156px !important}
+.size-160 {font-size:160px !important}
+.size-164 {font-size:164px !important}
+.size-168 {font-size:168px !important}
+.size-172 {font-size:172px !important}
+.size-176 {font-size:176px !important}
+.size-180 {font-size:180px !important}
+.size-184 {font-size:184px !important}
+.size-188 {font-size:188px !important}
+.size-192 {font-size:192px !important}
+.size-196 {font-size:196px !important}
+.size-200 {font-size:200px !important}
+.size-204 {font-size:204px !important}
+.size-208 {font-size:208px !important}
+.size-212 {font-size:212px !important}
+.size-216 {font-size:216px !important}
+.size-220 {font-size:220px !important}
+.size-224 {font-size:224px !important}
+.size-228 {font-size:228px !important}
+.size-232 {font-size:232px !important}
+.size-236 {font-size:236px !important}
+.size-240 {font-size:240px !important}
+.size-244 {font-size:244px !important}
+.size-248 {font-size:248px !important}
+.size-252 {font-size:252px !important}
+.size-256 {font-size:256px !important}
+.size-260 {font-size:260px !important}
+.size-264 {font-size:264px !important}
+.size-268 {font-size:268px !important}
+.size-272 {font-size:272px !important}
+.size-276 {font-size:276px !important}
+.size-280 {font-size:280px !important}
+.size-284 {font-size:284px !important}
+.size-288 {font-size:288px !important}
+.size-292 {font-size:292px !important}
+.size-296 {font-size:296px !important}
+.size-300 {font-size:300px !important}
+.size-304 {font-size:304px !important}
+.size-308 {font-size:308px !important}
+.size-312 {font-size:312px !important}
+.size-316 {font-size:316px !important}
+.size-320 {font-size:320px !important}
+.size-324 {font-size:324px !important}
+.size-328 {font-size:328px !important}
+.size-332 {font-size:332px !important}
+.size-336 {font-size:336px !important}
+.size-340 {font-size:340px !important}
+.size-344 {font-size:344px !important}
+.size-348 {font-size:348px !important}
+.size-352 {font-size:352px !important}
+.size-356 {font-size:356px !important}
+.size-360 {font-size:360px !important}
+.size-364 {font-size:364px !important}
+.size-368 {font-size:368px !important}
+.size-372 {font-size:372px !important}
+.size-376 {font-size:376px !important}
+.size-380 {font-size:380px !important}
+.size-384 {font-size:384px !important}
+.size-388 {font-size:388px !important}
+.size-392 {font-size:392px !important}
+.size-396 {font-size:396px !important}
+.size-400 {font-size:400px !important}
+
+.container .size-64, .is-container .size-64 { width: unset; height: unset; }
+
+@media all and (max-width: 1800px) { 
+    .v2 .size-12 {font-size:0.74vw !important; font-size:clamp(12px, 0.74vw, 0.74vw) !important} /* Use clamp to prevent small sizes */
+    .v2 .size-13 {font-size:0.8vw !important; font-size:clamp(13px, 0.8vw, 0.8vw) !important}
+    .v2 .size-14 {font-size:0.86vw !important; font-size:clamp(14px, 0.86vw, 0.86vw) !important}
+    .v2 .size-15 {font-size:0.93vw !important; font-size:clamp(15px, 0.93vw, 0.93vw) !important}
+    .v2 .size-16 {font-size:0.99vw !important; font-size:clamp(16px, 0.99vw, 0.99vw) !important}
+    .v2 .size-17 {font-size:1.05vw !important; font-size:clamp(17px, 1.05vw, 1.05vw) !important}
+    .v2 .size-18 {font-size:1.11vw !important; font-size:clamp(18px, 1.11vw, 1.11vw) !important}
+    .v2 .size-19 {font-size:1.17vw !important; font-size:clamp(19px, 1.17vw, 1.17vw) !important}
+    .v2 .size-20 {font-size:1.23vw !important; font-size:clamp(20px, 1.23vw, 1.23vw) !important}
+    .v2 .size-21 {font-size:1.29vw !important; font-size:clamp(21px, 1.29vw, 1.29vw) !important}
+    .v2 .size-24 {font-size:1.48vw !important; font-size:clamp(22px, 1.48vw, 1.48vw) !important}
+    .v2 .size-28 {font-size:1.56vw !important; font-size:clamp(23px, 1.56vw, 1.56vw) !important}
+    .v2 .size-32 {font-size:1.64vw !important; font-size:clamp(24px, 1.64vw, 1.64vw) !important}
+    .v2 .size-35 {font-size:1.82vw !important; font-size:clamp(25px, 1.82vw, 1.82vw) !important}
+    .v2 .size-38 {font-size:1.98vw !important; font-size:clamp(26px, 1.98vw, 1.98vw) !important}
+    .v2 .size-42 {font-size:2.19vw !important; font-size:clamp(27px, 2.19vw, 2.19vw) !important} /**/
+    .v2 .size-46 {font-size:2.4vw !important; font-size:clamp(28px, 2.4vw, 2.4vw) !important}
+    .v2 .size-48 {font-size:2.5vw !important; font-size:clamp(29px, 2.5vw, 2.5vw) !important}
+    .v2 .size-50 {font-size:2.61vw !important; font-size:clamp(30px, 2.61vw, 2.61vw) !important}
+    .v2 .size-54 {font-size:2.81vw !important; font-size:clamp(31px, 2.81vw, 2.81vw) !important}
+    .v2 .size-60 {font-size:3.13vw !important; font-size:clamp(32px, 3.13vw, 3.13vw) !important}
+    .v2 .size-64 {font-size:3.33vw !important; font-size:clamp(33px, 3.33vw, 3.33vw) !important}
+    .v2 .size-68 {font-size:3.54vw !important; font-size:clamp(34px, 3.54vw, 3.54vw) !important}
+    .v2 .size-72 {font-size:3.75vw !important; font-size:clamp(35px, 3.75vw, 3.75vw) !important}
+    .v2 .size-76 {font-size:3.96vw !important; font-size:clamp(36px, 3.96vw, 3.96vw) !important}
+    .v2 .size-80 {font-size:4.17vw !important; font-size:clamp(37px, 4.17vw, 4.17vw) !important}
+    .v2 .size-84 {font-size:4.38vw !important; font-size:clamp(38px, 4.38vw, 4.38vw) !important} 
+    .v2 .size-88 {font-size:4.58vw !important; font-size:clamp(39px, 4.58vw, 4.58vw) !important}
+    .v2 .size-92 {font-size:4.79vw !important; font-size:clamp(40px, 4.79vw, 4.79vw) !important} /**/
+    .v2 .size-96 {font-size:5vw !important; font-size:clamp(41px, 5vw, 5vw) !important}
+    .v2 .size-100 {font-size:5.21vw !important; font-size:clamp(42px, 5.21vw, 5.21vw) !important} 
+    .v2 .size-104 {font-size:5.42vw !important; font-size:clamp(43px, 5.42vw, 5.42vw) !important}
+    .v2 .size-108 {font-size:5.63vw !important; font-size:clamp(44px, 5.63vw, 5.63vw) !important}
+    .v2 .size-112 {font-size:5.84vw !important; font-size:clamp(45px, 5.84vw, 5.84vw) !important}
+    .v2 .size-116 {font-size:6.04vw !important; font-size:clamp(46px, 6.04vw, 6.04vw) !important}
+    .v2 .size-120 {font-size:6.25vw !important; font-size:clamp(47px, 6.25vw, 6.25vw) !important}
+    .v2 .size-124 {font-size:6.46vw !important; font-size:clamp(48px, 6.46vw, 6.46vw) !important}
+    .v2 .size-128 {font-size:6.67vw !important; font-size:clamp(49px, 6.67vw, 6.67vw) !important}
+    .v2 .size-132 {font-size:6.88vw !important; font-size:clamp(50px, 6.88vw, 6.88vw) !important}
+    .v2 .size-136 {font-size:7.09vw !important; font-size:clamp(51px, 7.09vw, 7.09vw) !important}
+    .v2 .size-140 {font-size:7.29vw !important; font-size:clamp(52px, 7.29vw, 7.29vw) !important}
+    .v2 .size-144 {font-size:7.5vw !important; font-size:clamp(53px, 7.5vw, 7.5vw) !important}
+    .v2 .size-148 {font-size:7.71vw !important; font-size:clamp(54px, 7.71vw, 7.71vw) !important}
+    .v2 .size-152 {font-size:7.92vw !important; font-size:clamp(55px, 7.92vw, 7.92vw) !important}
+    .v2 .size-156 {font-size:8.13vw !important; font-size:clamp(56px, 8.13vw, 8.13vw) !important}
+    .v2 .size-160 {font-size:8.34vw !important; font-size:clamp(57px, 8.34vw, 8.34vw) !important}
+    .v2 .size-164 {font-size:8.54vw !important; font-size:clamp(58px, 8.54vw, 8.54vw) !important}
+    .v2 .size-168 {font-size:8.75vw !important; font-size:clamp(59px, 8.75vw, 8.75vw) !important}
+    .v2 .size-172 {font-size:8.96vw !important; font-size:clamp(60px, 8.96vw, 8.96vw) !important}
+    .v2 .size-176 {font-size:9.17vw !important; font-size:clamp(61px, 9.17vw, 9.17vw) !important}
+    .v2 .size-180 {font-size:9.38vw !important; font-size:clamp(62px, 9.38vw, 9.38vw) !important}
+    .v2 .size-184 {font-size:9.59vw !important; font-size:clamp(63px, 9.59vw, 9.59vw) !important}
+    .v2 .size-188 {font-size:9.79vw !important; font-size:clamp(64px, 9.79vw, 9.79vw) !important}
+    .v2 .size-192 {font-size:10vw !important; font-size:clamp(65px, 10vw, 10vw) !important}
+    .v2 .size-196 {font-size:10.21vw !important; font-size:clamp(66px, 10.21vw, 10.21vw) !important}
+    .v2 .size-200 {font-size:10.42vw !important; font-size:clamp(67px, 10.42vw, 10.42vw) !important}
+    .v2 .size-204 {font-size:10.63vw !important; font-size:clamp(68px, 10.63vw, 10.63vw) !important}
+    .v2 .size-208 {font-size:10.84vw !important; font-size:clamp(69px, 10.84vw, 10.84vw) !important}
+    .v2 .size-212 {font-size:11.05vw !important; font-size:clamp(70px, 11.05vw, 11.05vw) !important}
+    .v2 .size-216 {font-size:11.25vw !important; font-size:clamp(71px, 11.25vw, 11.25vw) !important}
+    .v2 .size-220 {font-size:11.46vw !important; font-size:clamp(72px, 11.46vw, 11.46vw) !important}  
+    .v2 .size-224 {font-size:11.67vw !important; font-size:clamp(73px, 11.67vw, 11.67vw) !important}
+    .v2 .size-228 {font-size:11.88vw !important; font-size:clamp(75px, 11.88vw, 11.88vw) !important}
+    .v2 .size-232 {font-size:12.09vw !important; font-size:clamp(75px, 12.09vw, 12.09vw) !important}
+    .v2 .size-236 {font-size:12.3vw !important; font-size:clamp(76px, 12.3vw, 12.3vw) !important}
+    .v2 .size-240 {font-size:12.5vw !important; font-size:clamp(77px, 12.5vw, 12.5vw) !important}
+    .v2 .size-244 {font-size:12.71vw !important; font-size:clamp(78px, 12.71vw, 12.71vw) !important}
+    .v2 .size-248 {font-size:12.92vw !important; font-size:clamp(79px, 12.92vw, 12.92vw) !important}
+    .v2 .size-252 {font-size:13.13vw !important; font-size:clamp(80px, 13.13vw, 13.13vw) !important}
+    .v2 .size-256 {font-size:13.34vw !important; font-size:clamp(81px, 13.34vw, 13.34vw) !important}
+    .v2 .size-260 {font-size:13.55vw !important; font-size:clamp(82px, 13.55vw, 13.55vw) !important}
+    .v2 .size-264 {font-size:13.75vw !important; font-size:clamp(83px, 13.75vw, 13.75vw) !important}
+    .v2 .size-268 {font-size:13.96vw !important; font-size:clamp(84px, 13.96vw, 13.96vw) !important}
+    .v2 .size-272 {font-size:14.17vw !important; font-size:clamp(85px, 14.17vw, 14.17vw) !important}
+    .v2 .size-276 {font-size:14.38vw !important; font-size:clamp(86px, 14.38vw, 14.38vw) !important}
+    .v2 .size-280 {font-size:14.59vw !important; font-size:clamp(87px, 14.59vw, 14.59vw) !important}
+    .v2 .size-284 {font-size:14.8vw !important; font-size:clamp(88px, 14.8vw, 14.8vw) !important}
+    .v2 .size-288 {font-size:15vw !important; font-size:clamp(89px, 15vw, 15vw) !important}
+    .v2 .size-292 {font-size:15.21vw !important; font-size:clamp(90px, 15.21vw, 15.21vw) !important}
+    .v2 .size-296 {font-size:15.42vw !important; font-size:clamp(91px, 15.42vw, 15.42vw) !important}
+    .v2 .size-300 {font-size:15.63vw !important; font-size:clamp(92px, 15.63vw, 15.63vw) !important}
+    .v2 .size-304 {font-size:15.84vw !important; font-size:clamp(93px, 15.84vw, 15.84vw) !important}
+    .v2 .size-308 {font-size:16.06vw !important; font-size:clamp(94px, 16.06vw, 16.06vw) !important}
+    .v2 .size-312 {font-size:16.26vw !important; font-size:clamp(95px, 16.26vw, 16.26vw) !important}
+    .v2 .size-316 {font-size:16.46vw !important; font-size:clamp(96px, 16.46vw, 16.46vw) !important}
+    .v2 .size-320 {font-size:16.67vw !important; font-size:clamp(97px, 16.67vw, 16.67vw) !important}
+    .v2 .size-324 {font-size:16.88vw !important; font-size:clamp(98px, 16.88vw, 16.88vw) !important}
+    .v2 .size-328 {font-size:17.09vw !important; font-size:clamp(99px, 17.09vw, 17.09vw) !important}
+    .v2 .size-332 {font-size:17.3vw !important; font-size:clamp(100px, 17.3vw, 17.3vw) !important}
+    .v2 .size-336 {font-size:17.5vw !important; font-size:clamp(101px, 17.5vw, 17.5vw) !important}
+    .v2 .size-340 {font-size:17.71vw !important; font-size:clamp(102px, 17.71vw, 17.71vw) !important}
+    .v2 .size-344 {font-size:17.92vw !important; font-size:clamp(103px, 17.92vw, 17.92vw) !important}
+    .v2 .size-348 {font-size:18.13vw !important; font-size:clamp(104px, 18.13vw, 18.13vw) !important}
+    .v2 .size-352 {font-size:18.34vw !important; font-size:clamp(105px, 18.34vw, 18.34vw) !important}
+    .v2 .size-356 {font-size:18.55vw !important; font-size:clamp(106px, 18.55vw, 18.55vw) !important}
+    .v2 .size-360 {font-size:18.76vw !important; font-size:clamp(107px, 18.76vw, 18.76vw) !important}
+    .v2 .size-364 {font-size:18.96vw !important; font-size:clamp(108px, 18.96vw, 18.96vw) !important}
+    .v2 .size-368 {font-size:19.17vw !important; font-size:clamp(109px, 19.17vw, 19.17vw) !important}
+    .v2 .size-372 {font-size:19.38vw !important; font-size:clamp(110px, 19.38vw, 19.38vw) !important}
+    .v2 .size-376 {font-size:19.59vw !important; font-size:clamp(111px, 19.59vw, 19.59vw) !important}
+    .v2 .size-380 {font-size:19.8vw !important; font-size:clamp(112px, 19.8vw, 19.8vw) !important}
+    .v2 .size-384 {font-size:20vw !important; font-size:clamp(113px, 20vw, 20vw) !important}
+    .v2 .size-388 {font-size:20.21vw !important; font-size:clamp(114px, 20.21vw, 20.21vw) !important}
+    .v2 .size-392 {font-size:20.42vw !important; font-size:clamp(115px, 20.42vw, 20.42vw) !important}
+    .v2 .size-396 {font-size:20.63vw !important; font-size:clamp(116px, 20.63vw, 20.63vw) !important}
+    .v2 .size-400 {font-size:20.84vw !important; font-size:clamp(117px, 20.84vw, 20.84vw) !important}  
+} 
+
+@media all and (min-width: 1921px) { 
+    .v2 .size-12 {font-size:0.63vw !important}
+    .v2 .size-13 {font-size:0.68vw !important}
+    .v2 .size-14 {font-size:0.73vw !important}
+    .v2 .size-15 {font-size:0.78vw !important}
+    .v2 .size-16 {font-size:0.83vw !important}
+    .v2 .size-17 {font-size:0.89vw !important}
+    .v2 .size-18 {font-size:0.94vw !important}
+    .v2 .size-19 {font-size:0.99vw !important}
+    .v2 .size-20 {font-size:1.04vw !important}
+    .v2 .size-21 {font-size:1.09vw !important}
+    .v2 .size-24 {font-size:1.25vw !important}
+    .v2 .size-28 {font-size:1.46vw !important}
+    .v2 .size-32 {font-size:1.67vw !important}
+    .v2 .size-35 {font-size:1.82vw !important}
+    .v2 .size-38 {font-size:1.98vw !important}
+    .v2 .size-42 {font-size:2.19vw !important}
+    .v2 .size-46 {font-size:2.4vw !important}
+    .v2 .size-48 {font-size:2.5vw !important}
+    .v2 .size-50 {font-size:2.61vw !important;}
+    .v2 .size-54 {font-size:2.81vw !important;}
+    .v2 .size-60 {font-size:3.13vw !important;}
+    .v2 .size-64 {font-size:3.33vw !important;}
+    .v2 .size-68 {font-size:3.54vw !important;}
+    .v2 .size-72 {font-size:3.75vw !important;}
+    .v2 .size-76 {font-size:3.96vw !important;}
+    .v2 .size-80 {font-size:4.17vw !important}
+    .v2 .size-84 {font-size:4.38vw !important} 
+    .v2 .size-88 {font-size:4.58vw !important}
+    .v2 .size-92 {font-size:4.79vw !important}
+    .v2 .size-96 {font-size:5vw !important}
+    .v2 .size-100 {font-size:5.21vw !important} 
+    .v2 .size-104 {font-size:5.42vw !important}
+    .v2 .size-108 {font-size:5.63vw !important}
+    .v2 .size-112 {font-size:5.84vw !important}
+    .v2 .size-116 {font-size:6.04vw !important}
+    .v2 .size-120 {font-size:6.25vw !important}
+    .v2 .size-124 {font-size:6.46vw !important}
+    .v2 .size-128 {font-size:6.67vw !important}
+    .v2 .size-132 {font-size:6.88vw !important}
+    .v2 .size-136 {font-size:7.09vw !important}
+    .v2 .size-140 {font-size:7.29vw !important}
+    .v2 .size-144 {font-size:7.5vw !important}
+    .v2 .size-148 {font-size:7.71vw !important}
+    .v2 .size-152 {font-size:7.92vw !important}
+    .v2 .size-156 {font-size:8.13vw !important}
+    .v2 .size-160 {font-size:8.34vw !important}
+    .v2 .size-164 {font-size:8.54vw !important}
+    .v2 .size-168 {font-size:8.75vw !important}
+    .v2 .size-172 {font-size:8.96vw !important}
+    .v2 .size-176 {font-size:9.17vw !important}
+    .v2 .size-180 {font-size:9.38vw !important}
+    .v2 .size-184 {font-size:9.59vw !important}
+    .v2 .size-188 {font-size:9.79vw !important}
+    .v2 .size-192 {font-size:10vw !important}
+    .v2 .size-196 {font-size:10.21vw !important}
+    .v2 .size-200 {font-size:10.42vw !important}
+    .v2 .size-204 {font-size:10.63vw !important}
+    .v2 .size-208 {font-size:10.84vw !important}
+    .v2 .size-212 {font-size:11.05vw !important}
+    .v2 .size-216 {font-size:11.25vw !important}
+    .v2 .size-220 {font-size:11.46vw !important}  
+    .v2 .size-224 {font-size:11.67vw !important}
+    .v2 .size-228 {font-size:11.88vw !important}
+    .v2 .size-232 {font-size:12.09vw !important}
+    .v2 .size-236 {font-size:12.3vw !important}
+    .v2 .size-240 {font-size:12.5vw !important}
+    .v2 .size-244 {font-size:12.71vw !important}
+    .v2 .size-248 {font-size:12.92vw !important}
+    .v2 .size-252 {font-size:13.13vw !important}
+    .v2 .size-256 {font-size:13.34vw !important}
+    .v2 .size-260 {font-size:13.55vw !important}
+    .v2 .size-264 {font-size:13.75vw !important}
+    .v2 .size-268 {font-size:13.96vw !important}
+    .v2 .size-272 {font-size:14.17vw !important}
+    .v2 .size-276 {font-size:14.38vw !important}
+    .v2 .size-280 {font-size:14.59vw !important}
+    .v2 .size-284 {font-size:14.8vw !important}
+    .v2 .size-288 {font-size:15vw !important}
+    .v2 .size-292 {font-size:15.21vw !important}
+    .v2 .size-296 {font-size:15.42vw !important}
+    .v2 .size-300 {font-size:15.63vw !important}
+    .v2 .size-304 {font-size:15.84vw !important}
+    .v2 .size-308 {font-size:16.06vw !important}
+    .v2 .size-312 {font-size:16.26vw !important}
+    .v2 .size-316 {font-size:16.46vw !important}
+    .v2 .size-320 {font-size:16.67vw !important}
+    .v2 .size-324 {font-size:16.88vw !important}
+    .v2 .size-328 {font-size:17.09vw !important}
+    .v2 .size-332 {font-size:17.3vw !important}
+    .v2 .size-336 {font-size:17.5vw !important}
+    .v2 .size-340 {font-size:17.71vw !important}
+    .v2 .size-344 {font-size:17.92vw !important}
+    .v2 .size-348 {font-size:18.13vw !important}
+    .v2 .size-352 {font-size:18.34vw !important}
+    .v2 .size-356 {font-size:18.55vw !important}
+    .v2 .size-360 {font-size:18.76vw !important}
+    .v2 .size-364 {font-size:18.96vw !important}
+    .v2 .size-368 {font-size:19.17vw !important}
+    .v2 .size-372 {font-size:19.38vw !important}
+    .v2 .size-376 {font-size:19.59vw !important}
+    .v2 .size-380 {font-size:19.8vw !important}
+    .v2 .size-384 {font-size:20vw !important}
+    .v2 .size-388 {font-size:20.21vw !important}
+    .v2 .size-392 {font-size:20.42vw !important}
+    .v2 .size-396 {font-size:20.63vw !important}
+    .v2 .size-400 {font-size:20.84vw !important}
+
+    /* new v3: limit the size on large screen */
+    .v3 .size-12 {font-size:0.63vw !important}
+    .v3 .size-13 {font-size:0.68vw !important}
+    .v3 .size-14 {font-size:0.73vw !important}
+    .v3 .size-15 {font-size:0.78vw !important}
+    .v3 .size-16 {font-size:0.83vw !important}
+    .v3 .size-17 {font-size:0.89vw !important}
+    .v3 .size-18 {font-size:0.94vw !important}
+    .v3 .size-19 {font-size:0.99vw !important}
+    .v3 .size-20 {font-size:1.04vw !important}
+    .v3 .size-21 {font-size:1.09vw !important}
+    .v3 .size-24 {font-size:1.25vw !important}
+    .v3 .size-28 {font-size:1.46vw !important}
+    .v3 .size-32 {font-size:clamp(30px, 1.67vw, 43px) !important}
+    .v3 .size-35 {font-size:clamp(30px, 1.82vw, 44px) !important}
+    .v3 .size-38 {font-size:clamp(30px, 1.98vw, 45px) !important}
+    .v3 .size-42 {font-size:clamp(30px, 2.19vw, 46px) !important}
+    .v3 .size-46 {font-size:clamp(30px, 2.4vw, 47px) !important}
+    .v3 .size-48 {font-size:clamp(30px, 2.5vw, 48px) !important}
+    .v3 .size-50 {font-size:clamp(30px, 2.61vw, 50px) !important;}
+    .v3 .size-54 {font-size:clamp(30px, 2.81vw, 54px) !important;}
+    .v3 .size-60 {font-size:clamp(30px, 3.13vw, 60px) !important;}
+    .v3 .size-64 {font-size:clamp(30px, 3.33vw, 64px) !important;}
+    .v3 .size-68 {font-size:clamp(30px, 3.54vw, 68px) !important;}
+    .v3 .size-72 {font-size:clamp(30px, 3.75vw, 72px) !important;}
+    .v3 .size-76 {font-size:clamp(30px, 3.96vw, 76px) !important;}
+    .v3 .size-80 {font-size:clamp(30px, 4.17vw, 80px) !important}
+    .v3 .size-84 {font-size:clamp(30px, 4.38vw, 84px) !important} 
+    .v3 .size-88 {font-size:clamp(30px, 4.58vw, 88px) !important}
+    .v3 .size-92 {font-size:clamp(30px, 4.79vw, 92px) !important}
+    .v3 .size-96 {font-size:clamp(30px, 5vw, 96px) !important}
+    .v3 .size-100 {font-size:clamp(30px, 5.21vw, 100px) !important} 
+    .v3 .size-104 {font-size:clamp(30px, 5.42vw, 104px) !important}
+    .v3 .size-108 {font-size:clamp(30px, 5.63vw, 108px) !important}
+    .v3 .size-112 {font-size:clamp(30px, 5.84vw, 112px) !important}
+    .v3 .size-116 {font-size:clamp(30px, 6.04vw, 116px) !important}
+    .v3 .size-120 {font-size:clamp(30px, 6.25vw, 120px) !important}
+    .v3 .size-124 {font-size:clamp(30px, 6.46vw, 124px) !important}
+    .v3 .size-128 {font-size:clamp(30px, 6.67vw, 128px) !important}
+    .v3 .size-132 {font-size:clamp(30px, 6.88vw, 132px) !important}
+    .v3 .size-136 {font-size:clamp(30px, 7.09vw, 136px) !important}
+    .v3 .size-140 {font-size:clamp(30px, 7.29vw, 140px) !important}
+    .v3 .size-144 {font-size:clamp(30px, 7.5vw, 144px) !important}
+    .v3 .size-148 {font-size:clamp(30px, 7.71vw, 148px) !important}
+    .v3 .size-152 {font-size:clamp(30px, 7.92vw, 152px) !important}
+    .v3 .size-156 {font-size:clamp(30px, 8.13vw, 156px) !important}
+    .v3 .size-160 {font-size:clamp(30px, 8.34vw, 160px) !important}
+    .v3 .size-164 {font-size:clamp(30px, 8.54vw, 164px) !important}
+    .v3 .size-168 {font-size:clamp(30px, 8.75vw, 168px) !important}
+    .v3 .size-172 {font-size:clamp(30px, 8.96vw, 172px) !important}
+    .v3 .size-176 {font-size:clamp(30px, 9.17vw, 176px) !important}
+    .v3 .size-180 {font-size:clamp(30px, 9.38vw, 180px) !important}
+    .v3 .size-184 {font-size:clamp(30px, 9.59vw, 184px) !important}
+    .v3 .size-188 {font-size:clamp(30px, 9.79vw, 188px) !important}
+    .v3 .size-192 {font-size:clamp(30px, 10vw, 192px) !important}
+    .v3 .size-196 {font-size:clamp(30px, 10.21vw, 196px) !important}
+    .v3 .size-200 {font-size:clamp(30px, 10.42vw, 200px) !important}
+    .v3 .size-204 {font-size:clamp(30px, 10.63vw, 204px) !important}
+    .v3 .size-208 {font-size:clamp(30px, 10.84vw, 208px) !important}
+    .v3 .size-212 {font-size:clamp(30px, 11.05vw, 212px) !important}
+    .v3 .size-216 {font-size:clamp(30px, 11.25vw, 216px) !important}
+    .v3 .size-220 {font-size:clamp(30px, 11.46vw, 220px) !important}  
+    .v3 .size-224 {font-size:clamp(30px, 11.67vw, 224px) !important}
+    .v3 .size-228 {font-size:clamp(30px, 11.88vw, 228px) !important}
+    .v3 .size-232 {font-size:clamp(30px, 12.09vw, 232px) !important}
+    .v3 .size-236 {font-size:clamp(30px, 12.3vw, 236px) !important}
+    .v3 .size-240 {font-size:clamp(30px, 12.5vw, 240px) !important}
+    .v3 .size-244 {font-size:clamp(30px, 12.71vw, 244px) !important}
+    .v3 .size-248 {font-size:clamp(30px, 12.92vw, 248px) !important}
+    .v3 .size-252 {font-size:clamp(30px, 13.13vw, 252px) !important}
+    .v3 .size-256 {font-size:clamp(30px, 13.34vw, 256px) !important}
+    .v3 .size-260 {font-size:clamp(30px, 13.55vw, 260px) !important}
+    .v3 .size-264 {font-size:clamp(30px, 13.75vw, 264px) !important}
+    .v3 .size-268 {font-size:clamp(30px, 13.96vw, 268px) !important}
+    .v3 .size-272 {font-size:clamp(30px, 14.17vw, 272px) !important}
+    .v3 .size-276 {font-size:clamp(30px, 14.38vw, 276px) !important}
+    .v3 .size-280 {font-size:clamp(30px, 14.59vw, 280px) !important}
+    .v3 .size-284 {font-size:clamp(30px, 14.8vw, 284px) !important}
+    .v3 .size-288 {font-size:clamp(30px, 15vw, 288px) !important}
+    .v3 .size-292 {font-size:clamp(30px, 15.21vw, 292px) !important}
+    .v3 .size-296 {font-size:clamp(30px, 15.42vw, 296px) !important}
+    .v3 .size-300 {font-size:clamp(30px, 15.63vw, 300px) !important}
+    .v3 .size-304 {font-size:clamp(30px, 15.84vw, 304px) !important}
+    .v3 .size-308 {font-size:clamp(30px, 16.06vw, 308px) !important}
+    .v3 .size-312 {font-size:clamp(30px, 16.26vw, 312px) !important}
+    .v3 .size-316 {font-size:clamp(30px, 16.46vw, 316px) !important}
+    .v3 .size-320 {font-size:clamp(30px, 16.67vw, 320px) !important}
+    .v3 .size-324 {font-size:clamp(30px, 16.88vw, 324px) !important}
+    .v3 .size-328 {font-size:clamp(30px, 17.09vw, 328px) !important}
+    .v3 .size-332 {font-size:clamp(30px, 17.3vw, 332px) !important}
+    .v3 .size-336 {font-size:clamp(30px, 17.5vw, 336px) !important}
+    .v3 .size-340 {font-size:clamp(30px, 17.71vw, 340px) !important}
+    .v3 .size-344 {font-size:clamp(30px, 17.92vw, 344px) !important}
+    .v3 .size-348 {font-size:clamp(30px, 18.13vw, 348px) !important}
+    .v3 .size-352 {font-size:clamp(30px, 18.34vw, 352px) !important}
+    .v3 .size-356 {font-size:clamp(30px, 18.55vw, 356px) !important}
+    .v3 .size-360 {font-size:clamp(30px, 18.76vw, 360px) !important}
+    .v3 .size-364 {font-size:clamp(30px, 18.96vw, 364px) !important}
+    .v3 .size-368 {font-size:clamp(30px, 19.17vw, 368px) !important}
+    .v3 .size-372 {font-size:clamp(30px, 19.38vw, 372px) !important}
+    .v3 .size-376 {font-size:clamp(30px, 19.59vw, 376px) !important}
+    .v3 .size-380 {font-size:clamp(30px, 19.8vw, 380px) !important}
+    .v3 .size-384 {font-size:clamp(30px, 20vw, 384px) !important}
+    .v3 .size-388 {font-size:clamp(30px, 20.21vw, 388px) !important}
+    .v3 .size-392 {font-size:clamp(30px, 20.42vw, 392px) !important}
+    .v3 .size-396 {font-size:clamp(30px, 20.63vw, 396px) !important}
+    .v3 .size-400 {font-size:clamp(30px, 20.84vw, 400px) !important}  
+}
+
+/* targetted font sizes */
+@media (min-width: 971px) and (max-width: 1280px) {
+    .v2 .md-size-12 {font-size:0.74vw !important; font-size:clamp(12px, 0.74vw, 0.74vw) !important}
+    .v2 .md-size-13 {font-size:0.8vw !important; font-size:clamp(13px, 0.8vw, 0.8vw) !important}
+    .v2 .md-size-14 {font-size:0.86vw !important; font-size:clamp(14px, 0.86vw, 0.86vw) !important}
+    .v2 .md-size-15 {font-size:0.93vw !important; font-size:clamp(15px, 0.93vw, 0.93vw) !important}
+    .v2 .md-size-16 {font-size:0.99vw !important; font-size:clamp(16px, 0.99vw, 0.99vw) !important}
+    .v2 .md-size-17 {font-size:1.05vw !important; font-size:clamp(17px, 1.05vw, 1.05vw) !important}
+    .v2 .md-size-18 {font-size:1.11vw !important; font-size:clamp(18px, 1.11vw, 1.11vw) !important}
+    .v2 .md-size-19 {font-size:1.17vw !important; font-size:clamp(19px, 1.17vw, 1.17vw) !important}
+    .v2 .md-size-20 {font-size:1.23vw !important; font-size:clamp(20px, 1.23vw, 1.23vw) !important}
+    .v2 .md-size-21 {font-size:1.29vw !important; font-size:clamp(21px, 1.29vw, 1.29vw) !important}
+    .v2 .md-size-24 {font-size:1.48vw !important; font-size:clamp(22px, 1.48vw, 1.48vw) !important}
+    .v2 .md-size-28 {font-size:1.56vw !important; font-size:clamp(23px, 1.56vw, 1.56vw) !important}
+    .v2 .md-size-32 {font-size:1.64vw !important; font-size:clamp(24px, 1.64vw, 1.64vw) !important}
+    .v2 .md-size-35 {font-size:1.82vw !important; font-size:clamp(25px, 1.82vw, 1.82vw) !important}
+    .v2 .md-size-38 {font-size:1.98vw !important; font-size:clamp(26px, 1.98vw, 1.98vw) !important}
+    .v2 .md-size-42 {font-size:2.19vw !important; font-size:clamp(27px, 2.19vw, 2.19vw) !important} 
+    .v2 .md-size-46 {font-size:2.4vw !important; font-size:clamp(28px, 2.4vw, 2.4vw) !important}
+    .v2 .md-size-48 {font-size:2.5vw !important; font-size:clamp(29px, 2.5vw, 2.5vw) !important}
+    .v2 .md-size-50 {font-size:2.61vw !important; font-size:clamp(30px, 2.61vw, 2.61vw) !important}
+    .v2 .md-size-54 {font-size:2.81vw !important; font-size:clamp(31px, 2.81vw, 2.81vw) !important}
+    .v2 .md-size-60 {font-size:3.13vw !important; font-size:clamp(32px, 3.13vw, 3.13vw) !important}
+    .v2 .md-size-64 {font-size:3.33vw !important; font-size:clamp(33px, 3.33vw, 3.33vw) !important}
+    .v2 .md-size-68 {font-size:3.54vw !important; font-size:clamp(34px, 3.54vw, 3.54vw) !important}
+    .v2 .md-size-72 {font-size:3.75vw !important; font-size:clamp(35px, 3.75vw, 3.75vw) !important}
+    .v2 .md-size-76 {font-size:3.96vw !important; font-size:clamp(36px, 3.96vw, 3.96vw) !important}
+    .v2 .md-size-80 {font-size:4.17vw !important; font-size:clamp(37px, 4.17vw, 4.17vw) !important}
+    .v2 .md-size-84 {font-size:4.38vw !important; font-size:clamp(38px, 4.38vw, 4.38vw) !important} 
+    .v2 .md-size-88 {font-size:4.58vw !important; font-size:clamp(39px, 4.58vw, 4.58vw) !important}
+    .v2 .md-size-92 {font-size:4.79vw !important; font-size:clamp(40px, 4.79vw, 4.79vw) !important} 
+    .v2 .md-size-96 {font-size:5vw !important; font-size:clamp(41px, 5vw, 5vw) !important}
+    .v2 .md-size-100 {font-size:5.21vw !important; font-size:clamp(42px, 5.21vw, 5.21vw) !important} 
+    .v2 .md-size-104 {font-size:5.42vw !important; font-size:clamp(43px, 5.42vw, 5.42vw) !important}
+    .v2 .md-size-108 {font-size:5.63vw !important; font-size:clamp(44px, 5.63vw, 5.63vw) !important}
+    .v2 .md-size-112 {font-size:5.84vw !important; font-size:clamp(45px, 5.84vw, 5.84vw) !important}
+    .v2 .md-size-116 {font-size:6.04vw !important; font-size:clamp(46px, 6.04vw, 6.04vw) !important}
+    .v2 .md-size-120 {font-size:6.25vw !important; font-size:clamp(47px, 6.25vw, 6.25vw) !important}
+    .v2 .md-size-124 {font-size:6.46vw !important; font-size:clamp(48px, 6.46vw, 6.46vw) !important}
+    .v2 .md-size-128 {font-size:6.67vw !important; font-size:clamp(49px, 6.67vw, 6.67vw) !important}
+    .v2 .md-size-132 {font-size:6.88vw !important; font-size:clamp(50px, 6.88vw, 6.88vw) !important}
+    .v2 .md-size-136 {font-size:7.09vw !important; font-size:clamp(51px, 7.09vw, 7.09vw) !important}
+    .v2 .md-size-140 {font-size:7.29vw !important; font-size:clamp(52px, 7.29vw, 7.29vw) !important}
+    .v2 .md-size-144 {font-size:7.5vw !important; font-size:clamp(53px, 7.5vw, 7.5vw) !important}
+    .v2 .md-size-148 {font-size:7.71vw !important; font-size:clamp(54px, 7.71vw, 7.71vw) !important}
+    .v2 .md-size-152 {font-size:7.92vw !important; font-size:clamp(55px, 7.92vw, 7.92vw) !important}
+    .v2 .md-size-156 {font-size:8.13vw !important; font-size:clamp(56px, 8.13vw, 8.13vw) !important}
+    .v2 .md-size-160 {font-size:8.34vw !important; font-size:clamp(57px, 8.34vw, 8.34vw) !important}
+    .v2 .md-size-164 {font-size:8.54vw !important; font-size:clamp(58px, 8.54vw, 8.54vw) !important}
+    .v2 .md-size-168 {font-size:8.75vw !important; font-size:clamp(59px, 8.75vw, 8.75vw) !important}
+    .v2 .md-size-172 {font-size:8.96vw !important; font-size:clamp(60px, 8.96vw, 8.96vw) !important}
+    .v2 .md-size-176 {font-size:9.17vw !important; font-size:clamp(61px, 9.17vw, 9.17vw) !important}
+    .v2 .md-size-180 {font-size:9.38vw !important; font-size:clamp(62px, 9.38vw, 9.38vw) !important}
+    .v2 .md-size-184 {font-size:9.59vw !important; font-size:clamp(63px, 9.59vw, 9.59vw) !important}
+    .v2 .md-size-188 {font-size:9.79vw !important; font-size:clamp(64px, 9.79vw, 9.79vw) !important}
+    .v2 .md-size-192 {font-size:10vw !important; font-size:clamp(65px, 10vw, 10vw) !important}
+    .v2 .md-size-196 {font-size:10.21vw !important; font-size:clamp(66px, 10.21vw, 10.21vw) !important}
+    .v2 .md-size-200 {font-size:10.42vw !important; font-size:clamp(67px, 10.42vw, 10.42vw) !important}
+    .v2 .md-size-204 {font-size:10.63vw !important; font-size:clamp(68px, 10.63vw, 10.63vw) !important}
+    .v2 .md-size-208 {font-size:10.84vw !important; font-size:clamp(69px, 10.84vw, 10.84vw) !important}
+    .v2 .md-size-212 {font-size:11.05vw !important; font-size:clamp(70px, 11.05vw, 11.05vw) !important}
+    .v2 .md-size-216 {font-size:11.25vw !important; font-size:clamp(71px, 11.25vw, 11.25vw) !important}
+    .v2 .md-size-220 {font-size:11.46vw !important; font-size:clamp(72px, 11.46vw, 11.46vw) !important}  
+    .v2 .md-size-224 {font-size:11.67vw !important; font-size:clamp(73px, 11.67vw, 11.67vw) !important}
+    .v2 .md-size-228 {font-size:11.88vw !important; font-size:clamp(75px, 11.88vw, 11.88vw) !important}
+    .v2 .md-size-232 {font-size:12.09vw !important; font-size:clamp(75px, 12.09vw, 12.09vw) !important}
+    .v2 .md-size-236 {font-size:12.3vw !important; font-size:clamp(76px, 12.3vw, 12.3vw) !important}
+    .v2 .md-size-240 {font-size:12.5vw !important; font-size:clamp(77px, 12.5vw, 12.5vw) !important}
+    .v2 .md-size-244 {font-size:12.71vw !important; font-size:clamp(78px, 12.71vw, 12.71vw) !important}
+    .v2 .md-size-248 {font-size:12.92vw !important; font-size:clamp(79px, 12.92vw, 12.92vw) !important}
+    .v2 .md-size-252 {font-size:13.13vw !important; font-size:clamp(80px, 13.13vw, 13.13vw) !important}
+    .v2 .md-size-256 {font-size:13.34vw !important; font-size:clamp(81px, 13.34vw, 13.34vw) !important}
+    .v2 .md-size-260 {font-size:13.55vw !important; font-size:clamp(82px, 13.55vw, 13.55vw) !important}
+    .v2 .md-size-264 {font-size:13.75vw !important; font-size:clamp(83px, 13.75vw, 13.75vw) !important}
+    .v2 .md-size-268 {font-size:13.96vw !important; font-size:clamp(84px, 13.96vw, 13.96vw) !important}
+    .v2 .md-size-272 {font-size:14.17vw !important; font-size:clamp(85px, 14.17vw, 14.17vw) !important}
+    .v2 .md-size-276 {font-size:14.38vw !important; font-size:clamp(86px, 14.38vw, 14.38vw) !important}
+    .v2 .md-size-280 {font-size:14.59vw !important; font-size:clamp(87px, 14.59vw, 14.59vw) !important}
+    .v2 .md-size-284 {font-size:14.8vw !important; font-size:clamp(88px, 14.8vw, 14.8vw) !important}
+    .v2 .md-size-288 {font-size:15vw !important; font-size:clamp(89px, 15vw, 15vw) !important}
+    .v2 .md-size-292 {font-size:15.21vw !important; font-size:clamp(90px, 15.21vw, 15.21vw) !important}
+    .v2 .md-size-296 {font-size:15.42vw !important; font-size:clamp(91px, 15.42vw, 15.42vw) !important}
+    .v2 .md-size-300 {font-size:15.63vw !important; font-size:clamp(92px, 15.63vw, 15.63vw) !important}
+    .v2 .md-size-304 {font-size:15.84vw !important; font-size:clamp(93px, 15.84vw, 15.84vw) !important}
+    .v2 .md-size-308 {font-size:16.06vw !important; font-size:clamp(94px, 16.06vw, 16.06vw) !important}
+    .v2 .md-size-312 {font-size:16.26vw !important; font-size:clamp(95px, 16.26vw, 16.26vw) !important}
+    .v2 .md-size-316 {font-size:16.46vw !important; font-size:clamp(96px, 16.46vw, 16.46vw) !important}
+    .v2 .md-size-320 {font-size:16.67vw !important; font-size:clamp(97px, 16.67vw, 16.67vw) !important}
+    .v2 .md-size-324 {font-size:16.88vw !important; font-size:clamp(98px, 16.88vw, 16.88vw) !important}
+    .v2 .md-size-328 {font-size:17.09vw !important; font-size:clamp(99px, 17.09vw, 17.09vw) !important}
+    .v2 .md-size-332 {font-size:17.3vw !important; font-size:clamp(100px, 17.3vw, 17.3vw) !important}
+    .v2 .md-size-336 {font-size:17.5vw !important; font-size:clamp(101px, 17.5vw, 17.5vw) !important}
+    .v2 .md-size-340 {font-size:17.71vw !important; font-size:clamp(102px, 17.71vw, 17.71vw) !important}
+    .v2 .md-size-344 {font-size:17.92vw !important; font-size:clamp(103px, 17.92vw, 17.92vw) !important}
+    .v2 .md-size-348 {font-size:18.13vw !important; font-size:clamp(104px, 18.13vw, 18.13vw) !important}
+    .v2 .md-size-352 {font-size:18.34vw !important; font-size:clamp(105px, 18.34vw, 18.34vw) !important}
+    .v2 .md-size-356 {font-size:18.55vw !important; font-size:clamp(106px, 18.55vw, 18.55vw) !important}
+    .v2 .md-size-360 {font-size:18.76vw !important; font-size:clamp(107px, 18.76vw, 18.76vw) !important}
+    .v2 .md-size-364 {font-size:18.96vw !important; font-size:clamp(108px, 18.96vw, 18.96vw) !important}
+    .v2 .md-size-368 {font-size:19.17vw !important; font-size:clamp(109px, 19.17vw, 19.17vw) !important}
+    .v2 .md-size-372 {font-size:19.38vw !important; font-size:clamp(110px, 19.38vw, 19.38vw) !important}
+    .v2 .md-size-376 {font-size:19.59vw !important; font-size:clamp(111px, 19.59vw, 19.59vw) !important}
+    .v2 .md-size-380 {font-size:19.8vw !important; font-size:clamp(112px, 19.8vw, 19.8vw) !important}
+    .v2 .md-size-384 {font-size:20vw !important; font-size:clamp(113px, 20vw, 20vw) !important}
+    .v2 .md-size-388 {font-size:20.21vw !important; font-size:clamp(114px, 20.21vw, 20.21vw) !important}
+    .v2 .md-size-392 {font-size:20.42vw !important; font-size:clamp(115px, 20.42vw, 20.42vw) !important}
+    .v2 .md-size-396 {font-size:20.63vw !important; font-size:clamp(116px, 20.63vw, 20.63vw) !important}
+    .v2 .md-size-400 {font-size:20.84vw !important; font-size:clamp(117px, 20.84vw, 20.84vw) !important}  
+}
+@media (min-width: 761px) and (max-width: 970px) {
+    .v2 .sm-size-12 {font-size:0.74vw !important; font-size:clamp(12px, 0.74vw, 0.74vw) !important}
+    .v2 .sm-size-13 {font-size:0.8vw !important; font-size:clamp(13px, 0.8vw, 0.8vw) !important}
+    .v2 .sm-size-14 {font-size:0.86vw !important; font-size:clamp(14px, 0.86vw, 0.86vw) !important}
+    .v2 .sm-size-15 {font-size:0.93vw !important; font-size:clamp(15px, 0.93vw, 0.93vw) !important}
+    .v2 .sm-size-16 {font-size:0.99vw !important; font-size:clamp(16px, 0.99vw, 0.99vw) !important}
+    .v2 .sm-size-17 {font-size:1.05vw !important; font-size:clamp(17px, 1.05vw, 1.05vw) !important}
+    .v2 .sm-size-18 {font-size:1.11vw !important; font-size:clamp(18px, 1.11vw, 1.11vw) !important}
+    .v2 .sm-size-19 {font-size:1.17vw !important; font-size:clamp(19px, 1.17vw, 1.17vw) !important}
+    .v2 .sm-size-20 {font-size:1.23vw !important; font-size:clamp(20px, 1.23vw, 1.23vw) !important}
+    .v2 .sm-size-21 {font-size:1.29vw !important; font-size:clamp(21px, 1.29vw, 1.29vw) !important}
+    .v2 .sm-size-24 {font-size:1.48vw !important; font-size:clamp(22px, 1.48vw, 1.48vw) !important}
+    .v2 .sm-size-28 {font-size:1.56vw !important; font-size:clamp(23px, 1.56vw, 1.56vw) !important}
+    .v2 .sm-size-32 {font-size:1.64vw !important; font-size:clamp(24px, 1.64vw, 1.64vw) !important}
+    .v2 .sm-size-35 {font-size:1.82vw !important; font-size:clamp(25px, 1.82vw, 1.82vw) !important}
+    .v2 .sm-size-38 {font-size:1.98vw !important; font-size:clamp(26px, 1.98vw, 1.98vw) !important}
+    .v2 .sm-size-42 {font-size:2.19vw !important; font-size:clamp(27px, 2.19vw, 2.19vw) !important} 
+    .v2 .sm-size-46 {font-size:2.4vw !important; font-size:clamp(28px, 2.4vw, 2.4vw) !important}
+    .v2 .sm-size-48 {font-size:2.5vw !important; font-size:clamp(29px, 2.5vw, 2.5vw) !important}
+    .v2 .sm-size-50 {font-size:2.61vw !important; font-size:clamp(30px, 2.61vw, 2.61vw) !important}
+    .v2 .sm-size-54 {font-size:2.81vw !important; font-size:clamp(31px, 2.81vw, 2.81vw) !important}
+    .v2 .sm-size-60 {font-size:3.13vw !important; font-size:clamp(32px, 3.13vw, 3.13vw) !important}
+    .v2 .sm-size-64 {font-size:3.33vw !important; font-size:clamp(33px, 3.33vw, 3.33vw) !important}
+    .v2 .sm-size-68 {font-size:3.54vw !important; font-size:clamp(34px, 3.54vw, 3.54vw) !important}
+    .v2 .sm-size-72 {font-size:3.75vw !important; font-size:clamp(35px, 3.75vw, 3.75vw) !important}
+    .v2 .sm-size-76 {font-size:3.96vw !important; font-size:clamp(36px, 3.96vw, 3.96vw) !important}
+    .v2 .sm-size-80 {font-size:4.17vw !important; font-size:clamp(37px, 4.17vw, 4.17vw) !important}
+    .v2 .sm-size-84 {font-size:4.38vw !important; font-size:clamp(38px, 4.38vw, 4.38vw) !important} 
+    .v2 .sm-size-88 {font-size:4.58vw !important; font-size:clamp(39px, 4.58vw, 4.58vw) !important}
+    .v2 .sm-size-92 {font-size:4.79vw !important; font-size:clamp(40px, 4.79vw, 4.79vw) !important} 
+    .v2 .sm-size-96 {font-size:5vw !important; font-size:clamp(41px, 5vw, 5vw) !important}
+    .v2 .sm-size-100 {font-size:5.21vw !important; font-size:clamp(42px, 5.21vw, 5.21vw) !important} 
+    .v2 .sm-size-104 {font-size:5.42vw !important; font-size:clamp(43px, 5.42vw, 5.42vw) !important}
+    .v2 .sm-size-108 {font-size:5.63vw !important; font-size:clamp(44px, 5.63vw, 5.63vw) !important}
+    .v2 .sm-size-112 {font-size:5.84vw !important; font-size:clamp(45px, 5.84vw, 5.84vw) !important}
+    .v2 .sm-size-116 {font-size:6.04vw !important; font-size:clamp(46px, 6.04vw, 6.04vw) !important}
+    .v2 .sm-size-120 {font-size:6.25vw !important; font-size:clamp(47px, 6.25vw, 6.25vw) !important}
+    .v2 .sm-size-124 {font-size:6.46vw !important; font-size:clamp(48px, 6.46vw, 6.46vw) !important}
+    .v2 .sm-size-128 {font-size:6.67vw !important; font-size:clamp(49px, 6.67vw, 6.67vw) !important}
+    .v2 .sm-size-132 {font-size:6.88vw !important; font-size:clamp(50px, 6.88vw, 6.88vw) !important}
+    .v2 .sm-size-136 {font-size:7.09vw !important; font-size:clamp(51px, 7.09vw, 7.09vw) !important}
+    .v2 .sm-size-140 {font-size:7.29vw !important; font-size:clamp(52px, 7.29vw, 7.29vw) !important}
+    .v2 .sm-size-144 {font-size:7.5vw !important; font-size:clamp(53px, 7.5vw, 7.5vw) !important}
+    .v2 .sm-size-148 {font-size:7.71vw !important; font-size:clamp(54px, 7.71vw, 7.71vw) !important}
+    .v2 .sm-size-152 {font-size:7.92vw !important; font-size:clamp(55px, 7.92vw, 7.92vw) !important}
+    .v2 .sm-size-156 {font-size:8.13vw !important; font-size:clamp(56px, 8.13vw, 8.13vw) !important}
+    .v2 .sm-size-160 {font-size:8.34vw !important; font-size:clamp(57px, 8.34vw, 8.34vw) !important}
+    .v2 .sm-size-164 {font-size:8.54vw !important; font-size:clamp(58px, 8.54vw, 8.54vw) !important}
+    .v2 .sm-size-168 {font-size:8.75vw !important; font-size:clamp(59px, 8.75vw, 8.75vw) !important}
+    .v2 .sm-size-172 {font-size:8.96vw !important; font-size:clamp(60px, 8.96vw, 8.96vw) !important}
+    .v2 .sm-size-176 {font-size:9.17vw !important; font-size:clamp(61px, 9.17vw, 9.17vw) !important}
+    .v2 .sm-size-180 {font-size:9.38vw !important; font-size:clamp(62px, 9.38vw, 9.38vw) !important}
+    .v2 .sm-size-184 {font-size:9.59vw !important; font-size:clamp(63px, 9.59vw, 9.59vw) !important}
+    .v2 .sm-size-188 {font-size:9.79vw !important; font-size:clamp(64px, 9.79vw, 9.79vw) !important}
+    .v2 .sm-size-192 {font-size:10vw !important; font-size:clamp(65px, 10vw, 10vw) !important}
+    .v2 .sm-size-196 {font-size:10.21vw !important; font-size:clamp(66px, 10.21vw, 10.21vw) !important}
+    .v2 .sm-size-200 {font-size:10.42vw !important; font-size:clamp(67px, 10.42vw, 10.42vw) !important}
+    .v2 .sm-size-204 {font-size:10.63vw !important; font-size:clamp(68px, 10.63vw, 10.63vw) !important}
+    .v2 .sm-size-208 {font-size:10.84vw !important; font-size:clamp(69px, 10.84vw, 10.84vw) !important}
+    .v2 .sm-size-212 {font-size:11.05vw !important; font-size:clamp(70px, 11.05vw, 11.05vw) !important}
+    .v2 .sm-size-216 {font-size:11.25vw !important; font-size:clamp(71px, 11.25vw, 11.25vw) !important}
+    .v2 .sm-size-220 {font-size:11.46vw !important; font-size:clamp(72px, 11.46vw, 11.46vw) !important}  
+    .v2 .sm-size-224 {font-size:11.67vw !important; font-size:clamp(73px, 11.67vw, 11.67vw) !important}
+    .v2 .sm-size-228 {font-size:11.88vw !important; font-size:clamp(75px, 11.88vw, 11.88vw) !important}
+    .v2 .sm-size-232 {font-size:12.09vw !important; font-size:clamp(75px, 12.09vw, 12.09vw) !important}
+    .v2 .sm-size-236 {font-size:12.3vw !important; font-size:clamp(76px, 12.3vw, 12.3vw) !important}
+    .v2 .sm-size-240 {font-size:12.5vw !important; font-size:clamp(77px, 12.5vw, 12.5vw) !important}
+    .v2 .sm-size-244 {font-size:12.71vw !important; font-size:clamp(78px, 12.71vw, 12.71vw) !important}
+    .v2 .sm-size-248 {font-size:12.92vw !important; font-size:clamp(79px, 12.92vw, 12.92vw) !important}
+    .v2 .sm-size-252 {font-size:13.13vw !important; font-size:clamp(80px, 13.13vw, 13.13vw) !important}
+    .v2 .sm-size-256 {font-size:13.34vw !important; font-size:clamp(81px, 13.34vw, 13.34vw) !important}
+    .v2 .sm-size-260 {font-size:13.55vw !important; font-size:clamp(82px, 13.55vw, 13.55vw) !important}
+    .v2 .sm-size-264 {font-size:13.75vw !important; font-size:clamp(83px, 13.75vw, 13.75vw) !important}
+    .v2 .sm-size-268 {font-size:13.96vw !important; font-size:clamp(84px, 13.96vw, 13.96vw) !important}
+    .v2 .sm-size-272 {font-size:14.17vw !important; font-size:clamp(85px, 14.17vw, 14.17vw) !important}
+    .v2 .sm-size-276 {font-size:14.38vw !important; font-size:clamp(86px, 14.38vw, 14.38vw) !important}
+    .v2 .sm-size-280 {font-size:14.59vw !important; font-size:clamp(87px, 14.59vw, 14.59vw) !important}
+    .v2 .sm-size-284 {font-size:14.8vw !important; font-size:clamp(88px, 14.8vw, 14.8vw) !important}
+    .v2 .sm-size-288 {font-size:15vw !important; font-size:clamp(89px, 15vw, 15vw) !important}
+    .v2 .sm-size-292 {font-size:15.21vw !important; font-size:clamp(90px, 15.21vw, 15.21vw) !important}
+    .v2 .sm-size-296 {font-size:15.42vw !important; font-size:clamp(91px, 15.42vw, 15.42vw) !important}
+    .v2 .sm-size-300 {font-size:15.63vw !important; font-size:clamp(92px, 15.63vw, 15.63vw) !important}
+    .v2 .sm-size-304 {font-size:15.84vw !important; font-size:clamp(93px, 15.84vw, 15.84vw) !important}
+    .v2 .sm-size-308 {font-size:16.06vw !important; font-size:clamp(94px, 16.06vw, 16.06vw) !important}
+    .v2 .sm-size-312 {font-size:16.26vw !important; font-size:clamp(95px, 16.26vw, 16.26vw) !important}
+    .v2 .sm-size-316 {font-size:16.46vw !important; font-size:clamp(96px, 16.46vw, 16.46vw) !important}
+    .v2 .sm-size-320 {font-size:16.67vw !important; font-size:clamp(97px, 16.67vw, 16.67vw) !important}
+    .v2 .sm-size-324 {font-size:16.88vw !important; font-size:clamp(98px, 16.88vw, 16.88vw) !important}
+    .v2 .sm-size-328 {font-size:17.09vw !important; font-size:clamp(99px, 17.09vw, 17.09vw) !important}
+    .v2 .sm-size-332 {font-size:17.3vw !important; font-size:clamp(100px, 17.3vw, 17.3vw) !important}
+    .v2 .sm-size-336 {font-size:17.5vw !important; font-size:clamp(101px, 17.5vw, 17.5vw) !important}
+    .v2 .sm-size-340 {font-size:17.71vw !important; font-size:clamp(102px, 17.71vw, 17.71vw) !important}
+    .v2 .sm-size-344 {font-size:17.92vw !important; font-size:clamp(103px, 17.92vw, 17.92vw) !important}
+    .v2 .sm-size-348 {font-size:18.13vw !important; font-size:clamp(104px, 18.13vw, 18.13vw) !important}
+    .v2 .sm-size-352 {font-size:18.34vw !important; font-size:clamp(105px, 18.34vw, 18.34vw) !important}
+    .v2 .sm-size-356 {font-size:18.55vw !important; font-size:clamp(106px, 18.55vw, 18.55vw) !important}
+    .v2 .sm-size-360 {font-size:18.76vw !important; font-size:clamp(107px, 18.76vw, 18.76vw) !important}
+    .v2 .sm-size-364 {font-size:18.96vw !important; font-size:clamp(108px, 18.96vw, 18.96vw) !important}
+    .v2 .sm-size-368 {font-size:19.17vw !important; font-size:clamp(109px, 19.17vw, 19.17vw) !important}
+    .v2 .sm-size-372 {font-size:19.38vw !important; font-size:clamp(110px, 19.38vw, 19.38vw) !important}
+    .v2 .sm-size-376 {font-size:19.59vw !important; font-size:clamp(111px, 19.59vw, 19.59vw) !important}
+    .v2 .sm-size-380 {font-size:19.8vw !important; font-size:clamp(112px, 19.8vw, 19.8vw) !important}
+    .v2 .sm-size-384 {font-size:20vw !important; font-size:clamp(113px, 20vw, 20vw) !important}
+    .v2 .sm-size-388 {font-size:20.21vw !important; font-size:clamp(114px, 20.21vw, 20.21vw) !important}
+    .v2 .sm-size-392 {font-size:20.42vw !important; font-size:clamp(115px, 20.42vw, 20.42vw) !important}
+    .v2 .sm-size-396 {font-size:20.63vw !important; font-size:clamp(116px, 20.63vw, 20.63vw) !important}
+    .v2 .sm-size-400 {font-size:20.84vw !important; font-size:clamp(117px, 20.84vw, 20.84vw) !important}  
+}
+
+@media (max-width: 760px) {
+    .v2 .xs-size-12 {font-size:0.74vw !important; font-size:clamp(12px, 0.74vw, 0.74vw) !important}
+    .v2 .xs-size-13 {font-size:0.8vw !important; font-size:clamp(13px, 0.8vw, 0.8vw) !important}
+    .v2 .xs-size-14 {font-size:0.86vw !important; font-size:clamp(14px, 0.86vw, 0.86vw) !important}
+    .v2 .xs-size-15 {font-size:0.93vw !important; font-size:clamp(15px, 0.93vw, 0.93vw) !important}
+    .v2 .xs-size-16 {font-size:0.99vw !important; font-size:clamp(16px, 0.99vw, 0.99vw) !important}
+    .v2 .xs-size-17 {font-size:1.05vw !important; font-size:clamp(17px, 1.05vw, 1.05vw) !important}
+    .v2 .xs-size-18 {font-size:1.11vw !important; font-size:clamp(18px, 1.11vw, 1.11vw) !important}
+    .v2 .xs-size-19 {font-size:1.17vw !important; font-size:clamp(19px, 1.17vw, 1.17vw) !important}
+    .v2 .xs-size-20 {font-size:1.23vw !important; font-size:clamp(20px, 1.23vw, 1.23vw) !important}
+    .v2 .xs-size-21 {font-size:1.29vw !important; font-size:clamp(21px, 1.29vw, 1.29vw) !important}
+    .v2 .xs-size-24 {font-size:1.48vw !important; font-size:clamp(22px, 1.48vw, 1.48vw) !important}
+    .v2 .xs-size-28 {font-size:1.56vw !important; font-size:clamp(23px, 1.56vw, 1.56vw) !important}
+    .v2 .xs-size-32 {font-size:1.64vw !important; font-size:clamp(24px, 1.64vw, 1.64vw) !important}
+    .v2 .xs-size-35 {font-size:1.82vw !important; font-size:clamp(25px, 1.82vw, 1.82vw) !important}
+    .v2 .xs-size-38 {font-size:1.98vw !important; font-size:clamp(26px, 1.98vw, 1.98vw) !important}
+    .v2 .xs-size-42 {font-size:2.19vw !important; font-size:clamp(27px, 2.19vw, 2.19vw) !important}
+    .v2 .xs-size-46 {font-size:2.4vw !important; font-size:clamp(28px, 2.4vw, 2.4vw) !important}
+    .v2 .xs-size-48 {font-size:2.5vw !important; font-size:clamp(29px, 2.5vw, 2.5vw) !important}
+    .v2 .xs-size-50 {font-size:2.61vw !important; font-size:clamp(30px, 2.61vw, 2.61vw) !important}
+    .v2 .xs-size-54 {font-size:2.81vw !important; font-size:clamp(31px, 2.81vw, 2.81vw) !important}
+    .v2 .xs-size-60 {font-size:3.13vw !important; font-size:clamp(32px, 3.13vw, 3.13vw) !important}
+    .v2 .xs-size-64 {font-size:3.33vw !important; font-size:clamp(33px, 3.33vw, 3.33vw) !important}
+    .v2 .xs-size-68 {font-size:3.54vw !important; font-size:clamp(34px, 3.54vw, 3.54vw) !important}
+    .v2 .xs-size-72 {font-size:3.75vw !important; font-size:clamp(35px, 3.75vw, 3.75vw) !important}
+    .v2 .xs-size-76 {font-size:3.96vw !important; font-size:clamp(36px, 3.96vw, 3.96vw) !important}
+    .v2 .xs-size-80 {font-size:4.17vw !important; font-size:clamp(37px, 4.17vw, 4.17vw) !important}
+    .v2 .xs-size-84 {font-size:4.38vw !important; font-size:clamp(38px, 4.38vw, 4.38vw) !important} 
+    .v2 .xs-size-88 {font-size:4.58vw !important; font-size:clamp(39px, 4.58vw, 4.58vw) !important}
+    .v2 .xs-size-92 {font-size:4.79vw !important; font-size:clamp(40px, 4.79vw, 4.79vw) !important}
+    .v2 .xs-size-96 {font-size:5vw !important; font-size:clamp(41px, 5vw, 5vw) !important}
+    .v2 .xs-size-100 {font-size:5.21vw !important; font-size:clamp(42px, 5.21vw, 5.21vw) !important} 
+    .v2 .xs-size-104 {font-size:5.42vw !important; font-size:clamp(43px, 5.42vw, 5.42vw) !important}
+    .v2 .xs-size-108 {font-size:5.63vw !important; font-size:clamp(44px, 5.63vw, 5.63vw) !important}
+    .v2 .xs-size-112 {font-size:5.84vw !important; font-size:clamp(45px, 5.84vw, 5.84vw) !important}
+    .v2 .xs-size-116 {font-size:6.04vw !important; font-size:clamp(46px, 6.04vw, 6.04vw) !important}
+    .v2 .xs-size-120 {font-size:6.25vw !important; font-size:clamp(47px, 6.25vw, 6.25vw) !important}
+    .v2 .xs-size-124 {font-size:6.46vw !important; font-size:clamp(48px, 6.46vw, 6.46vw) !important}
+    .v2 .xs-size-128 {font-size:6.67vw !important; font-size:clamp(49px, 6.67vw, 6.67vw) !important}
+    .v2 .xs-size-132 {font-size:6.88vw !important; font-size:clamp(50px, 6.88vw, 6.88vw) !important}
+    .v2 .xs-size-136 {font-size:7.09vw !important; font-size:clamp(51px, 7.09vw, 7.09vw) !important}
+    .v2 .xs-size-140 {font-size:7.29vw !important; font-size:clamp(52px, 7.29vw, 7.29vw) !important}
+    .v2 .xs-size-144 {font-size:7.5vw !important; font-size:clamp(53px, 7.5vw, 7.5vw) !important}
+    .v2 .xs-size-148 {font-size:7.71vw !important; font-size:clamp(54px, 7.71vw, 7.71vw) !important}
+    .v2 .xs-size-152 {font-size:7.92vw !important; font-size:clamp(55px, 7.92vw, 7.92vw) !important}
+    .v2 .xs-size-156 {font-size:8.13vw !important; font-size:clamp(56px, 8.13vw, 8.13vw) !important}
+    .v2 .xs-size-160 {font-size:8.34vw !important; font-size:clamp(57px, 8.34vw, 8.34vw) !important}
+    .v2 .xs-size-164 {font-size:8.54vw !important; font-size:clamp(58px, 8.54vw, 8.54vw) !important}
+    .v2 .xs-size-168 {font-size:8.75vw !important; font-size:clamp(59px, 8.75vw, 8.75vw) !important}
+    .v2 .xs-size-172 {font-size:8.96vw !important; font-size:clamp(60px, 8.96vw, 8.96vw) !important}
+    .v2 .xs-size-176 {font-size:9.17vw !important; font-size:clamp(61px, 9.17vw, 9.17vw) !important}
+    .v2 .xs-size-180 {font-size:9.38vw !important; font-size:clamp(62px, 9.38vw, 9.38vw) !important}
+    .v2 .xs-size-184 {font-size:9.59vw !important; font-size:clamp(63px, 9.59vw, 9.59vw) !important}
+    .v2 .xs-size-188 {font-size:9.79vw !important; font-size:clamp(64px, 9.79vw, 9.79vw) !important}
+    .v2 .xs-size-192 {font-size:10vw !important; font-size:clamp(65px, 10vw, 10vw) !important}
+    .v2 .xs-size-196 {font-size:10.21vw !important; font-size:clamp(66px, 10.21vw, 10.21vw) !important}
+    .v2 .xs-size-200 {font-size:10.42vw !important; font-size:clamp(67px, 10.42vw, 10.42vw) !important}
+    .v2 .xs-size-204 {font-size:10.63vw !important; font-size:clamp(68px, 10.63vw, 10.63vw) !important}
+    .v2 .xs-size-208 {font-size:10.84vw !important; font-size:clamp(69px, 10.84vw, 10.84vw) !important}
+    .v2 .xs-size-212 {font-size:11.05vw !important; font-size:clamp(70px, 11.05vw, 11.05vw) !important}
+    .v2 .xs-size-216 {font-size:11.25vw !important; font-size:clamp(71px, 11.25vw, 11.25vw) !important}
+    .v2 .xs-size-220 {font-size:11.46vw !important; font-size:clamp(72px, 11.46vw, 11.46vw) !important}  
+    .v2 .xs-size-224 {font-size:11.67vw !important; font-size:clamp(73px, 11.67vw, 11.67vw) !important}
+    .v2 .xs-size-228 {font-size:11.88vw !important; font-size:clamp(75px, 11.88vw, 11.88vw) !important}
+    .v2 .xs-size-232 {font-size:12.09vw !important; font-size:clamp(75px, 12.09vw, 12.09vw) !important}
+    .v2 .xs-size-236 {font-size:12.3vw !important; font-size:clamp(76px, 12.3vw, 12.3vw) !important}
+    .v2 .xs-size-240 {font-size:12.5vw !important; font-size:clamp(77px, 12.5vw, 12.5vw) !important}
+    .v2 .xs-size-244 {font-size:12.71vw !important; font-size:clamp(78px, 12.71vw, 12.71vw) !important}
+    .v2 .xs-size-248 {font-size:12.92vw !important; font-size:clamp(79px, 12.92vw, 12.92vw) !important}
+    .v2 .xs-size-252 {font-size:13.13vw !important; font-size:clamp(80px, 13.13vw, 13.13vw) !important}
+    .v2 .xs-size-256 {font-size:13.34vw !important; font-size:clamp(81px, 13.34vw, 13.34vw) !important}
+    .v2 .xs-size-260 {font-size:13.55vw !important; font-size:clamp(82px, 13.55vw, 13.55vw) !important}
+    .v2 .xs-size-264 {font-size:13.75vw !important; font-size:clamp(83px, 13.75vw, 13.75vw) !important}
+    .v2 .xs-size-268 {font-size:13.96vw !important; font-size:clamp(84px, 13.96vw, 13.96vw) !important}
+    .v2 .xs-size-272 {font-size:14.17vw !important; font-size:clamp(85px, 14.17vw, 14.17vw) !important}
+    .v2 .xs-size-276 {font-size:14.38vw !important; font-size:clamp(86px, 14.38vw, 14.38vw) !important}
+    .v2 .xs-size-280 {font-size:14.59vw !important; font-size:clamp(87px, 14.59vw, 14.59vw) !important}
+    .v2 .xs-size-284 {font-size:14.8vw !important; font-size:clamp(88px, 14.8vw, 14.8vw) !important}
+    .v2 .xs-size-288 {font-size:15vw !important; font-size:clamp(89px, 15vw, 15vw) !important}
+    .v2 .xs-size-292 {font-size:15.21vw !important; font-size:clamp(90px, 15.21vw, 15.21vw) !important}
+    .v2 .xs-size-296 {font-size:15.42vw !important; font-size:clamp(91px, 15.42vw, 15.42vw) !important}
+    .v2 .xs-size-300 {font-size:15.63vw !important; font-size:clamp(92px, 15.63vw, 15.63vw) !important}
+    .v2 .xs-size-304 {font-size:15.84vw !important; font-size:clamp(93px, 15.84vw, 15.84vw) !important}
+    .v2 .xs-size-308 {font-size:16.06vw !important; font-size:clamp(94px, 16.06vw, 16.06vw) !important}
+    .v2 .xs-size-312 {font-size:16.26vw !important; font-size:clamp(95px, 16.26vw, 16.26vw) !important}
+    .v2 .xs-size-316 {font-size:16.46vw !important; font-size:clamp(96px, 16.46vw, 16.46vw) !important}
+    .v2 .xs-size-320 {font-size:16.67vw !important; font-size:clamp(97px, 16.67vw, 16.67vw) !important}
+    .v2 .xs-size-324 {font-size:16.88vw !important; font-size:clamp(98px, 16.88vw, 16.88vw) !important}
+    .v2 .xs-size-328 {font-size:17.09vw !important; font-size:clamp(99px, 17.09vw, 17.09vw) !important}
+    .v2 .xs-size-332 {font-size:17.3vw !important; font-size:clamp(100px, 17.3vw, 17.3vw) !important}
+    .v2 .xs-size-336 {font-size:17.5vw !important; font-size:clamp(101px, 17.5vw, 17.5vw) !important}
+    .v2 .xs-size-340 {font-size:17.71vw !important; font-size:clamp(102px, 17.71vw, 17.71vw) !important}
+    .v2 .xs-size-344 {font-size:17.92vw !important; font-size:clamp(103px, 17.92vw, 17.92vw) !important}
+    .v2 .xs-size-348 {font-size:18.13vw !important; font-size:clamp(104px, 18.13vw, 18.13vw) !important}
+    .v2 .xs-size-352 {font-size:18.34vw !important; font-size:clamp(105px, 18.34vw, 18.34vw) !important}
+    .v2 .xs-size-356 {font-size:18.55vw !important; font-size:clamp(106px, 18.55vw, 18.55vw) !important}
+    .v2 .xs-size-360 {font-size:18.76vw !important; font-size:clamp(107px, 18.76vw, 18.76vw) !important}
+    .v2 .xs-size-364 {font-size:18.96vw !important; font-size:clamp(108px, 18.96vw, 18.96vw) !important}
+    .v2 .xs-size-368 {font-size:19.17vw !important; font-size:clamp(109px, 19.17vw, 19.17vw) !important}
+    .v2 .xs-size-372 {font-size:19.38vw !important; font-size:clamp(110px, 19.38vw, 19.38vw) !important}
+    .v2 .xs-size-376 {font-size:19.59vw !important; font-size:clamp(111px, 19.59vw, 19.59vw) !important}
+    .v2 .xs-size-380 {font-size:19.8vw !important; font-size:clamp(112px, 19.8vw, 19.8vw) !important}
+    .v2 .xs-size-384 {font-size:20vw !important; font-size:clamp(113px, 20vw, 20vw) !important}
+    .v2 .xs-size-388 {font-size:20.21vw !important; font-size:clamp(114px, 20.21vw, 20.21vw) !important}
+    .v2 .xs-size-392 {font-size:20.42vw !important; font-size:clamp(115px, 20.42vw, 20.42vw) !important}
+    .v2 .xs-size-396 {font-size:20.63vw !important; font-size:clamp(116px, 20.63vw, 20.63vw) !important}
+    .v2 .xs-size-400 {font-size:20.84vw !important; font-size:clamp(117px, 20.84vw, 20.84vw) !important}  
+}
+
+/* targetted font sizes */
+@media (min-width: 971px) and (max-width: 1280px) {
+    .md-size-12 {font-size:12px !important}
+    .md-size-13 {font-size:13px !important}
+    .md-size-14 {font-size:14px !important}
+    .md-size-15 {font-size:15px !important}
+    .md-size-16 {font-size:16px !important}
+    .md-size-17 {font-size:17px !important}
+    .md-size-18 {font-size:18px !important}
+    .md-size-19 {font-size:19px !important}
+    .md-size-20 {font-size:20px !important}
+    .md-size-21 {font-size:21px !important}
+    .md-size-24 {font-size:24px !important}
+    .md-size-28 {font-size:28px !important}
+    .md-size-32 {font-size:32px !important}
+    .md-size-35 {font-size:35px !important}
+    .md-size-38 {font-size:38px !important}
+    .md-size-42 {font-size:42px !important}
+    .md-size-46 {font-size:46px !important}
+    .md-size-48 {font-size:48px !important}
+    .md-size-50 {font-size:50px !important;}
+    .md-size-54 {font-size:54px !important;}
+    .md-size-60 {font-size:60px !important;}
+    .md-size-64 {font-size:64px !important;}
+    .md-size-68 {font-size:68px !important;}
+    .md-size-72 {font-size:72px !important;}
+    .md-size-76 {font-size:76px !important;}
+    .md-size-80 {font-size:80px !important;}
+    .md-size-84 {font-size:84px !important;}
+    .md-size-88 {font-size:88px !important;}
+    .md-size-92 {font-size:92px !important;}
+    .md-size-96 {font-size:96px !important;}
+    .md-size-100 {font-size:100px !important;}
+    .md-size-104 {font-size:104px !important;}
+    .md-size-108 {font-size:108px !important;}
+    .md-size-112 {font-size:112px !important;}
+    .md-size-116 {font-size:116px !important;}
+    .md-size-120 {font-size:120px !important;}
+    .md-size-124 {font-size:124px !important;}
+    .md-size-128 {font-size:128px !important;}
+    .md-size-132 {font-size:132px !important;}
+    .md-size-136 {font-size:136px !important;}
+    .md-size-140 {font-size:140px !important;}
+    .md-size-144 {font-size:144px !important;}
+    .md-size-148 {font-size:148px !important;}
+    .md-size-152 {font-size:152px !important;}
+    .md-size-156 {font-size:156px !important;}
+    .md-size-160 {font-size:160px !important;}
+    .md-size-164 {font-size:164px !important;}
+    .md-size-168 {font-size:168px !important;}
+    .md-size-172 {font-size:172px !important;}
+    .md-size-176 {font-size:176px !important;}
+    .md-size-180 {font-size:180px !important;}
+    .md-size-184 {font-size:184px !important;}
+    .md-size-188 {font-size:188px !important;}
+    .md-size-192 {font-size:192px !important;}
+    .md-size-196 {font-size:196px !important;}
+    .md-size-200 {font-size:200px !important;}
+    .md-size-204 {font-size:204px !important;}
+    .md-size-208 {font-size:208px !important;}
+    .md-size-212 {font-size:212px !important;}
+    .md-size-216 {font-size:216px !important;}
+    .md-size-220 {font-size:220px !important;}
+    .md-size-224 {font-size:224px !important;}
+    .md-size-228 {font-size:228px !important;}
+    .md-size-232 {font-size:232px !important;}
+    .md-size-236 {font-size:236px !important;}
+    .md-size-240 {font-size:240px !important;}
+    .md-size-244 {font-size:244px !important;}
+    .md-size-248 {font-size:248px !important;}
+    .md-size-252 {font-size:252px !important;}
+    .md-size-256 {font-size:256px !important;}
+    .md-size-260 {font-size:260px !important;}
+    .md-size-264 {font-size:264px !important;}
+    .md-size-268 {font-size:268px !important;}
+    .md-size-272 {font-size:272px !important;}
+    .md-size-276 {font-size:276px !important;}
+    .md-size-280 {font-size:280px !important;}
+    .md-size-284 {font-size:284px !important;}
+    .md-size-288 {font-size:288px !important;}
+    .md-size-292 {font-size:292px !important;}
+    .md-size-296 {font-size:296px !important;}
+    .md-size-300 {font-size:300px !important;}
+    .md-size-304 {font-size:304px !important;}
+    .md-size-308 {font-size:308px !important;}
+    .md-size-312 {font-size:312px !important;}
+    .md-size-316 {font-size:316px !important;}
+    .md-size-320 {font-size:320px !important;}
+    .md-size-324 {font-size:324px !important;}
+    .md-size-328 {font-size:328px !important;}
+    .md-size-332 {font-size:332px !important;}
+    .md-size-336 {font-size:336px !important;}
+    .md-size-340 {font-size:340px !important;}
+    .md-size-344 {font-size:344px !important;}
+    .md-size-348 {font-size:348px !important;}
+    .md-size-352 {font-size:352px !important;}
+    .md-size-356 {font-size:356px !important;}
+    .md-size-360 {font-size:360px !important;}
+    .md-size-364 {font-size:364px !important;}
+    .md-size-368 {font-size:368px !important;}
+    .md-size-372 {font-size:372px !important;}
+    .md-size-376 {font-size:376px !important;}
+    .md-size-380 {font-size:380px !important;}
+    .md-size-384 {font-size:384px !important;}
+    .md-size-388 {font-size:388px !important;}
+    .md-size-392 {font-size:392px !important;}
+    .md-size-396 {font-size:396px !important;}
+    .md-size-400 {font-size:400px !important;}
+}
+@media (min-width: 761px) and (max-width: 970px) {
+    .sm-size-12 {font-size:12px !important}
+    .sm-size-13 {font-size:13px !important}
+    .sm-size-14 {font-size:14px !important}
+    .sm-size-15 {font-size:15px !important}
+    .sm-size-16 {font-size:16px !important}
+    .sm-size-17 {font-size:17px !important}
+    .sm-size-18 {font-size:18px !important}
+    .sm-size-19 {font-size:19px !important}
+    .sm-size-20 {font-size:20px !important}
+    .sm-size-21 {font-size:21px !important}
+    .sm-size-24 {font-size:24px !important}
+    .sm-size-28 {font-size:28px !important}
+    .sm-size-32 {font-size:32px !important}
+    .sm-size-35 {font-size:35px !important}
+    .sm-size-38 {font-size:38px !important}
+    .sm-size-42 {font-size:42px !important}
+    .sm-size-46 {font-size:46px !important}
+    .sm-size-48 {font-size:48px !important}
+    .sm-size-50 {font-size:50px !important;}
+    .sm-size-54 {font-size:54px !important;}
+    .sm-size-60 {font-size:60px !important;}
+    .sm-size-64 {font-size:64px !important;}
+    .sm-size-68 {font-size:68px !important;}
+    .sm-size-72 {font-size:72px !important;}
+    .sm-size-76 {font-size:76px !important;}
+    .sm-size-80 {font-size:80px !important;}
+    .sm-size-84 {font-size:84px !important;}
+    .sm-size-88 {font-size:88px !important;}
+    .sm-size-92 {font-size:92px !important;}
+    .sm-size-96 {font-size:96px !important;}
+    .sm-size-100 {font-size:100px !important;}
+    .sm-size-104 {font-size:104px !important;}
+    .sm-size-108 {font-size:108px !important;}
+    .sm-size-112 {font-size:112px !important;}
+    .sm-size-116 {font-size:116px !important;}
+    .sm-size-120 {font-size:120px !important;}
+    .sm-size-124 {font-size:124px !important;}
+    .sm-size-128 {font-size:128px !important;}
+    .sm-size-132 {font-size:132px !important;}
+    .sm-size-136 {font-size:136px !important;}
+    .sm-size-140 {font-size:140px !important;}
+    .sm-size-144 {font-size:144px !important;}
+    .sm-size-148 {font-size:148px !important;}
+    .sm-size-152 {font-size:152px !important;}
+    .sm-size-156 {font-size:156px !important;}
+    .sm-size-160 {font-size:160px !important;}
+    .sm-size-164 {font-size:164px !important;}
+    .sm-size-168 {font-size:168px !important;}
+    .sm-size-172 {font-size:172px !important;}
+    .sm-size-176 {font-size:176px !important;}
+    .sm-size-180 {font-size:180px !important;}
+    .sm-size-184 {font-size:184px !important;}
+    .sm-size-188 {font-size:188px !important;}
+    .sm-size-192 {font-size:192px !important;}
+    .sm-size-196 {font-size:196px !important;}
+    .sm-size-200 {font-size:200px !important;}
+    .sm-size-204 {font-size:204px !important;}
+    .sm-size-208 {font-size:208px !important;}
+    .sm-size-212 {font-size:212px !important;}
+    .sm-size-216 {font-size:216px !important;}
+    .sm-size-220 {font-size:220px !important;}
+    .sm-size-224 {font-size:224px !important;}
+    .sm-size-228 {font-size:228px !important;}
+    .sm-size-232 {font-size:232px !important;}
+    .sm-size-236 {font-size:236px !important;}
+    .sm-size-240 {font-size:240px !important;}
+    .sm-size-244 {font-size:244px !important;}
+    .sm-size-248 {font-size:248px !important;}
+    .sm-size-252 {font-size:252px !important;}
+    .sm-size-256 {font-size:256px !important;}
+    .sm-size-260 {font-size:260px !important;}
+    .sm-size-264 {font-size:264px !important;}
+    .sm-size-268 {font-size:268px !important;}
+    .sm-size-272 {font-size:272px !important;}
+    .sm-size-276 {font-size:276px !important;}
+    .sm-size-280 {font-size:280px !important;}
+    .sm-size-284 {font-size:284px !important;}
+    .sm-size-288 {font-size:288px !important;}
+    .sm-size-292 {font-size:292px !important;}
+    .sm-size-296 {font-size:296px !important;}
+    .sm-size-300 {font-size:300px !important;}
+    .sm-size-304 {font-size:304px !important;}
+    .sm-size-308 {font-size:308px !important;}
+    .sm-size-312 {font-size:312px !important;}
+    .sm-size-316 {font-size:316px !important;}
+    .sm-size-320 {font-size:320px !important;}
+    .sm-size-324 {font-size:324px !important;}
+    .sm-size-328 {font-size:328px !important;}
+    .sm-size-332 {font-size:332px !important;}
+    .sm-size-336 {font-size:336px !important;}
+    .sm-size-340 {font-size:340px !important;}
+    .sm-size-344 {font-size:344px !important;}
+    .sm-size-348 {font-size:348px !important;}
+    .sm-size-352 {font-size:352px !important;}
+    .sm-size-356 {font-size:356px !important;}
+    .sm-size-360 {font-size:360px !important;}
+    .sm-size-364 {font-size:364px !important;}
+    .sm-size-368 {font-size:368px !important;}
+    .sm-size-372 {font-size:372px !important;}
+    .sm-size-376 {font-size:376px !important;}
+    .sm-size-380 {font-size:380px !important;}
+    .sm-size-384 {font-size:384px !important;}
+    .sm-size-388 {font-size:388px !important;}
+    .sm-size-392 {font-size:392px !important;}
+    .sm-size-396 {font-size:396px !important;}
+    .sm-size-400 {font-size:400px !important;}
+}
+@media (max-width: 760px) {
+    .xs-size-12 {font-size:12px !important}
+    .xs-size-13 {font-size:13px !important}
+    .xs-size-14 {font-size:14px !important}
+    .xs-size-15 {font-size:15px !important}
+    .xs-size-16 {font-size:16px !important}
+    .xs-size-17 {font-size:17px !important}
+    .xs-size-18 {font-size:18px !important}
+    .xs-size-19 {font-size:19px !important}
+    .xs-size-20 {font-size:20px !important}
+    .xs-size-21 {font-size:21px !important}
+    .xs-size-24 {font-size:24px !important}
+    .xs-size-28 {font-size:28px !important}
+    .xs-size-32 {font-size:32px !important}
+    .xs-size-35 {font-size:35px !important}
+    .xs-size-38 {font-size:38px !important}
+    .xs-size-42 {font-size:42px !important}
+    .xs-size-46 {font-size:46px !important}
+    .xs-size-48 {font-size:48px !important}
+    .xs-size-50 {font-size:50px !important;}
+    .xs-size-54 {font-size:54px !important;}
+    .xs-size-60 {font-size:60px !important;}
+    .xs-size-64 {font-size:64px !important;}
+    .xs-size-68 {font-size:68px !important;}
+    .xs-size-72 {font-size:72px !important;}
+    .xs-size-76 {font-size:76px !important;}
+    .xs-size-80 {font-size:80px !important;}
+    .xs-size-84 {font-size:84px !important;}
+    .xs-size-88 {font-size:88px !important;}
+    .xs-size-92 {font-size:92px !important;}
+    .xs-size-96 {font-size:96px !important;}
+    .xs-size-100 {font-size:100px !important;}
+    .xs-size-104 {font-size:104px !important;}
+    .xs-size-108 {font-size:108px !important;}
+    .xs-size-112 {font-size:112px !important;}
+    .xs-size-116 {font-size:116px !important;}
+    .xs-size-120 {font-size:120px !important;}
+    .xs-size-124 {font-size:124px !important;}
+    .xs-size-128 {font-size:128px !important;}
+    .xs-size-132 {font-size:132px !important;}
+    .xs-size-136 {font-size:136px !important;}
+    .xs-size-140 {font-size:140px !important;}
+    .xs-size-144 {font-size:144px !important;}
+    .xs-size-148 {font-size:148px !important;}
+    .xs-size-152 {font-size:152px !important;}
+    .xs-size-156 {font-size:156px !important;}
+    .xs-size-160 {font-size:160px !important;}
+    .xs-size-164 {font-size:164px !important;}
+    .xs-size-168 {font-size:168px !important;}
+    .xs-size-172 {font-size:172px !important;}
+    .xs-size-176 {font-size:176px !important;}
+    .xs-size-180 {font-size:180px !important;}
+    .xs-size-184 {font-size:184px !important;}
+    .xs-size-188 {font-size:188px !important;}
+    .xs-size-192 {font-size:192px !important;}
+    .xs-size-196 {font-size:196px !important;}
+    .xs-size-200 {font-size:200px !important;}
+    .xs-size-204 {font-size:204px !important;}
+    .xs-size-208 {font-size:208px !important;}
+    .xs-size-212 {font-size:212px !important;}
+    .xs-size-216 {font-size:216px !important;}
+    .xs-size-220 {font-size:220px !important;}
+    .xs-size-224 {font-size:224px !important;}
+    .xs-size-228 {font-size:228px !important;}
+    .xs-size-232 {font-size:232px !important;}
+    .xs-size-236 {font-size:236px !important;}
+    .xs-size-240 {font-size:240px !important;}
+    .xs-size-244 {font-size:244px !important;}
+    .xs-size-248 {font-size:248px !important;}
+    .xs-size-252 {font-size:252px !important;}
+    .xs-size-256 {font-size:256px !important;}
+    .xs-size-260 {font-size:260px !important;}
+    .xs-size-264 {font-size:264px !important;}
+    .xs-size-268 {font-size:268px !important;}
+    .xs-size-272 {font-size:272px !important;}
+    .xs-size-276 {font-size:276px !important;}
+    .xs-size-280 {font-size:280px !important;}
+    .xs-size-284 {font-size:284px !important;}
+    .xs-size-288 {font-size:288px !important;}
+    .xs-size-292 {font-size:292px !important;}
+    .xs-size-296 {font-size:296px !important;}
+    .xs-size-300 {font-size:300px !important;}
+    .xs-size-304 {font-size:304px !important;}
+    .xs-size-308 {font-size:308px !important;}
+    .xs-size-312 {font-size:312px !important;}
+    .xs-size-316 {font-size:316px !important;}
+    .xs-size-320 {font-size:320px !important;}
+    .xs-size-324 {font-size:324px !important;}
+    .xs-size-328 {font-size:328px !important;}
+    .xs-size-332 {font-size:332px !important;}
+    .xs-size-336 {font-size:336px !important;}
+    .xs-size-340 {font-size:340px !important;}
+    .xs-size-344 {font-size:344px !important;}
+    .xs-size-348 {font-size:348px !important;}
+    .xs-size-352 {font-size:352px !important;}
+    .xs-size-356 {font-size:356px !important;}
+    .xs-size-360 {font-size:360px !important;}
+    .xs-size-364 {font-size:364px !important;}
+    .xs-size-368 {font-size:368px !important;}
+    .xs-size-372 {font-size:372px !important;}
+    .xs-size-376 {font-size:376px !important;}
+    .xs-size-380 {font-size:380px !important;}
+    .xs-size-384 {font-size:384px !important;}
+    .xs-size-388 {font-size:388px !important;}
+    .xs-size-392 {font-size:392px !important;}
+    .xs-size-396 {font-size:396px !important;}
+    .xs-size-400 {font-size:400px !important;}
+}
+
+@media all and (max-width: 970px) {
+    .margin-left-1024-reset {margin-left:0px !important;}
+    .margin-right-1024-reset {margin-right:0px !important;}
+}
+
+.is-light-text *:not(svg):not(path) {
+    color: rgba(255, 255, 255, 0.93);
+}
+.is-dark-text *:not(svg):not(path) {
+    color: #000;
+}
+
+/* Snippets: text */
+
+.is-title1-96 {margin-top:20px;margin-bottom:20px;}
+.is-title1-80 {margin-top:15px;margin-bottom:15px;}
+.is-title1-64 {margin-top:15px;margin-bottom:15px;}
+.is-title1-48 {margin-top:15px;margin-bottom:15px;}
+.is-title1-32 {margin-top:15px;margin-bottom:15px;}
+
+.is-title2-96 {margin-top:25px;margin-bottom:20px;}
+.is-title2-80 {margin-top:20px;margin-bottom:15px;}
+.is-title2-64 {margin-top:20px;margin-bottom:15px;}
+.is-title2-48 {margin-top:15px;margin-bottom:15px;}
+.is-title2-32 {margin-top:10px;margin-bottom:15px;}
+
+.is-title3-96 {margin-top:30px;margin-bottom:35px;padding:20px 0;border-top:#000 2px solid;border-bottom:#000 2px solid;}
+.is-title3-80 {margin-top:25px;margin-bottom:33px;padding:20px 0;border-top:#000 2px solid;border-bottom:#000 2px solid;}
+.is-title3-64 {margin-top:20px;margin-bottom:30px;padding:18px 0;border-top:#000 2px solid;border-bottom:#000 2px solid;}
+.is-title3-48 {margin-top:20px;margin-bottom:25px;padding:18px 0;border-top:#000 2px solid;border-bottom:#000 2px solid;}
+.is-title3-32 {margin-top:20px;margin-bottom:20px;padding:15px 0;border-top:#000 2px solid;border-bottom:#000 2px solid;}
+
+.is-light-text .is-title3-96 {border-top:#fff 2px solid;border-bottom:#fff 2px solid;}
+.is-light-text .is-title3-80 {border-top:#fff 2px solid;border-bottom:#fff 2px solid;}
+.is-light-text .is-title3-64 {border-top:#fff 2px solid;border-bottom:#fff 2px solid;}
+.is-light-text .is-title3-48 {border-top:#fff 2px solid;border-bottom:#fff 2px solid;}
+.is-light-text .is-title3-32 {border-top:#fff 2px solid;border-bottom:#fff 2px solid;}
+
+.is-dark-text .is-title3-96 {border-top:#000 2px solid;border-bottom:#000 2px solid;}
+.is-dark-text .is-title3-80 {border-top:#000 2px solid;border-bottom:#000 2px solid;}
+.is-dark-text .is-title3-64 {border-top:#000 2px solid;border-bottom:#000 2px solid;}
+.is-dark-text .is-title3-48 {border-top:#000 2px solid;border-bottom:#000 2px solid;}
+.is-dark-text .is-title3-32 {border-top:#000 2px solid;border-bottom:#000 2px solid;}
+
+.is-title4-96 {margin-top:30px;margin-bottom:35px;padding:20px 30px;border:#000 2px solid;}
+.is-title4-80 {margin-top:25px;margin-bottom:33px;padding:20px 30px;border:#000 2px solid;}
+.is-title4-64 {margin-top:20px;margin-bottom:30px;padding:18px 30px;border:#000 2px solid;}
+.is-title4-48 {margin-top:20px;margin-bottom:25px;padding:18px 30px;border:#000 2px solid;}
+.is-title4-32 {margin-top:20px;margin-bottom:20px;padding:15px 30px;border:#000 2px solid;}
+
+.is-light-text .is-title4-96 {border:#fff 2px solid;}
+.is-light-text .is-title4-80 {border:#fff 2px solid;}
+.is-light-text .is-title4-64 {border:#fff 2px solid;}
+.is-light-text .is-title4-48 {border:#fff 2px solid;}
+.is-light-text .is-title4-32 {border:#fff 2px solid;}
+
+.is-dark-text .is-title4-96 {border:#000 2px solid;}
+.is-dark-text .is-title4-80 {border:#000 2px solid;}
+.is-dark-text .is-title4-64 {border:#000 2px solid;}
+.is-dark-text .is-title4-48 {border:#000 2px solid;}
+.is-dark-text .is-title4-32 {border:#000 2px solid;}
+
+.is-title5-96 {margin-top:10px;margin-bottom:35px;padding-bottom:25px;border-bottom:#000 2px solid;}
+.is-title5-80 {margin-top:10px;margin-bottom:33px;padding-bottom:25px;border-bottom:#000 2px solid;}
+.is-title5-64 {margin-top:10px;margin-bottom:30px;padding-bottom:20px;border-bottom:#000 2px solid;}
+.is-title5-48 {margin-top:10px;margin-bottom:25px;padding-bottom:20px;border-bottom:#000 2px solid;}
+.is-title5-32 {margin-top:10px;margin-bottom:20px;padding-bottom:20px;border-bottom:#000 2px solid;}
+
+.is-light-text .is-title5-96 {border-bottom:#fff 2px solid;}
+.is-light-text .is-title5-80 {border-bottom:#fff 2px solid;}
+.is-light-text .is-title5-64 {border-bottom:#fff 2px solid;}
+.is-light-text .is-title5-48 {border-bottom:#fff 2px solid;}
+.is-light-text .is-title5-32 {border-bottom:#fff 2px solid;}
+
+.is-dark-text .is-title5-96 {border-bottom:#000 2px solid;}
+.is-dark-text .is-title5-80 {border-bottom:#000 2px solid;}
+.is-dark-text .is-title5-64 {border-bottom:#000 2px solid;}
+.is-dark-text .is-title5-48 {border-bottom:#000 2px solid;}
+.is-dark-text .is-title5-32 {border-bottom:#000 2px solid;}
+
+.is-title-lite {letter-spacing:3px;word-spacing:5px;}
+.is-title-lite.is-title3-96, .is-title-lite.is-title4-96, .is-title-lite.is-title5-96 {letter-spacing:4px;word-spacing:8px;}
+.is-title-lite.is-title3-80, .is-title-lite.is-title4-80, .is-title-lite.is-title5-80 {letter-spacing:4px;word-spacing:8px;}
+.is-title-lite.is-title3-64, .is-title-lite.is-title4-64, .is-title-lite.is-title5-64 {letter-spacing:4px;word-spacing:8px;}
+.is-title-lite.is-title3-48, .is-title-lite.is-title4-48, .is-title-lite.is-title5-48 {letter-spacing:4px;word-spacing:8px;}
+.is-title-lite.is-title3-32, .is-title-lite.is-title4-32, .is-title-lite.is-title5-32 {letter-spacing:3px;word-spacing:5px;}
+
+.is-title-bold {font-weight:800;}
+.is-title-bold.is-title3-96, .is-title-bold.is-title4-96, .is-title-bold.is-title5-96 {border-width:4px;}
+.is-title-bold.is-title3-80, .is-title-bold.is-title4-80, .is-title-bold.is-title5-80 {border-width:4px;}
+.is-title-bold.is-title3-64, .is-title-bold.is-title4-64, .is-title-bold.is-title5-64 {border-width:3px;}
+.is-title-bold.is-title3-48, .is-title-bold.is-title4-48, .is-title-bold.is-title5-48 {border-width:3px;}
+.is-title-bold.is-title3-32, .is-title-bold.is-title4-32, .is-title-bold.is-title5-32 {border-width:2px;}
+
+.is-info1 {margin-top:10px;margin-bottom:0px;font-style:italic;}
+.is-info1.size-21 {margin-top:12px;}
+.is-info1.size-24 {margin-top:15px;}
+
+.is-info2 {margin-top:10px;margin-bottom:0px;}
+.is-info2.size-21 {margin-top:12px;}
+.is-info2.size-24 {margin-top:15px;}
+
+/* Snippets: buttons */
+
+.is-rounded-button-big a {display:inline-block;text-align:center;margin:0 20px;border-radius: 500px; width: 110px; height: 110px;background-color: #aaa;overflow: hidden;text-decoration: none;}
+.is-rounded-button-big a i {display:inline-block;width:100%;height:100%;vertical-align:middle;color:#ffffff;font-size:40px; display: flex;align-items: center;justify-content: center;}
+.is-rounded-button-big a:first-child {margin:0 20px 0 0;}
+.is-rounded-button-big a:last-child {margin:0 0 0 20px;}
+
+.is-rounded-button-medium a {display:inline-block;text-align:center;margin:0 20px;border-radius: 500px; width: 70px; height: 70px;background-color: #aaa;overflow: hidden;text-decoration: none;}
+.is-rounded-button-medium a i {display:inline-block;width:100%;height:100%;vertical-align:middle;color:#ffffff;font-size:30px;display: flex;align-items: center;justify-content: center;}
+.is-rounded-button-medium a:first-child {margin:0 20px 0 0;}
+.is-rounded-button-medium a:last-child {margin:0 0 0 20px;}
+
+.is-boxed-button-big {display:inline-block;}
+.is-boxed-button-big a {display:table;float:left;text-align:center;margin:0 30px 0 0;width: 110px; height: 110px;background-color: #aaa;text-decoration: none;}
+.is-boxed-button-big a i {display:table-cell;width:100%;height:100%;vertical-align:middle;color:#ffffff;font-size:40px;display: flex;align-items: center;justify-content: center;}
+
+.is-boxed-button-big2 {display:inline-block;}
+.is-boxed-button-big2 a {display:table;float:left;text-align:center;margin:0 30px 0 0;width: 150px; height: 70px;background-color: #aaa;text-decoration: none;}
+.is-boxed-button-big2 a i {display:table-cell;width:100%;height:100%;vertical-align:middle;color:#ffffff;font-size:35px;display: flex;align-items: center;justify-content: center;}
+
+.is-boxed-button-medium {display:inline-block;}
+.is-boxed-button-medium a {display:table;float:left;text-align:center;margin:0 30px 0 0;width: 70px; height: 70px;background-color: #aaa;text-decoration: none;}
+.is-boxed-button-medium a i {display:table-cell;width:100%;height:100%;vertical-align:middle;color:#ffffff;font-size:30px;display: flex;align-items: center;justify-content: center;}
+
+.is-boxed-button-medium2 {display:inline-block;}
+.is-boxed-button-medium2 a {display:table;float:left;text-align:center;margin:0 30px 0 0;width: 100px; height: 50px;background-color: #aaa;text-decoration: none;}
+.is-boxed-button-medium2 a i {display:table-cell;width:100%;height:100%;vertical-align:middle;color:#ffffff;font-size:25px;display: flex;align-items: center;justify-content: center;}
+
+.is-boxed-button-small {display:inline-block;}
+.is-boxed-button-small a {display:table;float:left;text-align:center;margin:0 20px 0 0;width: 50px; height: 50px;background-color: #aaa;text-decoration: none;}
+.is-boxed-button-small a i {display:table-cell;width:100%;height:100%;vertical-align:middle;color:#ffffff;font-size:20px;display: flex;align-items: center;justify-content: center;}
+
+.is-btn, 
+a.is-btn {
+    padding: 10px 50px;
+    font-size: 1rem;
+    line-height: 2rem;
+    border-radius: 0;
+    letter-spacing: 3px;
+    display: inline-block;
+    margin: 3px 0;
+    font-weight: normal;
+    text-align: center;
+    text-decoration: none;
+    cursor: pointer;
+    background-image: none;
+    border: 1px solid transparent;
+    white-space: nowrap;
+    -webkit-transition: all 0.16s ease;
+    transition: all 0.16s ease;
+    text-decoration:none;
+    color: #000;
+}
+.is-btn:hover,.is-btn:visited,.is-btn:focus,
+a.is-btn:hover,a.is-btn:visited,a.is-btn:focus {color:initial;text-decoration:initial;opacity:initial;} /* prevent overide */
+
+.is-btn-ghost1, 
+a.is-btn-ghost1 { color: #000; border: 2px solid #111; }
+
+.is-light-text .is-btn-ghost1,
+.is-dark-text .is-light-text .is-btn-ghost1,
+.is-light-text a.is-btn-ghost1,
+.is-dark-text .is-light-text a.is-btn-ghost1  { color: #fff; border: 2px solid #fff;}
+
+.is-dark-text .is-btn-ghost1,
+.is-light-text .is-dark-text .is-btn-ghost1,
+.is-dark-text a.is-btn-ghost1,
+.is-light-text .is-dark-text a.is-btn-ghost1 { color: #000; border: 2px solid #111; }
+
+.is-btn-ghost2,
+a.is-btn-ghost2 { color: #000; border: 2px solid #dcdcdc; background-color: #dcdcdc;}
+
+.is-light-text .is-btn-ghost2,
+.is-dark-text .is-light-text .is-btn-ghost2,
+.is-light-text a.is-btn-ghost2,
+.is-dark-text .is-light-text a.is-btn-ghost2  { color: #000; border: 2px solid #f9f9f9; background-color: #f9f9f9; }
+
+.is-dark-text .is-btn-ghost2,
+.is-light-text .is-dark-text .is-btn-ghost2,
+.is-dark-text a.is-btn-ghost2,
+.is-light-text .is-dark-text a.is-btn-ghost2  { color: #000; border: 2px solid #d7d7d7; background-color: #d7d7d7; }
+
+.is-btn.is-btn-small, .is-btn-small { padding: 5px 25px; font-size: 0.85em; }
+.is-btn.is-upper, .is-upper { text-transform:uppercase; }
+.is-btn.is-rounded-30, .is-rounded-30 { border-radius: 30px; }
+
+.btn {
+    padding: 7px 25px;
+    font-size: 1em;
+    line-height: 2em;
+    border-radius: 5px;
+    letter-spacing: 1px;
+    display: inline-block;
+    margin-bottom: 0;
+    font-weight: normal;
+    text-align: center;
+    text-decoration: none;
+    vertical-align: middle;
+    cursor: pointer;
+    background-image: none;
+    border: 1px solid transparent;
+    white-space: nowrap;
+    -webkit-transition: all 0.16s ease;
+    transition: all 0.16s ease;
+}
+.btn.btn-primary {color: #ffffff;background-color: #08c9b9;}
+.btn.btn-primary:hover {color: #ffffff;background-color: #07b0a2;border-color: #07b0a2;}
+.btn.btn-default {color: #333333;background-color: #d3d3d3;}
+.btn.btn-default:hover {color: #111;background-color: #ccc;border-color: #ccc;}
+
+/* ---------- Editing Utilities ---------- */
+
+/* Responsive */
+@media all and (max-width: 970px) {
+    .hideonmobile { display: none !important }
+}
+
+/* Lightbox */
+
+.block-click {
+    cursor: pointer;
+}
+
+.block-click > * {
+    pointer-events: none;
+    user-select: none;
+}
+
+/* Column Height */
+
+.min-height-300 { min-height: 300px !important; }
+.min-height-350 { min-height: 350px !important; }
+.min-height-400 { min-height: 400px !important; }
+.min-height-450 { min-height: 450px !important; }
+.min-height-500 { min-height: 500px !important; }
+.min-height-550 { min-height: 550px !important; }
+.min-height-600 { min-height: 600px !important; }
+.min-height-650 { min-height: 650px !important; }
+.min-height-700 { min-height: 700px !important; }
+
+@media all and (max-width: 1024px) {
+    .min-height-300 { min-height: 300px !important; }
+    .min-height-350 { min-height: 340px !important; }
+    .min-height-400 { min-height: 380px !important; }
+    .min-height-450 { min-height: 430px !important; }
+    .min-height-500 { min-height: 480px !important; }
+    .min-height-550 { min-height: 530px !important; }
+    .min-height-600 { min-height: 580px !important; }
+    .min-height-650 { min-height: 630px !important; }
+    .min-height-700 { min-height: 680px !important; }
+}
+
+@media all and (max-width: 640px) {
+    .min-height-300 { min-height: 240px !important; }
+    .min-height-350 { min-height: 270px !important; }
+    .min-height-400 { min-height: 300px !important; }
+    .min-height-450 { min-height: 350px !important; }
+    .min-height-500 { min-height: 400px !important; }
+    .min-height-550 { min-height: 430px !important; }
+    .min-height-600 { min-height: 460px !important; }
+    .min-height-650 { min-height: 500px !important; }
+    .min-height-700 { min-height: 540px !important; }
+}
+
+@media all and (max-width: 540px) {
+    .min-height-300 { min-height: 180px !important; }
+    .min-height-350 { min-height: 210px !important; }
+    .min-height-400 { min-height: 240px !important; }
+    .min-height-450 { min-height: 270px !important; }
+    .min-height-500 { min-height: 300px !important; }
+    .min-height-550 { min-height: 310px !important; }
+    .min-height-600 { min-height: 320px !important; }
+    .min-height-650 { min-height: 360px !important; }
+    .min-height-700 { min-height: 400px !important; }
+}
+
+@media all and (max-width: 425px) {
+    .min-height-300 { min-height: 150px !important; }
+    .min-height-350 { min-height: 185px !important; }
+    .min-height-400 { min-height: 220px !important; }
+    .min-height-450 { min-height: 240px !important; }
+    .min-height-500 { min-height: 260px !important; }
+    .min-height-550 { min-height: 270px !important; }
+    .min-height-600 { min-height: 280px !important; }
+    .min-height-650 { min-height: 315px !important; }
+    .min-height-700 { min-height: 350px !important; }
+}
+
+/* Text Formatting */
+        
+.font-thin { font-weight: 100 !important; }
+.font-extralight { font-weight: 200 !important; }
+.font-light { font-weight: 300 !important; }
+.font-normal { font-weight: 400 !important; }
+.font-medium { font-weight: 500 !important; }
+.font-semibold { font-weight: 600 !important; }
+.font-bold { font-weight: 700 !important; }
+.font-extrabold { font-weight: 800 !important; }
+.font-black { font-weight: 900 !important; }
+.italic { font-style: italic !important; }
+.not-italic { font-style: normal !important; }
+.display .italic { font-style: italic !important; }
+.display .not-italic { font-style: normal !important; }
+.underline { -webkit-text-decoration-line: underline !important; text-decoration-line: underline !important; }
+.line-through { -webkit-text-decoration-line: line-through !important; text-decoration-line: line-through !important; }
+.no-underline { -webkit-text-decoration-line: none !important; text-decoration-line: none !important; }
+.uppercase { text-transform: uppercase !important; }
+.lowercase { text-transform: lowercase !important; }
+.capitalize { text-transform: capitalize !important; }
+.normal-case { text-transform: none !important; }
+
+.text-left { text-align: left }
+.text-center { text-align: center; }
+.text-right { text-align: right; }
+.text-justify { text-align: justify; }
+
+.sub, .sup { font-size: 75%; line-height: 0; position: relative; vertical-align: baseline; }
+.sup { top: -0.3em; vertical-align: super;}
+.sub { bottom: -0.25em; vertical-align: sub;}
+
+.tracking--100 { letter-spacing: -0.1em !important }
+.tracking--75 { letter-spacing: -0.075em !important }
+.tracking--50, .tracking-tighter { letter-spacing: -0.05em !important }
+.tracking--25, .tracking-tight { letter-spacing: -0.025em !important }
+.tracking-0, .tracking-normal { letter-spacing: 0em !important }
+.tracking-25, .tracking-wide { letter-spacing: 0.025em !important }
+.tracking-50, .tracking-wider { letter-spacing: 0.05em !important }
+.tracking-75 { letter-spacing: 0.075em !important }
+.tracking-100, .tracking-widest { letter-spacing: 0.1em !important }
+.tracking-125 { letter-spacing: 0.125em !important }
+.tracking-150 { letter-spacing: 0.15em !important }
+.tracking-175 { letter-spacing: 0.175em !important }
+.tracking-200 { letter-spacing: 0.2em !important }
+.tracking-225 { letter-spacing: 0.225em !important }
+.tracking-250 { letter-spacing: 0.25em !important }
+.tracking-275 { letter-spacing: 0.275em !important }
+.tracking-300 { letter-spacing: 0.3em !important }
+.tracking-325 { letter-spacing: 0.325em !important }
+.tracking-350 { letter-spacing: 0.350em !important }
+.tracking-375 { letter-spacing: 0.375em !important }
+.tracking-400 { letter-spacing: 0.4em !important }
+.tracking-425 { letter-spacing: 0.425em !important }
+.tracking-450 { letter-spacing: 0.450em !important }
+.tracking-475 { letter-spacing: 0.475em !important }
+.tracking-500 { letter-spacing: 0.5em !important }
+
+.leading-05 { line-height: 0.5 !important }
+.leading-06 { line-height: 0.6 !important }
+.leading-07 { line-height: 0.7 !important }
+.leading-08 { line-height: 0.8 !important }
+.leading-09 { line-height: 0.9 !important }
+.leading-10, .leading-none { line-height: 1 !important }
+.leading-11 { line-height: 1.1 !important }
+.leading-12 { line-height: 1.2 !important }
+.leading-tight { line-height: 1.25 !important }
+.leading-13 { line-height: 1.3 !important }
+.leading-snug { line-height: 1.375 !important }
+.leading-14 { line-height: 1.4 !important }
+.leading-15, .leading-normal { line-height: 1.5 !important }
+.leading-16 { line-height: 1.6 !important }
+.leading-relaxed { line-height: 1.625 !important }
+.leading-17 { line-height: 1.7 !important }
+.leading-18 { line-height: 1.8 !important }
+.leading-19 { line-height: 1.9 !important }
+.leading-20, .leading-loose { line-height: 2 !important }
+.leading-21 { line-height: 2.1 !important }
+.leading-22 { line-height: 2.2 !important }
+.leading-23 { line-height: 2.3 !important }
+.leading-24 { line-height: 2.4 !important }
+.leading-25 { line-height: 2.5 !important }
+.leading-26 { line-height: 2.6 !important }
+.leading-27 { line-height: 2.7 !important }
+.leading-28 { line-height: 2.8 !important }
+.leading-29 { line-height: 2.9 !important }
+.leading-30 { line-height: 3 !important }
+
+.opacity-0 { opacity: 0 !important }
+.opacity-2 { opacity: 0.02 !important }
+.opacity-4 { opacity: 0.04 !important }
+.opacity-5 { opacity: 0.05 !important }
+.opacity-6 { opacity: 0.06 !important }
+.opacity-8 { opacity: 0.08 !important }
+.opacity-10 { opacity: 0.1 !important }
+.opacity-12 { opacity: 0.12 !important }
+.opacity-15 { opacity: 0.15 !important }
+.opacity-20 { opacity: 0.2 !important }
+.opacity-25 { opacity: 0.25 !important }
+.opacity-30 { opacity: 0.3 !important }
+.opacity-35 { opacity: 0.35 !important }
+.opacity-40 { opacity: 0.4 !important }
+.opacity-45 { opacity: 0.45 !important }
+.opacity-50 { opacity: 0.5 !important }
+.opacity-55 { opacity: 0.55 !important }
+.opacity-60 { opacity: 0.6 !important }
+.opacity-65 { opacity: 0.65 !important }
+.opacity-70 { opacity: 0.7 !important }
+.opacity-75 { opacity: 0.75 !important }
+.opacity-80 { opacity: 0.8 !important }
+.opacity-85 { opacity: 0.85 !important }
+.opacity-90 { opacity: 0.9 !important }
+.opacity-95 { opacity: 0.95 !important }
+.opacity-100 { opacity: 1 !important }
+
+.pb-0 { padding-bottom: 0px !important}
+.pb-1 { padding-bottom: 0.25rem !important}
+.pb-2 { padding-bottom: 0.5rem !important}
+.pb-3 { padding-bottom: 0.75rem !important}
+.pb-4 { padding-bottom: 1rem !important}
+.pb-5 { padding-bottom: 1.25rem !important}
+.pb-6 { padding-bottom: 1.5rem !important}
+.pb-7 { padding-bottom: 1.75rem !important}
+.pb-8 { padding-bottom: 2rem !important}
+.pb-9 { padding-bottom: 2.25rem !important}
+.pb-10 { padding-bottom: 2.5rem !important}
+.pb-11 { padding-bottom: 2.75rem !important}
+.pb-12 { padding-bottom: 3rem !important}
+.pb-14 { padding-bottom: 3.5rem !important}
+.pb-16 { padding-bottom: 4rem !important}
+.pb-20 { padding-bottom: 5rem !important}
+
+.pr-0 { padding-right: 0px !important}
+.pr-1 { padding-right: 0.25rem !important}
+.pr-2 { padding-right: 0.5rem !important}
+.pr-3 { padding-right: 0.75rem !important}
+.pr-4 { padding-right: 1rem !important}
+.pr-5 { padding-right: 1.25rem !important}
+.pr-6 { padding-right: 1.5rem !important}
+.pr-7 { padding-right: 1.75rem !important}
+.pr-8 { padding-right: 2rem !important}
+.pr-9 { padding-right: 2.25rem !important}
+.pr-10 { padding-right: 2.5rem !important}
+.pr-11 { padding-right: 2.75rem !important}
+.pr-12 { padding-right: 3rem !important}
+.pr-14 { padding-right: 3.5rem !important}
+.pr-16 { padding-right: 4rem !important}
+.pr-20 { padding-right: 5rem !important}
+
+.pt-0 { padding-top: 0px !important}
+.pt-1 { padding-top: 0.25rem !important}
+.pt-2 { padding-top: 0.5rem !important}
+.pt-3 { padding-top: 0.75rem !important}
+.pt-4 { padding-top: 1rem !important}
+.pt-5 { padding-top: 1.25rem !important}
+.pt-6 { padding-top: 1.5rem !important}
+.pt-7 { padding-top: 1.75rem !important}
+.pt-8 { padding-top: 2rem !important}
+.pt-9 { padding-top: 2.25rem !important}
+.pt-10 { padding-top: 2.5rem !important}
+.pt-11 { padding-top: 2.75rem !important}
+.pt-12 { padding-top: 3rem !important}
+.pt-14 { padding-top: 3.5rem !important}
+.pt-16 { padding-top: 4rem !important}
+.pt-20 { padding-top: 5rem !important}
+
+.pl-0 { padding-left: 0px !important}
+.pl-1 { padding-left: 0.25rem !important}
+.pl-2 { padding-left: 0.5rem !important}
+.pl-3 { padding-left: 0.75rem !important}
+.pl-4 { padding-left: 1rem !important}
+.pl-5 { padding-left: 1.25rem !important}
+.pl-6 { padding-left: 1.5rem !important}
+.pl-7 { padding-left: 1.75rem !important}
+.pl-8 { padding-left: 2rem !important}
+.pl-9 { padding-left: 2.25rem !important}
+.pl-10 { padding-left: 2.5rem !important}
+.pl-11 { padding-left: 2.75rem !important}
+.pl-12 { padding-left: 3rem !important}
+.pl-14 { padding-left: 3.5rem !important}
+.pl-16 { padding-left: 4rem !important}
+.pl-20 { padding-left: 5rem !important}
+
+@media (max-width: 760px) {
+    .xs-pb-0 { padding-bottom: 0px !important}
+    .xs-pb-1 { padding-bottom: 0.25rem !important}
+    .xs-pb-2 { padding-bottom: 0.5rem !important}
+    .xs-pb-3 { padding-bottom: 0.75rem !important}
+    .xs-pb-4 { padding-bottom: 1rem !important}
+    .xs-pb-5 { padding-bottom: 1.25rem !important}
+    .xs-pb-6 { padding-bottom: 1.5rem !important}
+    .xs-pb-7 { padding-bottom: 1.75rem !important}
+    .xs-pb-8 { padding-bottom: 2rem !important}
+    .xs-pb-9 { padding-bottom: 2.25rem !important}
+    .xs-pb-10 { padding-bottom: 2.5rem !important}
+    .xs-pb-11 { padding-bottom: 2.75rem !important}
+    .xs-pb-12 { padding-bottom: 3rem !important}
+    .xs-pb-14 { padding-bottom: 3.5rem !important}
+    .xs-pb-16 { padding-bottom: 4rem !important}
+    .xs-pb-20 { padding-bottom: 5rem !important}
+    
+    .xs-pr-0 { padding-right: 0px !important}
+    .xs-pr-1 { padding-right: 0.25rem !important}
+    .xs-pr-2 { padding-right: 0.5rem !important}
+    .xs-pr-3 { padding-right: 0.75rem !important}
+    .xs-pr-4 { padding-right: 1rem !important}
+    .xs-pr-5 { padding-right: 1.25rem !important}
+    .xs-pr-6 { padding-right: 1.5rem !important}
+    .xs-pr-7 { padding-right: 1.75rem !important}
+    .xs-pr-8 { padding-right: 2rem !important}
+    .xs-pr-9 { padding-right: 2.25rem !important}
+    .xs-pr-10 { padding-right: 2.5rem !important}
+    .xs-pr-11 { padding-right: 2.75rem !important}
+    .xs-pr-12 { padding-right: 3rem !important}
+    .xs-pr-14 { padding-right: 3.5rem !important}
+    .xs-pr-16 { padding-right: 4rem !important}
+    .xs-pr-20 { padding-right: 5rem !important}
+    
+    .xs-pt-0 { padding-top: 0px !important}
+    .xs-pt-1 { padding-top: 0.25rem !important}
+    .xs-pt-2 { padding-top: 0.5rem !important}
+    .xs-pt-3 { padding-top: 0.75rem !important}
+    .xs-pt-4 { padding-top: 1rem !important}
+    .xs-pt-5 { padding-top: 1.25rem !important}
+    .xs-pt-6 { padding-top: 1.5rem !important}
+    .xs-pt-7 { padding-top: 1.75rem !important}
+    .xs-pt-8 { padding-top: 2rem !important}
+    .xs-pt-9 { padding-top: 2.25rem !important}
+    .xs-pt-10 { padding-top: 2.5rem !important}
+    .xs-pt-11 { padding-top: 2.75rem !important}
+    .xs-pt-12 { padding-top: 3rem !important}
+    .xs-pt-14 { padding-top: 3.5rem !important}
+    .xs-pt-16 { padding-top: 4rem !important}
+    .xs-pt-20 { padding-top: 5rem !important}
+    
+    .xs-pl-0 { padding-left: 0px !important}
+    .xs-pl-1 { padding-left: 0.25rem !important}
+    .xs-pl-2 { padding-left: 0.5rem !important}
+    .xs-pl-3 { padding-left: 0.75rem !important}
+    .xs-pl-4 { padding-left: 1rem !important}
+    .xs-pl-5 { padding-left: 1.25rem !important}
+    .xs-pl-6 { padding-left: 1.5rem !important}
+    .xs-pl-7 { padding-left: 1.75rem !important}
+    .xs-pl-8 { padding-left: 2rem !important}
+    .xs-pl-9 { padding-left: 2.25rem !important}
+    .xs-pl-10 { padding-left: 2.5rem !important}
+    .xs-pl-11 { padding-left: 2.75rem !important}
+    .xs-pl-12 { padding-left: 3rem !important}
+    .xs-pl-14 { padding-left: 3.5rem !important}
+    .xs-pl-16 { padding-left: 4rem !important}
+    .xs-pl-20 { padding-left: 5rem !important}
+}
+
+@media (min-width: 761px) and (max-width: 970px) {
+    .sm-pb-0 { padding-bottom: 0px !important}
+    .sm-pb-1 { padding-bottom: 0.25rem !important}
+    .sm-pb-2 { padding-bottom: 0.5rem !important}
+    .sm-pb-3 { padding-bottom: 0.75rem !important}
+    .sm-pb-4 { padding-bottom: 1rem !important}
+    .sm-pb-5 { padding-bottom: 1.25rem !important}
+    .sm-pb-6 { padding-bottom: 1.5rem !important}
+    .sm-pb-7 { padding-bottom: 1.75rem !important}
+    .sm-pb-8 { padding-bottom: 2rem !important}
+    .sm-pb-9 { padding-bottom: 2.25rem !important}
+    .sm-pb-10 { padding-bottom: 2.5rem !important}
+    .sm-pb-11 { padding-bottom: 2.75rem !important}
+    .sm-pb-12 { padding-bottom: 3rem !important}
+    .sm-pb-14 { padding-bottom: 3.5rem !important}
+    .sm-pb-16 { padding-bottom: 4rem !important}
+    .sm-pb-20 { padding-bottom: 5rem !important}
+    
+    .sm-pr-0 { padding-right: 0px !important}
+    .sm-pr-1 { padding-right: 0.25rem !important}
+    .sm-pr-2 { padding-right: 0.5rem !important}
+    .sm-pr-3 { padding-right: 0.75rem !important}
+    .sm-pr-4 { padding-right: 1rem !important}
+    .sm-pr-5 { padding-right: 1.25rem !important}
+    .sm-pr-6 { padding-right: 1.5rem !important}
+    .sm-pr-7 { padding-right: 1.75rem !important}
+    .sm-pr-8 { padding-right: 2rem !important}
+    .sm-pr-9 { padding-right: 2.25rem !important}
+    .sm-pr-10 { padding-right: 2.5rem !important}
+    .sm-pr-11 { padding-right: 2.75rem !important}
+    .sm-pr-12 { padding-right: 3rem !important}
+    .sm-pr-14 { padding-right: 3.5rem !important}
+    .sm-pr-16 { padding-right: 4rem !important}
+    .sm-pr-20 { padding-right: 5rem !important}
+    
+    .sm-pt-0 { padding-top: 0px !important}
+    .sm-pt-1 { padding-top: 0.25rem !important}
+    .sm-pt-2 { padding-top: 0.5rem !important}
+    .sm-pt-3 { padding-top: 0.75rem !important}
+    .sm-pt-4 { padding-top: 1rem !important}
+    .sm-pt-5 { padding-top: 1.25rem !important}
+    .sm-pt-6 { padding-top: 1.5rem !important}
+    .sm-pt-7 { padding-top: 1.75rem !important}
+    .sm-pt-8 { padding-top: 2rem !important}
+    .sm-pt-9 { padding-top: 2.25rem !important}
+    .sm-pt-10 { padding-top: 2.5rem !important}
+    .sm-pt-11 { padding-top: 2.75rem !important}
+    .sm-pt-12 { padding-top: 3rem !important}
+    .sm-pt-14 { padding-top: 3.5rem !important}
+    .sm-pt-16 { padding-top: 4rem !important}
+    .sm-pt-20 { padding-top: 5rem !important}
+    
+    .sm-pl-0 { padding-left: 0px !important}
+    .sm-pl-1 { padding-left: 0.25rem !important}
+    .sm-pl-2 { padding-left: 0.5rem !important}
+    .sm-pl-3 { padding-left: 0.75rem !important}
+    .sm-pl-4 { padding-left: 1rem !important}
+    .sm-pl-5 { padding-left: 1.25rem !important}
+    .sm-pl-6 { padding-left: 1.5rem !important}
+    .sm-pl-7 { padding-left: 1.75rem !important}
+    .sm-pl-8 { padding-left: 2rem !important}
+    .sm-pl-9 { padding-left: 2.25rem !important}
+    .sm-pl-10 { padding-left: 2.5rem !important}
+    .sm-pl-11 { padding-left: 2.75rem !important}
+    .sm-pl-12 { padding-left: 3rem !important}
+    .sm-pl-14 { padding-left: 3.5rem !important}
+    .sm-pl-16 { padding-left: 4rem !important}
+    .sm-pl-20 { padding-left: 5rem !important}
+}
+@media (min-width: 971px) and (max-width: 1280px) {
+    .md-pb-0 { padding-bottom: 0px !important}
+    .md-pb-1 { padding-bottom: 0.25rem !important}
+    .md-pb-2 { padding-bottom: 0.5rem !important}
+    .md-pb-3 { padding-bottom: 0.75rem !important}
+    .md-pb-4 { padding-bottom: 1rem !important}
+    .md-pb-5 { padding-bottom: 1.25rem !important}
+    .md-pb-6 { padding-bottom: 1.5rem !important}
+    .md-pb-7 { padding-bottom: 1.75rem !important}
+    .md-pb-8 { padding-bottom: 2rem !important}
+    .md-pb-9 { padding-bottom: 2.25rem !important}
+    .md-pb-10 { padding-bottom: 2.5rem !important}
+    .md-pb-11 { padding-bottom: 2.75rem !important}
+    .md-pb-12 { padding-bottom: 3rem !important}
+    .md-pb-14 { padding-bottom: 3.5rem !important}
+    .md-pb-16 { padding-bottom: 4rem !important}
+    .md-pb-20 { padding-bottom: 5rem !important}
+    
+    .md-pr-0 { padding-right: 0px !important}
+    .md-pr-1 { padding-right: 0.25rem !important}
+    .md-pr-2 { padding-right: 0.5rem !important}
+    .md-pr-3 { padding-right: 0.75rem !important}
+    .md-pr-4 { padding-right: 1rem !important}
+    .md-pr-5 { padding-right: 1.25rem !important}
+    .md-pr-6 { padding-right: 1.5rem !important}
+    .md-pr-7 { padding-right: 1.75rem !important}
+    .md-pr-8 { padding-right: 2rem !important}
+    .md-pr-9 { padding-right: 2.25rem !important}
+    .md-pr-10 { padding-right: 2.5rem !important}
+    .md-pr-11 { padding-right: 2.75rem !important}
+    .md-pr-12 { padding-right: 3rem !important}
+    .md-pr-14 { padding-right: 3.5rem !important}
+    .md-pr-16 { padding-right: 4rem !important}
+    .md-pr-20 { padding-right: 5rem !important}
+    
+    .md-pt-0 { padding-top: 0px !important}
+    .md-pt-1 { padding-top: 0.25rem !important}
+    .md-pt-2 { padding-top: 0.5rem !important}
+    .md-pt-3 { padding-top: 0.75rem !important}
+    .md-pt-4 { padding-top: 1rem !important}
+    .md-pt-5 { padding-top: 1.25rem !important}
+    .md-pt-6 { padding-top: 1.5rem !important}
+    .md-pt-7 { padding-top: 1.75rem !important}
+    .md-pt-8 { padding-top: 2rem !important}
+    .md-pt-9 { padding-top: 2.25rem !important}
+    .md-pt-10 { padding-top: 2.5rem !important}
+    .md-pt-11 { padding-top: 2.75rem !important}
+    .md-pt-12 { padding-top: 3rem !important}
+    .md-pt-14 { padding-top: 3.5rem !important}
+    .md-pt-16 { padding-top: 4rem !important}
+    .md-pt-20 { padding-top: 5rem !important}
+    
+    .md-pl-0 { padding-left: 0px !important}
+    .md-pl-1 { padding-left: 0.25rem !important}
+    .md-pl-2 { padding-left: 0.5rem !important}
+    .md-pl-3 { padding-left: 0.75rem !important}
+    .md-pl-4 { padding-left: 1rem !important}
+    .md-pl-5 { padding-left: 1.25rem !important}
+    .md-pl-6 { padding-left: 1.5rem !important}
+    .md-pl-7 { padding-left: 1.75rem !important}
+    .md-pl-8 { padding-left: 2rem !important}
+    .md-pl-9 { padding-left: 2.25rem !important}
+    .md-pl-10 { padding-left: 2.5rem !important}
+    .md-pl-11 { padding-left: 2.75rem !important}
+    .md-pl-12 { padding-left: 3rem !important}
+    .md-pl-14 { padding-left: 3.5rem !important}
+    .md-pl-16 { padding-left: 4rem !important}
+    .md-pl-20 { padding-left: 5rem !important}
+}
+
+.hover\:border-transparent:hover { border-color: transparent !important }
+.hover\:border-current:hover { border-color: currentColor !important }
+.hover\:text-white:hover { --tw-text-opacity: 1; color: rgb(255 255 255 / var(--tw-text-opacity)) !important; }
+.hover\:text-black:hover { --tw-text-opacity: 1; color: rgb(0 0 0 / var(--tw-text-opacity)) !important; }
+.hover\:text-current:hover { color: currentColor !important }
+
+/* 
+Master Style (new feature)
+You can apply master style to the container (must be .is-container class).
+Example:
+<div class="is-container size-18 leading-14 v2">
+    ...content here (rows & columns)...
+</div>
+Note: .v2 class option gives optimization for large screen.
+*/ 
+.feature-master-style { display: none; } /* do not remove */
+
+/* size-16 */
+.is-container.size-16 {
+    font-size: 16px;
+}
+.is-container.size-16 p, .is-container.size-16 td, .is-container.size-16 li, .is-container.size-16 label {
+    font-size: 16px;
+}
+@media all and (max-width: 1800px) {
+    .is-container.size-16 p, 
+    .is-container.size-16 td, 
+    .is-container.size-16 li, 
+    .is-container.size-16 label {font-size:0.99vw; font-size:clamp(16px, 0.99vw, 0.99vw)}
+}
+@media all and (min-width: 1921px) { 
+    .is-container.size-16.v2:not(.v3) p, 
+    .is-container.size-16.v2:not(.v3) td, 
+    .is-container.size-16.v2:not(.v3) li, 
+    .is-container.size-16.v2:not(.v3) label {font-size:0.83vw}
+}
+
+/* size-17 */
+.is-container.size-17 { font-size: 17px; }
+.is-container.size-17 p, .is-container.size-17 td, .is-container.size-17 li, .is-container.size-17 label { font-size: 17px; }
+@media all and (max-width: 1800px) {
+    .is-container.size-17 p, 
+    .is-container.size-17 td, 
+    .is-container.size-17 li, 
+    .is-container.size-17 label {font-size:1.05vw; font-size:clamp(17px, 1.05vw, 1.05vw)}
+}
+@media all and (min-width: 1921px) { 
+    .is-container.size-17.v2:not(.v3) p, 
+    .is-container.size-17.v2:not(.v3) td, 
+    .is-container.size-17.v2:not(.v3) li, 
+    .is-container.size-17.v2:not(.v3) label {font-size:0.89vw}
+}
+
+/* size-18 */
+.is-container.size-18 { font-size: 18px; }
+.is-container.size-18 p, .is-container.size-18 td, .is-container.size-18 li, .is-container.size-18 label { font-size: 18px; }
+@media all and (max-width: 1800px) {
+    .is-container.size-18 p, 
+    .is-container.size-18 td, 
+    .is-container.size-18 li, 
+    .is-container.size-18 label {font-size:1.11vw; font-size:clamp(18px, 1.11vw, 1.11vw)}
+}
+@media all and (min-width: 1921px) { 
+    .is-container.size-18.v2:not(.v3) p, 
+    .is-container.size-18.v2:not(.v3) td, 
+    .is-container.size-18.v2:not(.v3) li, 
+    .is-container.size-18.v2:not(.v3) label{font-size:0.94vw}
+}
+
+/* size-19 */
+.is-container.size-19 { font-size: 19px; }
+.is-container.size-19 p, .is-container.size-19 td, .is-container.size-19 li, .is-container.size-19 label { font-size: 19px; }
+@media all and (max-width: 1800px) {
+    .is-container.size-19 p, 
+    .is-container.size-19 td, 
+    .is-container.size-19 li, 
+    .is-container.size-19 label {font-size:1.17vw; font-size:clamp(19px, 1.17vw, 1.17vw)}
+}
+@media all and (min-width: 1921px) { 
+    .is-container.size-19.v2:not(.v3) p, 
+    .is-container.size-19.v2:not(.v3) td, 
+    .is-container.size-19.v2:not(.v3) li, 
+    .is-container.size-19.v2:not(.v3) label {font-size:0.99vw}
+}
+
+/* size-20 */
+.is-container.size-20 { font-size: 20px; }
+.is-container.size-20 p, .is-container.size-20 td, .is-container.size-20 li, .is-container.size-20 label { font-size: 20px; }
+@media all and (max-width: 1800px) {
+    .is-container.size-20 p, 
+    .is-container.size-20 td, 
+    .is-container.size-20 li, 
+    .is-container.size-20 label {font-size:1.23vw; font-size:clamp(20px, 1.23vw, 1.23vw)}
+}
+@media all and (min-width: 1921px) { 
+    .is-container.size-20.v2:not(.v3) p, 
+    .is-container.size-20.v2:not(.v3) td, 
+    .is-container.size-20.v2:not(.v3) li, 
+    .is-container.size-20.v2:not(.v3) label {font-size:1.04vw}
+}
+
+/* size-21 */
+.is-container.size-21 { font-size: 21px; }
+.is-container.size-21 p, .is-container.size-21 td, .is-container.size-21 li, .is-container.size-21 label { font-size: 21px; }
+@media all and (max-width: 1800px) {
+    .is-container.size-21 p, 
+    .is-container.size-21 td, 
+    .is-container.size-21 li, 
+    .is-container.size-21 label {font-size:1.29vw; font-size:clamp(21px, 1.29vw, 1.29vw)}
+}
+@media all and (min-width: 1921px) { 
+    .is-container.size-21.v2:not(.v3) p, 
+    .is-container.size-21.v2:not(.v3) td, 
+    .is-container.size-21.v2:not(.v3) li, 
+    .is-container.size-21.v2:not(.v3) label {font-size:1.09vw}
+}
+
+/* leading */
+.is-container.leading-none p, .is-container.leading-none td, .is-container.leading-none li, .is-container.leading-none label { line-height: 1; }
+.is-container.leading-none h1, .is-container.leading-none h2, .is-container.leading-none h3, .is-container.leading-none h4, .is-container.leading-none h5, .is-container.leading-none h6 {
+    line-height: 1.1;
+}
+.is-container.leading-10 p, .is-container.leading-10 td, .is-container.leading-10 li, .is-container.leading-10 label { line-height: 1; }
+.is-container.leading-10 h1, .is-container.leading-10 h2, .is-container.leading-10 h3, .is-container.leading-10 h4, .is-container.leading-10 h5, .is-container.leading-10 h6 {
+    line-height: 1.1;
+}
+.is-container.leading-11 p, .is-container.leading-11 td, .is-container.leading-11 li, .is-container.leading-11 label { line-height: 1.1; }
+.is-container.leading-11 h1, .is-container.leading-11 h2, .is-container.leading-11 h3, .is-container.leading-11 h4, .is-container.leading-11 h5, .is-container.leading-11 h6 {
+    line-height: 1.1;
+}
+.is-container.leading-12 p, .is-container.leading-12 td, .is-container.leading-12 li, .is-container.leading-12 label { line-height: 1.2; }
+.is-container.leading-12 h1, .is-container.leading-12 h2, .is-container.leading-12 h3, .is-container.leading-12 h4, .is-container.leading-12 h5, .is-container.leading-12 h6 {
+    line-height: 1.1;
+}
+.is-container.leading-13 p, .is-container.leading-13 td, .is-container.leading-13 li, .is-container.leading-13 label { line-height: 1.3; }
+.is-container.leading-13 h1, .is-container.leading-13 h2, .is-container.leading-13 h3, .is-container.leading-13 h4, .is-container.leading-13 h5, .is-container.leading-13 h6 {
+    line-height: 1.2;
+}
+.is-container.leading-14 p, .is-container.leading-14 td, .is-container.leading-14 li, .is-container.leading-14 label { line-height: 1.4; }
+.is-container.leading-14 h1, .is-container.leading-14 h2, .is-container.leading-14 h3, .is-container.leading-14 h4, .is-container.leading-14 h5, .is-container.leading-14 h6 {
+    line-height: 1.2;
+}
+.is-container.leading-15 p, .is-container.leading-15 td, .is-container.leading-15 li, .is-container.leading-15 label { line-height: 1.5; }
+.is-container.leading-15 h1, .is-container.leading-15 h2, .is-container.leading-15 h3, .is-container.leading-15 h4, .is-container.leading-15 h5, .is-container.leading-15 h6 {
+    line-height: 1.3;
+}
+.is-container.leading-16 p, .is-container.leading-16 td, .is-container.leading-16 li, .is-container.leading-16 label { line-height: 1.6; }
+.is-container.leading-16 h1, .is-container.leading-16 h2, .is-container.leading-16 h3, .is-container.leading-16 h4, .is-container.leading-16 h5, .is-container.leading-16 h6 {
+    line-height: 1.3;
+}
+.is-container.leading-17 p, .is-container.leading-17 td, .is-container.leading-17 li, .is-container.leading-17 label { line-height: 1.7; }
+.is-container.leading-17 h1, .is-container.leading-17 h2, .is-container.leading-17 h3, .is-container.leading-17 h4, .is-container.leading-17 h5, .is-container.leading-17 h6 {
+    line-height: 1.3;
+}
+.is-container.leading-18 p, .is-container.leading-18 td, .is-container.leading-18 li, .is-container.leading-18 label { line-height: 1.8; }
+.is-container.leading-18 h1, .is-container.leading-18 h2, .is-container.leading-18 h3, .is-container.leading-18 h4, .is-container.leading-18 h5, .is-container.leading-18 h6 {
+    line-height: 1.3;
+}
+.is-container.leading-19 p, .is-container.leading-19 td, .is-container.leading-19 li, .is-container.leading-19 label { line-height: 1.9; }
+.is-container.leading-19 h1, .is-container.leading-19 h2, .is-container.leading-19 h3, .is-container.leading-19 h4, .is-container.leading-19 h5, .is-container.leading-19 h6 {
+    line-height: 1.3;
+}
+.is-container.leading-20 p, .is-container.leading-20 td, .is-container.leading-20 li, .is-container.leading-20 label { line-height: 2.0; }
+.is-container.leading-20 h1, .is-container.leading-20 h2, .is-container.leading-20 h3, .is-container.leading-20 h4, .is-container.leading-20 h5, .is-container.leading-20 h6 {
+    line-height: 1.3;
+}
+
+/* Additional Fix */
+.is-container > div,
+.is-container > div > div {
+    box-sizing: border-box;
+}
+@media all and (max-width: 760px) { /*970px*/
+    .flex-col.md\:flex-row {
+        flex-direction: column; /* Adjustment for row */
+    }
+}
+
+.relative { position: relative }
+.is-row-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: -1; pointer-events: none; user-select: none; }
+
+.is-dock {
+    position: absolute;
+    width: 100%;
+    padding-bottom: 100%;
+    height: 0px;
+}
+.is-dock > div {
+    position: absolute;
+}
+.is-dock > div > img {
+    width: 100%;
+}
+@media all and (max-width: 970px) {
+    .is-dock {
+        position: relative;
+        width: 350px;
+        padding-bottom: 350px;
+        height: 0px;
+    }
+}
+.is-container > div > div:has( .is-dock) {
+    width: 100%;
+    position: relative; /* for tailwind */
+}
+
+.grow { flex-grow: 1; } 
+
+/* Media Grid */
+.is-media-grid {
+    column-count: 4;
+    column-gap: 10px;
+    padding: 0px;
+}
+.is-media-grid.cols-1 { column-count: 1 !important; }
+.is-media-grid.cols-2 { column-count: 2 !important; }
+.is-media-grid.cols-3 { column-count: 3 !important; }
+.is-media-grid.cols-4 { column-count: 4 !important; }
+.is-media-grid.cols-5 { column-count: 5 !important; }
+.is-media-grid.cols-6 { column-count: 6 !important; }
+.is-media-grid.cols-7 { column-count: 7 !important; }
+.is-media-grid.cols-8 { column-count: 8 !important; }
+.is-media-grid.cols-9 { column-count: 9 !important; }
+.is-media-grid.cols-10 { column-count: 10 !important; }
+.is-media-grid .gallery-item {
+    position: relative;
+    break-inside: avoid;
+    border-radius: 0px;
+    margin-bottom: 10px;
+    line-height: 0;
+    overflow: hidden;
+}
+.is-media-grid .gallery-item img {
+    width: 100%;
+    height: auto;
+    transition: .8s all;
+}
+.is-media-grid .gallery-item .caption {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    background-color: rgba(0, 0, 0, 0.4);
+    color: #fff;
+    padding: 12px 15px;
+    opacity: 0;
+    transition: all 0.8s ease;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    box-sizing: border-box;
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+    font-size: .9em;
+    font-weight: 200;
+    line-height: 1.2;
+}
+.is-media-grid .gallery-item .caption h4 {
+    font-weight: 300;
+    font-size: 1.1em;
+    margin: 0 0 0.1em;;
+}
+.is-media-grid .gallery-item video {
+    height: auto;
+    width: 100%;
+    object-fit: cover;
+}
+
+.is-container form {
+    width: 100%;
+}
+
+.is-container .size-12,
+.is-container .size-13,
+.is-container .size-14,
+.is-container .size-15,
+.is-container .size-16,
+.is-container .size-17,
+.is-container .size-18,
+.is-container .size-19,
+.is-container .size-20,
+.is-container .size-21,
+.is-container .size-24,
+.is-container .size-28,
+.is-container .size-32,
+.is-container .size-35,
+.is-container .size-38,
+.is-container .size-42,
+.is-container .size-46,
+.is-container .size-48,
+.is-container .size-50,
+.is-container .size-54,
+.is-container .size-60,
+.is-container .size-64,
+.is-container .size-68,
+.is-container .size-72,
+.is-container .size-76,
+.is-container .size-80,
+.is-container .size-84,
+.is-container .size-88,
+.is-container .size-92,
+.is-container .size-96,
+.is-container .size-100,
+.is-container .size-104,
+.is-container .size-108,
+.is-container .size-112,
+.is-container .size-116,
+.is-container .size-120,
+.is-container .size-124,
+.is-container .size-128,
+.is-container .size-132,
+.is-container .size-136,
+.is-container .size-140,
+.is-container .size-144,
+.is-container .size-148,
+.is-container .size-152,
+.is-container .size-156,
+.is-container .size-160,
+.is-container .size-164,
+.is-container .size-168,
+.is-container .size-172,
+.is-container .size-176,
+.is-container .size-180,
+.is-container .size-184,
+.is-container .size-188,
+.is-container .size-192,
+.is-container .size-196,
+.is-container .size-200,
+.is-container .size-204,
+.is-container .size-208,
+.is-container .size-212,
+.is-container .size-216,
+.is-container .size-220,
+.is-container .size-224,
+.is-container .size-228,
+.is-container .size-232,
+.is-container .size-236,
+.is-container .size-240,
+.is-container .size-244,
+.is-container .size-248,
+.is-container .size-252,
+.is-container .size-256,
+.is-container .size-260,
+.is-container .size-264,
+.is-container .size-268,
+.is-container .size-272,
+.is-container .size-276,
+.is-container .size-280,
+.is-container .size-284,
+.is-container .size-288,
+.is-container .size-292,
+.is-container .size-296,
+.is-container .size-300,
+.is-container .size-304,
+.is-container .size-308,
+.is-container .size-312,
+.is-container .size-316,
+.is-container .size-320,
+.is-container .size-324,
+.is-container .size-328,
+.is-container .size-332,
+.is-container .size-336,
+.is-container .size-340,
+.is-container .size-344,
+.is-container .size-348,
+.is-container .size-352,
+.is-container .size-356,
+.is-container .size-360,
+.is-container .size-364,
+.is-container .size-368,
+.is-container .size-372,
+.is-container .size-376,
+.is-container .size-380,
+.is-container .size-384,
+.is-container .size-388,
+.is-container .size-392,
+.is-container .size-396,
+.is-container .size-400 {
+    width: initial;
+    height: initial;
+}
+
+.is-container.size-16,
+.is-container.size-17,
+.is-container.size-18,
+.is-container.size-19,
+.is-container.size-20,
+.is-container.size-21 {
+    width: 100%;
+    height: initial;
+}
+.is-container.size-16.h-full,
+.is-container.size-17.h-full,
+.is-container.size-18.h-full,
+.is-container.size-19.h-full,
+.is-container.size-20.h-full,
+.is-container.size-21.h-full {
+    width: 100%;
+    height: 100%;
+}

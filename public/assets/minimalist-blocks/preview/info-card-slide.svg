@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 390 160" width="390" height="160">
+  <rect width="390" height="160" fill="#fff"/>
+  <!-- 카드 1 -->
+  <rect x="16" y="12" width="280" height="136" rx="16" fill="#fff" stroke="#E5E7EB" stroke-width="1"/>
+  <rect x="32" y="28" width="52" height="20" rx="10" fill="#E8F0FC"/>
+  <text x="58" y="42" font-size="10" fill="#0046A4" text-anchor="middle" font-family="sans-serif">이벤트</text>
+  <rect x="32" y="58" width="160" height="12" rx="3" fill="#1A1A2E"/>
+  <rect x="32" y="78" width="200" height="8" rx="3" fill="#D1D5DB"/>
+  <rect x="32" y="100" width="110" height="28" rx="6" fill="#F5F7FA"/>
+  <text x="87" y="118" font-size="10" fill="#1A1A2E" text-anchor="middle" font-family="sans-serif">자세히 보기</text>
+  <rect x="150" y="100" width="110" height="28" rx="6" fill="#F5F7FA"/>
+  <text x="205" y="118" font-size="10" fill="#1A1A2E" text-anchor="middle" font-family="sans-serif">신청하기</text>
+  <!-- 카드 2 (살짝 보임) -->
+  <rect x="310" y="12" width="280" height="136" rx="16" fill="#fff" stroke="#E5E7EB" stroke-width="1" opacity="0.5"/>
+  <rect x="326" y="28" width="44" height="20" rx="10" fill="#E8F0FC" opacity="0.5"/>
+  <rect x="326" y="58" width="120" height="12" rx="3" fill="#1A1A2E" opacity="0.5"/>
+</svg>

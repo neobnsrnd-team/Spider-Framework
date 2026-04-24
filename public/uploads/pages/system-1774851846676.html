@@ -1,0 +1,1245 @@
+<div class="row relative">
+    <div class="column spw-finance-col">
+        <div data-component-id="app-header-mobile" data-spw-block="" style="font-family: -apple-system, BlinkMacSystemFont, &quot;Malgun Gothic&quot;, &quot;Apple SD Gothic Neo&quot;, sans-serif; background: rgb(255, 255, 255); border-bottom: 3px solid rgb(0, 139, 94);">
+            <div style="position: relative; height: 54px; padding: 0px 14px;" class="flex justify-center items-center"><a href="#" style="gap: 8px; text-decoration: none;" class="flex items-center"><img src="uploads\images.png" alt="은행 로고" style="width:34px;height:34px;object-fit:contain;border-radius:6px;flex-shrink:0;display:block;"><span style="font-size: 17px; font-weight: 800; color: rgb(31, 163, 131); letter-spacing: -0.4px; white-space: nowrap;" class="leading-none">하나카드</span></a></div>
+        </div>
+    </div>
+</div>
+<div class="row">
+    <div class="column spw-finance-col">
+        <div data-component-id="branch-locator-mobile" data-spw-block="" style="font-family: -apple-system, BlinkMacSystemFont, &quot;Malgun Gothic&quot;, &quot;Apple SD Gothic Neo&quot;, sans-serif; background: rgb(245, 247, 250); border-radius: 20px; min-height: 420px;" class="flex flex-col">
+            <div style="position:relative;aspect-ratio:16/9;border-radius:20px 20px 0 0;flex-shrink:0;background:#E8EFF8;"><iframe data-bl-map="" src="about:blank" style="position:absolute;top:0;left:0;width:100%;height:100%;border:none;border-radius:20px 20px 0 0;" title="지도" allowfullscreen=""></iframe>
+                <div data-bl-map-ph="" style="position: absolute; top: 0px; left: 0px; width: 100%; height: 100%; gap: 8px; background: linear-gradient(160deg, rgb(240, 248, 248) 0%, rgb(209, 227, 248) 100%);" class="flex justify-center flex-col items-center"><span style="font-size:40px;">📍</span>
+                    <p style="font-size:13px;color:#6B7280;margin:0;font-weight:500;">블록을 클릭하면 지점 편집 패널이 열립니다</p>
+                    <p style="font-size:11px;color:#9CA3AF;margin:0;">Google Maps / Kakao 지도 embed URL을 입력하세요</p>
+                </div>
+                <div style="position: absolute; top: 12px; left: 12px; right: 12px; gap: 8px; z-index: 10;" class="flex">
+                    <div style="flex: 1 1 0%; height: 44px; border-radius: 12px; background: rgb(255, 255, 255); box-shadow: rgba(0, 0, 0, 0.1) 0px 2px 12px; padding: 0px 14px;" class="flex items-center"><span style="font-size:14px;color:#9CA3AF;">지역 또는 지점명 검색</span></div>
+                    <div style="width: 44px; height: 44px; background: rgb(0, 132, 133); border-radius: 12px; flex-shrink: 0; box-shadow: rgba(0, 132, 133, 0.3) 0px 2px 12px;" class="flex justify-center items-center"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18">
+                            <circle cx="11" cy="11" r="8"></circle>
+                            <path d="m21 21-4.35-4.35"></path>
+                        </svg></div>
+                </div>
+                <div style="position: absolute; bottom: 12px; left: 12px; gap: 6px; z-index: 10;" class="flex"><button data-bl-filter="all" style="height: 32px; padding: 0px 14px; border: none; border-radius: 20px; background: rgb(0, 132, 133); color: rgb(255, 255, 255); font-size: 13px; cursor: pointer; box-shadow: rgba(0, 0, 0, 0.1) 0px 2px 8px;" class="font-semibold">전체</button><button data-bl-filter="branch" style="height: 32px; padding: 0px 14px; border: none; border-radius: 20px; background: rgb(255, 255, 255); color: rgb(107, 114, 128); font-size: 13px; cursor: pointer; box-shadow: rgba(0, 0, 0, 0.1) 0px 2px 8px;" class="font-semibold">영업점</button><button data-bl-filter="atm" style="height: 32px; padding: 0px 14px; border: none; border-radius: 20px; background: rgb(255, 255, 255); color: rgb(107, 114, 128); font-size: 13px; cursor: pointer; box-shadow: rgba(0, 0, 0, 0.1) 0px 2px 8px;" class="font-semibold">ATM</button></div>
+            </div>
+            <div data-bl-sheet="" style="background: rgb(255, 255, 255); border-radius: 20px 20px 0px 0px; box-shadow: rgba(0, 0, 0, 0.08) 0px -4px 24px; flex: 1 1 0%; min-height: 200px;" class="flex flex-col">
+                <div data-bl-handle="" style="width:40px;height:4px;background:#D1D5DB;border-radius:2px;margin:12px auto 0;cursor:grab;flex-shrink:0;"></div>
+                <div style="font-size:15px;font-weight:700;color:#1A1A2E;padding:12px 20px 8px;flex-shrink:0;">주변 영업점 · ATM</div>
+                <div data-bl-list="" style="flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding-bottom:12px;">
+                    <div data-bl-item="branch" style="gap: 12px; padding: 12px 20px; border-bottom: 1px solid rgb(243, 244, 246); min-height: 64px;" class="flex items-center" data-bl-map-src="">
+                        <div style="width: 40px; height: 40px; border-radius: 12px; background: rgb(0, 132, 133); font-size: 14px; font-weight: 800; letter-spacing: -0.5px; flex-shrink: 0; color: rgb(255, 255, 255);" class="flex justify-center items-center">영</div>
+                        <div style="flex: 1 1 0%; gap: 2px; min-width: 0px;" class="flex flex-col"><span data-bl-name="" style="font-size: 14px; color: rgb(26, 26, 46); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" class="font-semibold">[금융사명] 강남지점</span><span data-bl-addr="" style="font-size:12px;color:#6B7280;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">서울 강남구 테헤란로 123</span><span data-bl-hours="" style="font-size:11px;color:#9CA3AF;">평일 09:00~16:00</span></div><a href="tel:1566-2566" style="width: 44px; height: 44px; border-radius: 12px; background: rgb(240, 248, 248); color: rgb(0, 132, 133); text-decoration: none; flex-shrink: 0;" class="flex justify-center items-center"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18">
+                                <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 13.5 19.79 19.79 0 0 1 1.61 4.9 2 2 0 0 1 3.6 2.71h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 10.09a16 16 0 0 0 6 6l.91-.91a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 21.28 18 2 2 0 0 1 22 16.92z"></path>
+                            </svg></a>
+                    </div>
+                    <div data-bl-item="atm" style="gap: 12px; padding: 12px 20px; border-bottom: none; min-height: 64px;" class="flex items-center">
+                        <div style="width: 40px; height: 40px; border-radius: 12px; background: rgb(0, 163, 164); font-size: 10px; font-weight: 800; letter-spacing: -0.5px; flex-shrink: 0; color: rgb(255, 255, 255);" class="flex justify-center items-center">ATM</div>
+                        <div style="flex: 1 1 0%; gap: 2px; min-width: 0px;" class="flex flex-col"><span data-bl-name="" style="font-size: 14px; color: rgb(26, 26, 46); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" class="font-semibold">[금융사명] ATM (강남역 2번출구)</span><span data-bl-addr="" style="font-size:12px;color:#6B7280;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">서울 강남구 강남대로 396</span><span data-bl-hours="" style="font-size:11px;color:#9CA3AF;">24시간 운영</span></div><a href="tel:1566-2566" style="width: 44px; height: 44px; border-radius: 12px; background: rgb(240, 248, 248); color: rgb(0, 132, 133); text-decoration: none; flex-shrink: 0;" class="flex justify-center items-center"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18">
+                                <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 13.5 19.79 19.79 0 0 1 1.61 4.9 2 2 0 0 1 3.6 2.71h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 10.09a16 16 0 0 0 6 6l.91-.91a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 21.28 18 2 2 0 0 1 22 16.92z"></path>
+                            </svg></a>
+                    </div>
+                </div>
+            </div>
+            <script>
+                (function() {
+                    if (window.builderRuntime) return;
+                    var r = document.currentScript && document.currentScript.parentElement;
+                    if (!r) return;
+                    var mi = r.querySelector('[data-bl-map]');
+                    var mp = r.querySelector('[data-bl-map-ph]');
+                    var ms = mi ? mi.getAttribute('src') : '';
+                    if (mi && mp && ms && ms !== 'about:blank') mp.style.display = 'none';
+                    var fbs = Array.from(r.querySelectorAll('[data-bl-filter]'));
+                    var bis = Array.from(r.querySelectorAll('[data-bl-item]'));
+                    fbs.forEach(function(b) {
+                        b.addEventListener('click', function() {
+                            var t = b.getAttribute('data-bl-filter');
+                            fbs.forEach(function(x) {
+                                var a = x === b;
+                                x.style.background = a ? '#008485' : '#fff';
+                                x.style.color = a ? '#fff' : '#6B7280';
+                            });
+                            bis.forEach(function(i) {
+                                i.style.display = (t === 'all' || i.getAttribute('data-bl-item') === t) ? 'flex' : 'none';
+                            });
+                        });
+                    });
+                    var sh = r.querySelector('[data-bl-sheet]');
+                    var hd = r.querySelector('[data-bl-handle]');
+                    if (sh && hd) {
+                        var sY = 0,
+                            sH = 0,
+                            dr = false;
+                        var oS = function(e) {
+                            dr = true;
+                            sY = e.touches ? e.touches[0].clientY : e.clientY;
+                            sH = sh.offsetHeight;
+                            sh.style.transition = 'none';
+                        };
+                        var oM = function(e) {
+                            if (!dr) return;
+                            var y = e.touches ? e.touches[0].clientY : e.clientY;
+                            sh.style.height = Math.max(80, Math.min(r.offsetHeight * 0.8, sH + (sY - y))) + 'px';
+                        };
+                        var oE = function() {
+                            if (!dr) return;
+                            dr = false;
+                            sh.style.transition = 'height 0.3s ease';
+                            var h = sh.offsetHeight;
+                            sh.style.height = (h < 160 ? 80 : h > r.offsetHeight * 0.5 ? r.offsetHeight * 0.7 : 200) + 'px';
+                        };
+                        hd.addEventListener('touchstart', oS, {
+                            passive: true
+                        });
+                        hd.addEventListener('mousedown', oS);
+                        document.addEventListener('touchmove', oM, {
+                            passive: true
+                        });
+                        document.addEventListener('mousemove', oM);
+                        document.addEventListener('touchend', oE);
+                        document.addEventListener('mouseup', oE);
+                    }
+                })(); < \/script></div >
+                <
+                /div></div >
+                <
+                div class = "row" >
+                    <
+                    div class = "column" >
+                    <
+                    div data - cb - type = "loan-calculator"
+                style = "--lc-accent: #0046A4;"
+                data - cb -
+                    default -type = "loan"
+                data - cb - show - loan - tab = "true"
+                data - cb - show - deposit - tab = "true"
+                data - cb - show - savings - tab = "true"
+                data - cb - show - apply - btn = "true"
+                data - cb - apply - url = "#"
+                data - cb - apply - btn - label = "신청"
+                data - cb - accent - color = "#0046A4" >
+                    <
+                    div class = "lc-tabs" >
+                    <
+                    button class = "lc-tab active"
+                data - type = "loan" > 대출 < /button> <
+                button class = "lc-tab"
+                data - type = "deposit" > 예금 < /button> <
+                button class = "lc-tab"
+                data - type = "savings" > 적금 < /button> < /
+                    div > <
+                    div class = "lc-body" >
+                    <
+                    div class = "lc-panel"
+                data - type = "loan"
+                style = "display: block;" >
+                    <
+                    div class = "lc-field" >
+                    <
+                    label class = "lc-label" > 대출금액 < /label> <
+                div class = "lc-input-wrap" >
+                    <
+                    input type = "number"
+                inputmode = "numeric"
+                class = "lc-input"
+                data - key = "principal"
+                value = "10000"
+                min = "100"
+                max = "500000"
+                step = "100" >
+                    <
+                    span class = "lc-unit" > 만원 < /span> < /
+                    div > <
+                    input type = "range"
+                class = "lc-range"
+                data - key = "principal"
+                min = "100"
+                max = "500000"
+                step = "100"
+                value = "10000" >
+                    <
+                    div class = "lc-range-labels" > < span > 100 만원 < /span><span>50억원</span > < /div> < /
+                    div > <
+                    div class = "lc-field" >
+                    <
+                    label class = "lc-label" > 금리(연) < /label> <
+                div class = "lc-input-wrap" >
+                    <
+                    input type = "number"
+                inputmode = "decimal"
+                class = "lc-input"
+                data - key = "rate"
+                value = "5.0"
+                min = "0.1"
+                max = "20"
+                step = "0.1" >
+                    <
+                    span class = "lc-unit" > % < /span> < /
+                    div > <
+                    input type = "range"
+                class = "lc-range"
+                data - key = "rate"
+                min = "0.1"
+                max = "20"
+                step = "0.1"
+                value = "5.0" >
+                    <
+                    div class = "lc-range-labels" > < span > 0.1 % < /span><span>20%</span > < /div> < /
+                    div > <
+                    div class = "lc-field" >
+                    <
+                    label class = "lc-label" > 대출기간 < /label> <
+                div class = "lc-input-wrap" >
+                    <
+                    input type = "number"
+                inputmode = "numeric"
+                class = "lc-input"
+                data - key = "period"
+                value = "12"
+                min = "1"
+                max = "360"
+                step = "1" >
+                    <
+                    span class = "lc-unit" > 개월 < /span> < /
+                    div > <
+                    input type = "range"
+                class = "lc-range"
+                data - key = "period"
+                min = "1"
+                max = "360"
+                step = "1"
+                value = "12" >
+                    <
+                    div class = "lc-range-labels" > < span > 1 개월 < /span><span>30년</span > < /div> < /
+                    div > <
+                    /div> <
+                div class = "lc-panel"
+                data - type = "deposit"
+                style = "display:none" >
+                    <
+                    div class = "lc-field" >
+                    <
+                    label class = "lc-label" > 예치금액 < /label> <
+                div class = "lc-input-wrap" >
+                    <
+                    input type = "number"
+                inputmode = "numeric"
+                class = "lc-input"
+                data - key = "principal"
+                value = "1000"
+                min = "10"
+                max = "1000000"
+                step = "10" >
+                    <
+                    span class = "lc-unit" > 만원 < /span> < /
+                    div > <
+                    input type = "range"
+                class = "lc-range"
+                data - key = "principal"
+                min = "10"
+                max = "1000000"
+                step = "10"
+                value = "1000" >
+                    <
+                    div class = "lc-range-labels" > < span > 10 만원 < /span><span>100억원</span > < /div> < /
+                    div > <
+                    div class = "lc-field" >
+                    <
+                    label class = "lc-label" > 금리(연) < /label> <
+                div class = "lc-input-wrap" >
+                    <
+                    input type = "number"
+                inputmode = "decimal"
+                class = "lc-input"
+                data - key = "rate"
+                value = "3.5"
+                min = "0.1"
+                max = "20"
+                step = "0.1" >
+                    <
+                    span class = "lc-unit" > % < /span> < /
+                    div > <
+                    input type = "range"
+                class = "lc-range"
+                data - key = "rate"
+                min = "0.1"
+                max = "20"
+                step = "0.1"
+                value = "3.5" >
+                    <
+                    div class = "lc-range-labels" > < span > 0.1 % < /span><span>20%</span > < /div> < /
+                    div > <
+                    div class = "lc-field" >
+                    <
+                    label class = "lc-label" > 예치기간 < /label> <
+                div class = "lc-input-wrap" >
+                    <
+                    input type = "number"
+                inputmode = "numeric"
+                class = "lc-input"
+                data - key = "period"
+                value = "12"
+                min = "1"
+                max = "60"
+                step = "1" >
+                    <
+                    span class = "lc-unit" > 개월 < /span> < /
+                    div > <
+                    input type = "range"
+                class = "lc-range"
+                data - key = "period"
+                min = "1"
+                max = "60"
+                step = "1"
+                value = "12" >
+                    <
+                    div class = "lc-range-labels" > < span > 1 개월 < /span><span>60개월</span > < /div> < /
+                    div > <
+                    /div> <
+                div class = "lc-panel"
+                data - type = "savings"
+                style = "display:none" >
+                    <
+                    div class = "lc-field" >
+                    <
+                    label class = "lc-label" > 월 납입금액 < /label> <
+                div class = "lc-input-wrap" >
+                    <
+                    input type = "number"
+                inputmode = "numeric"
+                class = "lc-input"
+                data - key = "monthly"
+                value = "100"
+                min = "1"
+                max = "10000"
+                step = "1" >
+                    <
+                    span class = "lc-unit" > 만원 < /span> < /
+                    div > <
+                    input type = "range"
+                class = "lc-range"
+                data - key = "monthly"
+                min = "1"
+                max = "10000"
+                step = "1"
+                value = "100" >
+                    <
+                    div class = "lc-range-labels" > < span > 1 만원 < /span><span>1억원</span > < /div> < /
+                    div > <
+                    div class = "lc-field" >
+                    <
+                    label class = "lc-label" > 금리(연) < /label> <
+                div class = "lc-input-wrap" >
+                    <
+                    input type = "number"
+                inputmode = "decimal"
+                class = "lc-input"
+                data - key = "rate"
+                value = "4.0"
+                min = "0.1"
+                max = "20"
+                step = "0.1" >
+                    <
+                    span class = "lc-unit" > % < /span> < /
+                    div > <
+                    input type = "range"
+                class = "lc-range"
+                data - key = "rate"
+                min = "0.1"
+                max = "20"
+                step = "0.1"
+                value = "4.0" >
+                    <
+                    div class = "lc-range-labels" > < span > 0.1 % < /span><span>20%</span > < /div> < /
+                    div > <
+                    div class = "lc-field" >
+                    <
+                    label class = "lc-label" > 적금기간 < /label> <
+                div class = "lc-input-wrap" >
+                    <
+                    input type = "number"
+                inputmode = "numeric"
+                class = "lc-input"
+                data - key = "period"
+                value = "24"
+                min = "1"
+                max = "60"
+                step = "1" >
+                    <
+                    span class = "lc-unit" > 개월 < /span> < /
+                    div > <
+                    input type = "range"
+                class = "lc-range"
+                data - key = "period"
+                min = "1"
+                max = "60"
+                step = "1"
+                value = "24" >
+                    <
+                    div class = "lc-range-labels" > < span > 1 개월 < /span><span>60개월</span > < /div> < /
+                    div > <
+                    /div> <
+                div class = "lc-result" >
+                    <
+                    div class = "lc-result-item" >
+                    <
+                    span class = "lc-result-label lc-label-monthly" > 월 납입금 < /span> <
+                span class = "lc-result-value lc-val-monthly" > 856 만원 < /span> < /
+                    div > <
+                    div class = "lc-result-item" >
+                    <
+                    span class = "lc-result-label lc-label-interest" > 총 이자 < /span> <
+                span class = "lc-result-value lc-val-interest" > 273 만원 < /span> < /
+                    div > <
+                    div class = "lc-result-item lc-result-total" >
+                    <
+                    span class = "lc-result-label lc-label-total" > 총 상환금액 < /span> <
+                span class = "lc-result-value lc-val-total" > 1.0 억원 < /span> < /
+                    div > <
+                    /div> <
+                a href = "#"
+                class = "lc-apply-btn flex" > 상담 신청하기 < /a> < /
+                    div > <
+                    /div>
+
+                    <
+                    /div> < /
+                    div > <
+                    div class = "row" >
+                    <
+                    div class = "column spw-finance-col" >
+                    <
+                    div data - component - id = "auth-center-mobile"
+                data - spw - block = ""
+                style = "font-family:-apple-system,BlinkMacSystemFont,'Malgun Gothic',sans-serif;background:#fff;border-radius:20px;box-shadow:0 2px 16px rgba(0,70,164,0.07);" >
+                    <
+                    div style = "padding:20px 20px 12px;border-bottom:1px solid #F3F4F6;" >
+                    <
+                    h3 style = "font-size:18px;font-weight:700;color:#1A1A2E;margin:0 0 4px;" > 인증센터 < /h3> <
+                p style = "font-size:13px;color:#6B7280;margin:0;" > 안전한 금융거래를 위한 인증 서비스 < /p> < /
+                    div > <
+                    div style = "padding:8px 0;" > < a href = "#"
+                class = "ac-item flex items-center"
+                style = "gap: 14px; padding: 14px 20px; text-decoration: none; border-bottom: 1px solid rgb(249, 250, 251); min-height: 64px;" >
+                    <
+                    div class = "ac-icon-wrap flex justify-center items-center"
+                style = "width: 48px; height: 48px; border-radius: 14px; background: rgb(232, 240, 252); flex-shrink: 0; color: rgb(0, 70, 164);" > < svg viewBox = "0 0 24 24"
+                fill = "none"
+                stroke = "currentColor"
+                stroke - width = "1.5"
+                stroke - linecap = "round"
+                stroke - linejoin = "round"
+                width = "22"
+                height = "22" >
+                    <
+                    path d = "M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" > < /path> <
+                polyline points = "14 2 14 8 20 8" > < /polyline> <
+                line x1 = "16"
+                y1 = "13"
+                x2 = "8"
+                y2 = "13" > < /line> <
+                line x1 = "16"
+                y1 = "17"
+                x2 = "8"
+                y2 = "17" > < /line> <
+                polyline points = "10 9 9 9 8 9" > < /polyline> < /
+                    svg > < /div > <
+                    div style = "flex: 1 1 0%; gap: 3px; min-width: 0px;"
+                class = "flex flex-col" > < span style = "font-size:15px;font-weight:700;color:#1A1A2E;" > 공동인증서 < /span><span style="font-size:12px;color:#6B7280;">발급 · 갱신 · 복사</span > < /div><svg viewBox="0 0 24 24" fill="none" stroke="#D1D5DB" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"> <
+                path d = "m9 18 6-6-6-6" > < /path> < /
+                    svg > <
+                    /a><a href="#" class="ac-item flex items-center" style="gap: 14px; padding: 14px 20px; text-decoration: none; border-bottom: 1px solid rgb(249, 250, 251); min-height: 64px;"> <
+                div class = "ac-icon-wrap flex justify-center items-center"
+                style = "width: 48px; height: 48px; border-radius: 14px; background: rgb(232, 240, 252); flex-shrink: 0; color: rgb(0, 70, 164);" > < svg viewBox = "0 0 24 24"
+                fill = "none"
+                stroke = "currentColor"
+                stroke - width = "1.5"
+                stroke - linecap = "round"
+                stroke - linejoin = "round"
+                width = "22"
+                height = "22" >
+                    <
+                    rect x = "3"
+                y = "11"
+                width = "18"
+                height = "11"
+                rx = "2"
+                ry = "2" > < /rect> <
+                path d = "M7 11V7a5 5 0 0 1 10 0v4" > < /path> < /
+                    svg > < /div > <
+                    div style = "flex: 1 1 0%; gap: 3px; min-width: 0px;"
+                class = "flex flex-col" > < span style = "font-size:15px;font-weight:700;color:#1A1A2E;" > 금융인증서 < /span><span style="font-size:12px;color:#6B7280;">클라우드 기반 인증</span > < /div><svg viewBox="0 0 24 24" fill="none" stroke="#D1D5DB" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"> <
+                path d = "m9 18 6-6-6-6" > < /path> < /
+                    svg > <
+                    /a><a href="#" class="ac-item flex items-center" style="gap: 14px; padding: 14px 20px; text-decoration: none; border-bottom: 1px solid rgb(249, 250, 251); min-height: 64px;"> <
+                div class = "ac-icon-wrap flex justify-center items-center"
+                style = "width: 48px; height: 48px; border-radius: 14px; background: rgb(255, 243, 236); flex-shrink: 0; color: rgb(255, 102, 0);" > < svg viewBox = "0 0 24 24"
+                fill = "none"
+                stroke = "currentColor"
+                stroke - width = "1.5"
+                stroke - linecap = "round"
+                stroke - linejoin = "round"
+                width = "22"
+                height = "22" >
+                    <
+                    rect x = "5"
+                y = "2"
+                width = "14"
+                height = "20"
+                rx = "2" > < /rect> <
+                line x1 = "12"
+                y1 = "18"
+                x2 = "12.01"
+                y2 = "18" > < /line> <
+                path d = "M9 7h6" > < /path> <
+                path d = "M9 11h6" > < /path> < /
+                    svg > < /div > <
+                    div style = "flex: 1 1 0%; gap: 3px; min-width: 0px;"
+                class = "flex flex-col" > < span style = "font-size:15px;font-weight:700;color:#1A1A2E;" > OTP < /span><span style="font-size:12px;color:#6B7280;">일회용 비밀번호 생성기</span > < /div><svg viewBox="0 0 24 24" fill="none" stroke="#D1D5DB" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"> <
+                path d = "m9 18 6-6-6-6" > < /path> < /
+                    svg > <
+                    /a><a href="#" class="ac-item flex items-center" style="gap: 14px; padding: 14px 20px; text-decoration: none; border-bottom: none; min-height: 64px;"> <
+                div class = "ac-icon-wrap flex justify-center items-center"
+                style = "width: 48px; height: 48px; border-radius: 14px; background: rgb(240, 255, 244); flex-shrink: 0; color: rgb(5, 150, 105);" > < svg viewBox = "0 0 24 24"
+                fill = "none"
+                stroke = "currentColor"
+                stroke - width = "1.5"
+                stroke - linecap = "round"
+                stroke - linejoin = "round"
+                width = "22"
+                height = "22" >
+                    <
+                    path d = "M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10" > < /path> < /
+                    svg > < /div > <
+                    div style = "flex: 1 1 0%; gap: 3px; min-width: 0px;"
+                class = "flex flex-col" > < span style = "font-size:15px;font-weight:700;color:#1A1A2E;" > 보안카드 < /span><span style="font-size:12px;color:#6B7280;">보안카드 분실 · 재발급</span > < /div><svg viewBox="0 0 24 24" fill="none" stroke="#D1D5DB" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"> <
+                path d = "m9 18 6-6-6-6" > < /path> < /
+                    svg > <
+                    /a></div >
+                    <
+                    div style = "gap: 8px; background: rgb(254, 249, 195); padding: 14px 20px; border-top: 1px solid rgb(254, 240, 138);"
+                class = "flex items-start" > < svg viewBox = "0 0 24 24"
+                fill = "none"
+                stroke = "#CA8A04"
+                stroke - width = "2"
+                stroke - linecap = "round"
+                stroke - linejoin = "round"
+                width = "16"
+                height = "16"
+                style = "flex-shrink:0;margin-top:1px;" >
+                    <
+                    path d = "M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10" > < /path> < /
+                    svg > <
+                    p style = "font-size: 12px; color: rgb(120, 53, 15); margin: 0px; font-weight: 500;"
+                class = "leading-normal" > [금융사명] 은 절대 개인정보, 보안카드 번호 전체를 요구하지 않습니다. < /p> < /
+                    div > <
+                    /div> < /
+                    div > <
+                    /div> <
+                div class = "row" >
+                    <
+                    div class = "column" >
+                    <
+                    div data - component - id = "basic-mobile-042" >
+
+                    <
+                    /div> < /
+                    div > <
+                    /div> <
+                div class = "row" >
+                    <
+                    div class = "column full" > < img src = "uploads\cardImg.png"
+                alt = ""
+                style = "width: 100%;" > < /div> < /
+                    div > <
+                    div class = "row" >
+                    <
+                    div class = "column"
+                style = "font-size: 15px;" >
+                    <
+                    div data - component - id = "basic-mobile-001"
+                style = "font-family: Oswald, sans-serif;" >
+                    <
+                    div class = "size-28 font-semibold" > 하나 나랑사랑카드(체크) < /div> < /
+                    div > <
+                    /div> < /
+                    div > <
+                    link href = "//fonts.googleapis.com/css2?family=Oswald:wght@200;300;400;500;600;700"
+                rel = "stylesheet"
+                property = "stylesheet" >
+                    <
+                    div class = "row" >
+                    <
+                    div class = "column" >
+
+                    <
+                    div data - cb - type = "exchange-board"
+                style = "--eb-accent: #0046A4;" >
+                    <
+                    div class = "eb-header" >
+                    <
+                    span class = "eb-title" > 실시간 환율 < /span> <
+                span class = "eb-updated" > 15: 49 기준 < /span> < /
+                    div > <
+                    div class = "eb-list" >
+                    <
+                    div class = "eb-item"
+                data - currency = "JPY" >
+                    <
+                    div class = "eb-left" >
+                    <
+                    span class = "eb-flag" > 🇯🇵 < /span> <
+                div class = "eb-currency-info" >
+                    <
+                    span class = "eb-code" > JPY < /span> <
+                span class = "eb-name" > 일본 엔화 < /span> < /
+                    div > <
+                    /div> <
+                div class = "eb-right" >
+                    <
+                    div class = "eb-rates" >
+                    <
+                    div class = "eb-rate-row" > < span class = "eb-label" > 살 때 < /span><span class="eb-buy">0.00</span > < /div> <
+                div class = "eb-rate-row" > < span class = "eb-label" > 팔 때 < /span><span class="eb-sell">0.00</span > < /div> < /
+                    div > <
+                    div class = "eb-change down" > ▼0.00 < /div> < /
+                    div > <
+                    /div> <
+                div class = "eb-item"
+                data - currency = "JPY" >
+                    <
+                    div class = "eb-left" >
+                    <
+                    span class = "eb-flag" > 🇯🇵 < /span> <
+                div class = "eb-currency-info" >
+                    <
+                    span class = "eb-code" > JPY < /span> <
+                span class = "eb-name" > 일본 엔화 < /span> < /
+                    div > <
+                    /div> <
+                div class = "eb-right" >
+                    <
+                    div class = "eb-rates" >
+                    <
+                    div class = "eb-rate-row" > < span class = "eb-label" > 살 때 < /span><span class="eb-buy">0.00</span > < /div> <
+                div class = "eb-rate-row" > < span class = "eb-label" > 팔 때 < /span><span class="eb-sell">0.00</span > < /div> < /
+                    div > <
+                    div class = "eb-change up" > ▲0.00 < /div> < /
+                    div > <
+                    /div> < /
+                    div > <
+                    div class = "eb-footer" >
+                    <
+                    a href = "#"
+                class = "eb-exchange-btn" > 환전 신청 < /a> < /
+                    div > <
+                    /div>
+
+                    <
+                    /div> < /
+                    div > <
+                    div class = "row" >
+                    <
+                    div class = "column spw-finance-col" >
+                    <
+                    div data - component - id = "finance-calendar-mobile"
+                data - spw - block = ""
+                style = "font-family:-apple-system,BlinkMacSystemFont,'Malgun Gothic','Apple SD Gothic Neo',sans-serif;background:#ffffff;border-radius:12px;margin:0 16px;box-shadow:0 1px 4px rgba(0,0,0,0.08);" >
+                    <
+                    div style = "padding: 14px 16px 10px;"
+                class = "flex justify-between items-center" > < span data - fc - title = ""
+                style = "font-size:15px;font-weight:700;color:#1A1A2E;" > 금융 일정 < /span> <
+                div style = "gap: 8px;"
+                class = "flex items-center" > < span style = "font-size:14px;color:#9CA3AF;cursor:pointer;padding:2px 6px;" > ◀ < /span><span data-fc-year="2026" data-fc-month="7" style="font-size: 13px; color: rgb(55, 65, 81);" class="font-semibold">2026.07</span > < span style = "font-size:14px;color:#9CA3AF;cursor:pointer;padding:2px 6px;" > ▶ < /span></div >
+                    <
+                    /div> <
+                div data - fc - grid = ""
+                style = "padding:0 8px;"
+                data - fc - events = "[{&quot;day&quot;:10,&quot;label&quot;:&quot;카드값&quot;,&quot;amount&quot;:-320000,&quot;color&quot;:&quot;#EF4444&quot;},{&quot;day&quot;:16,&quot;label&quot;:&quot;적금 만기&quot;,&quot;color&quot;:&quot;#10B981&quot;},{&quot;day&quot;:25,&quot;label&quot;:&quot;보험료&quot;,&quot;amount&quot;:-85000,&quot;color&quot;:&quot;#F59E0B&quot;}]" >
+                    <
+                    div style = "flex-wrap: wrap; border-bottom: 1px solid rgb(243, 244, 246);"
+                class = "flex" >
+                    <
+                    div style = "width: 14.2857%; padding: 6px 0px; font-size: 12px; color: rgb(239, 68, 68);"
+                class = "font-semibold text-center" > 일 < /div> <
+                div style = "width: 14.2857%; padding: 6px 0px; font-size: 12px; color: rgb(55, 65, 81);"
+                class = "font-semibold text-center" > 월 < /div> <
+                div style = "width: 14.2857%; padding: 6px 0px; font-size: 12px; color: rgb(55, 65, 81);"
+                class = "font-semibold text-center" > 화 < /div> <
+                div style = "width: 14.2857%; padding: 6px 0px; font-size: 12px; color: rgb(55, 65, 81);"
+                class = "font-semibold text-center" > 수 < /div> <
+                div style = "width: 14.2857%; padding: 6px 0px; font-size: 12px; color: rgb(55, 65, 81);"
+                class = "font-semibold text-center" > 목 < /div> <
+                div style = "width: 14.2857%; padding: 6px 0px; font-size: 12px; color: rgb(55, 65, 81);"
+                class = "font-semibold text-center" > 금 < /div> <
+                div style = "width: 14.2857%; padding: 6px 0px; font-size: 12px; color: rgb(59, 130, 246);"
+                class = "font-semibold text-center" > 토 < /div> < /
+                    div > <
+                    div style = "flex-wrap: wrap;"
+                class = "flex" >
+                    <
+                    div style = "width: 14.2857%; padding: 4px 0px 2px;"
+                class = "text-center" > < span style = "font-size:12px;visibility:hidden;color:#EF4444;" > < /span> <
+                div style = "height:9px;" > < /div> < /
+                    div > <
+                    div style = "width: 14.2857%; padding: 4px 0px 2px;"
+                class = "text-center" > < span style = "font-size:12px;visibility:hidden;color:#374151;" > < /span> <
+                div style = "height:9px;" > < /div> < /
+                    div > <
+                    div style = "width: 14.2857%; padding: 4px 0px 2px;"
+                class = "text-center" > < span style = "font-size:12px;visibility:hidden;color:#374151;" > < /span> <
+                div style = "height:9px;" > < /div> < /
+                    div > <
+                    div style = "width: 14.2857%; padding: 4px 0px 2px;"
+                class = "text-center" > < span style = "font-size:12px;color:#374151;" > 1 < /span> <
+                div style = "height:9px;" > < /div> < /
+                    div > <
+                    div style = "width: 14.2857%; padding: 4px 0px 2px;"
+                class = "text-center" > < span style = "font-size:12px;color:#374151;" > 2 < /span> <
+                div style = "height:9px;" > < /div> < /
+                    div > <
+                    div style = "width: 14.2857%; padding: 4px 0px 2px;"
+                class = "text-center" > < span style = "font-size:12px;color:#374151;" > 3 < /span> <
+                div style = "height:9px;" > < /div> < /
+                    div > <
+                    div style = "width: 14.2857%; padding: 4px 0px 2px;"
+                class = "text-center" > < span style = "font-size:12px;color:#3B82F6;" > 4 < /span> <
+                div style = "height:9px;" > < /div> < /
+                    div > <
+                    div style = "width: 14.2857%; padding: 4px 0px 2px;"
+                class = "text-center" > < span style = "font-size:12px;color:#EF4444;" > 5 < /span> <
+                div style = "height:9px;" > < /div> < /
+                    div > <
+                    div style = "width: 14.2857%; padding: 4px 0px 2px;"
+                class = "text-center" > < span style = "font-size:12px;color:#374151;" > 6 < /span> <
+                div style = "height:9px;" > < /div> < /
+                    div > <
+                    div style = "width: 14.2857%; padding: 4px 0px 2px;"
+                class = "text-center" > < span style = "font-size:12px;color:#374151;" > 7 < /span> <
+                div style = "height:9px;" > < /div> < /
+                    div > <
+                    div style = "width: 14.2857%; padding: 4px 0px 2px;"
+                class = "text-center" > < span style = "font-size:12px;color:#374151;" > 8 < /span> <
+                div style = "height:9px;" > < /div> < /
+                    div > <
+                    div style = "width: 14.2857%; padding: 4px 0px 2px;"
+                class = "text-center" > < span style = "font-size:12px;color:#374151;" > 9 < /span> <
+                div style = "height:9px;" > < /div> < /
+                    div > <
+                    div style = "width: 14.2857%; padding: 4px 0px 2px;"
+                class = "text-center" > < span style = "font-size:12px;color:#374151;" > 10 < /span> <
+                div style = "gap: 2px; margin-top: 2px;"
+                class = "flex justify-center" > < span style = "width:5px;height:5px;border-radius:50%;background:#EF4444;display:inline-block;margin:0 1px;" > < /span></div >
+                    <
+                    /div> <
+                div style = "width: 14.2857%; padding: 4px 0px 2px;"
+                class = "text-center" > < span style = "font-size:12px;color:#3B82F6;" > 11 < /span> <
+                div style = "height:9px;" > < /div> < /
+                    div > <
+                    div style = "width: 14.2857%; padding: 4px 0px 2px;"
+                class = "text-center" > < span style = "font-size:12px;color:#EF4444;" > 12 < /span> <
+                div style = "height:9px;" > < /div> < /
+                    div > <
+                    div style = "width: 14.2857%; padding: 4px 0px 2px;"
+                class = "text-center" > < span style = "font-size:12px;color:#374151;" > 13 < /span> <
+                div style = "height:9px;" > < /div> < /
+                    div > <
+                    div style = "width: 14.2857%; padding: 4px 0px 2px;"
+                class = "text-center" > < span style = "font-size:12px;color:#374151;" > 14 < /span> <
+                div style = "height:9px;" > < /div> < /
+                    div > <
+                    div style = "width: 14.2857%; padding: 4px 0px 2px;"
+                class = "text-center" > < span style = "font-size:12px;color:#374151;" > 15 < /span> <
+                div style = "height:9px;" > < /div> < /
+                    div > <
+                    div style = "width: 14.2857%; padding: 4px 0px 2px;"
+                class = "text-center" > < span style = "font-size:12px;color:#374151;" > 16 < /span> <
+                div style = "gap: 2px; margin-top: 2px;"
+                class = "flex justify-center" > < span style = "width:5px;height:5px;border-radius:50%;background:#10B981;display:inline-block;margin:0 1px;" > < /span></div >
+                    <
+                    /div> <
+                div style = "width: 14.2857%; padding: 4px 0px 2px;"
+                class = "text-center" > < span style = "font-size:12px;color:#374151;" > 17 < /span> <
+                div style = "height:9px;" > < /div> < /
+                    div > <
+                    div style = "width: 14.2857%; padding: 4px 0px 2px;"
+                class = "text-center" > < span style = "font-size:12px;color:#3B82F6;" > 18 < /span> <
+                div style = "height:9px;" > < /div> < /
+                    div > <
+                    div style = "width: 14.2857%; padding: 4px 0px 2px;"
+                class = "text-center" > < span style = "font-size:12px;color:#EF4444;" > 19 < /span> <
+                div style = "height:9px;" > < /div> < /
+                    div > <
+                    div style = "width: 14.2857%; padding: 4px 0px 2px;"
+                class = "text-center" > < span style = "font-size:12px;color:#374151;" > 20 < /span> <
+                div style = "height:9px;" > < /div> < /
+                    div > <
+                    div style = "width: 14.2857%; padding: 4px 0px 2px;"
+                class = "text-center" > < span style = "font-size:12px;color:#374151;" > 21 < /span> <
+                div style = "height:9px;" > < /div> < /
+                    div > <
+                    div style = "width: 14.2857%; padding: 4px 0px 2px;"
+                class = "text-center" > < span style = "font-size:12px;color:#374151;" > 22 < /span> <
+                div style = "height:9px;" > < /div> < /
+                    div > <
+                    div style = "width: 14.2857%; padding: 4px 0px 2px;"
+                class = "text-center" > < span style = "font-size:12px;color:#374151;" > 23 < /span> <
+                div style = "height:9px;" > < /div> < /
+                    div > <
+                    div style = "width: 14.2857%; padding: 4px 0px 2px;"
+                class = "text-center" > < span style = "font-size:12px;color:#374151;" > 24 < /span> <
+                div style = "height:9px;" > < /div> < /
+                    div > <
+                    div style = "width: 14.2857%; padding: 4px 0px 2px;"
+                class = "text-center" > < span style = "font-size:12px;color:#3B82F6;" > 25 < /span> <
+                div style = "gap: 2px; margin-top: 2px;"
+                class = "flex justify-center" > < span style = "width:5px;height:5px;border-radius:50%;background:#F59E0B;display:inline-block;margin:0 1px;" > < /span></div >
+                    <
+                    /div> <
+                div style = "width: 14.2857%; padding: 4px 0px 2px;"
+                class = "text-center" > < span style = "font-size:12px;color:#EF4444;" > 26 < /span> <
+                div style = "height:9px;" > < /div> < /
+                    div > <
+                    div style = "width: 14.2857%; padding: 4px 0px 2px;"
+                class = "text-center" > < span style = "font-size:12px;color:#374151;" > 27 < /span> <
+                div style = "height:9px;" > < /div> < /
+                    div > <
+                    div style = "width: 14.2857%; padding: 4px 0px 2px;"
+                class = "text-center" > < span style = "font-size:12px;color:#374151;" > 28 < /span> <
+                div style = "height:9px;" > < /div> < /
+                    div > <
+                    div style = "width: 14.2857%; padding: 4px 0px 2px;"
+                class = "text-center" > < span style = "font-size:12px;color:#374151;" > 29 < /span> <
+                div style = "height:9px;" > < /div> < /
+                    div > <
+                    div style = "width: 14.2857%; padding: 4px 0px 2px;"
+                class = "text-center" > < span style = "font-size:12px;color:#374151;" > 30 < /span> <
+                div style = "height:9px;" > < /div> < /
+                    div > <
+                    div style = "width: 14.2857%; padding: 4px 0px 2px;"
+                class = "text-center" > < span style = "font-size:12px;color:#374151;" > 31 < /span> <
+                div style = "height:9px;" > < /div> < /
+                    div > <
+                    div style = "width: 14.2857%; padding: 4px 0px 2px;"
+                class = "text-center" > < span style = "font-size:12px;visibility:hidden;color:#3B82F6;" > < /span> <
+                div style = "height:9px;" > < /div> < /
+                    div > <
+                    /div> < /
+                    div > <
+                    div data - fc - event - list = ""
+                style = "padding:4px 16px 12px;" >
+                    <
+                    div style = "gap: 10px; padding: 8px 0px; border-bottom: 1px solid rgb(249, 250, 251);"
+                class = "flex items-center" > < span style = "width:8px;height:8px;border-radius:50%;background:#EF4444;flex-shrink:0;" > < /span><span style="font-size:12px;color:#9CA3AF;flex-shrink:0;">2026.07.10</span > < span style = "font-size:13px;color:#374151;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" > 카드값 < /span><span style="font-size: 13px; color: rgb(239, 68, 68); white-space: nowrap;" class="font-semibold">-320,000 원</span > < /div> <
+                div style = "gap: 10px; padding: 8px 0px; border-bottom: 1px solid rgb(249, 250, 251);"
+                class = "flex items-center" > < span style = "width:8px;height:8px;border-radius:50%;background:#10B981;flex-shrink:0;" > < /span><span style="font-size:12px;color:#9CA3AF;flex-shrink:0;">2026.07.16</span > < span style = "font-size:13px;color:#374151;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" > 적금 만기 < /span></div >
+                    <
+                    div style = "gap: 10px; padding: 8px 0px; border-bottom: 1px solid rgb(249, 250, 251);"
+                class = "flex items-center" > < span style = "width:8px;height:8px;border-radius:50%;background:#F59E0B;flex-shrink:0;" > < /span><span style="font-size:12px;color:#9CA3AF;flex-shrink:0;">2026.07.25</span > < span style = "font-size:13px;color:#374151;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" > 보험료 < /span><span style="font-size: 13px; color: rgb(239, 68, 68); white-space: nowrap;" class="font-semibold">-85,000 원</span > < /div> < /
+                    div > <
+                    /div> < /
+                    div > <
+                    /div> <
+                div class = "row" >
+                    <
+                    div class = "column spw-finance-col" >
+                    <
+                    div data - component - id = "promo-banner-mobile"
+                data - spw - block = ""
+                style = "font-family:-apple-system,BlinkMacSystemFont,'Malgun Gothic','Apple SD Gothic Neo',sans-serif;background:#fff;border-radius:20px;position:relative;" >
+                    <
+                    div data - pb - track = ""
+                style = "gap: 12px; padding: 12px;"
+                class = "flex flex-col" >
+                    <
+                    div data - pb - slide = ""
+                style = "width:100%;" >
+                    <
+                    div class = "pb-slide"
+                data - item - id = "pb-1"
+                style = "position:relative;height:200px;border-radius:16px;background:#059669;" >
+                    <
+                    div class = "pb-slide-content flex justify-center flex-col"
+                style = "position: relative; z-index: 1; padding: 24px 20px; gap: 6px; height: 100%; box-sizing: border-box;" > < span class = "pb-badge"
+                style = "display:inline-block;background:rgba(255,255,255,0.25);color:#fff;font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px;letter-spacing:0.5px;width:fit-content;border:1px solid rgba(255,255,255,0.4);" > 이벤트 < /span> <
+                h3 class = "pb-slide-title leading-12"
+                style = "font-size: 22px; font-weight: 800; color: rgb(255, 255, 255); margin: 0px; letter-spacing: -0.5px;" > 특별 금리 혜택 < /h3> <
+                p class = "pb-slide-desc leading-14"
+                style = "font-size: 13px; color: rgba(255, 255, 255, 0.85); margin: 0px;" > 적금 가입 시 최고 0.0 % 금리 < /p><a class="pb-slide-cta font-semibold items-center" href="#" style="display: inline-flex; background: rgba(255, 255, 255, 0.2); color: rgb(255, 255, 255); text-decoration: none; font-size: 13px; padding: 8px 16px; border-radius: 20px; border: 1px solid rgba(255, 255, 255, 0.5); width: fit-content; margin-top: 4px; min-height: 36px; -webkit-tap-highlight-color: transparent;">자세히 보기 →</a >
+                    <
+                    /div> < /
+                    div > <
+                    /div> <
+                div data - pb - slide = ""
+                style = "width:100%;" >
+                    <
+                    div class = "pb-slide"
+                data - item - id = "pb-2"
+                style = "position:relative;height:200px;border-radius:16px;background:#214a3d;" >
+                    <
+                    div class = "pb-slide-content flex justify-center flex-col"
+                style = "position: relative; z-index: 1; padding: 24px 20px; gap: 6px; height: 100%; box-sizing: border-box;" > < span class = "pb-badge"
+                style = "display:inline-block;background:rgba(255,255,255,0.25);color:#fff;font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px;letter-spacing:0.5px;width:fit-content;border:1px solid rgba(255,255,255,0.4);" > 신상품 < /span> <
+                h3 class = "pb-slide-title leading-12"
+                style = "font-size: 22px; font-weight: 800; color: rgb(255, 255, 255); margin: 0px; letter-spacing: -0.5px;" > 신규 가입 고객 전원에게! < /h3> <
+                p class = "pb-slide-desc leading-14"
+                style = "font-size: 13px; color: rgba(255, 255, 255, 0.85); margin: 0px;" > 최대 3 만원 캐시백 + 금융 쿠폰팩 증정 < /p><a class="pb-slide-cta font-semibold items-center" href="#" style="display: inline-flex; background: rgba(255, 255, 255, 0.2); color: rgb(255, 255, 255); text-decoration: none; font-size: 13px; padding: 8px 16px; border-radius: 20px; border: 1px solid rgba(255, 255, 255, 0.5); width: fit-content; margin-top: 4px; min-height: 36px; -webkit-tap-highlight-color: transparent;">자세히 보기 →</a >
+                    <
+                    /div> < /
+                    div > <
+                    /div> < /
+                    div > <
+                    div style = "gap: 6px; padding: 10px 0px 12px;"
+                class = "flex justify-center items-center" >
+                    <
+                    div data - pb - dots = ""
+                style = "height: 11px; gap: 6px;"
+                class = "flex items-center" > < /div><span style="font-size: 11px; color: rgb(156, 163, 175);" class="leading-none"><span data-pb-cur="">1</span > / 2</span >
+                    <
+                    /div> <
+                script >
+                    (function() {
+                        if (window.builderRuntime) return;
+                        var r = document.currentScript && document.currentScript.parentElement;
+                        if (!r) return;
+                        var track = r.querySelector('[data-pb-track]');
+                        var dotsEl = r.querySelector('[data-pb-dots]');
+                        var counterCur = r.querySelector('[data-pb-cur]');
+                        if (!track) return;
+                        track.style.cssText = 'display:flex;flex-direction:row;overflow-x:auto;scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch;scrollbar-width:none;-ms-overflow-style:none;gap:0;padding:12px 12px 4px;';
+                        var slides = Array.from(track.querySelectorAll('[data-pb-slide]'));
+                        if (!slides.length) return;
+                        slides.forEach(function(s) {
+                            s.style.cssText = 'flex-shrink:0;width:100%;scroll-snap-align:start;padding:0 8px;box-sizing:border-box;';
+                        });
+                        var cur = 0;
+                        if (counterCur) counterCur.textContent = '1';
+
+                        function updateDots(i) {
+                            if (!dotsEl) return;
+                            Array.from(dotsEl.children).forEach(function(d, j) {
+                                d.style.background = j === i ? 'rgba(255,255,255,0.9)' : 'rgba(255,255,255,0.4)';
+                            });
+                        }
+
+                        function goTo(i) {
+                            cur = i;
+                            track.scrollTo({
+                                left: i * track.clientWidth,
+                                behavior: 'smooth'
+                            });
+                            updateDots(i);
+                            if (counterCur) counterCur.textContent = String(i + 1);
+                        }
+                        if (dotsEl) {
+                            slides.forEach(function(_, i) {
+                                var d = document.createElement('button');
+                                d.setAttribute('aria-label', '슬라이드 ' + (i + 1));
+                                d.style.cssText = 'width:6px;height:6px;border-radius:50%;border:none;padding:0;cursor:pointer;flex-shrink:0;display:block;line-height:0;font-size:0;overflow:hidden;background:' + (i === 0 ? 'rgba(255,255,255,0.9)' : 'rgba(255,255,255,0.4)') + ';';
+                                d.addEventListener('click', function() {
+                                    goTo(i);
+                                });
+                                dotsEl.appendChild(d);
+                            });
+                        }
+                        var t;
+                        track.addEventListener('scroll', function() {
+                            clearTimeout(t);
+                            t = setTimeout(function() {
+                                var i = Math.round(track.scrollLeft / track.clientWidth);
+                                if (i !== cur) {
+                                    cur = i;
+                                    updateDots(i);
+                                    if (counterCur) counterCur.textContent = String(i + 1);
+                                }
+                            }, 80);
+                        }, {
+                            passive: true
+                        });
+                        var timer = setInterval(function() {
+                            goTo((cur + 1) % slides.length);
+                        }, 5000);
+                        track.addEventListener('touchstart', function() {
+                            clearInterval(timer);
+                        }, {
+                            passive: true,
+                            once: true
+                        });
+                    })();
+            </script>
+        </div>
+    </div>
+</div>
+<div class="row">
+    <div class="column spw-finance-col">
+        <div data-component-id="product-gallery-mobile" data-spw-block="" style="font-family:-apple-system,BlinkMacSystemFont,'Malgun Gothic','Apple SD Gothic Neo',sans-serif;background:#F5F7FA;border-radius:20px;position:relative;">
+            <div style="padding:20px 20px 12px;">
+                <h3 style="font-size:18px;font-weight:700;color:#1A1A2E;margin:0;">함께 가입하면 더 좋은 연관 상품</h3>
+            </div>
+            <div data-pg-track="" style="gap: 12px; padding: 4px 20px 20px;" class="flex flex-col">
+                <div data-pg-slide="" style="width:100%;">
+                    <div data-type="savings" data-item-id="pg-1" style="background: rgb(255, 255, 255); border-radius: 16px; padding: 24px 20px; gap: 6px; box-shadow: rgba(0, 70, 164, 0.08) 0px 4px 20px; position: relative; overflow: hidden;" class="flex flex-col">
+                        <div style="position:absolute;top:0;right:0;width:120px;height:120px;background:linear-gradient(135deg,#E8F0FC 0%,transparent 70%);border-radius:0 16px 0 100%;pointer-events:none;"></div>
+                        <div data-pg-field="badge" style="display: inline-flex; background: rgb(232, 240, 252); color: rgb(0, 70, 164); font-size: 11px; font-weight: 700; padding: 4px 10px; border-radius: 20px; width: fit-content; letter-spacing: 0.5px;" class="items-center">적금</div>
+                        <div data-pg-field="productName" style="font-size: 20px; font-weight: 700; color: rgb(26, 26, 46); margin-top: 4px;" class="leading-13">따뜻한 입출금 통장 (우대금리 연동)</div>
+                        <div data-pg-field="rateWrap" style="align-items: baseline; gap: 2px; margin-top: 8px; color: rgb(5, 94, 76);" class="flex"><span data-pg-field="rateValue" style="font-size: 40px; font-weight: 800; color: rgb(0, 70, 164); letter-spacing: -1px;" class="leading-none">4.5</span><span style="font-size:22px;font-weight:700;color:#0046A4;">%</span></div>
+                        <div data-pg-field="rateLabel" style="font-size:12px;color:#6B7280;font-weight:500;">최고 금리 (연)</div>
+                        <div data-pg-field="detail" style="font-size:13px;color:#6B7280;padding:10px 0;border-top:1px solid #F3F4F6;margin-top:4px;">기간 1~36개월 · 월 최대 100만원</div><a data-pg-field="cta" href="#" style="background: rgb(3, 135, 109); color: rgb(255, 255, 255); text-decoration: none; font-size: 15px; padding: 14px; border-radius: 12px; margin-top: 8px; min-height: 48px; -webkit-tap-highlight-color: transparent;" class="font-semibold flex justify-center items-center" data-bg="rgba(3, 135, 109, 1)">자세히 보기</a>
+                    </div>
+                </div>
+                <div data-pg-slide="" style="width:100%;">
+                    <div data-type="savings" data-item-id="pg-2" style="background: rgb(255, 255, 255); border-radius: 16px; padding: 24px 20px; gap: 6px; box-shadow: rgba(0, 70, 164, 0.08) 0px 4px 20px; position: relative; overflow: hidden;" class="flex flex-col">
+                        <div style="position:absolute;top:0;right:0;width:120px;height:120px;background:linear-gradient(135deg,#E8F0FC 0%,transparent 70%);border-radius:0 16px 0 100%;pointer-events:none;"></div>
+                        <div data-pg-field="badge" style="display: inline-flex; background: rgb(232, 240, 252); color: rgb(0, 70, 164); font-size: 11px; font-weight: 700; padding: 4px 10px; border-radius: 20px; width: fit-content; letter-spacing: 0.5px;" class="items-center">적금</div>
+                        <div data-pg-field="productName" style="font-size: 20px; font-weight: 700; color: rgb(26, 26, 46); margin-top: 4px;" class="leading-13">주택청약 종합저축</div>
+                        <div data-pg-field="rateWrap" style="align-items: baseline; gap: 2px; margin-top: 8px;" class="flex"><span data-pg-field="rateValue" style="font-size: 40px; font-weight: 800; color: rgb(0, 70, 164); letter-spacing: -1px;" class="leading-none">3.8</span><span style="font-size:22px;font-weight:700;color:#0046A4;">%</span></div>
+                        <div data-pg-field="rateLabel" style="font-size:12px;color:#6B7280;font-weight:500;">최고 금리 (연)</div>
+                        <div data-pg-field="detail" style="font-size:13px;color:#6B7280;padding:10px 0;border-top:1px solid #F3F4F6;margin-top:4px;">기간 6~36개월 · 1인 1계좌</div><a data-pg-field="cta" href="#" style="background: rgb(0, 70, 164); color: rgb(255, 255, 255); text-decoration: none; font-size: 15px; padding: 14px; border-radius: 12px; margin-top: 8px; min-height: 48px; -webkit-tap-highlight-color: transparent;" class="font-semibold flex justify-center items-center">자세히 보기</a>
+                    </div>
+                </div>
+            </div>
+            <div data-pg-dots="" style="height: 32px;" class="flex justify-center items-center"></div>
+            <script>
+                (function() {
+                    if (window.builderRuntime) return;
+                    var r = document.currentScript && document.currentScript.parentElement;
+                    if (!r) return;
+                    var track = r.querySelector('[data-pg-track]');
+                    var dotsEl = r.querySelector('[data-pg-dots]');
+                    if (!track) return;
+                    track.style.cssText = 'display:flex;flex-direction:row;overflow-x:auto;scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch;scrollbar-width:none;-ms-overflow-style:none;padding:4px 0 8px;gap:0;';
+                    var slides = Array.from(track.querySelectorAll('[data-pg-slide]'));
+                    if (!slides.length) return;
+                    slides.forEach(function(s) {
+                        s.style.cssText = 'flex-shrink:0;width:100%;scroll-snap-align:start;padding:0 20px;box-sizing:border-box;';
+                    });
+                    var cur = 0;
+
+                    function updateDots(i) {
+                        if (!dotsEl) return;
+                        Array.from(dotsEl.children).forEach(function(d, j) {
+                            d.style.background = j === i ? '#0046A4' : 'rgba(0,70,164,0.25)';
+                        });
+                    }
+
+                    function goTo(i) {
+                        cur = i;
+                        track.scrollTo({
+                            left: i * track.clientWidth,
+                            behavior: 'smooth'
+                        });
+                        updateDots(i);
+                    }
+                    if (dotsEl) {
+                        slides.forEach(function(_, i) {
+                            var d = document.createElement('button');
+                            d.setAttribute('aria-label', '슬라이드 ' + (i + 1));
+                            d.style.cssText = 'width:8px;height:8px;border-radius:50%;border:none;padding:0;cursor:pointer;margin:0 4px;display:block;line-height:0;font-size:0;overflow:hidden;flex-shrink:0;background:' + (i === 0 ? '#0046A4' : 'rgba(0,70,164,0.25)') + ';';
+                            d.addEventListener('click', function() {
+                                goTo(i);
+                            });
+                            dotsEl.appendChild(d);
+                        });
+                    }
+                    var t;
+                    track.addEventListener('scroll', function() {
+                        clearTimeout(t);
+                        t = setTimeout(function() {
+                            var i = Math.round(track.scrollLeft / track.clientWidth);
+                            if (i !== cur) {
+                                cur = i;
+                                updateDots(i);
+                            }
+                        }, 80);
+                    }, {
+                        passive: true
+                    });
+                    var timer = setInterval(function() {
+                        goTo((cur + 1) % slides.length);
+                    }, 4000);
+                    track.addEventListener('touchstart', function() {
+                        clearInterval(timer);
+                    }, {
+                        passive: true,
+                        once: true
+                    });
+                })();
+            </script>
+        </div>
+    </div>
+</div>
+<div class="row">
+    <div class="column spw-finance-col">
+        <div data-component-id="flex-list-mobile" data-spw-block="" data-fl-rows="[{&quot;columns&quot;:[{&quot;type&quot;:&quot;icon&quot;,&quot;width&quot;:&quot;fixed&quot;,&quot;icon&quot;:&quot;shopping&quot;,&quot;iconBg&quot;:&quot;#F0F8F8&quot;},{&quot;type&quot;:&quot;text&quot;,&quot;width&quot;:&quot;flex&quot;,&quot;lines&quot;:[{&quot;text&quot;:&quot;스타벅스 코리아&quot;},{&quot;text&quot;:&quot;01.15 14:30 · 본인&quot;}]},{&quot;type&quot;:&quot;text&quot;,&quot;width&quot;:&quot;auto&quot;,&quot;lines&quot;:[{&quot;text&quot;:&quot;-4,500원&quot;},{&quot;text&quot;:&quot;승인완료&quot;}]}]},{&quot;columns&quot;:[{&quot;type&quot;:&quot;icon&quot;,&quot;width&quot;:&quot;fixed&quot;,&quot;icon&quot;:&quot;shopping&quot;,&quot;iconBg&quot;:&quot;#F0F8F8&quot;},{&quot;type&quot;:&quot;text&quot;,&quot;width&quot;:&quot;flex&quot;,&quot;lines&quot;:[{&quot;text&quot;:&quot;네이버페이&quot;},{&quot;text&quot;:&quot;01.14 11:20 · 본인&quot;}]},{&quot;type&quot;:&quot;text&quot;,&quot;width&quot;:&quot;auto&quot;,&quot;lines&quot;:[{&quot;text&quot;:&quot;-32,000원&quot;},{&quot;text&quot;:&quot;승인완료&quot;}]}]},{&quot;columns&quot;:[{&quot;type&quot;:&quot;icon&quot;,&quot;width&quot;:&quot;fixed&quot;,&quot;icon&quot;:&quot;transfer&quot;,&quot;iconBg&quot;:&quot;#FEF3C7&quot;},{&quot;type&quot;:&quot;text&quot;,&quot;width&quot;:&quot;flex&quot;,&quot;lines&quot;:[{&quot;text&quot;:&quot;홍길동&quot;},{&quot;text&quot;:&quot;01.13 09:15 · 이체&quot;}]},{&quot;type&quot;:&quot;text&quot;,&quot;width&quot;:&quot;auto&quot;,&quot;lines&quot;:[{&quot;text&quot;:&quot;+500,000원&quot;},{&quot;text&quot;:&quot;입금&quot;}]}]}]" style="font-family:-apple-system,BlinkMacSystemFont,'Malgun Gothic','Apple SD Gothic Neo',sans-serif;background:#ffffff;"><a href="#" data-fl-link-mode="none" style="gap: 12px; padding: 16px 20px; border-bottom: 1px solid rgb(229, 231, 235); text-decoration: none;" class="flex items-center"><span data-fl-type="icon" data-fl-icon="shopping" data-fl-icon-bg="#F0F8F8" style="flex: 0 0 40px; width: 40px; height: 40px; border-radius: 50%; background: rgb(240, 248, 248);" class="flex justify-center items-center"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="#008485" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"></path>
+                        <path d="M3 6h18"></path>
+                        <path d="M16 10a4 4 0 0 1-8 0"></path>
+                    </svg></span><span data-fl-type="text" data-fl-width="flex" style="flex: 1 1 0%; min-width: 0px; gap: 2px;" class="flex flex-col"><span style="font-size: 15px; color: rgb(26, 26, 46);" class="font-semibold text-left leading-14">스타벅스 코리아</span><span style="font-size: 13px; color: rgb(107, 114, 128);" class="text-left leading-14">01.15 14:30 · 본인</span></span><span data-fl-type="text" data-fl-width="auto" style="flex: 0 0 auto; gap: 2px;" class="flex flex-col"><span style="font-size: 15px; color: rgb(26, 26, 46);" class="font-semibold text-left leading-14">-4,500원</span><span style="font-size: 13px; color: rgb(107, 114, 128);" class="text-left leading-14">승인완료</span></span></a><a href="#" data-fl-link-mode="none" style="gap: 12px; padding: 16px 20px; border-bottom: 1px solid rgb(229, 231, 235); text-decoration: none;" class="flex items-center"><span data-fl-type="icon" data-fl-icon="shopping" data-fl-icon-bg="#F0F8F8" style="flex: 0 0 40px; width: 40px; height: 40px; border-radius: 50%; background: rgb(240, 248, 248);" class="flex justify-center items-center"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="#008485" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"></path>
+                        <path d="M3 6h18"></path>
+                        <path d="M16 10a4 4 0 0 1-8 0"></path>
+                    </svg></span><span data-fl-type="text" data-fl-width="flex" style="flex: 1 1 0%; min-width: 0px; gap: 2px;" class="flex flex-col"><span style="font-size: 15px; color: rgb(26, 26, 46);" class="font-semibold text-left leading-14">네이버페이</span><span style="font-size: 13px; color: rgb(107, 114, 128);" class="text-left leading-14">01.14 11:20 · 본인</span></span><span data-fl-type="text" data-fl-width="auto" style="flex: 0 0 auto; gap: 2px;" class="flex flex-col"><span style="font-size: 15px; color: rgb(26, 26, 46);" class="font-semibold text-left leading-14">-32,000원</span><span style="font-size: 13px; color: rgb(107, 114, 128);" class="text-left leading-14">승인완료</span></span></a><a href="#" data-fl-link-mode="none" style="gap: 12px; padding: 16px 20px; text-decoration: none;" class="flex items-center"><span data-fl-type="icon" data-fl-icon="transfer" data-fl-icon-bg="#FEF3C7" style="flex: 0 0 40px; width: 40px; height: 40px; border-radius: 50%; background: rgb(254, 243, 199);" class="flex justify-center items-center"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="#008485" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M7 17l-4-4 4-4"></path>
+                        <path d="M3 13h13"></path>
+                        <path d="M17 7l4 4-4 4"></path>
+                        <path d="M21 11H8"></path>
+                    </svg></span><span data-fl-type="text" data-fl-width="flex" style="flex: 1 1 0%; min-width: 0px; gap: 2px;" class="flex flex-col"><span style="font-size: 15px; color: rgb(26, 26, 46);" class="font-semibold text-left leading-14">홍길동</span><span style="font-size: 13px; color: rgb(107, 114, 128);" class="text-left leading-14">01.13 09:15 · 이체</span></span><span data-fl-type="text" data-fl-width="auto" style="flex: 0 0 auto; gap: 2px;" class="flex flex-col"><span style="font-size: 15px; color: rgb(26, 26, 46);" class="font-semibold text-left leading-14">+500,000원</span><span style="font-size: 13px; color: rgb(107, 114, 128);" class="text-left leading-14">입금</span></span></a></div>
+    </div>
+</div>
+<div class="row">
+    <div class="column spw-finance-col">
+        <div data-component-id="info-accordion-mobile" data-spw-block="" data-accordion-items="[{&quot;title&quot;:&quot;서비스 이용 안내&quot;,&quot;content&quot;:&quot;&lt;p style=\&quot;margin:0 0 10px;\&quot;&gt;· 지난달 이용실적에 따른 월간 통합 할인한도&lt;/p&gt;&lt;table style=\&quot;width:100%;border-collapse:collapse;margin-bottom:14px;font-size:12px;\&quot;&gt;&lt;thead&gt;&lt;tr&gt;&lt;th style=\&quot;padding:9px 12px;text-align:center;font-weight:600;color:#374151;border:1px solid #E5E7EB;background:#F9FAFB;\&quot;&gt;지난달 이용실적&lt;/th&gt;&lt;th style=\&quot;padding:9px 12px;text-align:center;font-weight:600;color:#374151;border:1px solid #E5E7EB;background:#F9FAFB;\&quot;&gt;월 통합 할인 한도&lt;/th&gt;&lt;/tr&gt;&lt;/thead&gt;&lt;tbody&gt;&lt;tr&gt;&lt;td style=\&quot;padding:9px 12px;text-align:center;color:#374151;border:1px solid #E5E7EB;\&quot;&gt;10만원 이상&lt;/td&gt;&lt;td style=\&quot;padding:9px 12px;text-align:center;color:#374151;border:1px solid #E5E7EB;\&quot;&gt;5천원&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td style=\&quot;padding:9px 12px;text-align:center;color:#374151;border:1px solid #E5E7EB;\&quot;&gt;20만원 이상&lt;/td&gt;&lt;td style=\&quot;padding:9px 12px;text-align:center;color:#374151;border:1px solid #E5E7EB;\&quot;&gt;1만원&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td style=\&quot;padding:9px 12px;text-align:center;color:#374151;border:1px solid #E5E7EB;\&quot;&gt;30만원 이상&lt;/td&gt;&lt;td style=\&quot;padding:9px 12px;text-align:center;color:#374151;border:1px solid #E5E7EB;\&quot;&gt;2만원&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td style=\&quot;padding:9px 12px;text-align:center;color:#374151;border:1px solid #E5E7EB;\&quot;&gt;50만원 이상&lt;/td&gt;&lt;td style=\&quot;padding:9px 12px;text-align:center;color:#374151;border:1px solid #E5E7EB;\&quot;&gt;3만원&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td style=\&quot;padding:9px 12px;text-align:center;color:#374151;border:1px solid #E5E7EB;\&quot;&gt;100만원 이상&lt;/td&gt;&lt;td style=\&quot;padding:9px 12px;text-align:center;color:#374151;border:1px solid #E5E7EB;\&quot;&gt;5만원&lt;/td&gt;&lt;/tr&gt;&lt;/tbody&gt;&lt;/table&gt;&lt;p style=\&quot;margin:0 0 6px;\&quot;&gt;· 통합 할인한도 적용 대상 서비스: 대중교통, 국군 콘도, 레스토랑, 스타벅스, 패스트푸드, 온라인쇼핑, 어학시험, 교보문고/알라딘, 광역교통&lt;/p&gt;&lt;p style=\&quot;margin:0 0 6px;\&quot;&gt;· 군 급여이체 조건 상세안내&lt;/p&gt;&lt;p style=\&quot;margin:0 0 6px;\&quot;&gt;&nbsp;&nbsp;· &lt;strong&gt;국군재정관리단을 통한 하나은행 나라사랑통장 계좌로 급여이체 시에만 다음달에 서비스가 제공됨&lt;/strong&gt;&lt;/p&gt;&lt;p style=\&quot;margin:0 0 6px;\&quot;&gt;&nbsp;&nbsp;· 단, 군 급여를 수령한 당일에 나라사랑통장을 해지한 경우에는 서비스가 제공되지 않음&lt;/p&gt;&lt;p style=\&quot;margin:0;\&quot;&gt;&nbsp;&nbsp;· 월 말일자에 군 급여를 수령한 경우에는 다음 달 1일 00시부터 04시까지는 서비스가 제공되지 않음&lt;/p&gt;&quot;},{&quot;title&quot;:&quot;서비스 제공 조건&quot;,&quot;content&quot;:&quot;&lt;p style=\&quot;margin:0 0 6px;\&quot;&gt;· 본 서비스는 만 14세 이상 개인 고객을 대상으로 합니다.&lt;/p&gt;&lt;p style=\&quot;margin:0 0 6px;\&quot;&gt;· 카드 발급 후 익월 1일부터 서비스가 적용됩니다.&lt;/p&gt;&lt;p style=\&quot;margin:0 0 6px;\&quot;&gt;· 서비스 이용 중 카드 해지 시 해당 월 할인 혜택은 제공되지 않습니다.&lt;/p&gt;&lt;p style=\&quot;margin:0;\&quot;&gt;· 연회비 미납 등으로 카드 이용이 정지된 경우 서비스 혜택이 중단될 수 있습니다.&lt;/p&gt;&quot;},{&quot;title&quot;:&quot;유의사항&quot;,&quot;content&quot;:&quot;&lt;p style=\&quot;margin:0 0 6px;\&quot;&gt;· &lt;strong&gt;해외에서 발생한 이용 실적은 할인 한도 산정에서 제외됩니다.&lt;/strong&gt;&lt;/p&gt;&lt;p style=\&quot;margin:0 0 6px;\&quot;&gt;· 통합 할인 혜택은 매월 청구 시 자동 적용됩니다.&lt;/p&gt;&lt;p style=\&quot;margin:0;\&quot;&gt;· 자세한 사항은 카드 상품 설명서를 참고하시거나 고객센터(1588-0000)로 문의하시기 바랍니다.&lt;/p&gt;&quot;}]" style="font-family:-apple-system,BlinkMacSystemFont,'Malgun Gothic','Apple SD Gothic Neo',sans-serif;background:#fff;border-radius:20px;box-shadow:0 2px 16px rgba(0,70,164,0.07);" data-accordion-inited="1">
+            <div style="padding: 20px 20px 16px; border-bottom: 2px solid rgb(229, 231, 235);" class="text-center"><a href="#" style="text-decoration:none;">
+                    <h2 style="font-size:17px;font-weight:800;color:#1A1A2E;margin:0;display:inline-block;border-bottom:2px solid #1A1A2E;padding-bottom:3px;">이용안내</h2>
+                </a></div>
+
+            <div class="ia-item" data-open="1" style="border-bottom:1px solid #E5E7EB;"><button type="button" class="ia-header text-left flex justify-between items-center" style="width: 100%; padding: 16px 20px; background: none; border: none; cursor: pointer; -webkit-tap-highlight-color: transparent;"><span style="font-size: 15px; color: rgb(26, 26, 46);" class="font-semibold leading-13">서비스 이용 안내</span><svg class="ia-chevron" viewBox="0 0 24 24" fill="none" stroke="#9CA3AF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="16" height="16" style="flex-shrink: 0; transition: transform 0.25s; transform: rotate(180deg);">
+                        <path d="m6 9 6 6 6-6"></path>
+                    </svg></button>
+                <div class="ia-body" style="max-height: 9999px; overflow: hidden; transition: max-height 0.3s;">
+                    <div style="padding: 4px 20px 20px; font-size: 13px; color: rgb(55, 65, 81);" class="leading-17">
+                        <p style="margin:0 0 10px;">· 지난달 이용실적에 따른 월간 통합 할인한도</p>
+                        <table style="width:100%;border-collapse:collapse;margin-bottom:14px;font-size:12px;">
+                            <thead>
+                                <tr>
+                                    <th style="padding: 9px 12px; color: rgb(55, 65, 81); border: 1px solid rgb(229, 231, 235); background: rgb(249, 250, 251);" class="font-semibold text-center">지난달 이용실적</th>
+                                    <th style="padding: 9px 12px; color: rgb(55, 65, 81); border: 1px solid rgb(229, 231, 235); background: rgb(249, 250, 251);" class="font-semibold text-center">월 통합 할인 한도</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td style="padding: 9px 12px; color: rgb(55, 65, 81); border: 1px solid rgb(229, 231, 235);" class="text-center">10만원 이상</td>
+                                    <td style="padding: 9px 12px; color: rgb(55, 65, 81); border: 1px solid rgb(229, 231, 235);" class="text-center">5천원</td>
+                                </tr>
+                                <tr>
+                                    <td style="padding: 9px 12px; color: rgb(55, 65, 81); border: 1px solid rgb(229, 231, 235);" class="text-center">20만원 이상</td>
+                                    <td style="padding: 9px 12px; color: rgb(55, 65, 81); border: 1px solid rgb(229, 231, 235);" class="text-center">1만원</td>
+                                </tr>
+                                <tr>
+                                    <td style="padding: 9px 12px; color: rgb(55, 65, 81); border: 1px solid rgb(229, 231, 235);" class="text-center">30만원 이상</td>
+                                    <td style="padding: 9px 12px; color: rgb(55, 65, 81); border: 1px solid rgb(229, 231, 235);" class="text-center">2만원</td>
+                                </tr>
+                                <tr>
+                                    <td style="padding: 9px 12px; color: rgb(55, 65, 81); border: 1px solid rgb(229, 231, 235);" class="text-center">50만원 이상</td>
+                                    <td style="padding: 9px 12px; color: rgb(55, 65, 81); border: 1px solid rgb(229, 231, 235);" class="text-center">3만원</td>
+                                </tr>
+                                <tr>
+                                    <td style="padding: 9px 12px; color: rgb(55, 65, 81); border: 1px solid rgb(229, 231, 235);" class="text-center">100만원 이상</td>
+                                    <td style="padding: 9px 12px; color: rgb(55, 65, 81); border: 1px solid rgb(229, 231, 235);" class="text-center">5만원</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        <p style="margin:0 0 6px;">· 통합 할인한도 적용 대상 서비스: 대중교통, 국군 콘도, 레스토랑, 스타벅스, 패스트푸드, 온라인쇼핑, 어학시험, 교보문고/알라딘, 광역교통</p>
+                        <p style="margin:0 0 6px;">· 군 급여이체 조건 상세안내</p>
+                        <p style="margin:0 0 6px;">&nbsp;&nbsp;· <strong>국군재정관리단을 통한 하나은행 나라사랑통장 계좌로 급여이체 시에만 다음달에 서비스가 제공됨</strong></p>
+                        <p style="margin:0 0 6px;">&nbsp;&nbsp;· 단, 군 급여를 수령한 당일에 나라사랑통장을 해지한 경우에는 서비스가 제공되지 않음</p>
+                        <p style="margin:0;">&nbsp;&nbsp;· 월 말일자에 군 급여를 수령한 경우에는 다음 달 1일 00시부터 04시까지는 서비스가 제공되지 않음</p>
+                    </div>
+                </div>
+            </div>
+            <div class="ia-item" data-open="0" style="border-bottom:1px solid #E5E7EB;"><button type="button" class="ia-header text-left flex justify-between items-center" style="width: 100%; padding: 16px 20px; background: none; border: none; cursor: pointer; -webkit-tap-highlight-color: transparent;"><span style="font-size: 15px; color: rgb(26, 26, 46);" class="font-semibold leading-13">서비스 제공 조건</span><svg class="ia-chevron" viewBox="0 0 24 24" fill="none" stroke="#9CA3AF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="16" height="16" style="flex-shrink:0;transition:transform 0.25s ease;">
+                        <path d="m6 9 6 6 6-6"></path>
+                    </svg></button>
+                <div class="ia-body" style="max-height:0;overflow:hidden;transition:max-height 0.3s ease;">
+                    <div style="padding: 4px 20px 20px; font-size: 13px; color: rgb(55, 65, 81);" class="leading-17">
+                        <p style="margin:0 0 6px;">· 본 서비스는 만 14세 이상 개인 고객을 대상으로 합니다.</p>
+                        <p style="margin:0 0 6px;">· 카드 발급 후 익월 1일부터 서비스가 적용됩니다.</p>
+                        <p style="margin:0 0 6px;">· 서비스 이용 중 카드 해지 시 해당 월 할인 혜택은 제공되지 않습니다.</p>
+                        <p style="margin:0;">· 연회비 미납 등으로 카드 이용이 정지된 경우 서비스 혜택이 중단될 수 있습니다.</p>
+                    </div>
+                </div>
+            </div>
+            <div class="ia-item" data-open="0" style="border-bottom:1px solid #E5E7EB;"><button type="button" class="ia-header text-left flex justify-between items-center" style="width: 100%; padding: 16px 20px; background: none; border: none; cursor: pointer; -webkit-tap-highlight-color: transparent;"><span style="font-size: 15px; color: rgb(26, 26, 46);" class="font-semibold leading-13">유의사항</span><svg class="ia-chevron" viewBox="0 0 24 24" fill="none" stroke="#9CA3AF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="16" height="16" style="flex-shrink:0;transition:transform 0.25s ease;">
+                        <path d="m6 9 6 6 6-6"></path>
+                    </svg></button>
+                <div class="ia-body" style="max-height:0;overflow:hidden;transition:max-height 0.3s ease;">
+                    <div style="padding: 4px 20px 20px; font-size: 13px; color: rgb(55, 65, 81);" class="leading-17">
+                        <p style="margin:0 0 6px;">· <strong>해외에서 발생한 이용 실적은 할인 한도 산정에서 제외됩니다.</strong></p>
+                        <p style="margin:0 0 6px;">· 통합 할인 혜택은 매월 청구 시 자동 적용됩니다.</p>
+                        <p style="margin:0;">· 자세한 사항은 카드 상품 설명서를 참고하시거나 고객센터(1588-0000)로 문의하시기 바랍니다.</p>
+                    </div>
+                </div>
+            </div>
+            <script>
+                (function() {
+                    var root = document.currentScript && document.currentScript.closest('[data-spw-block]');
+                    if (!root || root.getAttribute('data-accordion-inited') === '1') return;
+                    root.setAttribute('data-accordion-inited', '1');
+                    root.querySelectorAll('.ia-header').forEach(function(btn) {
+                        btn.addEventListener('click', function() {
+                            var item = btn.closest('.ia-item');
+                            var body = item.querySelector('.ia-body');
+                            var chev = btn.querySelector('.ia-chevron');
+                            var open = item.getAttribute('data-open') === '1';
+                            if (open) {
+                                item.setAttribute('data-open', '0');
+                                body.style.maxHeight = '0';
+                                chev.style.transform = 'rotate(0deg)';
+                            } else {
+                                item.setAttribute('data-open', '1');
+                                body.style.maxHeight = '9999px';
+                                chev.style.transform = 'rotate(180deg)';
+                            }
+                        });
+                    });
+                    var firstHeader = root.querySelector('.ia-header');
+                    if (firstHeader) {
+                        firstHeader.click();
+                    }
+                })();
+            </script>
+        </div>
+    </div>
+</div>
+<div class="row">
+    <div class="column spw-finance-col">
+        <div data-cb-type="sticky-floating-bar" data-spw-block="" data-cb-original-content="" style="background: rgb(255, 255, 255); left: 433.4px; width: 390px; bottom: 0px;">
+            <div class="sfb-inner"><span class="sfb-text">지금 바로 신청하기</span><a class="sfb-btn" href="#" style="background: rgb(0, 70, 164);">신청하기</a></div>
+        </div>
+    </div>
+</div>
+<div class="row">
+    <div class="column spw-finance-col">
+        <div data-component-id="status-card-mobile" data-spw-block="" style="font-family:-apple-system,BlinkMacSystemFont,'Malgun Gothic','Apple SD Gothic Neo',sans-serif;background:#ffffff;border-radius:12px;margin:0 16px;box-shadow:0 1px 4px rgba(0,0,0,0.08);">
+            <div data-sc-header="" style="padding:16px 16px 8px;">
+                <div data-sc-title="" style="font-size:15px;font-weight:700;color:#1A1A2E;margin-bottom:6px;">포인트·리워드 현황</div><span data-sc-badge="" data-sc-badge-visible="false" style="display: none; padding: 2px 10px; border-radius: 4px; background: rgb(240, 248, 248); color: rgb(0, 132, 133); font-size: 12px;" class="font-semibold">뱃지</span>
+            </div>
+            <div data-sc-rows="" style="padding:0 16px;">
+                <div data-sc-row="" data-sc-row-type="text" style="padding: 10px 0px; border-bottom: 1px solid rgb(243, 244, 246);" class="flex justify-between items-center"><span data-sc-label="" style="font-size:14px;color:#6B7280;">항목 1</span><span data-sc-value="" data-sc-value-color="#1A1A2E" style="font-size: 14px; color: rgb(26, 26, 46);" class="font-semibold">값 1</span></div>
+                <div data-sc-row="" data-sc-row-type="text" style="padding: 10px 0px; border-bottom: 1px solid rgb(243, 244, 246);" class="flex justify-between items-center"><span data-sc-label="" style="font-size:14px;color:#6B7280;">항목 2</span><span data-sc-value="" data-sc-value-color="#1A1A2E" style="font-size: 14px; color: rgb(26, 26, 46);" class="font-semibold">값 2</span></div>
+                <div data-sc-row="" data-sc-row-type="progress" style="padding:10px 0;">
+                    <div style="margin-bottom: 6px;" class="flex justify-between"><span data-sc-label="" style="font-size:14px;color:#6B7280;">진행률</span><span data-sc-progress-pct="" data-sc-progress-color="#008485" style="font-size: 14px; color: rgb(0, 132, 133);" class="font-semibold">40%</span></div>
+                    <div style="height:6px;border-radius:3px;background:#F3F4F6;">
+                        <div data-sc-progress-bar="" data-sc-progress-color="#008485" style="height:100%;border-radius:3px;background:#008485;width:40%;"></div>
+                    </div>
+                </div>
+            </div>
+            <div data-sc-buttons="" style="padding: 12px 16px 16px; gap: 8px;" class="flex"><a data-sc-btn="primary" data-sc-btn-visible="true" href="#" style="flex: 1 1 0%; display: block; padding: 10px 0px; border-radius: 8px; background: rgb(0, 132, 133); color: rgb(255, 255, 255); font-size: 14px; text-decoration: none;" class="font-semibold text-center">확인하기</a><a data-sc-btn="secondary" data-sc-btn-visible="false" href="#" style="display: none; flex: 1 1 0%; padding: 10px 0px; border-radius: 8px; border: 1px solid rgb(0, 132, 133); color: rgb(0, 132, 133); font-size: 14px; text-decoration: none;" class="font-semibold text-center">내역 보기</a></div>
+        </div>
+    </div>
+</div>
+<div class="row">
+    <div class="column spw-finance-col">
+        <div data-component-id="site-footer-mobile" data-spw-block="" style="font-family:-apple-system,BlinkMacSystemFont,'Malgun Gothic','Apple SD Gothic Neo',sans-serif;background:#F9FAFB;">
+            <div style="padding:16px 16px 20px;">
+                <div style="flex-wrap: wrap; gap: 0px; margin-bottom: 10px;" class="flex leading-18"><a href="#" style="font-size:11px;color:#111827;text-decoration:none;white-space:nowrap;font-weight:700;">이용약관</a><span style="font-size:11px;color:#D1D5DB;padding:0 5px;">|</span><a href="#" style="font-size:11px;color:#111827;text-decoration:none;white-space:nowrap;font-weight:700;">개인정보처리방침</a><span style="font-size:11px;color:#D1D5DB;padding:0 5px;">|</span><a href="#" style="font-size:11px;color:#374151;text-decoration:none;white-space:nowrap;">신용정보처리방침</a><span style="font-size:11px;color:#D1D5DB;padding:0 5px;">|</span><a href="#" style="font-size:11px;color:#374151;text-decoration:none;white-space:nowrap;">금융소비자보호</a><span style="font-size:11px;color:#D1D5DB;padding:0 5px;">|</span><a href="#" style="font-size:11px;color:#374151;text-decoration:none;white-space:nowrap;">윤리경영</a><span style="font-size:11px;color:#D1D5DB;padding:0 5px;">|</span><a href="#" style="font-size:11px;color:#374151;text-decoration:none;white-space:nowrap;">사이트맵</a></div>
+                <div style="font-size: 11px; color: rgb(55, 65, 81); margin-bottom: 6px;" class="leading-16">고객센터 : 0000-0000 (평일 09:00~18:00) | 인터넷뱅킹 : 0000-0000</div>
+                <div style="font-size: 11px; color: rgb(107, 114, 128); margin-bottom: 14px;" class="leading-normal">[금융사명] [주소] | 대표이사 : [대표이사명]<br>사업자등록번호 : 000-00-00000 | Copyright [금융사명]. All rights reserved.</div>
+                <div style="gap: 8px;" class="flex items-center">
+                    <div style="gap: 6px; flex: 1 1 0%;" class="flex"><select style="flex:1;padding:7px 10px;border:1px solid #E5E7EB;border-radius:4px;font-size:11px;color:#374151;background:#fff url(" data:image="" svg+xml,%3csvg="" xmlns="http://www.w3.org/2000/svg" width="10" height="6" viewbox="0 0 10 6" %3e%3cpath="" d="M1 1l4 4 4-4" stroke="%236B7280" stroke-width="1.5" fill="none" stroke-linecap="round" %3e%3c="" svg%3e")="" no-repeat="" right="" 8px="" center;-webkit-appearance:none;appearance:none;cursor:pointer;font-family:inherit;"="">
+                            <option>선택 1</option>
+                            <option>계열사1</option>
+                            <option>계열사2</option>
+                            <option>계열사3</option>
+                        </select><select style="flex:1;padding:7px 10px;border:1px solid #E5E7EB;border-radius:4px;font-size:11px;color:#374151;background:#fff url(" data:image="" svg+xml,%3csvg="" xmlns="http://www.w3.org/2000/svg" width="10" height="6" viewbox="0 0 10 6" %3e%3cpath="" d="M1 1l4 4 4-4" stroke="%236B7280" stroke-width="1.5" fill="none" stroke-linecap="round" %3e%3c="" svg%3e")="" no-repeat="" right="" 8px="" center;-webkit-appearance:none;appearance:none;cursor:pointer;font-family:inherit;"="">
+                            <option>선택 2</option>
+                            <option>패밀리사이트1</option>
+                            <option>패밀리사이트2</option>
+                        </select></div><a href="#" style="width: 36px; height: 36px; border-radius: 50%; background: rgb(255, 255, 255); border: 1px solid rgb(229, 231, 235); text-decoration: none; color: rgb(107, 114, 128); flex-shrink: 0;" class="flex justify-center items-center"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="16" height="16">
+                            <path d="M18 15l-6-6-6 6"></path>
+                        </svg></a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

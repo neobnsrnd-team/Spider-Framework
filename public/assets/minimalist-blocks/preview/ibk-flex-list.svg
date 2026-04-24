@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 390 240" width="390" height="240">
+  <rect width="390" height="240" fill="#fff"/>
+  <!-- 행 1 -->
+  <circle cx="40" cy="48" r="16" fill="#E8F0FC"/>
+  <rect x="68" y="36" width="120" height="10" rx="3" fill="#1A1A2E"/>
+  <rect x="68" y="52" width="180" height="8" rx="3" fill="#D1D5DB"/>
+  <line x1="20" y1="80" x2="370" y2="80" stroke="#E5E7EB" stroke-width="1"/>
+  <!-- 행 2 -->
+  <circle cx="40" cy="112" r="16" fill="#E8F0FC"/>
+  <rect x="68" y="100" width="140" height="10" rx="3" fill="#1A1A2E"/>
+  <rect x="68" y="116" width="160" height="8" rx="3" fill="#D1D5DB"/>
+  <rect x="300" y="100" width="70" height="10" rx="3" fill="#1A1A2E"/>
+  <rect x="320" y="116" width="50" height="8" rx="3" fill="#059669"/>
+  <line x1="20" y1="144" x2="370" y2="144" stroke="#E5E7EB" stroke-width="1"/>
+  <!-- 행 3 -->
+  <circle cx="40" cy="176" r="16" fill="#FEF3C7"/>
+  <rect x="68" y="164" width="100" height="10" rx="3" fill="#1A1A2E"/>
+  <rect x="68" y="180" width="130" height="8" rx="3" fill="#D1D5DB"/>
+  <rect x="300" y="164" width="70" height="10" rx="3" fill="#0046A4"/>
+  <rect x="330" y="180" width="40" height="8" rx="3" fill="#6B7280"/>
+</svg>

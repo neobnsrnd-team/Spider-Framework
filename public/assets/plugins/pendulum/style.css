@@ -1,0 +1,31 @@
+/* Pendulum Harmonics Container */
+[data-cb-type="pendulum"] {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 20px 0;
+    background: transparent;
+}
+
+[data-cb-type="pendulum"] canvas {
+    display: block;
+    max-width: 100%;
+    height: auto;
+    border-radius: 8px;
+}
+
+/* Dark mode support (optional) */
+[data-cb-skin="dark"] [data-cb-type="pendulum"] {
+    background: transparent;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    [data-cb-type="pendulum"] {
+        padding: 10px 0;
+    }
+    
+    [data-cb-type="pendulum"] canvas {
+        border-radius: 4px;
+    }
+}

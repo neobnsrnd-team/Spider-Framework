@@ -1,0 +1,194 @@
+/* Accordion Container */
+[data-cb-type="faq"] {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 20px 0;
+    --border-radius: 10px;
+}
+
+/* Editable Area Hover (only in editor mode) */
+body.data-editor .edit {
+    transition: background-color 0.2s;
+    border-radius: 3px;
+}
+body.data-editor .edit:hover {
+    background-color: rgba(0, 123, 255, 0.05);
+}
+.edit:focus {
+    outline: 2px solid #007bff !important;
+    outline-offset: 3px;
+}
+
+/* Individual Accordion Item */
+[data-cb-type="faq"] .accordion-item {
+    background-color: #ffffff;
+    border: 1px solid #e5e7eb;
+    border-radius: var(--border-radius);
+    overflow: hidden;
+    transition: border-color 0.25s ease, box-shadow 0.25s ease;
+}
+
+[data-cb-type="faq"] .accordion-item:hover {
+    border-color: #d1d5db;
+    /* box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04); */
+}
+
+/* Accordion Header (now a button) */
+[data-cb-type="faq"] .accordion-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 18px 24px;
+    cursor: pointer;
+    user-select: none;
+    transition: background-color 0.25s ease;
+    width: 100%;
+    text-align: left;
+    border: none;
+    background: none;
+    font-family: inherit;
+    font-size: inherit;
+    border-radius: var(--border-radius);
+}
+
+[data-cb-type="faq"] .accordion-header:hover {
+    background-color: #f9fafb;
+}
+
+[data-cb-type="faq"] .accordion-item.active .accordion-header {
+    background-color: #f3f4f6;
+}
+
+/* Question Text */
+[data-cb-type="faq"] .accordion-question {
+    font-size: 18px;
+    font-weight: 400;
+    color: #111827;
+    line-height: 1.5;
+    flex: 1;
+    padding-right: 16px;
+}
+
+/* Accordion Icon */
+[data-cb-type="faq"] .accordion-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    flex-shrink: 0;
+    color: #6b7280;
+    transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1), color 0.25s ease;
+}
+
+[data-cb-type="faq"] .accordion-item.active .accordion-icon {
+    transform: rotate(180deg);
+    color: #374151;
+}
+
+/* Accordion Content */
+[data-cb-type="faq"] .accordion-content {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    padding: 0px 24px 0px 24px;
+}
+
+[data-cb-type="faq"] .accordion-item.active .accordion-content {
+    max-height: 500px;
+    transition: max-height 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Answer Text */
+[data-cb-type="faq"] .accordion-answer {
+    font-size: 18px;
+    color: #4b5563;
+    line-height: 1.4;
+    margin-top: -3px;
+    margin-bottom: 20px;
+    /* padding: 0px 24px 12px 24px; */
+    
+}
+
+/* Dark Mode Support */
+[data-cb-skin="dark"] [data-cb-type="faq"] .accordion-item {
+    background-color: #1f2937;
+    border-color: #374151;
+}
+
+[data-cb-skin="dark"] [data-cb-type="faq"] .accordion-item:hover {
+    border-color: #4b5563;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+[data-cb-skin="dark"] [data-cb-type="faq"] .accordion-header:hover {
+    background-color: #111827;
+}
+
+[data-cb-skin="dark"] [data-cb-type="faq"] .accordion-item.active .accordion-header {
+    background-color: #1a1f2e;
+}
+
+[data-cb-skin="dark"] [data-cb-type="faq"] .accordion-question {
+    color: #f9fafb;
+}
+
+[data-cb-skin="dark"] [data-cb-type="faq"] .accordion-answer {
+    color: #d1d5db;
+}
+
+[data-cb-skin="dark"] [data-cb-type="faq"] .accordion-icon {
+    color: #9ca3af;
+}
+
+[data-cb-skin="dark"] [data-cb-type="faq"] .accordion-item.active .accordion-icon {
+    color: #d1d5db;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    [data-cb-type="faq"] {
+        gap: 10px;
+    }
+
+    [data-cb-type="faq"] .accordion-header {
+        padding: 16px 20px;
+    }
+
+    [data-cb-type="faq"] .accordion-question {
+        font-size: 17px;
+        padding-right: 12px;
+    }
+
+    [data-cb-type="faq"] .accordion-item.active .accordion-content {
+        max-height: 2000px;
+    }
+
+    [data-cb-type="faq"] .accordion-answer {
+        font-size: 16px;
+        padding: 10px 20px 18px 20px;
+    }
+}
+
+/* Focus State for Accessibility */
+[data-cb-type="faq"] .accordion-header:focus {
+    outline: 2px solid #3b82f6;
+    outline-offset: -2px;
+}
+
+[data-cb-type="faq"] .accordion-header:focus-visible {
+    outline: 2px solid #3b82f6;
+    outline-offset: -2px;
+}
+
+/* Remove default button focus outline in favor of custom one */
+[data-cb-type="faq"] .accordion-header:focus:not(:focus-visible) {
+    outline: none;
+}
+
+/* Dark mode focus state */
+[data-cb-skin="dark"] [data-cb-type="faq"] .accordion-header:focus,
+[data-cb-skin="dark"] [data-cb-type="faq"] .accordion-header:focus-visible {
+    outline-color: #60a5fa;
+}

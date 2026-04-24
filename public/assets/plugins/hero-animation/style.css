@@ -1,0 +1,54 @@
+/* Hero Animation Container */
+[data-cb-type="hero-animation"] {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 400px;
+    padding: 40px 20px;
+    position: relative;
+}
+
+/* Canvas Styling */
+[data-cb-type="hero-animation"] canvas {
+    max-width: 100%;
+    height: auto;
+    display: block;
+    border-radius: 12px;
+}
+
+/* Optional: Add a subtle background */
+[data-cb-type="hero-animation"]::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: radial-gradient(circle at center, rgba(100, 100, 255, 0.03) 0%, transparent 70%);
+    pointer-events: none;
+    z-index: 0;
+}
+
+[data-cb-type="hero-animation"] canvas {
+    position: relative;
+    z-index: 1;
+}
+
+/* Dark Mode Support */
+[data-cb-skin="dark"] [data-cb-type="hero-animation"]::before {
+    background: radial-gradient(circle at center, rgba(100, 100, 255, 0.08) 0%, transparent 70%);
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    [data-cb-type="hero-animation"] {
+        min-height: 300px;
+        padding: 20px 10px;
+    }
+    
+    [data-cb-type="hero-animation"] canvas {
+        max-width: 100%;
+        width: 100% !important;
+        height: auto !important;
+    }
+}

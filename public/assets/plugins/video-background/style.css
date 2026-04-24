@@ -1,0 +1,426 @@
+/* Video Background Plugin Styles */
+
+/* Container - Absolute positioning for background usage */
+[data-cb-type="video-background"] {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    z-index: 0;
+}
+
+/* Video Wrapper - Fills entire container */
+[data-cb-type="video-background"] .video-bg-wrapper {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+}
+
+/* Video Element - Always covers full area with centered positioning */
+[data-cb-type="video-background"] .video-bg-wrapper video {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    min-width: 100%;
+    min-height: 100%;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+    outline: none;
+    /* background: #000; */
+}
+
+/* Video Overlay */
+[data-cb-type="video-background"] .video-bg-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 1;
+    transition: opacity 0.3s ease;
+}
+
+/* Control Buttons Container */
+[data-cb-type="video-background"] .video-bg-controls {
+    position: absolute;
+    z-index: 2;
+    display: flex;
+    gap: 12px;
+    padding: 20px;
+}
+
+/* Position Classes */
+[data-cb-type="video-background"] .video-bg-controls.top-left {
+    top: 0;
+    left: 0;
+}
+
+[data-cb-type="video-background"] .video-bg-controls.top-right {
+    top: 0;
+    right: 0;
+}
+
+[data-cb-type="video-background"] .video-bg-controls.bottom-left {
+    bottom: 0;
+    left: 0;
+}
+
+[data-cb-type="video-background"] .video-bg-controls.bottom-right {
+    bottom: 0;
+    right: 0;
+}
+
+/* Control Button Styling */
+[data-cb-type="video-background"] .video-bg-controls button {
+    /* background: rgba(0, 0, 0, 0.6);
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    border-radius: 50%; */
+    background: transparent;
+    width: 52px;
+    height: 52px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    padding: 0;
+    /* backdrop-filter: blur(10px); */
+}
+
+[data-cb-type="video-background"] .video-bg-controls button:hover {
+    /* background: rgba(0, 0, 0, 0.8);
+    border-color: rgba(255, 255, 255, 0.6); */
+    transform: scale(1.1);
+}
+
+[data-cb-type="video-background"] .video-bg-controls button:active {
+    transform: scale(0.95);
+}
+
+[data-cb-type="video-background"] .video-bg-controls button svg {
+    width: 35px;
+    height: 35px;
+    pointer-events: none;
+}
+
+/* Control Buttons Container */
+[data-cb-type="video-background"] .video-bg-controls {
+    position: absolute;
+    display: flex;
+    gap: 12px;
+    z-index: 10;
+    padding: 20px;
+}
+
+/* Position variants */
+[data-cb-type="video-background"] .video-bg-controls.top-left {
+    top: 0;
+    left: 0;
+}
+
+[data-cb-type="video-background"] .video-bg-controls.top-right {
+    top: 0;
+    right: 0;
+}
+
+[data-cb-type="video-background"] .video-bg-controls.bottom-left {
+    bottom: 0;
+    left: 0;
+}
+
+[data-cb-type="video-background"] .video-bg-controls.bottom-right {
+    bottom: 0;
+    right: 0;
+}
+
+/* Control Button Styling */
+[data-cb-type="video-background"] .video-control-btn {
+    width: 52px;
+    height: 52px;
+    border-radius: 50%;
+    /* background: rgba(0, 0, 0, 0.5);
+    border: 2px solid rgba(255, 255, 255, 0.3); */
+    background: transparent;
+    color: white;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s ease;
+    /* backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px); */
+}
+
+[data-cb-type="video-background"] .video-control-btn:hover {
+    /* background: rgba(0, 0, 0, 0.7);
+    border-color: rgba(255, 255, 255, 0.6); */
+    transform: scale(1.1);
+}
+
+[data-cb-type="video-background"] .video-control-btn:active {
+    transform: scale(0.95);
+}
+
+[data-cb-type="video-background"] .video-control-btn svg {
+    width: 24px;
+    height: 24px;
+    color: white;
+}
+
+/* Focus states for accessibility */
+[data-cb-type="video-background"] .video-control-btn:focus-visible {
+    outline: 3px solid rgba(59, 130, 246, 0.8);
+    outline-offset: 2px;
+}
+
+/* Loading State */
+[data-cb-type="video-background"][data-loading="true"] {
+    opacity: 0.6;
+}
+
+[data-cb-type="video-background"][data-loading="true"]::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 40px;
+    height: 40px;
+    border: 3px solid rgba(255, 255, 255, 0.3);
+    border-top-color: #fff;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    z-index: 10;
+}
+
+@keyframes spin {
+    to { transform: translate(-50%, -50%) rotate(360deg); }
+}
+
+/* Ensure video stays behind content */
+[data-cb-type="video-background"] ~ * {
+    position: relative;
+    z-index: 1;
+}
+
+/* Performance Optimization */
+[data-cb-type="video-background"] .video-bg-wrapper video {
+    will-change: transform;
+    backface-visibility: hidden;
+}
+
+/* Mobile Optimizations */
+@media (max-width: 767px) {
+    /* Ensure video still covers on mobile */
+    [data-cb-type="video-background"] .video-bg-wrapper video {
+        min-width: 100%;
+        min-height: 100%;
+    }
+
+    /* Smaller control buttons on mobile */
+    [data-cb-type="video-background"] .video-bg-controls {
+        padding: 12px;
+        gap: 8px;
+    }
+
+    [data-cb-type="video-background"] .video-control-btn {
+        width: 40px;
+        height: 40px;
+    }
+
+    [data-cb-type="video-background"] .video-control-btn svg {
+        width: 20px;
+        height: 20px;
+    }
+}
+
+/* Tablet Optimizations */
+@media (min-width: 768px) and (max-width: 1279px) {
+    [data-cb-type="video-background"] .video-bg-wrapper video {
+        min-width: 100%;
+        min-height: 100%;
+    }
+}
+
+/* Landscape Orientation - Prevent stretching */
+@media (orientation: landscape) {
+    [data-cb-type="video-background"] .video-bg-wrapper video {
+        width: 100%;
+        height: auto;
+        min-height: 100%;
+    }
+}
+
+/* Portrait Orientation - Prevent stretching */
+@media (orientation: portrait) {
+    [data-cb-type="video-background"] .video-bg-wrapper video {
+        width: auto;
+        height: 100%;
+        min-width: 100%;
+    }
+}
+
+/* Dark Mode Support */
+/* @media (prefers-color-scheme: dark) {
+    [data-cb-type="video-background"] .video-bg-wrapper {
+        background: #000;
+    }
+
+    [data-cb-type="video-background"][data-loading="true"]::after {
+        border-color: rgba(255, 255, 255, 0.2);
+        border-top-color: rgba(255, 255, 255, 0.8);
+    }
+} */
+
+/* Reduced Motion Support (Accessibility) */
+@media (prefers-reduced-motion: reduce) {
+    [data-cb-type="video-background"] .video-bg-wrapper video {
+        animation: none !important;
+    }
+
+    [data-cb-type="video-background"] .video-bg-overlay {
+        transition: none !important;
+    }
+
+    [data-cb-type="video-background"][data-loading="true"]::after {
+        animation: none !important;
+    }
+
+    [data-cb-type="video-background"] .video-control-btn {
+        transition: none !important;
+    }
+
+    [data-cb-type="video-background"] .video-control-btn:hover {
+        transform: none !important;
+    }
+}
+
+/* High Contrast Mode Support (Accessibility) */
+@media (prefers-contrast: high) {
+    [data-cb-type="video-background"] {
+        border: 2px solid currentColor;
+    }
+}
+
+/* Print Styles - Hide background videos when printing */
+@media print {
+    [data-cb-type="video-background"] {
+        display: none !important;
+    }
+}
+
+/* Fallback for browsers without video support */
+[data-cb-type="video-background"] .video-bg-wrapper video:not([src]):not([srcset])::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    /* background: #000; */
+}
+
+/* Error State */
+[data-cb-type="video-background"][data-error="true"] .video-bg-wrapper::after {
+    content: 'Video failed to load';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    color: #ef4444;
+    font-size: 14px;
+    font-weight: 500;
+    z-index: 5;
+    /* background: rgba(0, 0, 0, 0.8); */
+    padding: 12px 20px;
+    border-radius: 4px;
+}
+
+/* Prevent layout shift */
+/* [data-cb-type="video-background"] .video-bg-wrapper {
+    background: #000;
+} */
+
+/* Touch Device Optimizations - Prevent unwanted interactions */
+@media (hover: none) and (pointer: coarse) {
+    [data-cb-type="video-background"] .video-bg-wrapper video {
+        pointer-events: none;
+    }
+}
+
+/* Ensure smooth video playback on high DPI displays */
+@media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
+    [data-cb-type="video-background"] .video-bg-wrapper video {
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+    }
+}
+
+/* iOS specific fixes */
+@supports (-webkit-touch-callout: none) {
+    /* iOS Safari */
+    [data-cb-type="video-background"] .video-bg-wrapper video {
+        position: fixed;
+    }
+}
+
+/* Fullscreen mode (if triggered) */
+[data-cb-type="video-background"] .video-bg-wrapper video:fullscreen {
+    width: 100vw;
+    height: 100vh;
+    object-fit: cover;
+}
+
+[data-cb-type="video-background"] .video-bg-wrapper video:-webkit-full-screen {
+    width: 100vw;
+    height: 100vh;
+    object-fit: cover;
+}
+
+[data-cb-type="video-background"] .video-bg-wrapper video:-moz-full-screen {
+    width: 100vw;
+    height: 100vh;
+    object-fit: cover;
+}
+
+/* Ensure poster image covers properly */
+[data-cb-type="video-background"] .video-bg-wrapper video[poster] {
+    object-fit: cover;
+}
+
+/* GPU acceleration for smoother performance */
+[data-cb-type="video-background"],
+[data-cb-type="video-background"] .video-bg-wrapper {
+    transform: translateZ(0);
+    -webkit-transform: translateZ(0);
+}
+
+/* Note: Video element uses its own transform for centering, so excluded from GPU acceleration */
+
+/* Prevent video controls from showing (extra safety) */
+[data-cb-type="video-background"] .video-bg-wrapper video::-webkit-media-controls {
+    display: none !important;
+}
+
+[data-cb-type="video-background"] .video-bg-wrapper video::-webkit-media-controls-enclosure {
+    display: none !important;
+}
+
+[data-cb-type="video-background"] .video-bg-wrapper video::-webkit-media-controls-panel {
+    display: none !important;
+}
+
+/* Improve video rendering quality */
+[data-cb-type="video-background"] .video-bg-wrapper video {
+    image-rendering: crisp-edges;
+    image-rendering: -webkit-optimize-contrast;
+}

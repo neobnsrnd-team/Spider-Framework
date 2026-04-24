@@ -1,0 +1,229 @@
+<!DOCTYPE HTML>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title></title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="">
+    <style>
+        textarea {
+            width: 100%;
+            height: 415px;
+            margin: 0px;
+            border: none;
+            font-size: 14px;
+            line-height: 1.5;
+            font-family: courier;
+            padding: 8px 16px;
+            box-sizing: border-box;
+            border: 1px solid rgba(0, 0, 0, 0.06);
+            border-radius: 1px;
+            resize: none;
+        }
+    </style>
+</head>
+<body class="m-6">
+    
+    <div>
+        <textarea id="inpCode"></textarea>
+    </div>
+      
+    <script>
+        var activeModule = parent._cb.activeCol;
+        var isBlock = activeModule?true:false;
+        if(!isBlock) {
+            activeModule = parent._cb.doc.querySelector('.is-overlay-content[data-module-active]');
+        }
+
+        // Read settings (from data-settings attribute)
+        var settings = getSettings();
+        if (settings != 'undefined') {
+            var json = JSON.parse(settings);
+            document.querySelector("#inpCode").value = json.code; 
+        }
+        
+        function construct() {
+            var inpCode = document.querySelector('#inpCode');
+            var code = inpCode.value;
+
+            var preClass = 'language-markup';
+            if(code.includes(';')) {
+                preClass = 'language-javascript';
+            }
+
+            var html = `
+
+                <div class="hide-on-print" style="display: flex;
+                    justify-content: flex-end;margin-bottom:5px"><button id="_copycode{id}" style="font-family:system-ui;font-size:13px;font-weight:300;padding:0;border:none;background:transparent;display:flex">
+                        <svg width="16" height="16" style="margin-right:3px" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" class="icon-sm">
+                            <path fill-rule="evenodd" clip-rule="evenodd" d="M12 4C10.8954 4 10 4.89543 10 6H14C14 4.89543 13.1046 4 12 4ZM8.53513 4C9.22675 2.8044 10.5194 2 12 2C13.4806 2 14.7733 2.8044 15.4649 4H17C18.6569 4 20 5.34315 20 7V19C20 20.6569 18.6569 22 17 22H7C5.34315 22 4 20.6569 4 19V7C4 5.34315 5.34315 4 7 4H8.53513ZM8 6H7C6.44772 6 6 6.44772 6 7V19C6 19.5523 6.44772 20 7 20H17C17.5523 20 18 19.5523 18 19V7C18 6.44772 17.5523 6 17 6H16C16 7.10457 15.1046 8 14 8H10C8.89543 8 8 7.10457 8 6Z" fill="currentColor"></path>
+                        </svg>
+                        Copy Code</button></div>
+                <pre id="{id}" class="${preClass}" style="font-size:13px;background-color: #f4f4f4;padding: 12px 16px;text-wrap: wrap;">${code.replaceAll('<','&lt;')}</pre>
+                <scr` + `ipt>
+                    var docReady = function(fn) {
+                        var stateCheck = setInterval(function() {
+                            if (document.readyState !== "complete") return;
+                            clearInterval(stateCheck);
+                            try {
+                                fn()
+                            } catch (e) {}
+                        }, 1);
+                    };
+                    docReady(function() {
+                        var block = document.getElementById('{id}');
+
+                        if (typeof Prism === 'undefined') {
+                            var prismCss = document.createElement('link');
+                            prismCss.href = 'https://cdnjs.cloudflare.com/ajax/libs/prism/1.25.0/themes/prism.min.css';
+                            prismCss.rel = 'stylesheet';
+
+                            var prismThemeCss = document.createElement('link');
+                            prismThemeCss.href = 'https://cdnjs.cloudflare.com/ajax/libs/prism/1.25.0/themes/prism-coy.min.css';
+                            prismThemeCss.rel = 'stylesheet';
+
+                            var prismJs = document.createElement('script');
+                            prismJs.src = 'https://cdnjs.cloudflare.com/ajax/libs/prism/1.25.0/prism.min.js';
+                            prismJs.onload = function() {
+                                var styleElement = document.createElement('style');
+                                styleElement.innerHTML = \`
+                                    <style>
+                                        :not(pre)>code[class*=language-], pre[class*=language-] {
+                                            background-color: #f4f4f4 !important;
+                                            padding: 12px 16px !important;
+                                        }
+                                        pre[class*=language-]:after, pre[class*=language-]:before {
+                                            box-shadow: none;
+                                        }
+                                        :not(pre)>code[class*=language-], pre[class*=language-] {
+                                            margin-bottom: 1.2rem;
+                                        }
+                                        div[data-html] {
+                                            min-height: 40px;
+                                        }
+                                        code[class*=language-], pre[class*=language-] {
+                                            text-shadow: none;
+                                        }
+                                    </style>
+                                    \`;
+                                document.head.appendChild(styleElement);
+
+                                Prism.highlightElement(block);
+                            };
+
+                            document.head.appendChild(prismCss);
+                            document.head.appendChild(prismThemeCss);
+                            document.head.appendChild(prismJs);
+                        } else {
+                            Prism.highlightElement(block);
+                        }
+                        try {
+                            Prism.highlightElement(block);
+                        } catch (e) {}
+
+                        var btnCopyCode = document.getElementById('_copycode{id}');
+                        btnCopyCode.addEventListener('click', () => {
+                            const range = document.createRange();
+                            range.selectNode(block);
+                            window.getSelection().addRange(range);
+                            try {
+                                document.execCommand('copy');
+                            } catch (err) {
+                                console.error('Failed to copy code:', err);
+                            }
+                            window.getSelection().removeAllRanges();
+                        });
+
+                    });
+                </scr` + `ipt>`;
+
+            // Render module
+            if(isBlock) {
+                parent._cb.setModuleHtml(html); 
+            } else {
+                setHtml(html);
+            }
+
+            var settings = {};
+            settings.code = document.querySelector("#inpCode").value;
+
+            // Save settings
+            if(isBlock) {
+                parent._cb.setModuleSettings(JSON.stringify(settings));
+            } else {
+                setSettings(JSON.stringify(settings));
+            }
+        }
+
+        function getSettings() {
+            var activeModule = parent._cb.activeCol;
+            var isBlock = activeModule?true:false;
+            if(!isBlock) {
+                activeModule = parent._cb.doc.querySelector('.is-overlay-content[data-module-active]');
+            }
+            return decodeURIComponent(activeModule.getAttribute('data-settings'));
+        }
+
+        function setHtml(html) {
+            parent.document.querySelector('#hidModuleCode').value = html;
+        }
+
+        function setSettings(settings) {
+            parent.document.querySelector('#hidModuleSettings').value = settings;
+        }
+
+        // Style stuff
+        function applyParentStyles() {
+            var cssString = `
+                body {
+                    color: ${parent._cb.styleModalColor};
+                }
+                
+                button {
+                    background-color: ${parent._cb.styleButtonClassicBackground};
+                    color: ${parent._cb.styleButtonClassicColor};         
+                }
+                button svg {
+                    fill: ${parent._cb.styleButtonClassicColor};         
+                }
+
+                input[type="text"],
+                textarea {
+                    color: ${parent._cb.styleInputColor};
+                    background-color: ${parent._cb.styleInputBackground};
+                    border-bottom: ${parent._cb.styleInputBorderBottom};
+                }
+                input:focus,
+                textarea:focus {
+                    outline: none;
+                }
+                select {
+                    color: ${parent._cb.styleSelectColor};
+                    background-color: ${parent._cb.styleSelectBackground};
+                }
+                select option {
+                    background-color: ${parent._cb.styleSelectOptionBackground};
+                }
+                #divCaption {
+                    background-color: ${parent._cb.styleModalBackground};
+                }
+
+                a:focus-visible,
+                button:focus-visible,
+                select:focus-visible,
+                input:focus-visible,
+                textarea:focus-visible {
+                    outline:  ${parent._cb.styleOutlineColor} 2px solid;
+                }
+            `;
+            var style = document.createElement("style");
+            style.type = "text/css";
+            style.innerHTML = cssString;
+            document.getElementsByTagName("head")[0].appendChild(style);
+        }
+
+        applyParentStyles();
+    </script>
+
+</body>
+</html>
