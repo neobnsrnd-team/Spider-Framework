@@ -56,36 +56,38 @@ public class BizClient {
     /**
      * 인증AP(biz-auth, TCP 19100) 로 커맨드를 전송하고 응답을 반환한다.
      *
-     * @param command 전송할 커맨드 이름 ({@link com.example.bizcommon.BizCommands} 의 AUTH_* 상수)
-     * @param payload 요청 페이로드 (커맨드별 필요 파라미터)
+     * @param command   전송할 커맨드 이름 ({@link com.example.bizcommon.BizCommands} 의 AUTH_* 상수)
+     * @param payload   요청 페이로드 (커맨드별 필요 파라미터)
+     * @param requestId HTTP 수신 시 생성된 거래 추적 UUID — TCP 로그와 동일한 TRX_TRACKING_NO로 연결됨
      * @return 인증AP 의 응답 객체
      * @throws IOException TCP 연결 실패 또는 I/O 오류 발생 시
      */
-    public JsonCommandResponse sendToAuth(String command, Map<String, Object> payload) throws IOException {
+    public JsonCommandResponse sendToAuth(String command, Map<String, Object> payload, String requestId) throws IOException {
         JsonCommandRequest req = JsonCommandRequest.builder()
                 .command(command)
-                .requestId(UUID.randomUUID().toString())
+                .requestId(requestId)
                 .payload(payload)
                 .build();
-        log.debug("[BizClient] → 인증AP | command={} host={}:{}", command, authHost, authPort);
+        log.debug("[BizClient] → 인증AP | command={} host={}:{} requestId={}", command, authHost, authPort, requestId);
         return tcpClient.sendJson(authHost, authPort, req);
     }
 
     /**
      * 이체AP(biz-transfer, TCP 19200) 로 커맨드를 전송하고 응답을 반환한다.
      *
-     * @param command 전송할 커맨드 이름 ({@link com.example.bizcommon.BizCommands} 의 TRANSFER_* 상수)
-     * @param payload 요청 페이로드 (커맨드별 필요 파라미터)
+     * @param command   전송할 커맨드 이름 ({@link com.example.bizcommon.BizCommands} 의 TRANSFER_* 상수)
+     * @param payload   요청 페이로드 (커맨드별 필요 파라미터)
+     * @param requestId HTTP 수신 시 생성된 거래 추적 UUID — TCP 로그와 동일한 TRX_TRACKING_NO로 연결됨
      * @return 이체AP 의 응답 객체
      * @throws IOException TCP 연결 실패 또는 I/O 오류 발생 시
      */
-    public JsonCommandResponse sendToTransfer(String command, Map<String, Object> payload) throws IOException {
+    public JsonCommandResponse sendToTransfer(String command, Map<String, Object> payload, String requestId) throws IOException {
         JsonCommandRequest req = JsonCommandRequest.builder()
                 .command(command)
-                .requestId(UUID.randomUUID().toString())
+                .requestId(requestId)
                 .payload(payload)
                 .build();
-        log.debug("[BizClient] → 이체AP | command={} host={}:{}", command, transferHost, transferPort);
+        log.debug("[BizClient] → 이체AP | command={} host={}:{} requestId={}", command, transferHost, transferPort, requestId);
         return tcpClient.sendJson(transferHost, transferPort, req);
     }
 }

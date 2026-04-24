@@ -37,6 +37,9 @@ jobs:
           distribution: 'temurin'
           cache: maven
 
+      - name: Install spider-link to local Maven repository
+        run: mvn -B install -DskipTests --file ../spider-link/pom.xml
+
       - name: Build with Maven
         run: mvn -B compile --file pom.xml
 
@@ -235,6 +238,9 @@ jobs:
           java-version: '17'
           distribution: 'temurin'
           cache: maven
+
+      - name: Install spider-link to local Maven repository
+        run: mvn -B install -DskipTests --file ../spider-link/pom.xml
 
       - name: Build and generate JaCoCo report
         run: mvn -B test jacoco:report --file pom.xml
