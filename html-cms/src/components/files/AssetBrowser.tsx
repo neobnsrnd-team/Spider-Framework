@@ -338,8 +338,8 @@ export default function AssetBrowser({ assetOrigin = '' }: AssetBrowserProps) {
             </aside>
 
             <div className="flex min-w-0 flex-1 flex-col px-4 py-6 md:px-8">
-                {/* 상단 우측 — 사이드바 토글 햄버거 + 닫기 X */}
-                <div className="mb-3 flex shrink-0 items-center justify-end gap-1">
+                {/* 상단 바 — 햄버거(왼쪽, 폴더 사이드바 토글) + 닫기 X (오른쪽) */}
+                <div className="mb-3 flex shrink-0 items-center justify-between gap-1">
                     <button
                         type="button"
                         onClick={() => setSidebarOpen((prev) => !prev)}
