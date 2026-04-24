@@ -55,12 +55,7 @@ export async function getCmsAssetCategoryCodes(): Promise<CodeItem[]> {
 }
 
 export async function normalizeCmsAssetCategory(category?: string | null): Promise<string> {
-    const normalized = category?.trim() || CMS_ASSET_DEFAULT_CATEGORY;
-    const codes = await getCmsAssetCategoryCodes();
-
-    if (!codes.some((item) => item.code === normalized)) {
-        throw new Error('유효하지 않은 이미지 카테고리입니다.');
-    }
-
-    return normalized;
+    // Admin이 코드 목록 기반으로 선택한 값을 전송하므로 CMS에서 DB 재검증은 불필요하다.
+    // DB 불안정 시 getCodesByGroup이 빈 배열을 반환해 COMMON을 포함한 모든 카테고리가 거부되는 문제 방지.
+    return category?.trim() || CMS_ASSET_DEFAULT_CATEGORY;
 }

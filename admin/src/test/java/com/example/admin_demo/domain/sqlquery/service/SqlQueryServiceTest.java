@@ -44,8 +44,10 @@ class SqlQueryServiceTest {
                 SqlQuerySearchRequest.builder().page(1).size(10).build();
 
         List<SqlQueryResponse> data = List.of(buildResponse("Q001"), buildResponse("Q002"));
-        given(sqlQueryMapper.countAllWithSearch(any(), any(), any(), any(), any(), any())).willReturn(2L);
-        given(sqlQueryMapper.findAllWithSearch(any(), any(), any(), any(), any(), any(), any(), any(), anyInt(), anyInt()))
+        given(sqlQueryMapper.countAllWithSearch(any(), any(), any(), any(), any(), any()))
+                .willReturn(2L);
+        given(sqlQueryMapper.findAllWithSearch(
+                        any(), any(), any(), any(), any(), any(), any(), any(), anyInt(), anyInt()))
                 .willReturn(data);
 
         PageResponse<SqlQueryResponse> result = sqlQueryService.getSqlQueriesWithSearch(searchDTO);
@@ -61,8 +63,10 @@ class SqlQueryServiceTest {
         SqlQuerySearchRequest searchDTO =
                 SqlQuerySearchRequest.builder().page(1).size(10).build();
 
-        given(sqlQueryMapper.countAllWithSearch(any(), any(), any(), any(), any(), any())).willReturn(0L);
-        given(sqlQueryMapper.findAllWithSearch(any(), any(), any(), any(), any(), any(), any(), any(), anyInt(), anyInt()))
+        given(sqlQueryMapper.countAllWithSearch(any(), any(), any(), any(), any(), any()))
+                .willReturn(0L);
+        given(sqlQueryMapper.findAllWithSearch(
+                        any(), any(), any(), any(), any(), any(), any(), any(), anyInt(), anyInt()))
                 .willReturn(List.of());
 
         PageResponse<SqlQueryResponse> result = sqlQueryService.getSqlQueriesWithSearch(searchDTO);
@@ -220,7 +224,8 @@ class SqlQueryServiceTest {
     @DisplayName("[엑셀] 빈 데이터이면 빈 엑셀 바이트를 반환해야 한다")
     void exportExcel_emptyData_returnsBytes() {
         SqlQuerySearchRequest searchDTO = SqlQuerySearchRequest.builder().build();
-        given(sqlQueryMapper.findAllForExport(any(), any(), any(), any(), any(), any())).willReturn(Collections.emptyList());
+        given(sqlQueryMapper.findAllForExport(any(), any(), any(), any(), any(), any()))
+                .willReturn(Collections.emptyList());
 
         byte[] result = sqlQueryService.exportExcel(searchDTO);
 
@@ -236,7 +241,8 @@ class SqlQueryServiceTest {
                 .queryName("테스트")
                 .useYn("Y")
                 .build();
-        given(sqlQueryMapper.findAllForExport("Q001", "테스트", "Y", null, null, null)).willReturn(List.of(buildResponse("Q001")));
+        given(sqlQueryMapper.findAllForExport("Q001", "테스트", "Y", null, null, null))
+                .willReturn(List.of(buildResponse("Q001")));
 
         byte[] result = sqlQueryService.exportExcel(searchDTO);
 
@@ -257,8 +263,10 @@ class SqlQueryServiceTest {
                 .useYn("Y")
                 .build();
 
-        given(sqlQueryMapper.countAllWithSearch("Q001", "테스트", "Y", null, null, null)).willReturn(1L);
-        given(sqlQueryMapper.findAllWithSearch(eq("Q001"), eq("테스트"), eq("Y"), isNull(), isNull(), isNull(), any(), any(), anyInt(), anyInt()))
+        given(sqlQueryMapper.countAllWithSearch("Q001", "테스트", "Y", null, null, null))
+                .willReturn(1L);
+        given(sqlQueryMapper.findAllWithSearch(
+                        eq("Q001"), eq("테스트"), eq("Y"), isNull(), isNull(), isNull(), any(), any(), anyInt(), anyInt()))
                 .willReturn(List.of(buildResponse("Q001")));
 
         PageResponse<SqlQueryResponse> result = sqlQueryService.getSqlQueriesWithSearch(searchDTO);
@@ -278,8 +286,10 @@ class SqlQueryServiceTest {
                 .sortDirection("DESC")
                 .build();
 
-        given(sqlQueryMapper.countAllWithSearch(any(), any(), any(), any(), any(), any())).willReturn(0L);
-        given(sqlQueryMapper.findAllWithSearch(any(), any(), any(), any(), any(), any(), eq("queryName"), eq("DESC"), anyInt(), anyInt()))
+        given(sqlQueryMapper.countAllWithSearch(any(), any(), any(), any(), any(), any()))
+                .willReturn(0L);
+        given(sqlQueryMapper.findAllWithSearch(
+                        any(), any(), any(), any(), any(), any(), eq("queryName"), eq("DESC"), anyInt(), anyInt()))
                 .willReturn(List.of());
 
         PageResponse<SqlQueryResponse> result = sqlQueryService.getSqlQueriesWithSearch(searchDTO);
@@ -287,7 +297,8 @@ class SqlQueryServiceTest {
         assertThat(result.getContent()).isEmpty();
         then(sqlQueryMapper)
                 .should()
-                .findAllWithSearch(any(), any(), any(), any(), any(), any(), eq("queryName"), eq("DESC"), anyInt(), anyInt());
+                .findAllWithSearch(
+                        any(), any(), any(), any(), any(), any(), eq("queryName"), eq("DESC"), anyInt(), anyInt());
     }
 
     // ─── create (null sqlQuery2 — validateSqlText null path) ─────

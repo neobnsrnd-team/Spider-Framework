@@ -76,9 +76,13 @@ public class CmsBuilderClient {
         MultiValueMap<String, Object> form = buildFormData(file, userId, userName, businessCategory, assetDesc);
 
         try {
+            // cmsBuilderRestClient 사용 — 대용량 업로드를 위해 60초 read-timeout 유지 (#177)
+            // deploy 클라이언트(10초)는 파일 이동 전용이므로 업로드에 사용하면 타임아웃 위험이 있다.
+            // x-deploy-token은 header()로 직접 주입하여 서버 간 인증을 통과시킨다.
             CmsBuilderUploadApiResponse response = cmsBuilderRestClient
                     .post()
                     .uri(properties.getUploadPath())
+                    .header("x-deploy-token", properties.getDeploySecret())
                     .contentType(MediaType.MULTIPART_FORM_DATA)
                     .body(form)
                     .retrieve()
