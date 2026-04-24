@@ -55,13 +55,15 @@ docker compose --profile admin-proxy up -d admin-proxy
 **권한 매핑 (`menu-resource-permissions.yml`)**
 
 ```yaml
-v3_cms_manage / v3_cms_dashboard / v3_cms_edit:
+v3_cms_manage / v3_cms_edit:
   R: CMS:R
   W: CMS:W
 
-v3_cms_admin_approvals / v3_cms_admin_deployments /
-v3_cms_admin_statistics / v3_cms_admin_ab_tests / v3_cms_admin_components:
+v3_cms_dashboard:
   R: CMS:R
+
+v3_cms_admin_approvals / v3_cms_admin_asset_requests / v3_cms_admin_asset_approvals /
+v3_cms_admin_deployments / v3_cms_admin_statistics / v3_cms_admin_ab_tests / v3_cms_admin_components:
   W: CMS:W
 ```
 
@@ -69,7 +71,7 @@ v3_cms_admin_statistics / v3_cms_admin_ab_tests / v3_cms_admin_components:
 
 | 사용자 유형 | 메뉴 권한 |
 | --- | --- |
-| `cmsUser01` (제작자) | `v3_cms_manage W`, `v3_cms_dashboard W`, `v3_cms_edit W` |
+| `cmsUser01` (제작자) | `v3_cms_manage W`, `v3_cms_dashboard R`, `v3_cms_edit W` |
 | `cmsAdmin01` (관리자) | `v3_cms_manage W`, `v3_cms_admin_approvals W`, `v3_cms_admin_deployments W`, `v3_cms_admin_statistics W`, `v3_cms_admin_ab_tests W`, `v3_cms_admin_components W` |
 
 ---
@@ -136,10 +138,10 @@ v3_cms_admin_statistics / v3_cms_admin_ab_tests / v3_cms_admin_components:
 | POST | `/api/cms-admin/asset-approvals/{assetId}/approve` | `CMS:W` | 이미지 승인 |
 | POST | `/api/cms-admin/asset-approvals/{assetId}/reject` | `CMS:W` | 이미지 반려 |
 | POST | `/api/cms-admin/asset-approvals/{assetId}/visibility` | `CMS:W` | 노출 여부 변경 |
-| POST | `/api/cms-admin/asset-approvals/upload` | `CMS:W` | 관리자 직접 업로드 (즉시 승인) |
+| POST | `/api/cms-admin/asset-approvals/upload` | `CMS:W` | 관리자 직접 업로드 (즉시 APPROVED 처리, `CmsAssetApprovalController`) |
 | GET | `/api/cms-admin/asset-requests` | `CMS:R` | 제작자 업로드 요청 목록 |
 | POST | `/api/cms-admin/asset-requests/{assetId}/request` | `CMS:W` | 승인 요청 |
-| POST | `/api/cms-admin/asset-uploads` | `CMS:W` | 관리자 즉시 승인 업로드 |
+| POST | `/api/cms-admin/asset-uploads` | `CMS:W` | 현업 관리자 업로드 (WORK 상태로 CMS 포워딩, `CmsAssetUploadController`) |
 
 > **이미지 업로드 인증**: Admin 백엔드 → CMS(`/cms/api/builder/upload`)로 포워딩 시 `x-deploy-token` 헤더 사용 (Issue #177). `cms.builder.deploy-secret`과 CMS의 `DEPLOY_SECRET`이 일치해야 한다.
 
