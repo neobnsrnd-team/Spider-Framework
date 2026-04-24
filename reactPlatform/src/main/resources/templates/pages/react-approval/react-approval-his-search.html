@@ -5,7 +5,11 @@
 <div th:fragment="search" class="card border p-2 mb-3">
     <div class="d-flex flex-wrap align-items-center gap-2 mb-1">
 
-        <label class="form-label mb-0 small fw-medium">상태</label>
+        <label class="form-label mb-0 small fw-medium">Code ID</label>
+        <input type="text" id="hisSearchCodeId" class="form-control form-control-sm flex-fixed-200"
+               placeholder="Code ID">
+
+        <label class="form-label mb-0 small fw-medium ms-2">상태</label>
         <select id="hisSearchStatus" class="form-select form-select-sm flex-fixed-130">
             <option value="">전체</option>
             <option value="APPROVED">승인 완료</option>

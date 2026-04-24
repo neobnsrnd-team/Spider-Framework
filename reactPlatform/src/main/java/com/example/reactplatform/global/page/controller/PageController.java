@@ -103,4 +103,9 @@ public class PageController {
     public String reactApproval(HttpServletRequest request, Model model) {
         return resolveView(request, "pages/react-approval/react-approval :: content", model);
     }
+
+    @GetMapping("/react-deploy")
+    public String reactDeploy(HttpServletRequest request, Model model) {
+        return resolveView(request, "pages/react-deployment/react-deployment :: content", model);
+    }
 }

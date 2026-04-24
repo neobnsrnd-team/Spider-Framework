@@ -1,0 +1,168 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<!--
+    ReactDeploy Mapper (FWK_REACT_DEPLOY_HIS)
+    - React 코드 배포 이력 INSERT / SELECT
+-->
+<mapper namespace="com.example.reactplatform.domain.reactdeploy.mapper.ReactDeployMapper">
+
+    <!-- ==================== INSERT ==================== -->
+
+    <insert id="insert">
+        INSERT INTO FWK_REACT_DEPLOY_HIS (
+            DEPLOY_ID,
+            CODE_ID,
+            DEPLOY_MODE,
+            DEPLOY_STATUS,
+            FAIL_REASON,
+            PR_URL,
+            LAST_UPDATE_DTIME,
+            LAST_UPDATE_USER_ID
+        ) VALUES (
+            #{deployId,jdbcType=VARCHAR},
+            #{codeId,jdbcType=VARCHAR},
+            #{deployMode,jdbcType=VARCHAR},
+            #{deployStatus,jdbcType=VARCHAR},
+            #{failReason,jdbcType=CLOB},
+            #{prUrl,jdbcType=VARCHAR},
+            #{lastUpdateDtime,jdbcType=VARCHAR},
+            #{lastUpdateUserId,jdbcType=VARCHAR}
+        )
+    </insert>
+
+    <!-- ==================== 배포 가능 목록 ==================== -->
+
+    <!-- 검색 조건 Fragment (selectDeployList / selectDeployListCount 공유) -->
+    <sql id="deployListSearchCondition">
+        <if test="search != null and search != ''">
+            AND (
+                c.CODE_ID LIKE '%' || #{search} || '%' ESCAPE '\'
+                OR c.CREATE_USER_ID LIKE '%' || #{search} || '%' ESCAPE '\'
+            )
+        </if>
+    </sql>
+
+    <!--
+        APPROVED 코드 + 최근 배포 이력 1건 LEFT JOIN.
+        ROW_NUMBER() OVER (PARTITION BY CODE_ID ORDER BY LAST_UPDATE_DTIME DESC)로
+        코드별 가장 최근 이력만 조인한다.
+    -->
+    <select id="selectDeployList"
+            resultType="com.example.reactplatform.domain.reactdeploy.dto.ReactDeployListResponse">
+        SELECT *
+        FROM (
+            SELECT ROWNUM AS rn, inner_q.*
+            FROM (
+                SELECT
+                    c.CODE_ID            AS codeId,
+                    c.FIGMA_URL          AS figmaUrl,
+                    c.CREATE_USER_ID     AS createUserId,
+                    c.APPROVAL_USER_ID   AS approvalUserId,
+                    c.APPROVAL_DTIME     AS approvalDtime,
+                    h.DEPLOY_STATUS      AS lastDeployStatus,
+                    h.LAST_UPDATE_DTIME  AS lastDeployDtime,
+                    h.DEPLOY_MODE        AS lastDeployMode,
+                    h.PR_URL             AS lastPrUrl
+                FROM FWK_REACT_CODE_HIS c
+                LEFT JOIN (
+                    SELECT CODE_ID, DEPLOY_STATUS, DEPLOY_MODE, PR_URL, LAST_UPDATE_DTIME,
+                           ROW_NUMBER() OVER (PARTITION BY CODE_ID ORDER BY LAST_UPDATE_DTIME DESC) AS latest_rn
+                    FROM FWK_REACT_DEPLOY_HIS
+                ) h ON c.CODE_ID = h.CODE_ID AND h.latest_rn = 1
+                WHERE c.STATUS = 'APPROVED'
+                <include refid="deployListSearchCondition"/>
+                ORDER BY c.APPROVAL_DTIME DESC
+            ) inner_q
+            WHERE ROWNUM &lt;= #{endRow}
+        )
+        WHERE rn &gt; #{offset}
+    </select>
+
+    <select id="selectDeployListCount" resultType="int">
+        SELECT COUNT(*)
+        FROM FWK_REACT_CODE_HIS c
+        WHERE c.STATUS = 'APPROVED'
+        <include refid="deployListSearchCondition"/>
+    </select>
+
+    <!-- ==================== 전체 배포 이력 ==================== -->
+
+    <!-- 검색 조건 Fragment (selectAllHistoryList / selectAllHistoryCount 공유) -->
+    <sql id="historySearchCondition">
+        <if test="search != null and search != ''">
+            AND (
+                h.CODE_ID LIKE '%' || #{search} || '%' ESCAPE '\'
+                OR h.LAST_UPDATE_USER_ID LIKE '%' || #{search} || '%' ESCAPE '\'
+            )
+        </if>
+    </sql>
+
+    <select id="selectAllHistoryList"
+            resultType="com.example.reactplatform.domain.reactdeploy.dto.ReactDeployHistoryResponse">
+        SELECT *
+        FROM (
+            SELECT ROWNUM AS rn, inner_q.*
+            FROM (
+                SELECT
+                    h.DEPLOY_ID            AS deployId,
+                    h.CODE_ID              AS codeId,
+                    h.DEPLOY_MODE          AS deployMode,
+                    h.DEPLOY_STATUS        AS deployStatus,
+                    h.FAIL_REASON          AS failReason,
+                    h.PR_URL               AS prUrl,
+                    h.LAST_UPDATE_USER_ID  AS lastUpdateUserId,
+                    h.LAST_UPDATE_DTIME    AS lastUpdateDtime
+                FROM FWK_REACT_DEPLOY_HIS h
+                <where>
+                    <include refid="historySearchCondition"/>
+                </where>
+                ORDER BY h.LAST_UPDATE_DTIME DESC
+            ) inner_q
+            WHERE ROWNUM &lt;= #{endRow}
+        )
+        WHERE rn &gt; #{offset}
+    </select>
+
+    <select id="selectAllHistoryCount" resultType="int">
+        SELECT COUNT(*)
+        FROM FWK_REACT_DEPLOY_HIS h
+        <where>
+            <include refid="historySearchCondition"/>
+        </where>
+    </select>
+
+    <!-- ==================== 코드별 이력 (모달용) ==================== -->
+
+    <select id="selectHistoryByCodeId"
+            resultType="com.example.reactplatform.domain.reactdeploy.dto.ReactDeployHistoryResponse">
+        SELECT *
+        FROM (
+            SELECT ROWNUM AS rn, inner_q.*
+            FROM (
+                SELECT
+                    h.DEPLOY_ID            AS deployId,
+                    h.CODE_ID              AS codeId,
+                    h.DEPLOY_MODE          AS deployMode,
+                    h.DEPLOY_STATUS        AS deployStatus,
+                    h.FAIL_REASON          AS failReason,
+                    h.PR_URL               AS prUrl,
+                    h.LAST_UPDATE_USER_ID  AS lastUpdateUserId,
+                    h.LAST_UPDATE_DTIME    AS lastUpdateDtime
+                FROM FWK_REACT_DEPLOY_HIS h
+                WHERE h.CODE_ID = #{codeId,jdbcType=VARCHAR}
+                ORDER BY h.LAST_UPDATE_DTIME DESC
+            ) inner_q
+            WHERE ROWNUM &lt;= #{endRow}
+        )
+        WHERE rn &gt; #{offset}
+    </select>
+
+    <select id="selectHistoryCountByCodeId" resultType="int">
+        SELECT COUNT(*)
+        FROM FWK_REACT_DEPLOY_HIS
+        WHERE CODE_ID = #{codeId,jdbcType=VARCHAR}
+    </select>
+
+</mapper>

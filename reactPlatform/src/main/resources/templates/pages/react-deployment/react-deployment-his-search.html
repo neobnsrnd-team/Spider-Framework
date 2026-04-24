@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<!-- 배포 이력 검색 영역 Fragment -->
+<div th:fragment="search" class="card border p-2 mb-3">
+    <div class="d-flex flex-wrap align-items-center gap-2 mb-1">
+
+        <label class="form-label mb-0 small fw-medium">배포 결과</label>
+        <select id="hisSearchStatus" class="form-select form-select-sm flex-fixed-130">
+            <option value="">전체</option>
+            <option value="SUCCESS">성공</option>
+            <option value="FAILED">실패</option>
+        </select>
+
+        <label class="form-label mb-0 small fw-medium ms-2">배포 모드</label>
+        <select id="hisSearchMode" class="form-select form-select-sm flex-fixed-130">
+            <option value="">전체</option>
+            <option value="local">local</option>
+            <option value="git-pr">git-pr</option>
+        </select>
+
+        <label class="form-label mb-0 small fw-medium ms-2">검색</label>
+        <input type="text" id="hisSearchKeyword"
+               class="form-control form-control-sm flex-fixed-200"
+               placeholder="코드 ID / 실행자 ID">
+
+        <div class="flex-grow-1"></div>
+
+        <select id="limitRows" class="form-select form-select-sm sp-limit-select">
+            <option value="10" selected>10</option>
+            <option value="20">20</option>
+            <option value="50">50</option>
+        </select>
+        <label class="form-label mb-0 small fw-medium">건씩</label>
+
+        <button class="btn btn-outline-secondary btn-sm" id="btnSearchReset">
+            <i class="bi bi-arrow-counterclockwise"></i> 초기화
+        </button>
+        <button class="btn btn-primary btn-sm" id="btnSearch">
+            <i class="bi bi-search"></i> 조회
+        </button>
+    </div>
+</div>
+</body>
+</html>

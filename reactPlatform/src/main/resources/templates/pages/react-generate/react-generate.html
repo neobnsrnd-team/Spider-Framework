@@ -50,6 +50,18 @@
                     </select>
                 </div>
             </div>
+            <div class="mb-3">
+                <label for="componentNameInput" class="form-label fw-semibold">
+                    컴포넌트명 <span class="text-muted fw-normal small">(선택, 미입력 시 AI가 결정)</span>
+                </label>
+                <input type="text"
+                       id="componentNameInput"
+                       class="form-control"
+                       placeholder="예: LoginPage, TransferForm, MainDashboard"
+                       autocomplete="off"
+                       maxlength="100">
+                <div class="form-text">PascalCase로 입력하세요. Container scaffold 파일명도 이 값을 기준으로 생성됩니다.</div>
+            </div>
             <div class="d-flex justify-content-end gap-2">
                 <button type="button" class="btn btn-outline-secondary" id="btnReset">
                     <i class="bi bi-arrow-counterclockwise me-1"></i>초기화

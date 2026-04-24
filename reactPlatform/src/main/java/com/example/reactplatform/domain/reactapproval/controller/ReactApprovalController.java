@@ -4,11 +4,11 @@
  *     승인 대기 목록 조회, 승인, 반려 엔드포인트를 제공한다.
  *     읽기는 REACT_APPROVAL:R, 쓰기(승인·반려)는 REACT_APPROVAL:W 권한이 필요하다.
  */
-package com.example.reactplatform.domain.reactgenerate.controller;
+package com.example.reactplatform.domain.reactapproval.controller;
 
+import com.example.reactplatform.domain.reactapproval.service.ReactApprovalService;
 import com.example.reactplatform.domain.reactgenerate.dto.ReactGenerateApprovalResponse;
 import com.example.reactplatform.domain.reactgenerate.dto.ReactRejectRequest;
-import com.example.reactplatform.domain.reactgenerate.service.ReactApprovalService;
 import com.example.reactplatform.global.dto.ApiResponse;
 import com.example.reactplatform.global.util.SecurityUtil;
 import jakarta.validation.Valid;
@@ -58,6 +58,7 @@ public class ReactApprovalController {
      * @param page           페이지 번호 (기본값 1, 최솟값 1)
      * @param size           페이지당 건수 (기본값 10, 범위 1~100)
      * @param status         상태 필터 (APPROVED / REJECTED, 미입력 시 전체)
+     * @param codeId         Code ID 부분 일치 검색
      * @param approvalUserId 처리자 ID 부분 일치 검색
      * @param createUserId   요청자 ID 부분 일치 검색
      * @param fromDate       처리일시 시작 (yyyyMMdd)
@@ -70,12 +71,13 @@ public class ReactApprovalController {
             @RequestParam(defaultValue = "1") @Min(1) int page,
             @RequestParam(defaultValue = "10") @Min(1) @Max(100) int size,
             @RequestParam(defaultValue = "") String status,
+            @RequestParam(defaultValue = "") String codeId,
             @RequestParam(defaultValue = "") String approvalUserId,
             @RequestParam(defaultValue = "") String createUserId,
             @RequestParam(defaultValue = "") String fromDate,
             @RequestParam(defaultValue = "") String toDate) {
         return ResponseEntity.ok(ApiResponse.success(
-                reactApprovalService.getHistory(page, size, status, approvalUserId, createUserId, fromDate, toDate)));
+                reactApprovalService.getHistory(page, size, status, codeId, approvalUserId, createUserId, fromDate, toDate)));
     }
 
     /**

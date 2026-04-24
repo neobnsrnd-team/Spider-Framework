@@ -23,7 +23,8 @@ public class WebMvcConfig implements WebMvcConfigurer {
         registry.addInterceptor(apiLoggingInterceptor)
                 .addPathPatterns("/**")
                 .excludePathPatterns(
-                        "/actuator/**", "/css/**", "/js/**", "/images/**", "/webjars/**", "/vendor/**", "/favicon.ico");
+                        "/actuator/**", "/css/**", "/js/**", "/images/**", "/webjars/**", "/vendor/**", "/favicon.ico",
+                        "/swagger-ui/**", "/v3/api-docs/**");
     }
 
     /**

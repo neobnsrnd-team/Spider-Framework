@@ -79,14 +79,18 @@ public class ReactGenerateService {
         String id = UUID.randomUUID().toString();
         String now = LocalDateTime.now().format(FORMATTER);
 
-        // brand·domain은 requirements 컬럼에 JSON으로 저장 (DB 스키마 변경 없이 유지)
+        // brand·domain·componentName은 requirements 컬럼에 JSON으로 저장 (DB 스키마 변경 없이 유지)
         String requirementsJson;
         try {
-            requirementsJson = objectMapper.writeValueAsString(Map.of(
-                    "brand", request.getBrand().name().toLowerCase(),
-                    "domain", effectiveDomain.name().toLowerCase()));
+            Map<String, Object> requirementsMap = new HashMap<>();
+            requirementsMap.put("brand", request.getBrand().name().toLowerCase());
+            requirementsMap.put("domain", effectiveDomain.name().toLowerCase());
+            if (request.getComponentName() != null && !request.getComponentName().isBlank()) {
+                requirementsMap.put("componentName", request.getComponentName());
+            }
+            requirementsJson = objectMapper.writeValueAsString(requirementsMap);
         } catch (JsonProcessingException e) {
-            throw new InternalException("brand/domain JSON 직렬화 실패", e);
+            throw new InternalException("requirements JSON 직렬화 실패", e);
         }
 
         // 어느 단계에서 실패해도 그 시점까지 수집된 값을 실패 이력에 기록하기 위해 바깥에 선언
@@ -112,9 +116,10 @@ public class ReactGenerateService {
                     designContext.getWidth(),
                     designContext.getHeight());
 
-            // 4. system / user prompt 조립 (Figma 디자인 컨텍스트 + brand/domain 포함)
+            // 4. system / user prompt 조립 (Figma 디자인 컨텍스트 + brand/domain/componentName 포함)
             systemPrompt = promptBuilder.buildSystemPrompt();
-            userPrompt = promptBuilder.buildUserPrompt(designContext, request.getBrand(), effectiveDomain);
+            userPrompt = promptBuilder.buildUserPrompt(
+                    designContext, request.getBrand(), effectiveDomain, request.getComponentName());
 
             // 5. Claude API 호출하여 React 코드 생성
             reactCode = claudeApiClient.generate(systemPrompt, userPrompt);

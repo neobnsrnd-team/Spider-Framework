@@ -16,6 +16,9 @@ public class ReactGenerateSearchRequest {
     /** 상태 필터 (GENERATED / PENDING_APPROVAL / APPROVED / FAILED). null이면 전체 조회. */
     private String status;
 
+    /** Code ID 부분 일치 검색. null이면 전체 조회. */
+    private String codeId;
+
     /** 생성자 ID 부분 일치 검색. null이면 전체 조회. */
     private String createUserId;
 

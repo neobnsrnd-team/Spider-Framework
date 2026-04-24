@@ -66,6 +66,7 @@
             const myOnly = $('#chkMyOnly').is(':checked');
             // date input은 yyyy-MM-dd로 오므로 하이픈 제거 후 yyyyMMdd로 전달
             this.appliedSearch = {
+                codeId:         $('#searchCodeId').val().trim(),
                 status:         $('#searchStatus').val(),
                 createUserId:   myOnly ? CURRENT_USER_ID : $('#searchCreateUserId').val().trim(),
                 fromDate:       ($('#searchFromDate').val() || '').replace(/-/g, ''),
@@ -266,6 +267,7 @@
             this.currentDetailStatus = data.status;
 
             // ── 상세 정보 섹션 ──
+            $('#detailCodeId').text(data.codeId || '—');
             const safeUrl = HtmlUtils.escape(data.figmaUrl || '');
             // 안전한 URL(http/https)만 href 속성을 설정하고, 그 외에는 링크 없이 텍스트만 표시 (XSS 방지)
             if (isSafeUrl(data.figmaUrl)) {
@@ -410,6 +412,7 @@
     });
 
     $('#btnSearchReset').on('click', function () {
+        $('#searchCodeId').val('');
         $('#searchStatus').val('');
         $('#searchCreateUserId').val('').prop('disabled', false);
         $('#searchFromDate').val('');

@@ -93,6 +93,7 @@ public class ReactGenerateController {
      * fire-and-forget 방식으로 호출되며, 항상 200을 반환한다.
      */
     @PostMapping("/render-error")
+    @PreAuthorize("hasAuthority('REACT_GENERATE:R')")
     public ResponseEntity<Void> logRenderError(
             @RequestBody RenderErrorRequest request, HttpServletRequest httpRequest) {
         reactGenerateService.logRenderError(

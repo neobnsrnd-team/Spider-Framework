@@ -17,7 +17,7 @@ import org.springframework.stereotype.Component;
  * <p>섹션 조립 순서: 역할 정의 → CLAUDE.md → component-types → design-tokens
  *
  * <p>user prompt에는 Figma URL 텍스트 대신 {@link FigmaDesignContext}에서 추출한
- * 구조화된 레이아웃·색상·텍스트 정보를 포함한다.
+ * 구조화된 레이아웃·색상·텍스트 정보를 ASCII 트리 형태로 포함한다.
  */
 @Component
 @RequiredArgsConstructor
@@ -50,17 +50,22 @@ public class PromptBuilder {
      * Claude API의 messages[0].content 필드에 전달할 user prompt를 생성한다.
      *
      * <p>Figma URL 텍스트 대신 {@link FigmaDesignContext}의 구조화된 정보(크기, 레이아웃,
-     * 색상, 텍스트)를 ASCII 트리 형태로 포함하여 Claude의 코드 생성 정확도를 높인다.
+     * 색상, 텍스트, 타이포그래피, 그림자, 그라디언트 등)를 ASCII 트리 형태로 포함하여
+     * Claude의 코드 생성 정확도를 높인다.
      *
      * <p>brand·domain은 프롬프트 앞단에 명시하여 Claude가 globals.css의
      * 올바른 [data-brand]/[data-domain] 토큰 블록을 선택하도록 안내한다.
      *
-     * @param context Figma API에서 추출한 디자인 컨텍스트
-     * @param brand   적용할 금융 브랜드
-     * @param domain  적용할 금융 도메인
+     * <p>componentName이 주어지면 해당 이름으로 export default function을 생성하도록 명시한다.
+     * null이면 AI가 Figma 컴포넌트명을 기반으로 결정한다.
+     *
+     * @param context       Figma API에서 추출한 디자인 컨텍스트
+     * @param brand         적용할 금융 브랜드
+     * @param domain        적용할 금융 도메인
+     * @param componentName 생성할 컴포넌트 함수명 (null이면 AI가 결정)
      * @return user prompt 문자열
      */
-    public String buildUserPrompt(FigmaDesignContext context, BrandType brand, DomainType domain) {
+    public String buildUserPrompt(FigmaDesignContext context, BrandType brand, DomainType domain, String componentName) {
         StringBuilder sb = new StringBuilder();
 
         sb.append("Generate a React component from the following Figma design.\n\n");
@@ -113,25 +118,34 @@ public class PromptBuilder {
         // 하위 노드 트리 섹션
         if (context.getChildren() != null && !context.getChildren().isEmpty()) {
             sb.append("\n## Element Tree\n");
-            sb.append(formatNodeLine(
-                            context.getComponentName(),
-                            context.getComponentType(),
-                            context.getWidth(),
-                            context.getHeight(),
-                            context.getLayoutMode(),
-                            null,
-                            null,
-                            null))
-                    .append("\n");
+            sb.append("[")
+                    .append(context.getComponentType())
+                    .append("] ")
+                    .append(context.getComponentName())
+                    .append(" (")
+                    .append(context.getWidth())
+                    .append("×")
+                    .append(context.getHeight())
+                    .append("px, ")
+                    .append(describeLayoutMode(context.getLayoutMode()))
+                    .append(")\n");
             formatNodes(sb, context.getChildren(), "");
         }
 
         sb.append("\n## Rules\n");
         sb.append("- 반드시 위 컴포넌트 라이브러리의 컴포넌트만 사용할 것\n");
+        sb.append("- import는 JSX에서 실제로 렌더링되는 컴포넌트만 포함할 것 (사용하지 않는 import 금지)\n");
         sb.append("- 디자인 토큰(CSS 변수)을 활용하고 색상·크기 하드코딩 금지\n");
         sb.append("- TypeScript로 작성하고 props interface를 포함할 것\n");
         sb.append("- 접근성(aria 속성)을 고려할 것\n");
-        sb.append("- 반드시 `export default function ComponentName()` 형식으로 컴포넌트를 내보낼 것\n");
+        if (componentName != null && !componentName.isBlank()) {
+            // 명시적 컴포넌트명이 주어진 경우 — AI가 임의로 다른 이름을 사용하지 않도록 강하게 지시
+            sb.append("- 반드시 `export default function ")
+                    .append(componentName)
+                    .append("()` 형식으로 컴포넌트를 내보낼 것 (다른 이름 사용 금지)\n");
+        } else {
+            sb.append("- 반드시 `export default function ComponentName()` 형식으로 컴포넌트를 내보낼 것\n");
+        }
         sb.append("- 응답은 ```tsx ... ``` 코드 블록 하나로만 작성할 것\n");
 
         return sb.toString();
@@ -158,15 +172,7 @@ public class PromptBuilder {
 
             sb.append(indent)
                     .append(connector)
-                    .append(formatNodeLine(
-                            node.getName(),
-                            node.getType(),
-                            node.getWidth(),
-                            node.getHeight(),
-                            node.getLayoutMode(),
-                            node.getFillColor(),
-                            node.getText(),
-                            hasPadding(node) ? formatPadding(node) : null))
+                    .append(formatNodeLine(node))
                     .append("\n");
 
             formatNodes(sb, node.getChildren(), childIndent);
@@ -174,64 +180,127 @@ public class PromptBuilder {
     }
 
     /**
-     * 단일 노드를 한 줄 문자열로 표현한다.
+     * 단일 {@link FigmaNodeSummary}를 한 줄 문자열로 표현한다.
      *
-     * <p>출력 예시: {@code [FRAME] Card (360×120px, VERTICAL, gap:8px, padding:16/16/16/16) | fill: #FFFFFF}
+     * <p>출력 형식:
+     * <pre>
+     * [FRAME] Card (360×120px, VERTICAL, justify:SPACE_BETWEEN, align:CENTER,
+     *   padding:16/16/16/16, gap:8px, radius:32px, sizing:FILL/HUG)
+     *   | fill: #FFFFFF | stroke: #CAEE5D/4px | shadow: 0px/8px/24px rgba(0,132,133,0.06)
+     * [TEXT] Amount (182×40px) | text: "1,250,000"
+     *   | font: 36px/700/Noto Sans KR, lh:40px, ls:-0.9px
+     * </pre>
      */
-    private String formatNodeLine(
-            String name,
-            String type,
-            int width,
-            int height,
-            String layoutMode,
-            String fillColor,
-            String text,
-            String padding) {
+    private String formatNodeLine(FigmaNodeSummary node) {
         StringBuilder line = new StringBuilder();
-        line.append("[").append(type).append("] ").append(name);
+        line.append("[").append(node.getType()).append("] ").append(node.getName());
 
         // 크기 정보
-        if (width > 0 || height > 0) {
-            line.append(" (").append(width).append("×").append(height).append("px");
+        if (node.getWidth() > 0 || node.getHeight() > 0) {
+            line.append(" (").append(node.getWidth()).append("×").append(node.getHeight()).append("px");
 
-            // Auto Layout 정보
-            if (layoutMode != null && !"NONE".equals(layoutMode)) {
-                line.append(", ").append(layoutMode);
+            // Auto Layout 방향
+            if (node.getLayoutMode() != null && !"NONE".equals(node.getLayoutMode())) {
+                line.append(", ").append(node.getLayoutMode());
             }
 
-            // 패딩·간격 정보 (있는 경우만)
+            // 주축·교차축 정렬 (기본값 MIN 제외, 의미 있는 값만 출력)
+            if (isSignificantAlign(node.getMainAxisAlign())) {
+                line.append(", justify:").append(node.getMainAxisAlign());
+            }
+            if (isSignificantAlign(node.getCrossAxisAlign())) {
+                line.append(", align:").append(node.getCrossAxisAlign());
+            }
+
+            // 패딩·간격
+            String padding = buildPaddingStr(node);
             if (padding != null) {
                 line.append(", ").append(padding);
+            }
+
+            // 모서리 반경
+            if (node.getCornerRadius() > 0) {
+                line.append(", radius:").append(node.getCornerRadius()).append("px");
+            }
+
+            // 크기 결정 방식 (FIXED 제외 — 기본값이라 노이즈만 됨)
+            String sizingStr = buildSizingStr(node);
+            if (sizingStr != null) {
+                line.append(", sizing:").append(sizingStr);
             }
 
             line.append(")");
         }
 
         // 채우기 색상
-        if (fillColor != null) {
-            line.append(" | fill: ").append(fillColor);
+        if (node.getFillColor() != null) {
+            line.append(" | fill: ").append(node.getFillColor());
+        }
+        // 그라디언트 (SOLID가 없고 그라디언트가 있을 때)
+        if (node.getFillColor() == null && node.getGradientFill() != null) {
+            line.append(" | fill: ").append(node.getGradientFill());
+        }
+
+        // 테두리
+        if (node.getStrokeColor() != null) {
+            line.append(" | stroke: ").append(node.getStrokeColor());
+            if (node.getStrokeWeight() > 0) {
+                line.append("/").append(node.getStrokeWeight()).append("px");
+            }
+        }
+
+        // 그림자
+        if (node.getShadow() != null) {
+            line.append(" | shadow: ").append(node.getShadow());
+        }
+
+        // INSTANCE 컴포넌트 속성 (variant, boolean, text override)
+        if (node.getComponentProps() != null && !node.getComponentProps().isEmpty()) {
+            line.append(" | props: {");
+            node.getComponentProps().forEach((k, v) -> line.append(k).append("=").append(v).append(", "));
+            // 마지막 ", " 제거
+            line.setLength(line.length() - 2);
+            line.append("}");
         }
 
         // 텍스트 내용 (50자 초과 시 말줄임)
-        if (text != null && !text.isBlank()) {
-            String truncated = text.length() > 50 ? text.substring(0, 50) + "…" : text;
+        if (node.getText() != null && !node.getText().isBlank()) {
+            String truncated = node.getText().length() > 50
+                    ? node.getText().substring(0, 50) + "…"
+                    : node.getText();
             line.append(" | text: \"").append(truncated).append("\"");
+        }
+
+        // 타이포그래피 (TEXT 노드에서 fontSize가 있을 때)
+        if (node.getFontSize() > 0) {
+            line.append(" | font: ").append(node.getFontSize()).append("px");
+            if (node.getFontWeight() > 0) {
+                line.append("/").append(node.getFontWeight());
+            }
+            if (node.getFontFamily() != null) {
+                line.append("/").append(node.getFontFamily());
+            }
+            if (node.getLineHeight() > 0) {
+                line.append(", lh:").append(node.getLineHeight()).append("px");
+            }
+            if (node.getLetterSpacing() != 0.0) {
+                line.append(", ls:").append(String.format("%.1f", node.getLetterSpacing())).append("px");
+            }
         }
 
         return line.toString();
     }
 
-    /** 노드에 패딩 값이 하나라도 있는지 확인한다. */
-    private boolean hasPadding(FigmaNodeSummary node) {
-        return node.getPaddingTop() > 0
-                || node.getPaddingRight() > 0
-                || node.getPaddingBottom() > 0
-                || node.getPaddingLeft() > 0
-                || node.getGap() > 0;
+    /**
+     * 주축/교차축 정렬값이 기본값(MIN)이 아닌 의미 있는 값인지 확인한다.
+     * MIN은 flex-start로 기본 동작이므로 출력 생략해 노이즈를 줄인다.
+     */
+    private boolean isSignificantAlign(String align) {
+        return align != null && !"MIN".equals(align);
     }
 
     /** 패딩·간격 정보를 {@code padding:top/right/bottom/left, gap:Npx} 형식으로 반환한다. */
-    private String formatPadding(FigmaNodeSummary node) {
+    private String buildPaddingStr(FigmaNodeSummary node) {
         StringBuilder sb = new StringBuilder();
         if (node.getPaddingTop() > 0
                 || node.getPaddingRight() > 0
@@ -250,7 +319,20 @@ public class PromptBuilder {
             if (sb.length() > 0) sb.append(", ");
             sb.append("gap:").append(node.getGap()).append("px");
         }
-        return sb.toString();
+        return sb.length() > 0 ? sb.toString() : null;
+    }
+
+    /**
+     * 크기 결정 방식을 {@code H/V} 형식으로 반환한다.
+     * 둘 다 FIXED이거나 정보가 없으면 null을 반환해 출력을 생략한다.
+     */
+    private String buildSizingStr(FigmaNodeSummary node) {
+        boolean hasH = node.getSizingH() != null && !"FIXED".equals(node.getSizingH());
+        boolean hasV = node.getSizingV() != null && !"FIXED".equals(node.getSizingV());
+        if (!hasH && !hasV) return null;
+        String h = node.getSizingH() != null ? node.getSizingH() : "FIXED";
+        String v = node.getSizingV() != null ? node.getSizingV() : "FIXED";
+        return h + "/" + v;
     }
 
     /**

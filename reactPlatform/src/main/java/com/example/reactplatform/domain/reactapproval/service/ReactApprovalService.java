@@ -3,9 +3,12 @@
  * @description React 코드 승인 워크플로우를 전담하는 서비스.
  *     승인 대기 목록 조회, 승인, 반려 세 가지 오퍼레이션을 제공한다.
  *     승인 시 요청자 본인 여부를 서버에서 검증하여 클라이언트 우회를 방지한다.
+ *     승인 완료 후 {@link com.example.reactplatform.domain.reactgenerate.deploy.ReactDeployStrategy}에
+ *     배포를 위임한다 ({@code react.deploy.mode} 설정으로 local / git-pr 중 선택).
  */
-package com.example.reactplatform.domain.reactgenerate.service;
+package com.example.reactplatform.domain.reactapproval.service;
 
+import com.example.reactplatform.domain.reactdeploy.service.ReactDeployService;
 import com.example.reactplatform.domain.reactgenerate.dto.ReactApprovalResponse;
 import com.example.reactplatform.domain.reactgenerate.dto.ReactGenerateApprovalResponse;
 import com.example.reactplatform.domain.reactgenerate.dto.ReactGenerateHistoryResponse;
@@ -14,10 +17,7 @@ import com.example.reactplatform.domain.reactgenerate.enums.ReactGenerateStatus;
 import com.example.reactplatform.domain.reactgenerate.mapper.ReactGenerateMapper;
 import com.example.reactplatform.global.exception.InvalidInputException;
 import com.example.reactplatform.global.exception.NotFoundException;
-import java.io.IOException;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.Path;
+import com.example.reactplatform.global.util.SqlUtils;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
@@ -37,7 +37,7 @@ import org.springframework.transaction.support.TransactionSynchronizationManager
 public class ReactApprovalService {
 
     private final ReactGenerateMapper reactGenerateMapper;
-    private final ReactApprovalProperties approvalProperties;
+    private final ReactDeployService reactDeployService;
 
     private static final DateTimeFormatter FORMATTER = DateTimeFormatter.ofPattern("yyyyMMddHHmmss");
 
@@ -104,13 +104,13 @@ public class ReactApprovalService {
         }
         log.info("승인 완료 — codeId: {}, approver: {}", id, approverUserId);
 
-        // 트랜잭션 커밋 성공 후 React 컴포넌트 파일을 demo/front에 기록한다.
-        // afterCommit에서 실행하여 DB 롤백 시 파일이 생성되지 않도록 보장한다.
+        // 트랜잭션 커밋 성공 후 배포를 실행하고 결과를 FWK_REACT_DEPLOY_HIS에 기록한다.
+        // afterCommit에서 실행하여 DB 롤백 시 배포가 수행되지 않도록 보장한다.
         String reactCode = existing.getReactCode();
         TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
             @Override
             public void afterCommit() {
-                writeReactCodeToFile(id, reactCode);
+                reactDeployService.deployAndRecord(id, reactCode, approverUserId);
             }
         });
 
@@ -155,6 +155,7 @@ public class ReactApprovalService {
      * @param page           페이지 번호 (1-based)
      * @param size           페이지당 건수
      * @param status         상태 필터 (null/빈 문자열이면 전체)
+     * @param codeId         Code ID 부분 일치 검색 (null/빈 문자열이면 미적용)
      * @param approvalUserId 처리자 ID 부분 일치 검색
      * @param createUserId   요청자 ID 부분 일치 검색
      * @param fromDate       처리일시 시작 (yyyyMMdd)
@@ -165,6 +166,7 @@ public class ReactApprovalService {
             int page,
             int size,
             String status,
+            String codeId,
             String approvalUserId,
             String createUserId,
             String fromDate,
@@ -177,10 +179,11 @@ public class ReactApprovalService {
         int endRow = offset + size;
         // 빈 문자열은 null로 통일하여 mapper의 전체 조회 분기를 타도록 한다
         // status: APPROVED/REJECTED 외의 값이 들어오면 거부 (이력 API 범위 제한)
-        String s = validateAndNormalizeStatus(nullIfBlank(status));
+        String s  = validateAndNormalizeStatus(nullIfBlank(status));
+        String ci = SqlUtils.escapeLike(nullIfBlank(codeId));
         // LIKE 검색 파라미터: %, _, \ 를 이스케이프하여 의도치 않은 와일드카드 동작 방지
-        String au = escapeLike(nullIfBlank(approvalUserId));
-        String cu = escapeLike(nullIfBlank(createUserId));
+        String au = SqlUtils.escapeLike(nullIfBlank(approvalUserId));
+        String cu = SqlUtils.escapeLike(nullIfBlank(createUserId));
         String fd = nullIfBlank(fromDate);
         String td = nullIfBlank(toDate);
 
@@ -189,8 +192,8 @@ public class ReactApprovalService {
             throw new InvalidInputException("시작 날짜는 종료 날짜보다 이전이어야 합니다.");
         }
         List<ReactGenerateHistoryResponse> list =
-                reactGenerateMapper.selectApprovalHistory(offset, endRow, s, au, cu, fd, td);
-        int totalCount = reactGenerateMapper.selectApprovalHistoryCount(s, au, cu, fd, td);
+                reactGenerateMapper.selectApprovalHistory(offset, endRow, s, ci, au, cu, fd, td);
+        int totalCount = reactGenerateMapper.selectApprovalHistoryCount(s, ci, au, cu, fd, td);
         return Map.of("list", list, "totalCount", totalCount, "page", page, "size", size);
     }
 
@@ -227,20 +230,6 @@ public class ReactApprovalService {
         return status;
     }
 
-    /**
-     * Oracle LIKE 검색의 와일드카드 문자를 이스케이프한다.
-     * SQL에 {@code ESCAPE '\'} 절이 선언된 경우, Java에서 %, _, \ 를 미리 이스케이프해야
-     * 사용자 입력이 의도치 않은 와일드카드로 동작하는 것을 방지할 수 있다.
-     *
-     * @param value 이스케이프할 문자열 (null이면 null 반환)
-     * @return 이스케이프 처리된 문자열
-     */
-    private static String escapeLike(String value) {
-        if (value == null) return null;
-        // 순서 중요: \ 먼저 이스케이프 후 %, _ 순으로 처리
-        return value.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_");
-    }
-
     /** CODE_ID로 이력을 조회하고, PENDING_APPROVAL 상태가 아니면 예외를 던진다. */
     private ReactGenerateResponse requirePendingApproval(String id) {
         ReactGenerateResponse response = reactGenerateMapper.selectById(id);
@@ -260,39 +249,4 @@ public class ReactApprovalService {
         }
     }
 
-    /**
-     * 승인된 React 코드를 demo/front/src/generated/{codeId}.tsx 파일로 기록한다.
-     *
-     * <p>파일은 트랜잭션 커밋 후(afterCommit) 생성되므로 DB 롤백과 무관하게
-     * 커밋이 확정된 경우에만 파일이 생성된다.
-     *
-     * <p>파일 쓰기 실패는 승인 결과에 영향을 주지 않는다 — DB에는 이미 APPROVED로 기록되었으므로
-     * 로그만 남기고 계속 진행한다. (재배포 시 파일을 다시 생성할 수 있음)
-     *
-     * @param codeId    저장할 코드 ID (파일명으로 사용)
-     * @param reactCode 저장할 React TSX 코드
-     */
-    private void writeReactCodeToFile(String codeId, String reactCode) {
-        if (reactCode == null || reactCode.isBlank()) {
-            log.warn("React 파일 생성 건너뜀 — REACT_CODE가 비어 있음. codeId={}", codeId);
-            return;
-        }
-        // REACT_APPROVAL_OUTPUT_DIR이 빈 문자열로 설정된 경우 Path.of("")가
-        // 현재 작업 디렉토리로 해석되어 파일이 의도치 않은 위치에 생성될 수 있으므로 먼저 검증한다.
-        String outputDir = approvalProperties.getOutputDir();
-        if (outputDir == null || outputDir.isBlank()) {
-            log.error("React 컴포넌트 저장 경로가 설정되지 않았습니다. codeId={}", codeId);
-            return;
-        }
-        try {
-            Path dir = Path.of(outputDir);
-            Files.createDirectories(dir); // 디렉토리가 없으면 생성
-            Path target = dir.resolve(codeId + ".tsx");
-            Files.writeString(target, reactCode, StandardCharsets.UTF_8);
-            log.info("React 컴포넌트 파일 생성 완료 — path={}, codeId={}", target.toAbsolutePath(), codeId);
-        } catch (IOException e) {
-            // 파일 쓰기 실패는 비치명적 — DB 승인은 이미 커밋됨
-            log.error("React 컴포넌트 파일 생성 실패 — outputDir={}, codeId={}", outputDir, codeId, e);
-        }
-    }
 }

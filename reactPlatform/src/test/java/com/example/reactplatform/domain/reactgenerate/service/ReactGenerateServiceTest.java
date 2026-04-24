@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -135,7 +136,7 @@ class ReactGenerateServiceTest {
         service.generate(generateRequest(null), USER_ID);
 
         // promptBuilder.buildUserPrompt에 BANKING이 전달되는지 확인
-        verify(promptBuilder).buildUserPrompt(any(), eq(BrandType.HANA), eq(DomainType.BANKING));
+        verify(promptBuilder).buildUserPrompt(any(), eq(BrandType.HANA), eq(DomainType.BANKING), isNull());
     }
 
     // ========== generate — Figma 단계 실패 ==========
@@ -170,7 +171,7 @@ class ReactGenerateServiceTest {
         when(figmaDesignExtractor.extract(any(), anyString(), anyString()))
                 .thenReturn(minimalDesignContext());
         when(promptBuilder.buildSystemPrompt()).thenReturn(SYSTEM_PROMPT);
-        when(promptBuilder.buildUserPrompt(any(), any(), any())).thenReturn(USER_PROMPT);
+        when(promptBuilder.buildUserPrompt(any(), any(), any(), any())).thenReturn(USER_PROMPT);
         when(claudeApiClient.generate(anyString(), anyString()))
                 .thenThrow(new InternalException("Claude 타임아웃"));
 
@@ -291,7 +292,7 @@ class ReactGenerateServiceTest {
         when(figmaDesignExtractor.extract(any(), anyString(), anyString()))
                 .thenReturn(minimalDesignContext());
         when(promptBuilder.buildSystemPrompt()).thenReturn(SYSTEM_PROMPT);
-        when(promptBuilder.buildUserPrompt(any(), any(), any())).thenReturn(USER_PROMPT);
+        when(promptBuilder.buildUserPrompt(any(), any(), any(), any())).thenReturn(USER_PROMPT);
         when(claudeApiClient.generate(anyString(), anyString())).thenReturn(GENERATED_CODE);
         when(codeValidator.validate(anyString())).thenReturn(validationResult);
     }
