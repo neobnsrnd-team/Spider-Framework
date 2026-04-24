@@ -229,17 +229,13 @@ v3_cms_admin_statistics / v3_cms_admin_ab_tests / v3_cms_admin_components:
 
 ## 8. 미완료·후속 이슈
 
-| 항목 | 문서 |
-| --- | --- |
-| CMS 앱 관리자성 화면/API 정리 (deprecate/redirect) | migration Issue 6 |
-| 배포 receive URL·secret·HTML 서빙 경로 정렬 | `cms-deploy-serving-followup-issues.md` Issue 1, 2 |
-| 배포 HTML 내부 이미지 URL 치환 정책 | `cms-deploy-serving-followup-issues.md` Issue 3 |
-| 배포 이력·작업이력·실패 메시지 검증 | `cms-deploy-serving-followup-issues.md` Issue 4 |
-| 정적 리소스 백업/교체/rollback 운영 기준 | `cms-deploy-serving-followup-issues.md` Issue 5 |
-| 제작자 이미지 승인 요청 화면/API (CMS 측) | `cms-image-approval-issues.md` Issue 1 |
-| CMS 편집기 이미지 사용 경로 분리 (즉시 업로드 차단) | `cms-image-approval-issues.md` Issue 3 |
-| 기존 CMS `/api/manage/*`, `/api/assets/*` 처리 방향 | `cms-image-approval-issues.md` Issue 4 |
-| 로컬 proxy·E2E 시나리오 갱신 | migration Issue 10 |
+| 항목 | 문서 | 비고 |
+| --- | --- | --- |
+| CMS 앱 관리자성 화면/API 정리 (deprecate/redirect) | migration Issue 6 | html-cms `/api/manage/*`, `/api/assets/*` deprecate 마킹 미수행 |
+| 배포 이력 실패 메시지 저장 | `cms-deploy-serving-followup-issues.md` Issue 4 | `FWK_CMS_FILE_SEND_HIS`에 실패 메시지 컬럼 없음 |
+| 정적 리소스 rollback 운영 기준 | `cms-deploy-serving-followup-issues.md` Issue 5 | 버전·백업은 구현됨. 자동 rollback API 미구현 |
+| 기존 CMS `/api/manage/*`, `/api/assets/*` 처리 방향 | `cms-image-approval-issues.md` Issue 4 | redirect/deprecate 없이 API 유지 중 |
+| 로컬 proxy·E2E 시나리오 갱신 | migration Issue 10 | E2E 테스트는 있으나 nginx proxy 설정 미발견 |
 
 ---
 
