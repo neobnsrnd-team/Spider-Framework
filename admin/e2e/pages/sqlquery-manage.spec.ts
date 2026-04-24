@@ -119,10 +119,10 @@ test.describe('SQL Query CRUD', () => {
             await page.locator('#sqModalQueryId').fill(id);
             await page.locator('#sqModalQueryName').fill(name);
             await page.locator('#sqModalDbId').fill('e2e-ds-001');
-            await page.locator('#sqModalSqlType').selectOption('SELECT');
-            await page.locator('#sqModalExecType').selectOption('SYNC');
+            await page.locator('#sqModalSqlType').selectOption('R');
+            await page.locator('#sqModalExecType').selectOption('O');
             await page.locator('#sqModalTimeOut').fill('30');
-            await page.locator('#sqModalResultType').selectOption('MAP');
+            await page.locator('#sqModalResultType').fill('MAP');
             await page.locator('#sqModalCacheYn').selectOption('N');
             await page.locator('#sqModalUseYn').selectOption('Y');
             await page.locator('#sqModalSqlQuery').fill('SELECT 1 FROM DUAL');
