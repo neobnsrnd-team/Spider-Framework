@@ -86,6 +86,10 @@ public class SecurityConfig {
                         .requestMatchers("/h2-console/**")
                         .permitAll()
 
+                        // CMS 인증 필요
+                        .requestMatchers("/cms", "/cms/**")
+                        .authenticated()
+
                         // REST API 인증 필요
                         .requestMatchers("/api/**")
                         .authenticated()
