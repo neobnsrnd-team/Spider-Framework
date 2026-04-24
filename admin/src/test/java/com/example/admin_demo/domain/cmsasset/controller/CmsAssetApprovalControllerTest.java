@@ -55,6 +55,7 @@ class CmsAssetApprovalControllerTest {
     @MockitoBean
     private CmsAssetService cmsAssetService;
 
+    /** @WebMvcTest 컨텍스트에서 CmsBuilderClient의 RestClient 빈을 사용할 수 없으므로 mock 처리 */
     @MockitoBean
     private CmsBuilderClient cmsBuilderClient;
 
