@@ -62,8 +62,10 @@ public class GitPrApiClient {
             Map<String, Object> object = (Map<String, Object>) body.get("object");
             return (String) object.get("sha");
         } catch (HttpClientErrorException e) {
+            // 응답 바디는 debug 레벨로만 기록 — Authorization 헤더나 토큰이 포함된 cause를 상위로 전파하지 않는다
+            log.debug("[git-pr] getBaseSha 오류 응답 바디 — {}", e.getResponseBodyAsString());
             throw new InternalException(
-                    "GitHub base SHA 조회 실패 — branch=" + baseBranch + ", status=" + e.getStatusCode(), e);
+                    "GitHub base SHA 조회 실패 — branch=" + baseBranch + ", status=" + e.getStatusCode());
         }
     }
 
@@ -89,8 +91,9 @@ public class GitPrApiClient {
             log.info("[git-pr] 브랜치 이미 존재함, base SHA로 리셋 — branch={}", branchName);
             resetBranch(branchName, sha);
         } catch (HttpClientErrorException e) {
+            log.debug("[git-pr] createBranch 오류 응답 바디 — {}", e.getResponseBodyAsString());
             throw new InternalException(
-                    "GitHub 브랜치 생성 실패 — branch=" + branchName + ", status=" + e.getStatusCode(), e);
+                    "GitHub 브랜치 생성 실패 — branch=" + branchName + ", status=" + e.getStatusCode());
         }
     }
 
@@ -109,8 +112,9 @@ public class GitPrApiClient {
                     owner, repo, branchName);
             log.info("[git-pr] 브랜치 리셋 완료 — branch={}", branchName);
         } catch (HttpClientErrorException e) {
+            log.debug("[git-pr] resetBranch 오류 응답 바디 — {}", e.getResponseBodyAsString());
             throw new InternalException(
-                    "GitHub 브랜치 리셋 실패 — branch=" + branchName + ", status=" + e.getStatusCode(), e);
+                    "GitHub 브랜치 리셋 실패 — branch=" + branchName + ", status=" + e.getStatusCode());
         }
     }
 
@@ -164,8 +168,9 @@ public class GitPrApiClient {
                     owner, repo, path);
             log.info("[git-pr] 파일 커밋 완료 — branch={}, path={}", branch, path);
         } catch (HttpClientErrorException e) {
+            log.debug("[git-pr] createOrUpdateFile 오류 응답 바디 — {}", e.getResponseBodyAsString());
             throw new InternalException(
-                    "GitHub 파일 커밋 실패 — path=" + path + ", status=" + e.getStatusCode(), e);
+                    "GitHub 파일 커밋 실패 — path=" + path + ", status=" + e.getStatusCode());
         }
     }
 
@@ -195,8 +200,9 @@ public class GitPrApiClient {
             log.info("[git-pr] PR 생성 완료 — url={}", htmlUrl);
             return htmlUrl;
         } catch (HttpClientErrorException e) {
+            log.debug("[git-pr] createPullRequest 오류 응답 바디 — {}", e.getResponseBodyAsString());
             throw new InternalException(
-                    "GitHub PR 생성 실패 — head=" + head + ", status=" + e.getStatusCode(), e);
+                    "GitHub PR 생성 실패 — head=" + head + ", status=" + e.getStatusCode());
         }
     }
 

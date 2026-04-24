@@ -19,9 +19,20 @@ import org.springframework.stereotype.Component;
 @Component
 public class ContainerScaffoldGenerator {
 
-    /** TSX 코드에서 default export 함수명을 추출하는 패턴 */
-    private static final Pattern COMPONENT_NAME_PATTERN =
-            Pattern.compile("export default function (\\w+)");
+    /**
+     * 패턴 1: {@code export default function ComponentName}
+     * AI가 생성하는 가장 일반적인 형태.
+     */
+    private static final Pattern PATTERN_DEFAULT_FUNCTION =
+            Pattern.compile("export\\s+default\\s+function\\s+(\\w+)");
+
+    /**
+     * 패턴 2: {@code export default ComponentName;} (named → default export 패턴)
+     * 화살표 함수 또는 별도 선언 후 마지막에 default export하는 형태.
+     * 오탐 방지를 위해 식별자 뒤에 세미콜론 또는 줄 끝이 오는 경우만 매칭한다.
+     */
+    private static final Pattern PATTERN_NAMED_DEFAULT_EXPORT =
+            Pattern.compile("export\\s+default\\s+(\\w+)\\s*;?\\s*$", Pattern.MULTILINE);
 
     /** 컴포넌트명 추출 실패 시 사용하는 fallback 이름 */
     private static final String FALLBACK_COMPONENT_NAME = "GeneratedComponent";
@@ -85,8 +96,12 @@ public class ContainerScaffoldGenerator {
     }
 
     /**
-     * TSX 코드에서 {@code export default function ComponentName} 패턴으로 컴포넌트명을 추출한다.
-     * 패턴이 없으면 fallback 이름을 반환한다.
+     * TSX 코드에서 컴포넌트명을 추출한다.
+     * 다음 순서로 패턴을 시도하며, 모두 실패하면 fallback 이름을 반환한다.
+     * <ol>
+     *   <li>{@code export default function ComponentName}</li>
+     *   <li>{@code export default ComponentName;} (화살표 함수·named export 패턴)</li>
+     * </ol>
      *
      * <p>deploy 전략에서 UI 컴포넌트 파일명({@code {ComponentName}.tsx})을 결정할 때도 사용된다.
      */
@@ -94,7 +109,12 @@ public class ContainerScaffoldGenerator {
         if (reactCode == null || reactCode.isBlank()) {
             return FALLBACK_COMPONENT_NAME;
         }
-        Matcher matcher = COMPONENT_NAME_PATTERN.matcher(reactCode);
-        return matcher.find() ? matcher.group(1) : FALLBACK_COMPONENT_NAME;
+        Matcher m1 = PATTERN_DEFAULT_FUNCTION.matcher(reactCode);
+        if (m1.find()) return m1.group(1);
+
+        Matcher m2 = PATTERN_NAMED_DEFAULT_EXPORT.matcher(reactCode);
+        if (m2.find()) return m2.group(1);
+
+        return FALLBACK_COMPONENT_NAME;
     }
 }

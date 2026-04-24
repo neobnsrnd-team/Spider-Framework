@@ -38,6 +38,13 @@ public class FigmaDesignExtractor {
     private static final int MAX_NODES_PER_LEVEL = 50;
 
     /**
+     * 이 값 이상의 alpha는 완전 불투명으로 취급하여 HEX 형식으로 출력한다.
+     * 1.0 미만의 미세한 값(예: fillOpacity 곱셈 결과)도 rgba로 노출되지 않도록
+     * 1.0보다 약간 낮은 0.99를 경계로 사용한다.
+     */
+    private static final double OPAQUE_ALPHA_THRESHOLD = 0.99;
+
+    /**
      * Figma API 응답에서 디자인 컨텍스트를 추출한다.
      *
      * @param response Figma API {@code /v1/files/{fileKey}/nodes} 응답
@@ -242,8 +249,9 @@ public class FigmaDesignExtractor {
     /**
      * Figma RGBA 색상(각 채널 0.0~1.0)을 문자열로 변환한다.
      *
-     * <p>alpha가 0.99 미만이면 {@code rgba(r,g,b,a)} 형식, 그 외는 {@code #RRGGBB} 형식으로 반환한다.
-     * fillOpacity가 별도로 지정된 경우 해당 값을 우선 적용한다.
+     * <p>alpha가 {@link #OPAQUE_ALPHA_THRESHOLD} 미만이면 {@code rgba(r,g,b,a)} 형식,
+     * 그 이상이면 {@code #RRGGBB} 형식으로 반환한다.
+     * fillOpacity가 별도로 지정된 경우 color.a에 곱하여 실제 불투명도를 계산한다.
      *
      * @param color        Figma Color 객체
      * @param fillOpacity  Fill.opacity 값 (null 이면 color.a 사용)
@@ -256,7 +264,7 @@ public class FigmaDesignExtractor {
         int b = Math.min(255, (int) Math.round(color.getB() * 255));
         // fillOpacity가 있으면 color.a에 곱해서 실제 불투명도 계산
         double a = (fillOpacity != null) ? color.getA() * fillOpacity : color.getA();
-        if (a < 0.99) {
+        if (a < OPAQUE_ALPHA_THRESHOLD) {
             return String.format("rgba(%d,%d,%d,%.2f)", r, g, b, a);
         }
         return String.format("#%02X%02X%02X", r, g, b);

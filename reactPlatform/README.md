@@ -200,14 +200,26 @@ npm run build
 reactPlatform/
 ├── src/main/java/com/example/reactplatform/
 │   ├── domain/
-│   │   ├── reactgenerate/       # React 코드 생성 + 결재
+│   │   ├── reactgenerate/       # React 코드 생성
 │   │   │   ├── ai/              #   Claude API 클라이언트 + 프롬프트 빌더
 │   │   │   ├── figma/           #   Figma API 클라이언트 + 디자인 파서
-│   │   │   ├── deploy/          #   배포 전략 (local / git-pr)
+│   │   │   ├── deploy/          #   배포 전략 인터페이스 + 설정
+│   │   │   │   ├── gitpr/       #     GitHub PR 배포 전략
+│   │   │   │   └── local/       #     로컬 파일 배포 전략
 │   │   │   ├── validator/       #   생성 코드 유효성 검사
-│   │   │   ├── service/         #   생성·결재 서비스
+│   │   │   ├── dto/             #   요청·응답 DTO
+│   │   │   ├── enums/           #   상태 열거형 (ReactGenerateStatus 등)
+│   │   │   ├── mapper/          #   MyBatis 매퍼 인터페이스
+│   │   │   ├── service/         #   코드 생성 서비스
 │   │   │   └── controller/      #   REST + 화면 컨트롤러
+│   │   ├── reactapproval/       # 승인 워크플로우 (승인·반려·이력 조회)
+│   │   │   ├── controller/
+│   │   │   └── service/
 │   │   ├── reactdeploy/         # 배포 이력 조회·재배포
+│   │   │   ├── controller/
+│   │   │   ├── dto/
+│   │   │   ├── mapper/
+│   │   │   └── service/
 │   │   ├── user/                # 사용자 관리
 │   │   ├── role/                # 역할·메뉴 권한 관리
 │   │   └── menu/                # 메뉴 관리

@@ -98,8 +98,9 @@ public class GitPrDeployStrategy implements ReactDeployStrategy {
      */
     private String resolveImportPrefix(String componentPath, String containerPath) {
         try {
-            java.nio.file.Path comp = java.nio.file.Path.of(componentPath).normalize();
-            java.nio.file.Path cont = java.nio.file.Path.of(containerPath).normalize();
+            // OS 경로 구분자와 무관하게 동작하도록 Path.of() 전에 \ → / 로 정규화
+            java.nio.file.Path comp = java.nio.file.Path.of(componentPath.replace("\\", "/")).normalize();
+            java.nio.file.Path cont = java.nio.file.Path.of(containerPath.replace("\\", "/")).normalize();
             String relative = cont.relativize(comp).toString().replace("\\", "/");
             return relative.startsWith(".") ? relative : "./" + relative;
         } catch (Exception e) {

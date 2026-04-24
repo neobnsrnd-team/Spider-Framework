@@ -27,7 +27,9 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Pattern;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -47,6 +49,9 @@ public class ReactDeployService {
 
     /** LIKE 검색 인젝션 방지용 이스케이프 패턴 */
     private static final Pattern LIKE_ESCAPE = Pattern.compile("[%_\\\\]");
+
+    /** 진행 중인 재배포 codeId 집합 — 동일 codeId의 동시 요청을 방지한다. */
+    private final Set<String> inProgressCodeIds = ConcurrentHashMap.newKeySet();
 
     /**
      * 배포를 실행하고 결과를 {@code FWK_REACT_DEPLOY_HIS}에 기록한다.
@@ -84,15 +89,23 @@ public class ReactDeployService {
             throw new InvalidInputException("APPROVED 상태인 코드만 재배포할 수 있습니다. 현재 상태: " + code.getStatus());
         }
 
-        DeployResult result = deployStrategy.deploy(codeId, code.getReactCode());
-        recordHistory(codeId, result, userId);
+        // 동일 codeId의 중복 요청 차단 — ConcurrentHashMap.newKeySet()으로 원자적으로 점유
+        if (!inProgressCodeIds.add(codeId)) {
+            throw new InvalidInputException("이미 배포가 진행 중입니다. codeId=" + codeId);
+        }
+        try {
+            DeployResult result = deployStrategy.deploy(codeId, code.getReactCode());
+            recordHistory(codeId, result, userId);
 
-        String message = result.isSuccess() ? "배포가 완료되었습니다." : "배포 중 오류가 발생했습니다. (" + result.getFailReason() + ")";
-        return ReactRedeployResponse.builder()
-                .success(result.isSuccess())
-                .message(message)
-                .prUrl(result.getPrUrl())
-                .build();
+            String message = result.isSuccess() ? "배포가 완료되었습니다." : "배포 중 오류가 발생했습니다. (" + result.getFailReason() + ")";
+            return ReactRedeployResponse.builder()
+                    .success(result.isSuccess())
+                    .message(message)
+                    .prUrl(result.getPrUrl())
+                    .build();
+        } finally {
+            inProgressCodeIds.remove(codeId);
+        }
     }
 
     /**
@@ -145,6 +158,12 @@ public class ReactDeployService {
         return Map.of("list", list, "totalCount", totalCount, "page", page, "size", size);
     }
 
+    /**
+     * FAIL_REASON DB 저장 최대 길이.
+     * CLOB는 길이 제한이 없으나, 예외 메시지에 긴 응답 바디가 포함될 경우를 대비해 제한한다.
+     */
+    private static final int FAIL_REASON_MAX_LENGTH = 2000;
+
     /** 배포 결과를 FWK_REACT_DEPLOY_HIS에 INSERT한다. */
     private void recordHistory(String codeId, DeployResult result, String userId) {
         reactDeployMapper.insert(
@@ -152,11 +171,17 @@ public class ReactDeployService {
                 codeId,
                 deployProperties.getMode(),
                 result.getStatus(),
-                result.getFailReason(),
+                truncate(result.getFailReason(), FAIL_REASON_MAX_LENGTH),
                 result.getPrUrl(),
                 LocalDateTime.now().format(FORMATTER),
                 userId
         );
+    }
+
+    /** 문자열을 maxLength 이하로 자른다. null이면 null을 반환한다. */
+    private static String truncate(String value, int maxLength) {
+        if (value == null || value.length() <= maxLength) return value;
+        return value.substring(0, maxLength);
     }
 
     private static String nullIfBlank(String value) {
