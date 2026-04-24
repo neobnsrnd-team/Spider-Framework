@@ -24,6 +24,7 @@
  *   // 필요 시 수동 취소: cleanup();
  */
 import { nextApi } from '@/lib/api-url';
+import { attachResizeHandles, centerInitialBox } from '@/lib/resizable-box';
 
 /** 단건 URL만 콜백으로 전달하기 위해 postMessage payload에서 첫 URL을 추출 */
 function extractFirstAssetUrl(data: unknown): string | null {
@@ -58,26 +59,15 @@ export function openCmsFilesPicker(onSelect: (url: string) => void) {
     // 오버레이 — 반투명 배경. 외곽 클릭 시 닫기.
     // z-index: 편집 패널(EventBanner 등)이 99998/99999, TableEditorModal이 100001을 사용 →
     // 이들 모두 위에 뜨도록 1,000,000 부여. (picker는 편집 패널에서 호출되므로 반드시 최상위)
+    // 박스를 absolute 로 띄우기 위해 flex 중앙배치는 제거 — 중앙 배치는 centerInitialBox 가 담당.
     const overlay = document.createElement('div');
     overlay.id = MODAL_ID;
-    overlay.style.cssText = [
-        'position:fixed',
-        'inset:0',
-        'z-index:1000000',
-        'display:flex',
-        'align-items:center',
-        'justify-content:center',
-        'background:rgba(0,0,0,0.5)',
-    ].join(';');
+    overlay.style.cssText = ['position:fixed', 'inset:0', 'z-index:1000000', 'background:rgba(0,0,0,0.5)'].join(';');
 
-    // 모달 컨테이너 — 1280×900 기본, 화면 좁을 때 95vw/95vh 제한
+    // 모달 컨테이너 — 절대 위치, 크기·좌표는 centerInitialBox 에서 px 단위로 직접 설정
     const box = document.createElement('div');
     box.style.cssText = [
-        'position:relative',
-        'width:1280px',
-        'max-width:95vw',
-        'height:900px',
-        'max-height:95vh',
+        'position:absolute',
         'background:#ffffff',
         'border-radius:8px',
         'overflow:hidden',
@@ -116,13 +106,22 @@ export function openCmsFilesPicker(onSelect: (url: string) => void) {
         window.focus();
     };
 
+    // 드래그 리사이즈 핸들 detach 함수 — cleanup 시 호출하여 핸들 DOM 제거
+    // (overlay 자체를 remove 하면 핸들도 같이 사라지지만, 명시적으로 정리)
+    let detachResize: (() => void) | null = null;
+
     function cleanup() {
         window.removeEventListener('message', handleMessage);
+        detachResize?.();
         overlay.remove();
     }
 
     window.addEventListener('message', handleMessage);
     document.body.appendChild(overlay);
+
+    // DOM에 붙인 뒤 초기 중앙 배치 + 8방향 드래그 리사이즈 활성화
+    centerInitialBox(box, { width: 1280, height: 900 });
+    detachResize = attachResizeHandles(box, { minWidth: 480, minHeight: 360 });
 
     return cleanup;
 }

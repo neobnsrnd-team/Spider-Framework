@@ -36,6 +36,7 @@ import { type BrandTheme } from '@/data/brand-themes';
 import ko from '@/data/ko';
 import useToast from '@/hooks/useToast';
 import { nextApi } from '@/lib/api-url';
+import { attachResizeHandles, centerInitialBox } from '@/lib/resizable-box';
 
 // 기본 블록 타입 — DB SPW_CMS_COMPONENT에서 로드
 export interface BasicBlock {
@@ -342,6 +343,8 @@ export default function EditClient({
     // 별도 브라우저 창(window.open) 대신 에디터 DOM 내부 모달로 표시해
     // 주소창 노출·팝업 차단·별개 창 수명 문제를 제거한다.
     const [imagePickerOpen, setImagePickerOpen] = useState(false);
+    // 모달 박스 ref — 초기 중앙 배치와 8방향 드래그 리사이즈 핸들 부착 대상
+    const imagePickerBoxRef = useRef<HTMLDivElement>(null);
 
     // ── 현재 탭의 뷰 모드 (생성 시 결정, 이후 변경 불가) ─────────────────
     const currentTab = tabs.find((t) => t.id === bank);
@@ -1905,6 +1908,17 @@ export default function EditClient({
     // → 클릭을 캡처 단계에서 가로채서 승인 이미지 브라우저(/files) 모달로 우회
     const imageReplaceTargetRef = useRef<HTMLImageElement | null>(null);
 
+    // 이미지 picker 모달이 열릴 때 초기 크기·중앙 배치 + 8방향 리사이즈 핸들 부착
+    useEffect(() => {
+        if (!imagePickerOpen) return;
+        const box = imagePickerBoxRef.current;
+        if (!box) return;
+
+        centerInitialBox(box, { width: 1280, height: 900 });
+        const detach = attachResizeHandles(box, { minWidth: 480, minHeight: 360 });
+        return detach;
+    }, [imagePickerOpen]);
+
     useEffect(() => {
         const handleFileInputClick = (e: MouseEvent) => {
             const target = e.target as HTMLElement;
@@ -2871,11 +2885,11 @@ export default function EditClient({
             {/* ── 이미지 교체 picker 모달 (iframe으로 /cms/files 렌더) ──
                 - #fileEmbedImage 클릭 인터셉트 시 열림
                 - iframe 내부에서 완료/닫기 시 postMessage로 모달 닫기 요청 수신
-                - 반응형 크기: 기본 1280×900, 화면이 좁으면 95vw/95vh로 제한
+                - 초기 크기: 1280×900 (화면이 좁으면 95vw/95vh로 축소), 이후 8방향 드래그로 리사이즈 가능
                 - z-index: 편집 패널(99998/99999)과 TableEditorModal(100001)보다 위로 → 1,000,000 */}
             {imagePickerOpen && (
                 <div
-                    className="fixed inset-0 z-[1000000] flex items-center justify-center bg-black/50"
+                    className="fixed inset-0 z-[1000000] bg-black/50"
                     onClick={(e) => {
                         // 바깥(오버레이) 클릭 시 닫기 — 내부 iframe 클릭은 제외
                         if (e.target === e.currentTarget) {
@@ -2884,7 +2898,11 @@ export default function EditClient({
                         }
                     }}
                 >
-                    <div className="relative h-[900px] max-h-[95vh] w-[1280px] max-w-[95vw] overflow-hidden rounded-lg bg-white shadow-xl">
+                    <div
+                        ref={imagePickerBoxRef}
+                        // 절대 위치 + 초기 중앙 배치는 useEffect에서 계산
+                        className="absolute overflow-hidden rounded-lg bg-white shadow-xl"
+                    >
                         <iframe src={nextApi('/files')} className="h-full w-full border-0" title="이미지 선택" />
                     </div>
                 </div>
