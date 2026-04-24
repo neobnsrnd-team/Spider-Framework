@@ -1,21 +1,39 @@
 name: CMS Deploy
 
 on:
-  push:
-    branches:
-      - main
-    paths:
-      - 'html-cms/**'
   workflow_dispatch:
 
 env:
   IMAGE_NAME: springware-cms
 
 jobs:
+  # ── Job 0: main → cms-deploy 브랜치 머지 ────────────────────────────────────
+  prepare:
+    name: main → cms-deploy 머지
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: 코드 체크아웃
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: main → cms-deploy 머지 및 푸시
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git checkout cms-deploy 2>/dev/null || git checkout -b cms-deploy
+          git merge origin/main --no-edit
+          git push origin cms-deploy
+
   # ── Job 1: Lint & Build ──────────────────────────────────────────────────────
   ci:
     name: Lint & Build
     runs-on: ubuntu-latest
+    needs: prepare
     defaults:
       run:
         working-directory: html-cms
@@ -91,7 +109,7 @@ jobs:
     name: Deploy to NHN Cloud
     runs-on: ubuntu-latest
     needs: docker
-    if: github.ref == 'refs/heads/main'
+    if: always() && needs.docker.result == 'success'
 
     permissions:
       contents: read
