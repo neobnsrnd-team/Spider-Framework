@@ -7,10 +7,8 @@ package com.example.reactplatform.domain.reactdeploy.mapper;
 import com.example.reactplatform.domain.reactdeploy.dto.ReactDeployHistoryResponse;
 import com.example.reactplatform.domain.reactdeploy.dto.ReactDeployListResponse;
 import java.util.List;
-import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
-@Mapper
 public interface ReactDeployMapper {
 
     /**

@@ -28,7 +28,7 @@ import org.springframework.web.bind.annotation.RestController;
 @Slf4j
 @Validated
 @RestController
-@RequestMapping("/api/react-admin/deployments")
+@RequestMapping("/api/react-deploy")
 @RequiredArgsConstructor
 public class ReactDeployController {
 

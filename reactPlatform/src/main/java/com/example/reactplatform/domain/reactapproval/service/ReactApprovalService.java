@@ -6,7 +6,7 @@
  *     승인 완료 후 {@link com.example.reactplatform.domain.reactgenerate.deploy.ReactDeployStrategy}에
  *     배포를 위임한다 ({@code react.deploy.mode} 설정으로 local / git-pr 중 선택).
  */
-package com.example.reactplatform.domain.reactgenerate.service;
+package com.example.reactplatform.domain.reactapproval.service;
 
 import com.example.reactplatform.domain.reactdeploy.service.ReactDeployService;
 import com.example.reactplatform.domain.reactgenerate.dto.ReactApprovalResponse;
@@ -155,6 +155,7 @@ public class ReactApprovalService {
      * @param page           페이지 번호 (1-based)
      * @param size           페이지당 건수
      * @param status         상태 필터 (null/빈 문자열이면 전체)
+     * @param codeId         Code ID 부분 일치 검색 (null/빈 문자열이면 미적용)
      * @param approvalUserId 처리자 ID 부분 일치 검색
      * @param createUserId   요청자 ID 부분 일치 검색
      * @param fromDate       처리일시 시작 (yyyyMMdd)
@@ -179,8 +180,8 @@ public class ReactApprovalService {
         // 빈 문자열은 null로 통일하여 mapper의 전체 조회 분기를 타도록 한다
         // status: APPROVED/REJECTED 외의 값이 들어오면 거부 (이력 API 범위 제한)
         String s  = validateAndNormalizeStatus(nullIfBlank(status));
-        // LIKE 검색 파라미터: %, _, \ 를 이스케이프하여 의도치 않은 와일드카드 동작 방지
         String ci = escapeLike(nullIfBlank(codeId));
+        // LIKE 검색 파라미터: %, _, \ 를 이스케이프하여 의도치 않은 와일드카드 동작 방지
         String au = escapeLike(nullIfBlank(approvalUserId));
         String cu = escapeLike(nullIfBlank(createUserId));
         String fd = nullIfBlank(fromDate);

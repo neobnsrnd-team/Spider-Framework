@@ -4,10 +4,8 @@ import com.example.reactplatform.domain.role.dto.RoleCreateRequest;
 import com.example.reactplatform.domain.role.dto.RoleResponse;
 import com.example.reactplatform.domain.role.dto.RoleUpdateRequest;
 import java.util.List;
-import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
-@Mapper
 public interface RoleMapper {
 
     RoleResponse selectResponseById(String roleId);

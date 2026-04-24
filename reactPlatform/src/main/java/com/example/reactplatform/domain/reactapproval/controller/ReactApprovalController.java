@@ -4,11 +4,11 @@
  *     승인 대기 목록 조회, 승인, 반려 엔드포인트를 제공한다.
  *     읽기는 REACT_APPROVAL:R, 쓰기(승인·반려)는 REACT_APPROVAL:W 권한이 필요하다.
  */
-package com.example.reactplatform.domain.reactgenerate.controller;
+package com.example.reactplatform.domain.reactapproval.controller;
 
+import com.example.reactplatform.domain.reactapproval.service.ReactApprovalService;
 import com.example.reactplatform.domain.reactgenerate.dto.ReactGenerateApprovalResponse;
 import com.example.reactplatform.domain.reactgenerate.dto.ReactRejectRequest;
-import com.example.reactplatform.domain.reactgenerate.service.ReactApprovalService;
 import com.example.reactplatform.global.dto.ApiResponse;
 import com.example.reactplatform.global.util.SecurityUtil;
 import jakarta.validation.Valid;
