@@ -1,7 +1,6 @@
 // src/app/api/assets/[assetId]/route.ts
 // 에셋 단건 삭제 API
 
-import { timingSafeEqual } from 'crypto';
 import { unlink } from 'fs/promises';
 
 import { NextRequest } from 'next/server';
@@ -9,23 +8,7 @@ import { NextRequest } from 'next/server';
 import { deleteAsset, getAssetById, hardDeleteAsset } from '@/db/repository/asset.repository';
 import { errorResponse, getErrorMessage, successResponse } from '@/lib/api-response';
 import { canWriteCms, getCurrentUser } from '@/lib/current-user';
-import { DEPLOY_SECRET } from '@/lib/env';
-
-/**
- * Admin 백엔드 등 서버 간 호출 시 x-deploy-token 헤더로 인증한다.
- * 타이밍 공격 방지를 위해 timingSafeEqual로 비교한다.
- */
-function isValidToken(token: string | null): boolean {
-    if (!DEPLOY_SECRET || !token) return false;
-    try {
-        const expected = Buffer.from(DEPLOY_SECRET, 'utf8');
-        const received = Buffer.from(token, 'utf8');
-        if (expected.length !== received.length) return false;
-        return timingSafeEqual(expected, received);
-    } catch {
-        return false;
-    }
-}
+import { isValidDeployToken } from '@/lib/server-auth';
 
 /**
  * DELETE /api/assets/:assetId — 에셋 삭제
@@ -46,7 +29,7 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ a
         let userId: string;
         let userName: string;
 
-        if (isValidToken(req.headers.get('x-deploy-token'))) {
+        if (isValidDeployToken(req.headers.get('x-deploy-token'))) {
             // 서버 간 호출(Admin 백엔드): 세션 없이 시스템 계정으로 처리
             userId = 'SYSTEM';
             userName = 'SYSTEM';
