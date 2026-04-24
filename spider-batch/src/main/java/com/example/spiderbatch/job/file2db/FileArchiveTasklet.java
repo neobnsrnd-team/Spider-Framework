@@ -11,7 +11,6 @@ import java.time.format.DateTimeFormatter;
 import java.util.StringJoiner;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.batch.core.BatchStatus;
 import org.springframework.batch.core.StepContribution;
 import org.springframework.batch.core.scope.context.ChunkContext;
 import org.springframework.batch.core.step.tasklet.Tasklet;
@@ -41,6 +40,13 @@ public class FileArchiveTasklet implements Tasklet {
     /** 오류 파일 보관 루트 디렉터리 */
     private final String errorDir;
 
+    /**
+     * Job 흐름(flow)에서 라우팅된 경로를 기반으로 성공 여부를 주입받는다.
+     * jobExecution.getStatus()는 Step 실행 중 STARTED로 고정되어 판단 불가하므로,
+     * 성공/오류 Step이 분기된 시점에서 이미 결정된 값을 생성자로 전달한다.
+     */
+    private final boolean isSuccess;
+
     /** .reason 파일에 기록할 오류 사유 최대 길이 */
     private static final int REASON_MAX_LENGTH = 200;
 
@@ -49,14 +55,6 @@ public class FileArchiveTasklet implements Tasklet {
 
     @Override
     public RepeatStatus execute(StepContribution contribution, ChunkContext chunkContext) throws IOException {
-        // Job 전체 상태로 성공 여부를 판단 (이 Step 자체의 상태가 아닌 Job 상태 기준)
-        BatchStatus jobStatus = chunkContext.getStepContext()
-                .getStepExecution()
-                .getJobExecution()
-                .getStatus();
-
-        boolean isSuccess = BatchStatus.COMPLETED == jobStatus;
-
         String dateDir = LocalDate.now().format(DIR_DATE_FORMAT);
         Path sourceFile = Paths.get(inputFilePath);
 

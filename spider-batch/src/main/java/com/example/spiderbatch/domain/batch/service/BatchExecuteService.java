@@ -109,7 +109,6 @@ public class BatchExecuteService {
             log.error("배치 실행 실패 - {}: batchAppId={}", errorReason, request.getBatchAppId());
             BatchExecuteResponse response =
                     updateAsError(request.getBatchAppId(), request.getBatchDate(), nextSeq, userId, errorReason);
-            long durationMs = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startNanos);
             // Job 조회 실패도 비정상 종료로 기록 — 처리 건수 없음
             recordMetrics(request.getBatchAppId(), response.getResRtCode(), startNanos, 0L, 0L);
             auditLogger.logFailure(request.getBatchAppId(), nextSeq, errorReason);
@@ -119,7 +118,6 @@ public class BatchExecuteService {
             log.error("배치 실행 중 예외 발생: batchAppId={}", request.getBatchAppId(), e);
             BatchExecuteResponse response =
                     updateAsError(request.getBatchAppId(), request.getBatchDate(), nextSeq, userId, errorReason);
-            long durationMs = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startNanos);
             // 예외 발생 시도 비정상 종료로 기록 — 처리 건수 없음
             recordMetrics(request.getBatchAppId(), response.getResRtCode(), startNanos, 0L, 0L);
             auditLogger.logFailure(request.getBatchAppId(), nextSeq, errorReason);

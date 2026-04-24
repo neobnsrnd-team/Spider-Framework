@@ -6,6 +6,8 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
 import java.util.Map;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -77,7 +79,10 @@ public class ApiKeyAuthFilter extends OncePerRequestFilter {
 
         String requestApiKey = request.getHeader(API_KEY_HEADER);
 
-        if (!expectedApiKey.equals(requestApiKey)) {
+        // 타이밍 공격(Timing Attack) 방지: equals() 대신 상수 시간 비교 사용
+        if (requestApiKey == null || !MessageDigest.isEqual(
+                expectedApiKey.getBytes(StandardCharsets.UTF_8),
+                requestApiKey.getBytes(StandardCharsets.UTF_8))) {
             log.warn("[ApiKeyAuthFilter] 유효하지 않은 API Key 요청: uri={}, remoteAddr={}",
                     request.getRequestURI(), request.getRemoteAddr());
             sendUnauthorized(response);

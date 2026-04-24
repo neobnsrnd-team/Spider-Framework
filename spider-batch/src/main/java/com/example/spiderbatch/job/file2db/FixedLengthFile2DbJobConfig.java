@@ -133,10 +133,10 @@ public class FixedLengthFile2DbJobConfig {
     public TaskletStep fileArchiveSuccessStep(
             JobRepository jobRepository,
             PlatformTransactionManager transactionManager,
-            FileArchiveTasklet fileArchiveTasklet) {
+            FileArchiveTasklet fileArchiveSuccessTasklet) {
 
         return new StepBuilder("fileArchiveSuccessStep", jobRepository)
-                .tasklet(fileArchiveTasklet, transactionManager)
+                .tasklet(fileArchiveSuccessTasklet, transactionManager)
                 .build();
     }
 
@@ -145,10 +145,10 @@ public class FixedLengthFile2DbJobConfig {
     public TaskletStep fileArchiveErrorStep(
             JobRepository jobRepository,
             PlatformTransactionManager transactionManager,
-            FileArchiveTasklet fileArchiveTasklet) {
+            FileArchiveTasklet fileArchiveErrorTasklet) {
 
         return new StepBuilder("fileArchiveErrorStep", jobRepository)
-                .tasklet(fileArchiveTasklet, transactionManager)
+                .tasklet(fileArchiveErrorTasklet, transactionManager)
                 .build();
     }
 
@@ -236,6 +236,13 @@ public class FixedLengthFile2DbJobConfig {
                 log.warn("[FixedLengthFile2Db] 빈 레코드 skip — accountNo 공백");
                 return null;
             }
+            // skippedLinesCallback은 linesToSkip 대상(헤더)에만 동작하므로,
+            // 파일 끝 TLR 트레일러는 Processor에서 직접 필터링한다
+            if (record.getAccountNo().trim().startsWith("TLR")) {
+                log.info("[FixedLengthFile2Db] 트레일러 레코드 skip — accountNo: {}",
+                        record.getAccountNo().trim());
+                return null;
+            }
 
             // amount 필드: 선두 0패딩 포함 공백 trim (DB에는 순수 숫자 문자열로 저장)
             if (record.getAmount() != null) {
@@ -287,14 +294,27 @@ public class FixedLengthFile2DbJobConfig {
     // -------------------------------------------------------------------------
 
     /**
-     * 파일 아카이브 Tasklet Bean.
-     * 성공/오류 두 Step에서 공용으로 사용 (Step 실행 시점에 Job 상태로 분기).
+     * 성공 아카이브 Tasklet Bean.
+     * jobExecution.getStatus()는 Step 실행 중 STARTED이므로 판단 불가 —
+     * 성공 여부를 생성자에서 고정값(true)으로 주입한다.
      */
     @Bean
     @org.springframework.batch.core.configuration.annotation.StepScope
-    public FileArchiveTasklet fileArchiveTasklet(
+    public FileArchiveTasklet fileArchiveSuccessTasklet(
             @Value("#{jobParameters['inputFilePath']}") String inputFilePath) {
-        return new FileArchiveTasklet(inputFilePath, archiveDir, errorDir);
+        return new FileArchiveTasklet(inputFilePath, archiveDir, errorDir, true);
+    }
+
+    /**
+     * 오류 아카이브 Tasklet Bean.
+     * jobExecution.getStatus()는 Step 실행 중 STARTED이므로 판단 불가 —
+     * 성공 여부를 생성자에서 고정값(false)으로 주입한다.
+     */
+    @Bean
+    @org.springframework.batch.core.configuration.annotation.StepScope
+    public FileArchiveTasklet fileArchiveErrorTasklet(
+            @Value("#{jobParameters['inputFilePath']}") String inputFilePath) {
+        return new FileArchiveTasklet(inputFilePath, archiveDir, errorDir, false);
     }
 
     // -------------------------------------------------------------------------
@@ -317,8 +337,9 @@ public class FixedLengthFile2DbJobConfig {
             InputStream rawStream = resource.getInputStream();
 
             // BOM 여부 확인을 위해 첫 3바이트 선행 읽기
+            // read()는 3바이트 미만을 반환할 수 있으므로 readNBytes()로 정확히 읽는다 (Java 9+)
             byte[] bom = new byte[3];
-            int bytesRead = rawStream.read(bom, 0, 3);
+            int bytesRead = rawStream.readNBytes(bom, 0, 3);
 
             InputStream finalStream;
             if (bytesRead == 3
