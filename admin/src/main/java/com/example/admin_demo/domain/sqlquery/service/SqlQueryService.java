@@ -26,6 +26,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DuplicateKeyException;
@@ -226,12 +227,16 @@ public class SqlQueryService {
         Object[] args;
 
         if (hasParams) {
-            // 실제 파라미터 바인딩: #{varname}과 구버전 iBatis #VARNAME# 모두 JDBC ?로 치환
-            execSql = cleanedSql.replaceAll("#\\{[^}]+\\}", "?").replaceAll("#[A-Za-z0-9_.]+#", "?");
-            args = params.toArray(new Object[0]);
+            // null/빈 파라미터: 해당 조건을 WHERE 절에서 제외 (1=1 치환)
+            // 비 null 파라미터: #{} / ? → JDBC ?로 치환 후 바인딩
+            List<Object> bindArgs = new ArrayList<>();
+            execSql = applyNullableParams(cleanedSql, params, bindArgs);
+            // 구버전 #VARNAME# 방식은 파라미터 UI에서 미지원 — NULL로 치환
+            execSql = execSql.replaceAll("#[A-Za-z0-9_.]+#", "NULL");
+            args = bindArgs.isEmpty() ? null : bindArgs.toArray();
         } else {
             // 파라미터 미제공 — 바인딩 변수를 NULL로 치환 (기존 동작 유지)
-            execSql = cleanedSql.replaceAll("#\\{[^}]+\\}", "NULL").replaceAll("#[A-Za-z0-9_.]+#", "NULL");
+            execSql = cleanedSql.replaceAll("#\\{[^}]*\\}", "NULL").replaceAll("#[A-Za-z0-9_.]+#", "NULL");
             args = null;
         }
 
@@ -287,6 +292,94 @@ public class SqlQueryService {
                     .errorMessage(e.getMessage())
                     .build();
         }
+    }
+
+    /**
+     * null/빈 파라미터에 해당하는 조건을 1=1로 치환하고, 비 null 파라미터는 ?로 치환한다.
+     * MyBatis #{} 방식과 JDBC ? 방식 모두 지원한다.
+     *
+     * <p>null/빈 파라미터 → col = #{} 전체를 1=1로 교체하여 WHERE 절에서 해당 필터를 제외한다.
+     * 따라서 해당 조건이 없는 것처럼 전체 데이터가 조회된다.
+     */
+    private String applyNullableParams(String sql, List<String> params, List<Object> bindArgs) {
+        if (sql.contains("#{")) {
+            return applyMybatisParams(sql, params, bindArgs);
+        }
+        return applyJdbcParams(sql, params, bindArgs);
+    }
+
+    /** MyBatis #{varName} 방식 파라미터 적용. */
+    private String applyMybatisParams(String sql, List<String> params, List<Object> bindArgs) {
+        Matcher matcher = Pattern.compile("#\\{[^}]*\\}").matcher(sql);
+        StringBuilder result = new StringBuilder();
+        int lastEnd = 0;
+        int paramIdx = 0;
+
+        while (matcher.find()) {
+            String paramVal = (paramIdx < params.size()) ? params.get(paramIdx) : null;
+            boolean isNull = (paramVal == null || paramVal.trim().isEmpty());
+
+            if (isNull) {
+                // #{} 직전 텍스트에서 비교 연산자+컬럼명을 제거하고 1=1 삽입
+                result.append(removeConditionLhs(sql.substring(lastEnd, matcher.start())));
+                result.append("1=1");
+            } else {
+                result.append(sql, lastEnd, matcher.start());
+                result.append("?");
+                bindArgs.add(paramVal);
+            }
+
+            lastEnd = matcher.end();
+            paramIdx++;
+        }
+
+        result.append(sql, lastEnd, sql.length());
+        return result.toString();
+    }
+
+    /** JDBC ? 방식 파라미터 적용. */
+    private String applyJdbcParams(String sql, List<String> params, List<Object> bindArgs) {
+        Matcher matcher = Pattern.compile("\\?").matcher(sql);
+        StringBuilder result = new StringBuilder();
+        int lastEnd = 0;
+        int paramIdx = 0;
+
+        while (matcher.find()) {
+            String paramVal = (paramIdx < params.size()) ? params.get(paramIdx) : null;
+            boolean isNull = (paramVal == null || paramVal.trim().isEmpty());
+
+            if (isNull) {
+                result.append(removeConditionLhs(sql.substring(lastEnd, matcher.start())));
+                result.append("1=1");
+            } else {
+                result.append(sql, lastEnd, matcher.start());
+                result.append("?");
+                bindArgs.add(paramVal);
+            }
+
+            lastEnd = matcher.end();
+            paramIdx++;
+        }
+
+        result.append(sql, lastEnd, sql.length());
+        return result.toString();
+    }
+
+    /**
+     * 텍스트 끝부분에서 비교 연산자와 그 앞의 컬럼명을 제거한다.
+     *
+     * <p>예: "WHERE col = " → "WHERE "  /  " AND t.col LIKE " → " AND "
+     * null 파라미터 조건을 1=1로 대체하기 전에 호출해 LHS를 제거한다.
+     */
+    private static final Pattern CONDITION_LHS =
+            Pattern.compile("(?i)[\\w.`\"\\[\\]]+\\s*(?:NOT\\s+LIKE|NOT\\s+IN|LIKE|IN|<>|!=|<=|>=|=|<|>)\\s*$");
+
+    private String removeConditionLhs(String text) {
+        Matcher m = CONDITION_LHS.matcher(text);
+        if (m.find()) {
+            return text.substring(0, m.start());
+        }
+        return text;
     }
 
     /** 사용여부(USE_YN) Y↔N 반전 — 목록 인라인 토글에서 호출 */

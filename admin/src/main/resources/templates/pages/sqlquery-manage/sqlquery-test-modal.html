@@ -159,9 +159,10 @@
                     $section.removeClass('d-none');
 
                     for (let i = 0; i < detected.count; i++) {
-                        // MyBatis면 변수명, JDBC면 순번을 레이블로 표시
-                        const rawLabel = detected.type === 'mybatis'
-                            ? '#{' + detected.names[i] + '}'
+                        // MyBatis면 변수명, JDBC 또는 빈 #{} 이면 순번을 레이블로 표시
+                        const name = detected.names[i];
+                        const rawLabel = (detected.type === 'mybatis' && name)
+                            ? '#{' + name + '}'
                             : '파라미터 ' + (i + 1);
                         const safeLabel = (typeof HtmlUtils !== 'undefined')
                             ? HtmlUtils.escape(rawLabel)
