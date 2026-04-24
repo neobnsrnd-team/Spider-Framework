@@ -41,6 +41,8 @@ export async function GET(req: NextRequest) {
         const category = searchParams.get('category') || undefined;
         const search = searchParams.get('search') || undefined;
         const assetState = parseAssetState(searchParams.get('assetState'));
+        // 에디터 이미지 picker(/cms/files)는 배포 완료된 자산만 노출 — totalCount 정합성 때문에 서버 필터로 처리
+        const deployedOnly = searchParams.get('deployedOnly') === 'true';
 
         const { list, totalCount } = await getAssetList({
             businessCategory: category,
@@ -48,6 +50,7 @@ export async function GET(req: NextRequest) {
             search,
             page,
             pageSize,
+            deployedOnly,
         });
 
         const assets = list.map((a) => ({

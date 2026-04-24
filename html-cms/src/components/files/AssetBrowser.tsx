@@ -32,16 +32,6 @@ function extractFolderName(path: string | null): string {
     return parts[parts.length - 2];
 }
 
-/**
- * 승인 완료 + 배포까지 끝난 자산인지 판별.
- * deploy 흐름이 파일을 `deployed/` 하위로 이동시키므로 경로에 `/deployed/`가 포함되어야 한다.
- * 승인만 되고 아직 배포 전(= 파일이 `uploads/`에 남아 있는) 자산은 /cms/files 선택 모달에 노출하지 않는다.
- */
-function isDeployedAsset(asset: { path: string | null }): boolean {
-    if (!asset.path) return false;
-    return asset.path.replace(/\\/g, '/').includes('/deployed/');
-}
-
 interface CodeItem {
     code: string;
     codeName: string;
@@ -88,24 +78,24 @@ export default function AssetBrowser({ assetOrigin = '' }: AssetBrowserProps) {
     // 향후 여러 폴더로 나뉠 때 API 단에서 경로 필터를 추가하면 이 상태를 활용한다.
     const [folder, setFolder] = useState('');
 
-    // 승인+배포까지 완료된 자산만 대상 (경로에 /deployed/ 포함) — uploads/ 는 제외
-    const deployedAssets = useMemo(() => assets.filter(isDeployedAsset), [assets]);
+    // 승인+배포 필터는 서버(`deployedOnly=true`)가 담당하므로 클라이언트에선 추가 필터 없이 그대로 사용.
+    // (이전에는 클라가 isDeployedAsset 으로 재필터 → 서버 totalCount 와 실제 표시 건수가 어긋나는 버그가 있었음)
 
-    // 현재 페이지 배포 자산에서 추출한 distinct 폴더명 — 사이드바 리스트 소스
+    // 현재 페이지 자산에서 추출한 distinct 폴더명 — 사이드바 리스트 소스
     const folders = useMemo(() => {
         const set = new Set<string>();
-        deployedAssets.forEach((asset) => {
+        assets.forEach((asset) => {
             const name = extractFolderName(asset.path);
             if (name) set.add(name);
         });
         return Array.from(set).sort();
-    }, [deployedAssets]);
+    }, [assets]);
 
     // 선택된 폴더가 있으면 현재 페이지 내에서 클라이언트 필터 — 다중 폴더 대비 placeholder 동작
     const visibleAssets = useMemo(() => {
-        if (!folder) return deployedAssets;
-        return deployedAssets.filter((asset) => extractFolderName(asset.path) === folder);
-    }, [deployedAssets, folder]);
+        if (!folder) return assets;
+        return assets.filter((asset) => extractFolderName(asset.path) === folder);
+    }, [assets, folder]);
 
     const categoryMap = useMemo(
         () =>
@@ -185,6 +175,8 @@ export default function AssetBrowser({ assetOrigin = '' }: AssetBrowserProps) {
                 page: String(nextPage),
                 pageSize: String(pageSize),
                 assetState: 'APPROVED',
+                // 배포 완료(ASSET_URL LIKE '/deployed/%') 자산만 반환 — totalCount 도 동일 조건 기준
+                deployedOnly: 'true',
             });
 
             if (category) {
@@ -288,14 +280,16 @@ export default function AssetBrowser({ assetOrigin = '' }: AssetBrowserProps) {
     }
 
     return (
-        <div className="flex min-h-screen bg-slate-50">
+        // 루트는 iframe/뷰포트 정확히 맞추기 — 상단 검색 바와 하단 페이지네이션은 고정,
+        // 이미지 그리드만 내부 스크롤되도록 flex column 구조로 고정.
+        <div className="flex h-screen overflow-hidden bg-slate-50">
             {/* ── 좌측 사이드바 — 이미지가 있는 폴더 리스트 ───────────── */}
             <aside
                 className={`shrink-0 overflow-hidden border-r border-slate-200 bg-white transition-[width] duration-300 ease-in-out ${
                     sidebarOpen ? 'w-56' : 'w-0'
                 }`}
             >
-                <div className="w-56 p-4">
+                <div className="h-full w-56 overflow-y-auto p-4">
                     <div className="mb-3 text-xs font-semibold uppercase tracking-wider text-slate-500">폴더</div>
                     <ul className="space-y-1">
                         <li>
@@ -343,9 +337,9 @@ export default function AssetBrowser({ assetOrigin = '' }: AssetBrowserProps) {
                 </div>
             </aside>
 
-            <div className="min-w-0 flex-1 px-4 py-6 md:px-8">
+            <div className="flex min-w-0 flex-1 flex-col px-4 py-6 md:px-8">
                 {/* 상단 우측 — 사이드바 토글 햄버거 + 닫기 X */}
-                <div className="mb-3 flex items-center justify-end gap-1">
+                <div className="mb-3 flex shrink-0 items-center justify-end gap-1">
                     <button
                         type="button"
                         onClick={() => setSidebarOpen((prev) => !prev)}
@@ -381,7 +375,7 @@ export default function AssetBrowser({ assetOrigin = '' }: AssetBrowserProps) {
                 </div>
 
                 {/* 검색 조건 카드 — cms-admin/asset-approvals 스타일 */}
-                <div className="mb-3 rounded-md border border-slate-200 bg-white p-2">
+                <div className="mb-3 shrink-0 rounded-md border border-slate-200 bg-white p-2">
                     <div className="flex flex-wrap items-center gap-2">
                         <label className="m-0 text-xs font-medium text-slate-700">카테고리</label>
                         <select
@@ -454,27 +448,28 @@ export default function AssetBrowser({ assetOrigin = '' }: AssetBrowserProps) {
                 </div>
 
                 {/* 건수 */}
-                <div className="mb-3 flex justify-end text-xs text-slate-500">
+                <div className="mb-3 flex shrink-0 justify-end text-xs text-slate-500">
                     <p>
                         총 {totalCount}건, {page} / {totalPages} 페이지
                     </p>
                 </div>
 
-                {loading ? (
-                    <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-12 text-center text-slate-500">
-                        이미지 목록을 불러오는 중입니다.
-                    </div>
-                ) : error ? (
-                    <div className="rounded-2xl border border-red-200 bg-red-50 p-12 text-center text-red-600">
-                        {error}
-                    </div>
-                ) : visibleAssets.length === 0 ? (
-                    <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-12 text-center text-slate-500">
-                        조건에 맞는 이미지가 없습니다.
-                    </div>
-                ) : (
-                    <>
-                        {/* 고정폭 카드 — auto-fill로 가용 폭에 맞춰 열 개수만 바뀌고 개별 카드 크기는 일정 */}
+                {/* 스크롤 영역 — 이미지 그리드(또는 로딩/에러/빈 상태)만 내부 스크롤 */}
+                <div className="flex-1 overflow-y-auto">
+                    {loading ? (
+                        <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-12 text-center text-slate-500">
+                            이미지 목록을 불러오는 중입니다.
+                        </div>
+                    ) : error ? (
+                        <div className="rounded-2xl border border-red-200 bg-red-50 p-12 text-center text-red-600">
+                            {error}
+                        </div>
+                    ) : visibleAssets.length === 0 ? (
+                        <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-12 text-center text-slate-500">
+                            조건에 맞는 이미지가 없습니다.
+                        </div>
+                    ) : (
+                        // 고정폭 카드 — auto-fill로 가용 폭에 맞춰 열 개수만 바뀌고 개별 카드 크기는 일정
                         <div className="grid grid-cols-[repeat(auto-fill,180px)] justify-start gap-4">
                             {visibleAssets.map((asset) => {
                                 const isSelected = asset.url ? selectedUrl === asset.url : false;
@@ -528,53 +523,55 @@ export default function AssetBrowser({ assetOrigin = '' }: AssetBrowserProps) {
                                 );
                             })}
                         </div>
+                    )}
+                </div>
 
-                        {totalPages > 1 ? (
-                            <div className="mt-6 flex justify-center gap-1">
-                                <button
-                                    type="button"
-                                    onClick={() => setPage(Math.max(1, page - 1))}
-                                    disabled={page === 1}
-                                    className={`px-3.5 py-1.5 rounded-md border border-[#e5e7eb] text-[13px] ${
-                                        page === 1
-                                            ? 'bg-[#f9fafb] text-[#d1d5db] cursor-not-allowed'
-                                            : 'bg-white text-[#374151] cursor-pointer'
-                                    }`}
-                                >
-                                    이전
-                                </button>
+                {/* 페이지네이션 — 1페이지 상태에서도 노출 (이전/다음 버튼 자동 disabled)
+                    단, 로딩/에러/빈 목록 상태에서는 숨김 — 시각적 혼선 방지 */}
+                {!loading && !error && visibleAssets.length > 0 ? (
+                    <div className="mt-6 flex shrink-0 justify-center gap-1">
+                        <button
+                            type="button"
+                            onClick={() => setPage(Math.max(1, page - 1))}
+                            disabled={page === 1}
+                            className={`px-3.5 py-1.5 rounded-md border border-[#e5e7eb] text-[13px] ${
+                                page === 1
+                                    ? 'bg-[#f9fafb] text-[#d1d5db] cursor-not-allowed'
+                                    : 'bg-white text-[#374151] cursor-pointer'
+                            }`}
+                        >
+                            이전
+                        </button>
 
-                                {visiblePages.map((visiblePage) => (
-                                    <button
-                                        key={visiblePage}
-                                        type="button"
-                                        onClick={() => setPage(visiblePage)}
-                                        className={`px-3 py-1.5 rounded-md border text-[13px] cursor-pointer ${
-                                            page === visiblePage
-                                                ? 'border-[#0046A4] bg-[#0046A4] text-white font-semibold'
-                                                : 'border-[#e5e7eb] bg-white text-[#374151] font-normal'
-                                        }`}
-                                    >
-                                        {visiblePage}
-                                    </button>
-                                ))}
+                        {visiblePages.map((visiblePage) => (
+                            <button
+                                key={visiblePage}
+                                type="button"
+                                onClick={() => setPage(visiblePage)}
+                                className={`px-3 py-1.5 rounded-md border text-[13px] cursor-pointer ${
+                                    page === visiblePage
+                                        ? 'border-[#0046A4] bg-[#0046A4] text-white font-semibold'
+                                        : 'border-[#e5e7eb] bg-white text-[#374151] font-normal'
+                                }`}
+                            >
+                                {visiblePage}
+                            </button>
+                        ))}
 
-                                <button
-                                    type="button"
-                                    onClick={() => setPage(Math.min(totalPages, page + 1))}
-                                    disabled={page === totalPages}
-                                    className={`px-3.5 py-1.5 rounded-md border border-[#e5e7eb] text-[13px] ${
-                                        page === totalPages
-                                            ? 'bg-[#f9fafb] text-[#d1d5db] cursor-not-allowed'
-                                            : 'bg-white text-[#374151] cursor-pointer'
-                                    }`}
-                                >
-                                    다음
-                                </button>
-                            </div>
-                        ) : null}
-                    </>
-                )}
+                        <button
+                            type="button"
+                            onClick={() => setPage(Math.min(totalPages, page + 1))}
+                            disabled={page === totalPages}
+                            className={`px-3.5 py-1.5 rounded-md border border-[#e5e7eb] text-[13px] ${
+                                page === totalPages
+                                    ? 'bg-[#f9fafb] text-[#d1d5db] cursor-not-allowed'
+                                    : 'bg-white text-[#374151] cursor-pointer'
+                            }`}
+                        >
+                            다음
+                        </button>
+                    </div>
+                ) : null}
             </div>
         </div>
     );

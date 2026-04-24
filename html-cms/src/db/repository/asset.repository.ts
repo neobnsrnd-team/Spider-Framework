@@ -38,18 +38,27 @@ export async function getAssetById(assetId: string): Promise<CmsAsset | null> {
     }
 }
 
-/** 에셋 목록 조회 (페이지네이션) */
+/**
+ * 에셋 목록 조회 (페이지네이션)
+ *
+ * deployedOnly=true 를 주면 ASSET_URL LIKE '/deployed/%' 로 추가 필터하여
+ * "배포까지 완료된" 자산만 반환한다. 에디터 이미지 picker(/cms/files)에서 사용.
+ */
 export async function getAssetList(options?: {
     businessCategory?: string;
     assetState?: AssetState;
     search?: string;
     page?: number;
     pageSize?: number;
+    deployedOnly?: boolean;
 }): Promise<{ list: CmsAsset[]; totalCount: number }> {
     const page = options?.page ?? 1;
     const pageSize = options?.pageSize ?? 20;
     const startRow = (page - 1) * pageSize;
     const endRow = page * pageSize;
+    // Oracle에는 BOOLEAN 바인드 타입이 없으므로 'Y' 또는 null로 치환.
+    // SQL 쪽은 `:deployedOnly IS NULL OR ...` 로 분기하므로 값 자체는 무엇이든 상관없음.
+    const deployedOnly = options?.deployedOnly ? 'Y' : null;
 
     const conn = await getConnection();
     try {
@@ -60,6 +69,7 @@ export async function getAssetList(options?: {
                     businessCategory: options?.businessCategory ?? null,
                     assetState: options?.assetState ?? null,
                     search: options?.search?.trim() || null,
+                    deployedOnly,
                     startRow,
                     endRow,
                 },
@@ -71,6 +81,7 @@ export async function getAssetList(options?: {
                     businessCategory: options?.businessCategory ?? null,
                     assetState: options?.assetState ?? null,
                     search: options?.search?.trim() || null,
+                    deployedOnly,
                 },
                 OBJ,
             ),
