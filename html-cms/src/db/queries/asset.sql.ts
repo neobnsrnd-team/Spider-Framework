@@ -17,6 +17,10 @@ export const ASSET_SELECT_BY_ID = `
 /**
  * 에셋 목록 조회 (카테고리 필터, BLOB 제외, 페이지네이션 — Oracle 11g 호환)
  * USE_YN='Y' 고정: cms-admin 에서 "숨김" 처리된 자산(USE_YN='N')은 /cms/files 에 노출되지 않는다.
+ *
+ * :deployedOnly 가 NULL 이 아니면 ASSET_URL LIKE '/deployed/%' 조건을 추가로 적용한다.
+ * 에디터 이미지 picker는 실제 배포까지 완료된 자산만 노출해야 하므로 이 값으로 제어한다.
+ * (승인만 되고 파일이 아직 uploads/·/static/ 에 남아있는 자산은 운영에서 서빙되지 않아 깨짐)
  */
 export const ASSET_SELECT_LIST = `
   SELECT * FROM (
@@ -31,6 +35,7 @@ export const ASSET_SELECT_LIST = `
         AND (:businessCategory IS NULL OR BUSINESS_CATEGORY = :businessCategory)
         AND (:assetState IS NULL OR ASSET_STATE = :assetState)
         AND (:search IS NULL OR LOWER(ASSET_NAME) LIKE '%' || LOWER(:search) || '%')
+        AND (:deployedOnly IS NULL OR ASSET_URL LIKE '/deployed/%')
       ORDER BY CREATE_DATE DESC
     ) A
     WHERE ROWNUM <= :endRow
@@ -38,7 +43,7 @@ export const ASSET_SELECT_LIST = `
   WHERE RN > :startRow
 `;
 
-/** 에셋 전체 건수 (페이지네이션용) — SELECT_LIST 와 동일한 USE_YN='Y' 필터 유지 */
+/** 에셋 전체 건수 (페이지네이션용) — SELECT_LIST 와 동일 필터 조건 유지 (totalCount 정합성) */
 export const ASSET_COUNT = `
   SELECT COUNT(*) AS TOTAL_COUNT
   FROM SPW_CMS_ASSET
@@ -46,6 +51,7 @@ export const ASSET_COUNT = `
     AND (:businessCategory IS NULL OR BUSINESS_CATEGORY = :businessCategory)
     AND (:assetState IS NULL OR ASSET_STATE = :assetState)
     AND (:search IS NULL OR LOWER(ASSET_NAME) LIKE '%' || LOWER(:search) || '%')
+    AND (:deployedOnly IS NULL OR ASSET_URL LIKE '/deployed/%')
 `;
 
 /** 에셋 등록 */
