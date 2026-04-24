@@ -2874,11 +2874,7 @@ export default function EditClient({
                     }}
                 >
                     <div className="relative h-[900px] max-h-[95vh] w-[1280px] max-w-[95vw] overflow-hidden rounded-lg bg-white shadow-xl">
-                        <iframe
-                            src={nextApi('/files')}
-                            className="h-full w-full border-0"
-                            title="이미지 선택"
-                        />
+                        <iframe src={nextApi('/files')} className="h-full w-full border-0" title="이미지 선택" />
                     </div>
                 </div>
             )}
