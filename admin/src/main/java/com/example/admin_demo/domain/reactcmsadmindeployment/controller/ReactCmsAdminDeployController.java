@@ -66,8 +66,7 @@ public class ReactCmsAdminDeployController {
         PageRequest pageRequest =
                 PageRequest.builder().page(Math.max(0, page - 1)).size(size).build();
 
-        return ResponseEntity.ok(
-                ApiResponse.success(reactCmsAdminDeployService.findHistoryList(req, pageRequest)));
+        return ResponseEntity.ok(ApiResponse.success(reactCmsAdminDeployService.findHistoryList(req, pageRequest)));
     }
 
     /** 배포 실행 (REACT_CMS:W) */

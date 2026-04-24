@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>Preview</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="">
+    <link rel="shortcut icon" href="#">  
+    
+    <link href="runtime/contentbuilder-runtime.css" rel="stylesheet"> 
+
+    <style>
+        .is-container {margin: 140px auto; max-width: 980px; width:100%; padding:0 20px; box-sizing: border-box;}
+    </style>
+</head>
+<body style="touch-action: pan-y">
+
+    <div class="is-container"></div>
+    
+    <script src="runtime/contentbuilder-runtime.min.js"></script>
+    <script>
+        var html = localStorage.getItem('preview-html');
+        
+        // Add saved HTML
+        const container = document.querySelector('.is-container');
+        container.innerHTML = '';
+        const range = document.createRange(); 
+        range.setStart(container, 0);
+        container.appendChild(
+            range.createContextualFragment(html) 
+        ); 
+
+        const basePath = window.location.href.substring(0, window.location.href.lastIndexOf('/'));
+
+        // Initialize runtime
+        const runtime = new ContentBuilderRuntime({
+            // Plugins (Beta Feature)
+            // Registers available plugins (not yet loaded).
+            // Scripts and styles are fetched only when the plugin is actually used in content.
+            plugins: {
+                'logo-loop': {
+                    url: basePath + '/assets/plugins/logo-loop/index.js',
+                    css: basePath + '/assets/plugins/logo-loop/style.css'
+                },
+                'click-counter': {
+                    url: basePath + '/assets/plugins/click-counter/index.js',
+                    css: basePath + '/assets/plugins/click-counter/style.css'
+                },
+                'card-list': {
+                    url: basePath + '/assets/plugins/card-list/index.js',
+                    css: basePath + '/assets/plugins/card-list/style.css'
+                },
+                'accordion': {
+                    url: basePath + '/assets/plugins/accordion/index.js',
+                    css: basePath + '/assets/plugins/accordion/style.css'
+                },
+                'hero-animation': {
+                    url: basePath + '/assets/plugins/hero-animation/index.js',
+                    css: basePath + '/assets/plugins/hero-animation/style.css'
+                },
+                'animated-stats': {
+                    url: basePath + '/assets/plugins/animated-stats/index.js',
+                    css: basePath + '/assets/plugins/animated-stats/style.css'
+                },
+                'timeline': {
+                    url: basePath + '/assets/plugins/timeline/index.js',
+                    css: basePath + '/assets/plugins/timeline/style.css'
+                },
+                'before-after-slider': {
+                    url: basePath + '/assets/plugins/before-after-slider/index.js',
+                    css: basePath + '/assets/plugins/before-after-slider/style.css'
+                },
+                'more-info': {
+                    url: basePath + '/assets/plugins/more-info/index.js',
+                    css: basePath + '/assets/plugins/more-info/style.css'
+                },
+                'social-share': {
+                    url: basePath + '/assets/plugins/social-share/index.js',
+                    css: basePath + '/assets/plugins/social-share/style.css'
+                },
+                'pendulum': {
+                    url: basePath + '/assets/plugins/pendulum/index.js',
+                    css: basePath + '/assets/plugins/pendulum/style.css'
+                },
+                'browser-mockup': {
+                    url: basePath + '/assets/plugins/browser-mockup/index.js',
+                    css: basePath + '/assets/plugins/browser-mockup/style.css'
+                },
+                'hero-background': {
+                    url: basePath + '/assets/plugins/hero-background/index.js',
+                    css: basePath + '/assets/plugins/hero-background/style.css'
+                },
+                'cta-buttons': {
+                    url: basePath + '/assets/plugins/cta-buttons/index.js',
+                    css: basePath + '/assets/plugins/cta-buttons/style.css'
+                },
+
+                'media-slider': {
+                    url: basePath + '/assets/plugins/media-slider/index.js',
+                    css: basePath + '/assets/plugins/media-slider/style.css'
+                },
+                'media-grid': {
+                    url: basePath + '/assets/plugins/media-grid/index.js',
+                    css: basePath + '/assets/plugins/media-grid/style.css'
+                },
+                'particle-constellation': {
+                    url: basePath + '/assets/plugins/particle-constellation/index.js',
+                    css: basePath + '/assets/plugins/particle-constellation/style.css'
+                },
+                'vector-force': {
+                    url: basePath + '/assets/plugins/vector-force/index.js',
+                    css: basePath + '/assets/plugins/vector-force/style.css'
+                },
+                'aurora-glow': {
+                    url: basePath + '/assets/plugins/aurora-glow/index.js',
+                    css: basePath + '/assets/plugins/aurora-glow/style.css'
+                },
+                'simple-stats': {
+                    url: basePath + '/assets/plugins/simple-stats/index.js',
+                    css: basePath + '/assets/plugins/simple-stats/style.css'
+                },
+                'faq': {
+                    url: basePath + '/assets/plugins/faq/index.js',
+                    css: basePath + '/assets/plugins/faq/style.css'
+                },
+                'callout-box': {
+                    url: basePath + '/assets/plugins/callout-box/index.js',
+                    css: basePath + '/assets/plugins/callout-box/style.css'
+                },
+                'code': {
+                    url: basePath + '/assets/plugins/code/index.js',
+                    css: basePath + '/assets/plugins/code/style.css'
+                },
+                'video-embed': { // Experimental
+                    url: basePath + '/assets/plugins/video-embed/index.js',
+                    css: basePath + '/assets/plugins/video-embed/style.css'
+                },
+                'swiper-slider': {
+                    url: basePath + '/assets/plugins/swiper-slider/index.js',
+                    css: basePath + '/assets/plugins/swiper-slider/style.css'
+                },
+            }
+        });
+        runtime.init();
+    </script>
+</body>
+</html>

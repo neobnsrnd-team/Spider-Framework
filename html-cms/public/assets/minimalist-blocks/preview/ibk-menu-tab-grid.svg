@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 220" width="300" height="220">
+  <rect width="300" height="220" fill="white" rx="12"/>
+
+  <!-- 탭바 영역 -->
+  <line x1="0" y1="2" x2="300" y2="2" stroke="#F3F4F6" stroke-width="1"/>
+  <text x="16" y="24" font-family="sans-serif" font-size="11" fill="#1A1A2E" font-weight="700">전체</text>
+  <line x1="16" y1="29" x2="42" y2="29" stroke="#1A1A2E" stroke-width="2"/>
+  <text x="58" y="24" font-family="sans-serif" font-size="11" fill="#9CA3AF">새로 나왔어요!</text>
+  <text x="142" y="24" font-family="sans-serif" font-size="11" fill="#9CA3AF">이용내역</text>
+  <text x="198" y="24" font-family="sans-serif" font-size="11" fill="#9CA3AF">이용금액결제</text>
+  <!-- 펼침 토글 ∧ -->
+  <polyline points="278,20 283,14 288,20" fill="none" stroke="#9CA3AF" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+  <line x1="0" y1="34" x2="300" y2="34" stroke="#E5E7EB" stroke-width="1"/>
+
+  <!-- 그리드 메뉴 (펼친 상태) -->
+  <!-- 행 1 -->
+  <text x="16" y="58" font-family="sans-serif" font-size="11" fill="#1A1A2E" font-weight="700">전체</text>
+  <text x="110" y="58" font-family="sans-serif" font-size="11" fill="#4B5563">새로 나왔어요!</text>
+  <text x="210" y="58" font-family="sans-serif" font-size="11" fill="#4B5563">이용내역</text>
+  <!-- 행 2 -->
+  <text x="16" y="82" font-family="sans-serif" font-size="11" fill="#4B5563">이용금액결제</text>
+  <text x="110" y="82" font-family="sans-serif" font-size="11" fill="#4B5563">내카드</text>
+  <text x="210" y="82" font-family="sans-serif" font-size="11" fill="#4B5563">카드신청</text>
+  <!-- 행 3 -->
+  <text x="16" y="106" font-family="sans-serif" font-size="11" fill="#4B5563">금융</text>
+  <text x="110" y="106" font-family="sans-serif" font-size="11" fill="#4B5563">해외하면 하나카드</text>
+  <text x="210" y="106" font-family="sans-serif" font-size="11" fill="#4B5563">혜택</text>
+  <!-- 행 4 -->
+  <text x="16" y="130" font-family="sans-serif" font-size="11" fill="#4B5563">증명/납부</text>
+  <text x="110" y="130" font-family="sans-serif" font-size="11" fill="#4B5563">내 자산</text>
+  <text x="210" y="130" font-family="sans-serif" font-size="11" fill="#4B5563">내 계좌</text>
+  <!-- 행 5 -->
+  <text x="16" y="154" font-family="sans-serif" font-size="11" fill="#4B5563">라이프 UP</text>
+  <text x="110" y="154" font-family="sans-serif" font-size="11" fill="#4B5563">고객지원</text>
+  <text x="210" y="154" font-family="sans-serif" font-size="11" fill="#4B5563">기업카드</text>
+  <!-- 행 6 -->
+  <text x="16" y="178" font-family="sans-serif" font-size="11" fill="#4B5563">가맹점</text>
+  <text x="110" y="178" font-family="sans-serif" font-size="11" fill="#4B5563">나라사랑카드</text>
+  <text x="210" y="178" font-family="sans-serif" font-size="11" fill="#4B5563">별별뉴스</text>
+</svg>

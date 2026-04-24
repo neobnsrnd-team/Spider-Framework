@@ -1,0 +1,16 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(//c/Springware-CMS/**)",
+      "Bash(gh issue:*)",
+      "Bash(npx playwright:*)",
+      "Bash(gh label:*)",
+      "Bash(gh pr create --title '[QA #320] menu-tab-grid 컴포넌트 QA — E2E 자동화 구현' --body ':*)",
+      "Bash(gh api:*)",
+      "Bash(gh pr create --title '[QA #324] status-card 컴포넌트 QA — E2E 자동화 구현' --body ':*)",
+      "Bash(gh pr create --base main --head 'qa/#347' --title '[QA #347] sticky-floating-bar 플로팅 액션 바 E2E 자동화' --body ':*)",
+      "Bash(ls /c/Springware-CMS/scripts/migrate-*.ts)",
+      "Bash(gh pr:*)"
+    ]
+  }
+}

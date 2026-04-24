@@ -4,27 +4,23 @@
 <th:block th:fragment="script">
 <script th:inline="javascript">
 /*<![CDATA[*/
-    // SPA 탭 전환으로 동일 스크립트가 재실행되는 경우가 있어 const 대신 window 전역에 할당.
     window.HAS_CMS_WRITE = /*[[${userAuthorities != null && userAuthorities.contains('CMS:W')}]]*/ false;
 /*]]>*/
 </script>
 <script>
-    // ==================== CmsAssetApprovalPage ====================
-    // 결재자 "이미지 승인 관리" 화면 모듈.
-    // 승인(PENDING → APPROVED)은 #53에서 DB UPDATE만 수행, 파일 복사 API 연동은 #55.
-
     window.CmsAssetApprovalPage = {
         currentPage: 1,
         totalItems: 0,
         itemsPerPage: 10,
         sortBy: null,
         sortDirection: null,
-        // 썸네일은 #53 범위에서 placeholder 사용
+        categoryOptionsLoaded: false,
+        categoryMap: { COMMON: '공통', CARD: '카드', LOAN: '여신', DEPOSIT: '수신' },
         PLACEHOLDER_SRC: '/images/asset-placeholder.svg',
 
         STATE_BADGE: {
-            WORK:     '<span class="badge bg-secondary">작업중</span>',
-            PENDING:  '<span class="badge bg-warning text-dark">승인대기</span>',
+            WORK: '<span class="badge bg-secondary">작업중</span>',
+            PENDING: '<span class="badge bg-warning text-dark">승인대기</span>',
             APPROVED: '<span class="badge bg-success">승인완료</span>',
             REJECTED: '<span class="badge bg-danger">반려</span>',
         },
@@ -32,14 +28,14 @@
         load: function(page) {
             if (page !== undefined) this.currentPage = page;
             const params = new URLSearchParams({
-                page:             this.currentPage,
-                size:             this.itemsPerPage,
-                assetState:       $('#filterAssetState').val(),
-                uploaderId:       $('#filterUploaderId').val().trim(),
-                businessCategory: $('#filterBusinessCategory').val().trim(),
-                search:           $('#filterSearch').val().trim(),
-                startDate:        $('#filterStartDate').val(),
-                endDate:          $('#filterEndDate').val(),
+                page: this.currentPage,
+                size: this.itemsPerPage,
+                assetState: $('#filterAssetState').val(),
+                uploaderId: $('#filterUploaderId').val().trim(),
+                businessCategory: ($('#filterBusinessCategory').val() || '').trim(),
+                search: $('#filterSearch').val().trim(),
+                startDate: $('#filterStartDate').val(),
+                endDate: $('#filterEndDate').val(),
             });
             if (this.sortBy) {
                 params.append('sortBy', this.sortBy);
@@ -57,6 +53,32 @@
                     this.updateSortIndicators();
                 })
                 .catch(() => Toast.error('목록 조회 중 오류가 발생했습니다.'));
+        },
+
+        loadCategories: function() {
+            if (this.categoryOptionsLoaded) return Promise.resolve();
+
+            return fetch('/api/cms-admin/asset-categories')
+                .then(r => r.json())
+                .then(res => {
+                    if (!res.success || !Array.isArray(res.data)) return;
+
+                    const searchSelect = $('#filterBusinessCategory');
+                    const uploadSelect = $('#assetUploadCategory');
+
+                    searchSelect.find('option:not(:first)').remove();
+                    uploadSelect.empty();
+
+                    res.data.forEach(item => {
+                        this.categoryMap[item.code] = item.codeName;
+                        searchSelect.append(`<option value="${HtmlUtils.escape(item.code)}">${HtmlUtils.escape(item.codeName)}</option>`);
+                        uploadSelect.append(`<option value="${HtmlUtils.escape(item.code)}">${HtmlUtils.escape(item.codeName)}</option>`);
+                    });
+
+                    uploadSelect.val('COMMON');
+                    this.categoryOptionsLoaded = true;
+                })
+                .catch(() => {});
         },
 
         attachSortHandlers: function() {
@@ -100,35 +122,33 @@
                 return;
             }
 
-            const placeholder = this.PLACEHOLDER_SRC;
-
             const html = rows.map(row => {
-                const badge    = this.STATE_BADGE[row.assetState] || HtmlUtils.escape(row.assetState || '');
-                const aid      = HtmlUtils.escape(row.assetId);
+                const badge = this.STATE_BADGE[row.assetState] || HtmlUtils.escape(row.assetState || '');
+                const aid = HtmlUtils.escape(row.assetId);
                 const fileSize = this._formatFileSize(row.fileSize);
+                const categoryName = row.businessCategoryName || this.categoryMap[row.businessCategory] || row.businessCategory || '-';
 
-                // 결재 컬럼: PENDING + CMS:W 권한일 때만 노출
                 const tdApproval = (window.HAS_CMS_WRITE && row.assetState === 'PENDING')
                     ? `<div class="d-flex flex-column gap-1">
                            <button class="btn btn-success btn-xs" onclick="CmsAssetApprovalPage.approve('${aid}')">승인</button>
-                           <button class="btn btn-danger btn-xs"  onclick="CmsAssetApprovalPage.openRejectModal('${aid}')">반려</button>
+                           <button class="btn btn-danger btn-xs" onclick="CmsAssetApprovalPage.openRejectModal('${aid}')">반려</button>
                        </div>`
                     : '-';
 
                 return `<tr>
                     <td class="text-center">
-                        <img src="${placeholder}" alt="placeholder" class="asset-thumb"
-                             style="width:48px;height:48px;object-fit:cover;border-radius:4px;cursor:pointer;"
+                        <img src="/api/cms-admin/asset-approvals/${aid}/image"
+                             alt="${HtmlUtils.escape(row.assetName || '')}" class="asset-thumb"
                              onclick="CmsAssetApprovalPage.openPreview('${aid}')"
-                             onerror="this.src='${placeholder}'"/>
+                             onerror="this.onerror=null;this.src='${this.PLACEHOLDER_SRC}'"/>
                     </td>
                     <td>
-                        <span class="clickable-cell"
-                              onclick="CmsAssetApprovalPage.openPreview('${aid}')"
-                              title="상세">${HtmlUtils.escape(row.assetName || '')}</span>
+                        <span class="clickable-cell" onclick="CmsAssetApprovalPage.openPreview('${aid}')" title="상세">
+                            ${HtmlUtils.escape(row.assetName || '')}
+                        </span>
                     </td>
                     <td>${HtmlUtils.escape(row.createUserName || '')}</td>
-                    <td>${HtmlUtils.escape(row.businessCategory || '-')}</td>
+                    <td>${HtmlUtils.escape(categoryName)}</td>
                     <td class="small">
                         <div>${HtmlUtils.escape(row.mimeType || '-')}</div>
                         <div class="text-body-secondary">${fileSize}</div>
@@ -158,7 +178,7 @@
 
             const maxButtons = 5;
             let startPage = Math.max(1, this.currentPage - Math.floor(maxButtons / 2));
-            let endPage   = Math.min(totalPages, startPage + maxButtons - 1);
+            let endPage = Math.min(totalPages, startPage + maxButtons - 1);
             if (endPage - startPage + 1 < maxButtons) {
                 startPage = Math.max(1, endPage - maxButtons + 1);
             }
@@ -181,7 +201,7 @@
             `);
 
             const start = this.totalItems === 0 ? 0 : (this.currentPage - 1) * this.itemsPerPage + 1;
-            const end   = Math.min(this.currentPage * this.itemsPerPage, this.totalItems);
+            const end = Math.min(this.currentPage * this.itemsPerPage, this.totalItems);
             $('#pageInfo').text(`${start} - ${end} of ${this.totalItems} items`);
         },
 
@@ -206,7 +226,6 @@
             this.load(1);
         },
 
-        // ── 프리뷰 모달 ──
         openPreview: function(assetId) {
             $('#previewAssetName').text('-');
             $('#previewBusinessCategory').text('-');
@@ -216,7 +235,13 @@
             $('#previewAssetState').text('-');
             $('#previewCreateUser').text('-');
             $('#previewCreateDate').text('-');
-            $('#previewImg').attr('src', this.PLACEHOLDER_SRC);
+            const placeholder = this.PLACEHOLDER_SRC;
+            $('#previewImg')
+                .attr('src', `/api/cms-admin/asset-approvals/${encodeURIComponent(assetId)}/image`)
+                .off('error.assetPreview')
+                .on('error.assetPreview', function() {
+                    $(this).off('error.assetPreview').attr('src', placeholder);
+                });
 
             new bootstrap.Modal('#assetPreviewModal').show();
 
@@ -226,21 +251,17 @@
                     if (!res.success || !res.data) { Toast.error(res.message || '상세 조회 실패'); return; }
                     const d = res.data;
                     $('#previewAssetName').text(d.assetName || '-');
-                    $('#previewBusinessCategory').text(d.businessCategory || '-');
+                    $('#previewBusinessCategory').text(d.businessCategoryName || this.categoryMap[d.businessCategory] || d.businessCategory || '-');
                     $('#previewMimeType').text(d.mimeType || '-');
                     $('#previewFileSize').text(this._formatFileSize(d.fileSize));
                     $('#previewAssetDesc').text(d.assetDesc || '-');
                     $('#previewAssetState').html(this.STATE_BADGE[d.assetState] || HtmlUtils.escape(d.assetState || ''));
                     $('#previewCreateUser').text((d.createUserName || '-') + ' (' + (d.createUserId || '-') + ')');
                     $('#previewCreateDate').text(d.createDate || '-');
-                    // ASSET_URL 연동은 후속 이슈 — 현재는 placeholder 유지
                 })
                 .catch(() => Toast.error('상세 조회 중 오류가 발생했습니다.'));
         },
 
-        // ── 승인 (#55: CMS 파일 배포 연동) ──
-        // 승인 DB UPDATE + CMS 파일 배포가 한 트랜잭션에서 처리되므로 응답이 길어질 수 있다.
-        // LoadingOverlay 로 전체 화면 dim 처리해 중복 클릭·타 작업 진행을 차단.
         approve: function(assetId) {
             if (!confirm('해당 이미지를 승인하시겠습니까?')) return;
 
@@ -253,13 +274,12 @@
                 .then(r => r.json())
                 .then(res => {
                     if (res.success) { Toast.success(res.message); this.load(); }
-                    else             { Toast.error(res.message); }
+                    else { Toast.error(res.message); }
                 })
                 .catch(() => Toast.error('승인 처리 중 오류가 발생했습니다.'))
                 .finally(() => LoadingOverlay.hide());
         },
 
-        // ── 반려 모달 ──
         openRejectModal: function(assetId) {
             $('#rejectAssetId').val(assetId);
             $('#rejectReason').val('');
@@ -267,7 +287,7 @@
         },
 
         _submitReject: function() {
-            const assetId        = $('#rejectAssetId').val();
+            const assetId = $('#rejectAssetId').val();
             const rejectedReason = $('#rejectReason').val().trim();
 
             fetch(`/api/cms-admin/asset-approvals/${encodeURIComponent(assetId)}/reject`, {
@@ -279,7 +299,7 @@
                 .then(res => {
                     bootstrap.Modal.getInstance('#assetRejectModal').hide();
                     if (res.success) { Toast.success(res.message); this.load(); }
-                    else             { Toast.error(res.message); }
+                    else { Toast.error(res.message); }
                 })
                 .catch(() => Toast.error('반려 처리 중 오류가 발생했습니다.'));
         },
@@ -297,12 +317,261 @@
         },
     };
 
-    // ==================== 이벤트 바인딩 ====================
+    (function extendCmsAssetApprovalPage(page) {
+        const useYnBadge = (useYn) =>
+            useYn === 'Y'
+                ? '<span class="badge bg-primary">Y</span>'
+                : '<span class="badge bg-secondary">N</span>';
+
+        page.ensureUseYnColumn = function() {
+            const $headerRow = $('#assetApprovalTable thead tr');
+            if ($headerRow.find('[data-col="useYn"]').length === 0) {
+                $('<th class="col-w-140" data-col="useYn">노출여부</th>').insertAfter($headerRow.find('th[data-sort="assetState"]'));
+            }
+        };
+
+        page.renderUseYnCells = function(rows) {
+            this.ensureUseYnColumn();
+
+            const $rows = $('#assetApprovalTableBody tr');
+            if (!rows || rows.length === 0) {
+                $rows.find('td[colspan="8"]').attr('colspan', '9');
+                return;
+            }
+
+            $rows.each((index, tr) => {
+                const row = rows[index];
+                if (!row) return;
+
+                const useYn = (row.useYn || 'Y').toUpperCase();
+                const assetId = HtmlUtils.escape(row.assetId);
+                const cellHtml = window.HAS_CMS_WRITE
+                    ? `<select class="form-select form-select-sm asset-useyn-combo"
+                               data-asset-id="${assetId}"
+                               data-current-use-yn="${useYn}"
+                               data-use-yn="${useYn}"
+                               onchange="CmsAssetApprovalPage.handleVisibilityChange(this)">
+                           <option value="Y" ${useYn === 'Y' ? 'selected' : ''}>Y (노출)</option>
+                           <option value="N" ${useYn === 'N' ? 'selected' : ''}>N (숨김)</option>
+                       </select>`
+                    : useYnBadge(useYn);
+
+                const $tr = $(tr);
+                $tr.find('td[data-col="useYn"]').remove();
+                $(`<td class="text-center" data-col="useYn">${cellHtml}</td>`).insertAfter($tr.children().eq(5));
+            });
+        };
+
+        const originalRenderTable = page.renderTable;
+        page.renderTable = function(rows) {
+            originalRenderTable.call(this, rows);
+            this.renderUseYnCells(rows);
+        };
+
+        page.handleVisibilityChange = function(selectEl) {
+            const $select = $(selectEl);
+            const assetId = $select.data('assetId');
+            const currentUseYn = String($select.data('currentUseYn') || '').trim().toUpperCase();
+            const nextUseYn = String($select.val() || '').trim().toUpperCase();
+
+            if (currentUseYn === nextUseYn) {
+                return;
+            }
+
+            const label = nextUseYn === 'Y' ? '노출(Y)' : '숨김(N)';
+            if (!confirm(`노출 여부를 ${label}로 변경하시겠습니까?`)) {
+                $select.val(currentUseYn);
+                return;
+            }
+
+            $select.attr('data-use-yn', nextUseYn);
+            this.updateVisibility(assetId, nextUseYn, $select);
+        };
+
+        page.updateVisibility = function(assetId, useYn, $select) {
+            LoadingOverlay.show('노출 여부 변경 중...');
+            if ($select) {
+                $select.prop('disabled', true);
+            }
+
+            fetch(`/api/cms-admin/asset-approvals/${encodeURIComponent(assetId)}/visibility`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ useYn }),
+            })
+                .then((r) => r.json())
+                .then((res) => {
+                    if (res.success) {
+                        Toast.success(res.message || '노출 여부가 변경되었습니다.');
+                        this.load(this.currentPage);
+                    } else {
+                        if ($select) {
+                            const rollback = $select.data('currentUseYn');
+                            $select.val(rollback).attr('data-use-yn', rollback);
+                        }
+                        Toast.error(res.message || '노출 여부 변경 중 오류가 발생했습니다.');
+                    }
+                })
+                .catch(() => {
+                    if ($select) {
+                        const rollback = $select.data('currentUseYn');
+                        $select.val(rollback).attr('data-use-yn', rollback);
+                    }
+                    Toast.error('노출 여부 변경 중 오류가 발생했습니다.');
+                })
+                .finally(() => {
+                    if ($select) {
+                        $select.prop('disabled', false);
+                    }
+                    LoadingOverlay.hide();
+                });
+        };
+    })(window.CmsAssetApprovalPage);
+
+    window.CmsAssetApprovalUploadModal = {
+        MAX_FILE_SIZE: 20 * 1024 * 1024,
+        ALLOWED_MIME: ['image/png', 'image/jpeg', 'image/gif', 'image/webp'],
+        selectedFile: null,
+
+        init: function() {
+            this._bindOpenButton();
+            this._bindDropzone();
+            this._bindFileInput();
+            this._bindSubmit();
+            this._bindClear();
+        },
+
+        _bindOpenButton: function() {
+            $(document).off('click.assetApprovalUploadOpen', '#btnOpenAssetUpload')
+                .on('click.assetApprovalUploadOpen', '#btnOpenAssetUpload', () => this.open());
+        },
+
+        _bindDropzone: function() {
+            const $dz = $('#assetUploadDropzone');
+            $dz.off('click.assetApprovalUpload').on('click.assetApprovalUpload', () => {
+                const input = document.getElementById('assetUploadFileInput');
+                if (input) input.click();
+            });
+            $dz.off('dragover.assetApprovalUpload').on('dragover.assetApprovalUpload', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                $dz.addClass('is-dragover');
+            });
+            $dz.off('dragleave.assetApprovalUpload').on('dragleave.assetApprovalUpload', () => $dz.removeClass('is-dragover'));
+            $dz.off('drop.assetApprovalUpload').on('drop.assetApprovalUpload', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                $dz.removeClass('is-dragover');
+                const files = e.originalEvent.dataTransfer && e.originalEvent.dataTransfer.files;
+                if (files && files.length > 0) {
+                    this._onFileSelected(files[0]);
+                }
+            });
+        },
+
+        _bindFileInput: function() {
+            $('#assetUploadFileInput').off('change.assetApprovalUpload').on('change.assetApprovalUpload', (e) => {
+                if (e.target.files && e.target.files.length > 0) {
+                    this._onFileSelected(e.target.files[0]);
+                }
+            });
+        },
+
+        _bindSubmit: function() {
+            $('#btnAssetUploadSubmit').off('click.assetApprovalUpload').on('click.assetApprovalUpload', () => this._submit());
+        },
+
+        _bindClear: function() {
+            $('#btnAssetUploadClear').off('click.assetApprovalUpload').on('click.assetApprovalUpload', () => this._clearFile());
+        },
+
+        open: function() {
+            this._clearFile();
+            $('#assetUploadCategory').val('COMMON');
+            $('#assetUploadDesc').val('');
+            new bootstrap.Modal('#assetUploadModal').show();
+        },
+
+        _onFileSelected: function(file) {
+            if (!this.ALLOWED_MIME.includes(file.type)) {
+                Toast.error('지원되지 않는 파일 형식입니다. (PNG, JPG, JPEG, GIF, WebP)');
+                return;
+            }
+            if (file.size > this.MAX_FILE_SIZE) {
+                Toast.error('파일 크기는 20MB 이하로 업로드해 주세요.');
+                return;
+            }
+
+            this.selectedFile = file;
+            $('#assetUploadPreviewWrap').removeClass('d-none');
+            $('#assetUploadPreviewName').text(file.name);
+            $('#assetUploadPreviewSize').text(this._formatSize(file.size));
+            $('#assetUploadPreviewType').text(file.type);
+
+            const reader = new FileReader();
+            reader.onload = (ev) => $('#assetUploadPreview').attr('src', ev.target.result);
+            reader.readAsDataURL(file);
+
+            $('#btnAssetUploadSubmit').prop('disabled', false);
+        },
+
+        _clearFile: function() {
+            this.selectedFile = null;
+            $('#assetUploadFileInput').val('');
+            $('#assetUploadPreviewWrap').addClass('d-none');
+            $('#assetUploadPreview').attr('src', '');
+            $('#btnAssetUploadSubmit').prop('disabled', true);
+        },
+
+        _submit: function() {
+            if (!this.selectedFile) {
+                Toast.warning('업로드할 파일을 선택해 주세요.');
+                return;
+            }
+
+            const fd = new FormData();
+            fd.append('file', this.selectedFile);
+            fd.append('businessCategory', (($('#assetUploadCategory').val() || 'COMMON').trim() || 'COMMON'));
+
+            const desc = $('#assetUploadDesc').val().trim();
+            if (desc) fd.append('assetDesc', desc);
+
+            this._setSubmitting(true);
+
+            fetch('/api/cms-admin/asset-approvals/upload', {
+                method: 'POST',
+                body: fd,
+            })
+                .then(r => r.json().then(body => ({ status: r.status, body })))
+                .then(({ status, body }) => {
+                    if (status >= 200 && status < 300 && body.success) {
+                        Toast.success(body.message || '이미지 업로드가 완료되었습니다.');
+                        bootstrap.Modal.getInstance('#assetUploadModal').hide();
+                        CmsAssetApprovalPage.load(1);
+                    } else {
+                        Toast.error(body.message || '업로드 처리 중 오류가 발생했습니다.');
+                    }
+                })
+                .catch(() => Toast.error('업로드 처리 중 오류가 발생했습니다.'))
+                .finally(() => this._setSubmitting(false));
+        },
+
+        _setSubmitting: function(submitting) {
+            $('#btnAssetUploadSubmit').prop('disabled', submitting || !this.selectedFile);
+            $('#assetUploadSpinner').toggleClass('d-none', !submitting);
+        },
+
+        _formatSize: function(bytes) {
+            if (bytes < 1024) return bytes + ' B';
+            if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+            return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+        },
+    };
 
     $(document).ready(function() {
         CmsAssetApprovalPage.itemsPerPage = parseInt($('#limitRows').val()) || 10;
         CmsAssetApprovalPage.attachSortHandlers();
-        CmsAssetApprovalPage.load(1);
+        CmsAssetApprovalPage.loadCategories().finally(() => CmsAssetApprovalPage.load(1));
 
         $('#limitRows').on('change', function() {
             CmsAssetApprovalPage.itemsPerPage = parseInt($(this).val()) || 10;
@@ -310,6 +579,10 @@
         });
 
         $('#btnRejectConfirm').on('click', function() { CmsAssetApprovalPage._submitReject(); });
+
+        if (window.HAS_CMS_WRITE) {
+            CmsAssetApprovalUploadModal.init();
+        }
     });
 </script>
 </th:block>

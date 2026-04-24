@@ -32,220 +32,23 @@
     <th:block th:replace="~{fragments/page-content-layout :: pagination}" />
 
     <!-- Bottom Action Buttons -->
-    <div class="bottom-actions" th:if="${userAuthorities != null and userAuthorities.contains('SQL_QUERY:W')}">
-        <button class="btn btn-primary btn-sm" id="btnAdd">
-            + 등록
-        </button>
-    </div>
-
-    <!-- 권한 플래그 (모달에서 사용) -->
-    <script th:inline="javascript">
-        var sql_query_access = /*[[${userAuthorities != null and userAuthorities.contains('SQL_QUERY:W')}]]*/ false;
-    </script>
+    <div th:replace="~{pages/sqlquery-manage/sqlquery-manage-buttons :: buttons}"></div>
 
     <!-- SqlQuery Modal -->
     <div th:replace="~{pages/sqlquery-manage/sqlquery-modal :: modal}"></div>
 
+    <!-- SqlQuery Test Modal -->
+    <div th:replace="~{pages/sqlquery-manage/sqlquery-test-modal :: modal}"></div>
+
+    <!-- SqlQuery Restore Modal -->
+    <div th:replace="~{pages/sqlquery-manage/sqlquery-restore-modal :: modal}"></div>
+
+    <!-- WAS Reload Modal (공용 컴포넌트) -->
+    <div th:replace="~{modals/was-reload-modal :: modal}"></div>
+
     <!-- Page Script -->
-    <script th:inline="javascript">
-        var PAGE_CONFIG = {
-            pageId: 'sqlQueries',
-            apiEndpoint: API_BASE_URL + '/sql-queries/page',
+    <th:block th:replace="~{pages/sqlquery-manage/sqlquery-manage-script :: script}" />
 
-            search: {
-                fields: [
-                    {
-                        type: 'text',
-                        id: 'queryId',
-                        label: 'Query ID',
-                        labelStyle: 'min-width: 70px;',
-                        placeholder: 'Query ID',
-                        width: '180px'
-                    },
-                    {
-                        type: 'text',
-                        id: 'queryName',
-                        label: 'Query 명',
-                        labelStyle: 'min-width: 70px; margin-left: 10px;',
-                        placeholder: 'Query 명',
-                        width: '180px'
-                    },
-                    {
-                        type: 'select',
-                        id: 'useYn',
-                        label: '사용여부',
-                        labelStyle: 'min-width: 55px; margin-left: 10px;',
-                        width: '100px',
-                        placeholder: '전체',
-                        options: ComboManager.simple.getList('USE_YN')
-                    }
-                ],
-                limit: { default: 10, showLarge: true }
-            },
-
-            table: {
-                id: 'sqlQueryTable',
-                columns: [
-                    { key: 'queryId', label: 'Query ID', width: '180px', sortable: true },
-                    { key: 'queryName', label: 'Query 명', width: '200px', sortable: true },
-                    { key: 'sqlGroupName', label: 'SQL 그룹', width: '150px', sortable: true },
-                    { key: 'dbName', label: 'DB', width: '120px', sortable: false },
-                    { key: 'sqlType', label: 'SQL 유형', width: '80px', sortable: false },
-                    {
-                        key: 'cacheYn',
-                        label: '캐시',
-                        width: '60px',
-                        sortable: false,
-                        render: (val) => val === 'Y'
-                            ? '<span class="badge text-bg-success">Y</span>'
-                            : '<span class="badge text-bg-secondary">N</span>'
-                    },
-                    {
-                        key: 'useYn',
-                        label: '사용여부',
-                        width: '80px',
-                        sortable: true,
-                        render: (val) => val === 'Y'
-                            ? '<span class="badge text-bg-success">Y</span>'
-                            : '<span class="badge text-bg-secondary">N</span>'
-                    },
-                    { key: 'lastUpdateDtime', label: '최종수정일시', width: '140px', sortable: false }
-                ],
-                emptyMessage: '조회 버튼을 클릭하여 데이터를 불러오세요.',
-                noDataMessage: '조회된 데이터가 없습니다.'
-            },
-
-            containers: {
-                search: '#searchContainer',
-                table: '#tableContainer',
-                pagination: '#pagination',
-                pageInfo: '#pageInfo'
-            },
-
-            autoLoad: true
-        };
-
-        window.SqlQueryPage = {
-            currentPage: 1,
-            totalItems: 0,
-            itemsPerPage: 10,
-            sortBy: null,
-            sortDirection: null,
-
-            init: function() {
-                SearchForm.render('#searchContainer', PAGE_CONFIG.search, () => {
-                    this.currentPage = 1;
-                    this.load();
-                });
-
-                const tableConfig = {
-                    ...PAGE_CONFIG.table,
-                    onSort: (sortBy, sortDirection) => {
-                        this.sortBy = sortBy;
-                        this.sortDirection = sortDirection;
-                        this.currentPage = 1;
-                        this.load();
-                    }
-                };
-
-                DataTable.render('#tableContainer', tableConfig, (row) => {
-                    if (window.SqlQueryModal) {
-                        window.SqlQueryModal.openForDetail(row);
-                    }
-                });
-
-                Pagination.init('#pagination', '#pageInfo', (page) => {
-                    this.currentPage = page;
-                    this.load();
-                });
-
-                $('#btnRefresh').off('click').on('click', () => {
-                    this.load();
-                });
-
-                $('#btnPrint').off('click').on('click', () => {
-                    this.printTable();
-                });
-
-                $('#btnExcel').off('click').on('click', () => {
-                    this.exportExcel();
-                });
-
-                $('#btnAdd').off('click').on('click', () => {
-                    if (window.SqlQueryModal) {
-                        window.SqlQueryModal.openForCreate();
-                    }
-                });
-
-                if (PAGE_CONFIG.autoLoad) {
-                    this.load();
-                }
-            },
-
-            load: function() {
-                const params = SearchForm.getParams('#searchContainer');
-                params.page = this.currentPage;
-                params.size = params.size || this.itemsPerPage;
-
-                if (this.sortBy) {
-                    params.sortBy = this.sortBy;
-                    params.sortDirection = this.sortDirection || 'ASC';
-                }
-
-                $.ajax({
-                    url: PAGE_CONFIG.apiEndpoint,
-                    method: 'GET',
-                    data: params,
-                    success: (response) => {
-                        if (response.success && response.data) {
-                            const pageData = response.data;
-                            DataTable.setData('#tableContainer', pageData.content || []);
-
-                            this.totalItems = pageData.totalElements || 0;
-                            this.itemsPerPage = params.size;
-
-                            Pagination.update('#pagination', {
-                                currentPage: this.currentPage,
-                                totalItems: this.totalItems,
-                                itemsPerPage: this.itemsPerPage
-                            });
-                        } else {
-                            DataTable.setData('#tableContainer', []);
-                            Pagination.reset('#pagination');
-                        }
-                    },
-                    error: (xhr) => {
-                        console.error('Failed to load sql queries:', xhr);
-                        Toast.error('SQL Query 목록을 불러오는데 실패했습니다.');
-                        DataTable.setData('#tableContainer', []);
-                        Pagination.reset('#pagination');
-                    }
-                });
-            },
-
-            printTable: function() {
-                const printColumns = PAGE_CONFIG.table.columns
-                    .filter(col => !col.render)
-                    .map(col => ({ key: col.key, label: col.label }));
-                const data = DataTable.getData('#tableContainer');
-                PrintUtil.print({ title: 'SQL Query 목록', columns: printColumns, data: data });
-            },
-
-            exportExcel: function() {
-                const params = SearchForm.getParams('#searchContainer');
-                const qs = new URLSearchParams();
-                Object.entries(params).forEach(function(entry) {
-                    if (entry[1]) qs.append(entry[0], entry[1]);
-                });
-                var queryString = qs.toString();
-                window.location.href = API_BASE_URL + '/sql-queries/export' + (queryString ? '?' + queryString : '');
-            }
-        };
-
-        $(document).ready(function() {
-            SqlQueryPage.init();
-        });
-    </script>
 </div>
 </body>
 </html>

@@ -666,9 +666,9 @@ INSERT INTO FWK_CMS_SERVER_INSTANCE (
 ) VALUES (
     'prod-operation-01',
     '운영 서버',
-    '운영 배포 서버 (133.186.135.23:3001)',
+    '운영 배포 서버 (133.186.135.23:8080)',
     '133.186.135.23',
-    3001,
+    8080,
     'WEB',
     'Y',
     'system'

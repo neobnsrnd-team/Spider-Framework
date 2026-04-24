@@ -32,10 +32,14 @@ public class CmsBuilderConfig {
      *
      * <p>파일 이동은 CMS 내부 I/O 라 수 초 내 완료되어야 하므로 업로드용(60초) 보다 훨씬 짧은
      * read-timeout 을 적용한다. 지연 시 Admin 의 HTTP 스레드와 사용자 UI 가 오래 묶이는 것을 방지.
+     * CMS deploy 엔드포인트는 x-deploy-token 헤더 인증을 요구하므로 defaultHeader 로 고정 주입한다.
      */
     @Bean
     public RestClient cmsBuilderDeployRestClient() {
-        return buildClient(properties.getDeployConnectTimeoutSeconds(), properties.getDeployReadTimeoutSeconds());
+        return buildClient(properties.getDeployConnectTimeoutSeconds(), properties.getDeployReadTimeoutSeconds())
+                .mutate()
+                .defaultHeader("x-deploy-token", properties.getDeploySecret())
+                .build();
     }
 
     /** baseUrl 공유 + 타임아웃만 다르게 RestClient 를 생성. */

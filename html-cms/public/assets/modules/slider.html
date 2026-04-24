@@ -1,0 +1,680 @@
+﻿<!DOCTYPE HTML>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title></title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="">
+    <style>
+        html { height:100%; }
+        body { margin:20px;height:100%;overflow:hidden;font-family:Sans-Serif;font-size:14px;font-weight:300;line-height:1.7; 
+            opacity: 0;
+        }
+        #imageList {
+            display:inline-block;box-sizing:border-box;width:100%;margin: 0;
+            overflow-y:auto;overflow-x:hidden;height:200px;padding:10px;line-height:1.5;
+            border:rgba(127, 127, 127, 0.32) 1px solid;
+        }
+        #imageList div {position:relative;display:inline-block;margin:10px;cursor:pointer;}
+        #imageList div span {
+            position:absolute;top:0;right:0;cursor:pointer;
+            background:rgba(34, 34, 34, 0.18);
+            color: #fff;
+            width:28px;height:28px;text-align: center;line-height: 28px;font-size:12px;
+        }    
+        #imageList div img {height:100px;opacity: 0.9;}
+        input[type=text], textarea {
+            width:100%;
+            border-radius: 0;
+            height: 35px;
+            font-size: 14px;
+            box-sizing: border-box;
+            margin: 0;
+            font-family: sans-serif;
+            letter-spacing: 1px;
+            padding: 0;
+            padding-left: 8px;
+            border:none;
+        }
+        textarea {height:30%;} 
+        #divCaption label {margin:5px 0 5px;display: block;} 
+        textarea:focus, input:focus, select:focus {outline:none;}
+        #divCaption {
+            position: absolute;width:400px;height:100%;top:0px;right:-400px;padding:20px;box-sizing:border-box;
+            z-index:1000;
+            border: rgba(127, 127, 127, 0.32) 1px solid
+        }
+        /* img.selected {outline:#00da89 1px solid}
+        .dark img.selected {outline:#9e9132 2px solid}         */
+        .info {font-size: 14px;margin-bottom: 20px;text-align: left;font-style:italic;opacity: 0.8;}
+        
+        select {
+            font-size: 13px;
+            letter-spacing: 1px;
+            height: 35px;
+            line-height: 1.7;
+            border-radius: 5px;
+            border: none;
+            width: auto; 
+            display: inline-block;
+            background-image: none;
+            -webkit-appearance: menulist;
+            -moz-appearance: menulist;
+            appearance: menulist;
+            padding: 0 5px;
+        }
+        
+        button {
+            width: auto;
+            height: 36px;
+            line-height: 1;    
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            box-sizing: border-box;
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0 15px;
+            border: none;
+            cursor: pointer;
+            font-family: sans-serif;
+            letter-spacing: 1px;
+            font-size: 11px;
+            font-weight: 300;
+            text-transform: uppercase;
+            text-align: center;
+            position: relative;
+            border-radius: 0;
+            box-shadow: 0px 3px 6px -6px rgb(0 0 0 / 32%);  
+        }
+        button span {
+            margin-left: 8px;
+            font-size: 10px;
+        }
+        svg {
+            overflow: hidden;
+            vertical-align: middle;
+            pointer-events: none;
+        }
+        .is-icon-flex {
+            width: 16px;
+            height: 16px;
+        }
+        
+        /*http://codepen.io/vcmg/pen/JdKeVG */
+        .dot {
+          height: 7px;
+          width: 7px;
+          border-radius: 50%;
+          background-color: #ff6700;
+          display: inline-block;
+          margin: 5px 2px 0;
+          -webkit-animation: jump 1.5s linear infinite;
+        }
+        @-webkit-keyframes jump {
+          0%, 100% {transform: translateY(0px);}
+          20% {transform: translateY(-10px);}
+          40% {transform: translateY(0px);}
+        }
+        .dot:nth-of-type(2) {
+          -webkit-animation-delay: 0.2s;
+        }
+        .dot:nth-of-type(3) {
+          -webkit-animation-delay: 0.4s;
+        }
+        .loading {display:none}
+    </style>
+</head>
+<body>
+    <svg width="0" height="0" style="position:absolute;display:none;">
+        <defs>
+            <symbol viewBox="0 0 512 512" id="ion-image"><path d="M368 224c26.5 0 48-21.5 48-48s-21.5-48-48-48-48 21.5-48 48 21.5 48 48 48z"></path><path d="M452 64H60c-15.6 0-28 12.7-28 28.3v327.4c0 15.6 12.4 28.3 28 28.3h392c15.6 0 28-12.7 28-28.3V92.3c0-15.6-12.4-28.3-28-28.3zM348.9 261.7c-3-3.5-7.6-6.2-12.8-6.2-5.1 0-8.7 2.4-12.8 5.7L304.6 277c-3.9 2.8-7 4.7-11.5 4.7-4.3 0-8.2-1.6-11-4.1-1-.9-2.8-2.6-4.3-4.1L224 215.3c-4-4.6-10-7.5-16.7-7.5-6.7 0-12.9 3.3-16.8 7.8L64 368.2V107.7c1-6.8 6.3-11.7 13.1-11.7h357.7c6.9 0 12.5 5.1 12.9 12l.3 260.4-99.1-106.7z"></path></symbol>
+        </defs>
+    </svg>
+
+    <div id="imageList"></div>
+    <div class="info"><span data-lang>Drag image to change the position. Click image to edit the details.</span></div>
+
+    <div style="display: flex">
+        <button title="Add Image" class="input-slider-image">
+            <svg class="is-icon-flex"><use xlink:href="#ion-image"></use></svg>
+            <span data-lang>Add Image</span>
+        </button>
+    </div>
+
+    <br />
+
+    <label>
+        <input id="chkAuto" type="checkbox" checked="checked" /> <span data-lang>Autoplay</span>
+    </label>
+
+    <label>
+        <input id="chkArrow" type="checkbox" checked="checked" /> <span data-lang>Arrow Navigation</span>
+    </label>
+    
+    <label>
+        <input id="chkDots" type="checkbox" /> <span data-lang>Dots Navigation</span>
+    </label>
+
+    <label>
+        <input id="chkFade" type="checkbox" checked="checked" /> <span data-lang>Fade</span>
+    </label><br /><br />
+    
+    <!-- <label id="divHeight" for="txtHeight" style="display:none"><span data-lang>Height</span>: <input id="txtHeight" type="text" style="width:50px;" value="" /> px</label> -->
+    
+    <div id="divCaption">        
+        <label id="lblCaption" for="txtCaption">
+            <span data-lang>Caption (HTML allowed)</span>
+        </label>
+        <textarea id="txtCaption"></textarea>
+        <label id="lbkLink" for="txtLink"><span data-lang>Link</span>:</label>
+        <input id="txtLink" type="text" style="width:90%;" value="" />
+
+        <table>
+        <tr>
+            <td valign="top">
+                <label id="lblPlacement" for="selPlacement"><span data-lang>Placement</span>:</label>
+                <select id="selPlacement">
+                    <option value=""></option>
+                    <option value="top left" data-lang>Top Left</option>
+                    <option value="top center" data-lang>Top Center</option>
+                    <option value="top right" data-lang>Top Right</option>
+                    <option value="middle left" data-lang>Middle Left</option>
+                    <option value="middle center" data-lang>Middle Center</option>
+                    <option value="middle right" data-lang>Middle Right</option>
+                    <option value="bottom left" data-lang>Bottom Left</option>
+                    <option value="bottom center" data-lang>Bottom Center</option>
+                    <option value="bottom right" data-lang>Bottom Right</option>
+                </select>
+            </td>
+            <td>&nbsp;</td>
+            <td valign="top">
+                <label id="lblAlign" for="selAlign"><span data-lang>Align</span>:</label>
+                <select id="selAlign">
+                    <option value=""></option>
+                    <option value="left" data-lang>Left</option>
+                    <option value="center" data-lang>Center</option>
+                    <option value="right" data-lang>Right</option>
+                </select>
+            </td>
+            <td>&nbsp;</td>
+            <td valign="top">
+                <label id="lblWidth" for="txtWidth"><span data-lang>Max Width</span>:</label>
+                <input id="txtWidth" type="text" style="width:55px;" value="" /> px
+            </td>
+        </tr>
+        </table>
+
+    </div>
+  
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script> 
+    <script src="https://ajax.googleapis.com/ajax/libs/jqueryui/1.12.1/jquery-ui.min.js"></script>
+    <script>
+        var $activeModule;
+
+        var btnAddImage = document.querySelector('.input-slider-image');
+        btnAddImage.addEventListener('click', function() {
+            parent._cb.openImagePicker('', function(s){
+                var imageList = document.querySelector('#imageList');
+                imageList.insertAdjacentHTML('beforeend', '<div><img src="' + s + '" /><span>&#10005;</span></div>');
+                applyBehaviour();
+            });
+        });
+
+        jQuery(document).ready(function ($) {
+
+
+            //Show or hide Slider Height setting. Height is needed if slider is embedded on content. For embedding in a box, height is set 100% automatically.
+            // if (isModuleInBox()) {
+            //     $('#divHeight').css('display', 'none');
+            // } else {
+            //     $('#divHeight').css('display', 'inline-block');
+            // }
+
+            //Get current Settings
+
+            /*
+            [
+                {
+                    auto: false, 
+                    arrow: true, 
+                    dots: true, 
+                    fade: false, 
+                    height: '300px',
+                    images: [
+                        {
+                            src: 'test1.jpg',
+                            caption: 'Lorem ipsum',
+                            position: 'bottom left'
+                        },
+                        {
+                            src: 'test2.jpg',
+                            caption: 'Lorem ipsum',
+                            position: 'bottom left'
+                        }
+                    ]
+                }
+            ]
+            */
+            var settings = getSettings();
+            if (settings != 'undefined') {
+                try {
+                    var json = $.parseJSON(settings);
+                    $(json).each(function (i, val) {
+                        $.each(val, function (k, v) {
+                            //alert(k  + ' ' + v)
+                            if (k == 'auto') jQuery("#chkAuto").prop("checked", v);
+                            if (k == 'arrow') jQuery("#chkArrow").prop("checked", v);
+                            if (k == 'dots') jQuery("#chkDots").prop("checked", v);
+                            if (k == 'fade') jQuery("#chkFade").prop("checked", v);
+                            // if (k == 'height') jQuery("#txtHeight").val(v);
+                            if (k == 'images') {
+                                $.each(v, function (m, n) {
+                                    jQuery('#imageList').append('<div><img src="' + n.src + '" data-caption="' + (n.caption + '' == 'undefined' ? '' : n.caption) + '" data-width="' + n.width + '" data-link="' + (n.link + '' == 'undefined' ? '' : n.link) + '" data-align="' + (n.align + '' == 'undefined' ? '' : n.align) + '" data-position="' + n.position + '" /><span>&#10005;</span></div>');
+                                });
+                            }
+                        });
+                    });
+                } catch (e) { }
+            }
+
+            //If there is no settings, so read directly from the html (dom).
+            $activeModule = parent.jQuery('#divCustomModuleTool').data('active');
+            if (jQuery("#imageList").children().length == 0) {
+                $activeModule.find('div').each(function () {
+                    if (jQuery(this).css('background-image').indexOf('url(') != -1) {
+                        var bgurl = jQuery(this).css('background-image');
+                        bgurl = /^url\((['"]?)(.*)\1\)$/.exec(bgurl);
+                        bgurl = bgurl ? bgurl[2] : "";
+                        jQuery('#imageList').append('<div><img src="' + bgurl + '" /><i>&#10005;</i></div>')
+                    }
+                });
+            }
+
+            applyBehaviour();
+
+            //Make image list sortable
+            jQuery("#imageList").sortable({
+                delay: 200
+            });
+
+            jQuery(document).unbind('mousedown');
+            jQuery(document).bind('mousedown', function (event) {
+                if (jQuery(event.target).parents('#divCaption').length > 0 || jQuery(event.target).attr("id") == 'divCaption' || jQuery(event.target).prop("tagName").toLowerCase() == 'img') {
+
+                } else {
+
+                    if (parseInt(jQuery('#divCaption').css('right')) == 0) {//Close                        
+                        jQuery('#divCaption').animate({
+                            right: '-=400px'
+                        }, 200);
+                    }
+
+                }
+            });
+
+        });
+
+        function applyBehaviour(){
+            jQuery("#imageList img").unbind('click');
+            jQuery("#imageList img").click(function () {
+                jQuery("#imageList img").removeClass('selected');
+                jQuery(this).addClass('selected');
+
+                if (parseInt(jQuery('#divCaption').css('right')) < 0) {//Open                        
+                    jQuery('#divCaption').animate({
+                        right: '+=400px'
+                    }, 200);
+                }
+
+                if (jQuery('#divCaption').find('#imgSelected').length == 0) {
+                    jQuery('#divCaption').prepend('<img id="imgSelected" src="' + jQuery(this).attr('src') + '" style="height:50px;opacity:0.75;"/>');
+                } else {
+                    jQuery('#imgSelected').attr('src', jQuery(this).attr('src'));
+                }
+
+                var s = decodeURIComponent(jQuery(this).attr('data-caption'));
+                if (s == 'undefined') s = '';
+                jQuery('#txtCaption').val(s);
+
+                var s2 = jQuery(this).attr('data-link')+'';
+                if (s2 == 'undefined') s2 = '';
+                jQuery('#txtLink').val(s2);
+
+                var s3 = jQuery(this).attr('data-position') + '';
+                if (s3 == 'undefined') s3 = '';
+                jQuery('#selPlacement').val(s3);
+
+                var s4 = jQuery(this).attr('data-width') + '';
+                if (s4 == 'undefined') s4 = '';
+                jQuery('#txtWidth').val(s4);
+
+                var s5 = jQuery(this).attr('data-align') + '';
+                if (s5 == 'undefined') s5 = '';
+                jQuery('#selAlign').val(s5);
+
+            });
+
+            jQuery("#imageList > div > span").unbind('click');
+            jQuery("#imageList > div > span").click(function () {//delete image handling
+
+                jQuery(this).parent().remove();
+
+            });
+
+            jQuery("#txtCaption").unbind('keyup');
+            jQuery('#txtCaption').on('keyup', function () {
+                var s = encodeURIComponent(jQuery('#txtCaption').val());
+                jQuery('#imageList').find('.selected').attr('data-caption', s);
+            });
+
+            jQuery("#txtLink").unbind('keyup');
+            jQuery('#txtLink').on('keyup', function () {
+                var s = jQuery('#txtLink').val();
+                jQuery('#imageList').find('.selected').attr('data-link', s);
+            });
+
+            jQuery("#txtWidth").unbind('keyup');
+            jQuery('#txtWidth').on('keyup', function () {
+                var s = jQuery('#txtWidth').val();
+                jQuery('#imageList').find('.selected').attr('data-width', s);
+            });
+
+            jQuery("#selPlacement").unbind('change');
+            jQuery('#selPlacement').on('change', function () {
+                var optionSelected = $("option:selected", this);
+                var valueSelected = this.value;
+                jQuery('#imageList').find('.selected').attr('data-position', valueSelected);
+            });
+            jQuery("#selAlign").unbind('change');
+            jQuery('#selAlign').on('change', function () {
+                var optionSelected = $("option:selected", this);
+                var valueSelected = this.value;
+                jQuery('#imageList').find('.selected').attr('data-align', valueSelected);
+            });
+        }
+
+        //Generate html code, based on the image list and configuration
+        function construct() {
+
+            var html = '';
+            if (isModuleInBox()) {
+                //Slider in Box
+                html = '<div id="{id}" class="slider-on-box" style="width:100%;height:100%;display:none;">';
+            } else {
+                //Slider on Content
+                // if (jQuery("#txtHeight").val() == '') {
+                //     html = '<div id="{id}" class="slider-on-content" style="width:100%;display:none;">';
+                // } else {
+                //     html = '<div id="{id}" class="slider-on-content" style="width:100%;height:' + jQuery("#txtHeight").val() + 'px;display:none;">';
+                // }
+                html = '<div id="{id}" class="slider-on-content" style="position:absolute;top:0;left:0;width:100%;height:100%;display:none">';
+            }
+
+            var imglist = '';
+            jQuery('#imageList img').each(function () {
+                var imgSrc = jQuery(this).attr('src');
+                var encodedCaption = jQuery(this).attr('data-caption') + '';
+                var link = jQuery(this).attr('data-link') + '';
+                var position = jQuery(this).attr('data-position') + '';
+                var captionWidth = jQuery(this).attr('data-width') + '';
+                var captionAlign = jQuery(this).attr('data-align') + '';
+
+                if (encodedCaption == 'undefined') encodedCaption = '';
+                if (link == 'undefined') link = '';
+                if (position == 'undefined') link = '';
+                if (captionWidth == 'undefined') captionWidth = '';
+                if (captionAlign == 'undefined') captionAlign = '';
+
+                var sV = '';
+                if (position.indexOf('top') != -1) {
+                    sV = 'display:flex;align-items:flex-start;position:absolute;top:0;left:0;width:100%;height:100%;'; //'vertical-align:top;';
+                }
+                if (position.indexOf('middle') != -1) {
+                    sV = 'display:flex;align-items:center;position:absolute;top:0;left:0;width:100%;height:100%;'; //'vertical-align:middle;';
+                }
+                if (position.indexOf('bottom') != -1) {
+                    sV = 'display:flex;align-items:flex-end;position:absolute;top:0;left:0;width:100%;height:100%;'; // 'vertical-align:bottom;';
+                }
+
+                var sH = '';
+                var sW = '';
+                var sA = '';
+                if (captionWidth != '') sW = 'max-width:' + captionWidth + 'px;';
+                if (captionAlign != '') sA = 'text-align:' + captionAlign + ';';
+                if (position.indexOf('left') != -1) {
+                    sH = 'margin-left:0px;margin-right:auto;' + sW + sA;
+                }
+                else if (position.indexOf('center') != -1) {
+                    sH = 'margin-left:auto;margin-right:auto;' + sW + sA;
+                }
+                else if (position.indexOf('right') != -1) {
+                    sH = 'margin-left:auto;margin-right:0px;' + sW + sA;
+                }
+                else {
+                    sH = sW + sA;
+                }
+
+                var sliderContent = '';
+                if (encodedCaption != '') {
+                    if (link != '') {
+                        sliderContent = '<a href="' + link + '" title="" class="is-box-centered is-content-bottom slider-content" style="' + sV + '">' +
+                        '<div style="' + sH + '">' + decodeURIComponent(encodedCaption) + '</div>' +
+                            '</a>';
+                    } else {
+                        sliderContent = '<div class="is-box-centered is-content-bottom slider-content" style="' + sV + '">' +
+                        '<div style="' + sH + '">' + decodeURIComponent(encodedCaption) + '</div>' +
+                            '</div>';
+                    }
+                }
+
+                if (isModuleInBox()) {
+                    html += '<div class="is-boxes slider-image" style="background-image: url(\'' + imgSrc + '\');position:relative;">' +
+                        sliderContent +
+                        '</div>';
+                } else {
+                    // if (jQuery("#txtHeight").val() == '') {
+                    //     html += '<div class="is-boxes slider-image" style="background-image: url(\'' + imgSrc + '\');position:relative;">' +
+                    //     '<img src="' + imgSrc + '" style="visibility:hidden">' +
+                    //     sliderContent +
+                    // '</div>';
+                    // } else {
+                    //     html += '<div class="is-boxes slider-image" style="background-image: url(\'' + imgSrc + '\');position:relative;">' +
+                    //     sliderContent +
+                    //     '</div>';
+                    // }
+                    html += '<div class="is-boxes slider-image" style="background-image: url(\'' + imgSrc + '\');position:relative;">' +
+                    sliderContent +
+                    '</div>';
+                }
+
+
+                //sSlideContent = "<a href=""" & sLink2 & """ style=""display: table-cell; vertical-align:" & sVAlign2 & ";text-align:" & sHAlign2 & ";color:#fff;padding:20px 40px;" & IIf(sImagesPerSlide = "1", "padding-bottom:60px;", "padding-bottom:20px;") & "letter-spacing:1px;font-size:1.2em;text-decoration:none;text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);"">" & sCaption2 & "</a>"
+                if (imglist == '') {
+                    imglist += '{"src": "' + imgSrc + '", "caption": "' + encodedCaption + '", "link": "' + link + '", "width": "' + captionWidth + '", "align": "' + captionAlign + '", "position": "' + position + '"}';
+                } else {
+                    imglist += ',{"src": "' + imgSrc + '", "caption": "' + encodedCaption + '", "link": "' + link + '", "width": "' + captionWidth + '", "align": "' + captionAlign + '", "position": "' + position + '"}';
+                }
+            });
+            html += '</div>';
+          
+            html += '<scr' + 'ipt>\n' +
+            'var docReady=function(fn){' +
+                'var stateCheck=setInterval(function (){' +
+                    'if(document.readyState!=="complete")return;' +
+                    'clearInterval(stateCheck);' +
+                    'try{fn()}catch(e){}' +
+                '},1);' +
+            '};\n' +
+            'docReady(function() {\n' +
+                'jQuery("#{id}").css("display","block");\n' +
+                'jQuery("#{id}").slick({\n' +
+                    'dots: ' + jQuery("#chkDots").prop("checked") + ',' +
+                    'arrows: ' + jQuery("#chkArrow").prop("checked") + ',' +
+                    'infinite: true,' +
+                    'speed: 500,' +
+                    'cssEase: "linear",' +
+                    'slidesToShow: 1,' +
+                    'autoplay: ' + jQuery("#chkAuto").prop("checked") + ',' +
+                    'autoplaySpeed: 3000,' +
+                    'fade: ' + jQuery("#chkFade").prop("checked") + ',' +
+                    'adaptiveHeight: true,' +
+                    // 'responsive: [{breakpoint: 480,' +
+                    //     'settings: {arrows: false}' +
+                    // '}]\n' +
+                '});\n' +
+            '});\n' +
+            '</scr' + 'ipt>';
+
+            setHtml(html);
+
+            /*
+            [
+                {
+                auto: false, 
+                arrow: true, 
+                dots: true, 
+                fade: false, 
+                height: '300px',
+                images: [
+                    {
+                    src: 'test1.jpg',
+                    caption: 'Lorem ipsum',
+                    position: 'bottom left'
+                    },
+                    {
+                    src: 'test2.jpg',
+                    caption: 'Lorem ipsum',
+                    position: 'bottom left'
+                    }
+                ]
+            ]
+            */
+          
+            // var settings = '[{"auto":' + jQuery("#chkAuto").prop("checked") + ',"arrow":' + jQuery("#chkArrow").prop("checked") + ',"dots":' + jQuery("#chkDots").prop("checked") + ',"fade":' + jQuery("#chkFade").prop("checked") + ',"height":"' + jQuery("#txtHeight").val() + '","images":[' + imglist + ']}]';
+            var settings = '[{"auto":' + jQuery("#chkAuto").prop("checked") + ',"arrow":' + jQuery("#chkArrow").prop("checked") + ',"dots":' + jQuery("#chkDots").prop("checked") + ',"fade":' + jQuery("#chkFade").prop("checked") + ',"images":[' + imglist + ']}]';
+            setSettings(settings);
+        }
+
+        /*! jQuery UI Touch Punch 0.2.3 | Copyright 2011–2014, Dave Furfero | Dual licensed under the MIT or GPL Version 2 licenses. */
+        eval(function (p, a, c, k, e, r) { e = function (c) { return (c < a ? '' : e(parseInt(c / a))) + ((c = c % a) > 35 ? String.fromCharCode(c + 29) : c.toString(36)) }; if (!''.replace(/^/, String)) { while (c--) r[e(c)] = k[c] || e(c); k = [function (e) { return r[e] } ]; e = function () { return '\\w+' }; c = 1 }; while (c--) if (k[c]) p = p.replace(new RegExp('\\b' + e(c) + '\\b', 'g'), k[c]); return p } ('(7(4){4.w.8=\'H\'G p;c(!4.w.8){f}d 6=4.U.D.L,g=6.g,h=6.h,a;7 5(2,r){c(2.k.F.J>1){f}2.B();d 8=2.k.q[0],l=p.N(\'O\');l.S(r,i,i,V,1,8.W,8.X,8.Y,8.A,b,b,b,b,0,C);2.z.E(l)}6.m=7(2){d 3=e;c(a||!3.I(2.k.q[0])){f}a=i;3.j=b;5(2,\'K\');5(2,\'s\');5(2,\'M\')};6.n=7(2){c(!a){f}e.j=i;5(2,\'s\')};6.o=7(2){c(!a){f}5(2,\'P\');5(2,\'Q\');c(!e.j){5(2,\'R\')}a=b};6.g=7(){d 3=e;3.u.T({v:4.9(3,\'m\'),x:4.9(3,\'n\'),y:4.9(3,\'o\')});g.t(3)};6.h=7(){d 3=e;3.u.Z({v:4.9(3,\'m\'),x:4.9(3,\'n\'),y:4.9(3,\'o\')});h.t(3)}})(4);', 62, 62, '||event|self|jQuery|simulateMouseEvent|mouseProto|function|touch|proxy|touchHandled|false|if|var|this|return|_mouseInit|_mouseDestroy|true|_touchMoved|originalEvent|simulatedEvent|_touchStart|_touchMove|_touchEnd|document|changedTouches|simulatedType|mousemove|call|element|touchstart|support|touchmove|touchend|target|clientY|preventDefault|null|mouse|dispatchEvent|touches|in|ontouchend|_mouseCapture|length|mouseover|prototype|mousedown|createEvent|MouseEvents|mouseup|mouseout|click|initMouseEvent|bind|ui|window|screenX|screenY|clientX|unbind'.split('|'), 0, {}));
+
+        /* 
+        COMMON METHODS FOR MODULE.
+        */
+        function isModuleInBox() {
+
+            var $activeModule = parent._cb.win.jQuery("[data-module-active]"); //get active module
+            if ($activeModule.hasClass('is-overlay-content')) {
+                //Module in Box
+                return true;
+            } else {
+                //Module on Content
+                return false;
+            }
+
+        }
+        function getHtml() {
+            var $activeModule = parent._cb.win.jQuery("[data-module-active]"); //get active module    
+            return decodeURIComponent($activeModule.attr("data-html"));
+        }
+
+        function getSettings() {
+            var $activeModule = parent._cb.win.jQuery("[data-module-active]"); //get active module 
+            return decodeURIComponent($activeModule.attr('data-settings'));
+        }
+
+        function setHtml(html) {
+            if (isModuleInBox()) {
+                //Slider in Box
+                parent.jQuery('#hidModuleCode').val(html);
+            } else {
+                //Slider on Content
+                parent.jQuery('#hidContentModuleCode').val(html);
+            }
+        }
+
+        function setSettings(settings) {
+            if (isModuleInBox()) {
+                //Slider in Box
+                parent.jQuery('#hidModuleSettings').val(settings);
+            } else {
+                //Slider on Content
+                parent.jQuery('#hidContentModuleSettings').val(settings);
+            }
+        }
+
+        // source: http://stackoverflow.com/questions/1349404/generate-a-string-of-5-random-characters-in-javascript
+        function makeid() {
+            var text = "";
+            var possible = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
+            for (var i = 0; i < 2; i++)
+                text += possible.charAt(Math.floor(Math.random() * possible.length));
+
+            var text2 = "";
+            var possible2 = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+            for (var i = 0; i < 5; i++)
+                text2 += possible2.charAt(Math.floor(Math.random() * possible2.length));
+
+            return text + text2;
+        }
+
+        
+        // Style stuff
+        function applyParentStyles() {
+            var cssString = `
+                body {
+                    color: ${parent._cb.styleModalColor};
+                }
+                
+                button {
+                    background-color: ${parent._cb.styleButtonClassicBackground};
+                    color: ${parent._cb.styleButtonClassicColor};         
+                }
+                button svg {
+                    fill: ${parent._cb.styleButtonClassicColor};         
+                }
+
+                input[type="text"],
+                textarea {
+                    color: ${parent._cb.styleInputColor};
+                    background-color: ${parent._cb.styleInputBackground};
+                    border-bottom: ${parent._cb.styleInputBorderBottom};
+                }
+                input:focus,
+                textarea:focus {
+                    outline: none;
+                }
+                select {
+                    color: ${parent._cb.styleSelectColor};
+                    background-color: ${parent._cb.styleSelectBackground};
+                }
+                select option {
+                    background-color: ${parent._cb.styleSelectOptionBackground};
+                }
+                #divCaption {
+                    background-color: ${parent._cb.styleModalBackground};
+                }
+            `;
+            var style = document.createElement("style");
+            style.type = "text/css";
+            style.innerHTML = cssString;
+            document.getElementsByTagName("head")[0].appendChild(style);
+        }
+
+        applyParentStyles();
+        
+        // Language file stuff
+        function applyLang() {
+            let elms = document.querySelectorAll('[data-lang]');
+            elms.forEach(function(elm){
+                elm.innerHTML = parent._cb.out(elm.innerHTML);
+            });
+        }
+        applyLang();
+
+        document.body.style.opacity = 1;
+    </script>
+
+</body>
+</html>

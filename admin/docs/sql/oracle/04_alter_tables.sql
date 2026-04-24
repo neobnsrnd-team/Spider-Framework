@@ -102,5 +102,135 @@ ALTER TABLE SPW_CMS_PAGE ADD (
 ALTER TABLE SPW_CMS_PAGE ADD CONSTRAINT CHK_SPW_PAGE_TYPE
     CHECK (PAGE_TYPE IN ('PAGE', 'TEMPLATE', 'REACT'));
 
+-- =============================================================
+-- bizApp — POC_USER 비밀번호 BCrypt 마이그레이션
+-- 추가일: 2026-04-23
+-- 주의: 개발자가 DB에서 직접 실행해야 한다
+-- BCrypt 강도(strength): 10, 해시 길이: 60자
+--
+-- [순서]
+-- 1. PASSWORD 컬럼 크기를 60자로 확장 (BCrypt 해시 길이 수용)
+-- 2. BCrypt 해시 생성: new BCryptPasswordEncoder().encode("test12!") 실행 후 출력값 복사
+-- 3. 아래 UPDATE 문의 '<BCrypt hash of test12!>' 를 실제 해시값으로 교체 후 실행
+-- =============================================================
+
+-- Step 1: PASSWORD 컬럼 크기 확장 (VARCHAR2(20) → VARCHAR2(60))
+ALTER TABLE D_SPIDERLINK.POC_USER MODIFY PASSWORD VARCHAR2(60);
+
+-- Step 2: 평문 비밀번호를 BCrypt 해시로 교체
+-- BCryptPasswordEncoder(strength=10).encode("test12!") 생성값
+UPDATE D_SPIDERLINK.POC_USER
+SET PASSWORD = '$2a$10$fTvJ5wu/HMA8gkiVez/M/um83ToooOeUG2fhmZVfRCTgABTHZFLIu'
+WHERE PASSWORD = 'test12!';
+
+-- =============================================================
+-- CMS 배포 서버 인스턴스 포트 변경: 3001(Next.js 직접) → 8080(nginx)
+-- =============================================================
+-- 생성일: 2026-04-22
+-- ※ 아래 쿼리는 개발자가 DB에서 직접 실행해야 합니다.
+-- =============================================================
+
+-- 미리보기 URL이 http://{ip}:{INSTANCE_PORT}/cms/deployed/{pageId}.html 형태로 구성되므로
+-- INSTANCE_PORT를 8080으로 변경해야 nginx를 통해 정적 파일에 접근할 수 있다.
+UPDATE FWK_CMS_SERVER_INSTANCE
+SET INSTANCE_PORT = 8080,
+    INSTANCE_DESC = '운영 배포 서버 (133.186.135.23:8080)'
+WHERE INSTANCE_ID = 'prod-operation-01';
+
+COMMIT;
+
+-- =============================================================
+-- #147 CMS 배포 관리 — 만료수동처리 기능 추가
+-- ⚠ 개발자가 DB에서 직접 실행해야 합니다.
+-- =============================================================
+
+-- SPW_CMS_PAGE.BEGINNING_DATE / EXPIRED_DATE / IS_PUBLIC / FILE_PATH_BACK 컬럼은
+-- 01_create_tables.sql 에 이미 정의되어 있으므로 별도 ALTER 불필요.
+-- FWK_CMS_FILE_SEND_HIS 의 만료 전용 이력 조회 예시 (운영 확인용):
+--   SELECT * FROM FWK_CMS_FILE_SEND_HIS
+--   WHERE FILE_ID LIKE '%_expired.html'
+--   ORDER BY LAST_MODIFIED_DTIME DESC;
+
+-- =============================================================
+-- FWK_SQL_QUERY_HIS — 실제 DB 테이블 확인 결과
+-- =============================================================
+-- 확인일: 2026-04-22
+-- FWK_SQL_QUERY_HIS 테이블은 구버전부터 이미 존재하는 테이블입니다.
+-- PK: (VERSION_ID VARCHAR2(50), QUERY_ID VARCHAR2(50))
+-- 신버전에서는 VERSION_ID = System.currentTimeMillis() 문자열 사용
+-- ※ 잘못 생성된 시퀀스를 아래 쿼리로 제거하세요 (개발자 직접 실행):
+DROP SEQUENCE SEQ_FWK_SQL_QUERY_HIS;
+
+-- =============================================================
+-- #148 FWK_MESSAGE_INSTANCE — 컬럼 크기 일괄 수정
+-- ⚠ 개발자가 DB에서 직접 실행해야 합니다.
+-- =============================================================
+-- ORG_ID         VARCHAR2(10) → VARCHAR2(20) : "biz-transfer"(12자) 등 appName 수용
+-- REQ_RES_TYPE   VARCHAR2(1)  → VARCHAR2(3)  : "REQ"/"RES" 3자 수용
+-- TRX_TRACKING_NO VARCHAR2(30) → VARCHAR2(40) : UUID(36자) 수용, TRX_ID와 통일
+-- INSTANCE_ID    VARCHAR2(4)  → VARCHAR2(20) : "biz-transfer:19200"(16자) 수용
+ALTER TABLE FWK_MESSAGE_INSTANCE MODIFY (
+    ORG_ID          VARCHAR2(20),
+    REQ_RES_TYPE    VARCHAR2(3),
+    TRX_TRACKING_NO VARCHAR2(40),
+    INSTANCE_ID     VARCHAR2(20)
+);
+
+COMMIT;
+
+-- =============================================================
+-- FWK_SQL_QUERY_HIS 컬럼 크기 확장
+-- =============================================================
+-- 배경: 이력 저장 시 QUERY_NAME(50), QUERY_DESC(200) 초과 데이터 유실 방지
+--       메인 테이블(FWK_SQL_QUERY) 기준으로 컬럼 크기를 일치시킴
+-- ※ 개발자가 DB에서 직접 실행해야 합니다.
+ALTER TABLE FWK_SQL_QUERY_HIS MODIFY (QUERY_NAME VARCHAR2(200));
+ALTER TABLE FWK_SQL_QUERY_HIS MODIFY (QUERY_DESC VARCHAR2(500));
+
+COMMIT;
+
+-- =============================================================
+-- #150 MetaDrivenCommandHandler Biz 타입('B') 데모 컴포넌트 데이터
+-- =============================================================
+-- 배경: MetaDrivenCommandHandler 에 Biz 클래스 리플렉션 호출(COMPONENT_TYPE='B') 추가.
+--       외부시스템 TCP 호출이 필요한 서비스 스텝은 아래와 같이 FWK_COMPONENT 에 등록한다.
+-- ⚠ 개발자가 DB에서 직접 실행해야 합니다.
+--
+-- COMPONENT_TYPE 값 정리:
+--   S = SELECT (MyBatis selectOne)
+--   U = UPDATE/INSERT/DELETE (MyBatis update, auto-commit)
+--   B = Biz 클래스 리플렉션 호출 (COMPONENT_CLASS_NAME = 스프링 빈 클래스 전체 경로)
+--
+-- TcpCallBiz 사용 시 접속 대상은 spider-link application.yml 의 tcp.ext.host / tcp.ext.port 로 설정.
+
+-- 외부 인증AP(biz-auth) 로그인 TCP 호출 컴포넌트 예시
+INSERT INTO FWK_COMPONENT (
+    COMPONENT_ID, COMPONENT_NAME, COMPONENT_DESC,
+    COMPONENT_TYPE, COMPONENT_CLASS_NAME, COMPONENT_METHOD_NAME,
+    USE_YN, LAST_UPDATE_DTIME, LAST_UPDATE_USER_ID
+) VALUES (
+    'EXT_TCP_AUTH_LOGIN',
+    '외부 인증AP 로그인 TCP 호출',
+    'TcpCallBiz 를 통해 biz-auth(포트 19100)로 AUTH_LOGIN 커맨드 전송',
+    'B',
+    'com.example.spiderlink.infra.tcp.biz.TcpCallBiz',
+    'AUTH_LOGIN',
+    'Y',
+    TO_CHAR(SYSDATE, 'YYYYMMDDHH24MISS'),
+    'Admin'
+);
+
+COMMIT;
+
+-- =============================================================
+-- #169 FWK_MESSAGE_INSTANCE TRX_TRACKING_NO / MESSAGE_SNO 컬럼 길이 확장
+-- =============================================================
+-- 배경: MessageInstanceRecorder 가 requestId(UUID, 36자)를 TRX_TRACKING_NO 에 그대로 저장하는데
+--       컬럼이 VARCHAR2(30) 으로 정의되어 있어 6자리가 잘려서 저장됨.
+--       → REQ/RES 거래 체인 추적 오류 및 Admin 거래추적로그조회 불일치 발생 가능.
+--       MESSAGE_SNO 는 현재 시퀀스(NEXTVAL) 사용으로 즉각 문제는 없으나 향후 UUID 전환 대비 함께 확장.
+-- ⚠ 개발자가 DB에서 직접 실행해야 합니다.
+ALTER TABLE FWK_MESSAGE_INSTANCE MODIFY TRX_TRACKING_NO VARCHAR2(36);
+ALTER TABLE FWK_MESSAGE_INSTANCE MODIFY MESSAGE_SNO     VARCHAR2(36);
 
 COMMIT;

@@ -1,0 +1,32 @@
+spring:
+  application:
+    name: biz-transfer
+  config:
+    import: optional:file:.env[.properties]
+  main:
+    # TCP 서버만 사용하므로 내장 웹 서버를 비활성화한다
+    web-application-type: none
+    keep-alive: true
+  datasource:
+    url: ${DB_URL}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+    driver-class-name: oracle.jdbc.OracleDriver
+    hikari:
+      maximum-pool-size: 2
+      minimum-idle: 1
+
+tcp:
+  server:
+    port: ${TCP_SERVER_PORT}
+    handler-pool-size: ${TCP_SERVER_HANDLER_POOL_SIZE}
+    queue-capacity: ${TCP_SERVER_QUEUE_CAPACITY}
+
+mock:
+  core:
+    host: ${MOCK_CORE_HOST}
+    port: ${MOCK_CORE_PORT}
+
+logging:
+  level:
+    com.example.biztransfer: DEBUG

@@ -10,6 +10,7 @@ import org.springframework.core.io.Resource;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
@@ -75,9 +76,13 @@ public class CmsBuilderClient {
         MultiValueMap<String, Object> form = buildFormData(file, userId, userName, businessCategory, assetDesc);
 
         try {
+            // cmsBuilderRestClient 사용 — 대용량 업로드를 위해 60초 read-timeout 유지 (#177)
+            // deploy 클라이언트(10초)는 파일 이동 전용이므로 업로드에 사용하면 타임아웃 위험이 있다.
+            // x-deploy-token은 header()로 직접 주입하여 서버 간 인증을 통과시킨다.
             CmsBuilderUploadApiResponse response = cmsBuilderRestClient
                     .post()
                     .uri(properties.getUploadPath())
+                    .header("x-deploy-token", properties.getDeploySecret())
                     .contentType(MediaType.MULTIPART_FORM_DATA)
                     .body(form)
                     .retrieve()
@@ -146,6 +151,29 @@ public class CmsBuilderClient {
      * @param assetId 배포 대상 자산 식별자
      * @throws BaseException 배포 실패 시 (HTTP 502)
      */
+    /**
+     * CMS 이미지를 바이트 배열로 가져온다.
+     *
+     * <p>CMS의 {@code GET /cms/api/assets/{assetId}/image} 는 DB에서 현재 파일 위치를 읽어 302 redirect 한다.
+     * 미승인(임시 경로)·승인(운영 경로) 상태 구분 없이 동일 URL로 접근 가능하다.
+     * Admin → CMS 서버 간 호출이므로 x-deploy-token 인증(defaultHeader 주입)을 사용한다.
+     *
+     * @param assetId 이미지 자산 ID
+     * @return 이미지 바이트 및 Content-Type. CMS 오류 시 빈 404 반환
+     */
+    public ResponseEntity<byte[]> fetchImage(String assetId) {
+        try {
+            return cmsBuilderDeployRestClient
+                    .get()
+                    .uri("/cms/api/assets/{assetId}/image", assetId)
+                    .retrieve()
+                    .toEntity(byte[].class);
+        } catch (RestClientException e) {
+            log.warn("CMS 이미지 조회 실패: assetId={}", assetId, e);
+            return ResponseEntity.notFound().build();
+        }
+    }
+
     public void deployAsset(String assetId) {
         try {
             cmsBuilderDeployRestClient

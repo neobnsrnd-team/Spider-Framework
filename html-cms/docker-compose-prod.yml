@@ -1,0 +1,76 @@
+# docker-compose-prod.yml
+# ──────────────────────────────────────────────────────────────────────────────
+# NHN Cloud 단일 인스턴스 — 2컨테이너 운영 구성
+#
+# [실행]
+#   docker compose -f docker-compose-prod.yml up -d
+#
+# [이미지 갱신 후 재시작]
+#   docker compose -f docker-compose-prod.yml pull && \
+#   docker compose -f docker-compose-prod.yml up -d --no-deps cms operation
+#
+# [전제 조건]
+#   - .env.prod 파일이 동일 디렉토리에 존재해야 합니다.
+#   - Oracle DB는 외부(개발 DB 공용)로 연결합니다. (ORACLE_HOST 기준)
+#   - 호스트에 /data/uploads, /data/deployed 디렉토리가 사전 생성되어야 합니다.
+# ──────────────────────────────────────────────────────────────────────────────
+
+services:
+
+  # ── CMS 관리자 컨테이너 ────────────────────────────────────────────────────
+  cms:
+    image: ${DOCKER_IMAGE:-neobns/springware-cms:latest}
+    pull_policy: never
+    container_name: springware-cms
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    env_file:
+      - .env.prod
+    environment:
+      PORT: "3000"
+      SERVER_MODE: "cms"
+    volumes:
+      # 호스트 바인드 마운트 — nginx 정적 서빙 공유용
+      - /data/uploads:/app/public/uploads
+      - /data/deployed:/app/public/deployed   # 승인 이미지 복사 대상 + :3000 에디터 읽기용
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:3000/cms/api/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "5"
+
+  # ── 운영 배포 컨테이너 ─────────────────────────────────────────────────────
+  operation:
+    image: ${DOCKER_IMAGE:-neobns/springware-cms:latest}
+    pull_policy: never
+    container_name: springware-operation
+    restart: unless-stopped
+    ports:
+      - "3001:3000"
+    env_file:
+      - .env.prod
+    environment:
+      PORT: "3000"
+      SERVER_MODE: "operation"
+    volumes:
+      # 호스트 바인드 마운트 — 배포 HTML 영속
+      - /data/deployed:/app/public/deployed
+      - /data/uploads:/app/public/uploads:ro   # 이미지 접근용 (읽기 전용)
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:3000/cms/api/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "5"

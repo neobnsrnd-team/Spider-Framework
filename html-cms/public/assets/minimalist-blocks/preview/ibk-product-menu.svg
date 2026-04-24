@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 390 320" width="390" height="320">
+  <rect width="390" height="320" rx="16" fill="#ffffff"/>
+  <text x="20" y="44" fill="#0046A4" font-size="16" font-weight="700" font-family="sans-serif">상품물</text>
+  <!-- Row 1 -->
+  <rect x="20" y="60" width="108" height="82" rx="12" fill="#F3F4F6"/>
+  <text x="74" y="130" text-anchor="middle" fill="#0046A4" font-size="12" font-family="sans-serif">예금</text>
+  <rect x="141" y="60" width="108" height="82" rx="12" fill="#F3F4F6"/>
+  <text x="195" y="130" text-anchor="middle" fill="#0046A4" font-size="12" font-family="sans-serif">대출</text>
+  <rect x="262" y="60" width="108" height="82" rx="12" fill="#F3F4F6"/>
+  <text x="316" y="130" text-anchor="middle" fill="#0046A4" font-size="12" font-family="sans-serif">펀드</text>
+  <!-- Row 2 -->
+  <rect x="20" y="154" width="108" height="82" rx="12" fill="#F3F4F6"/>
+  <text x="74" y="224" text-anchor="middle" fill="#0046A4" font-size="12" font-family="sans-serif">신탁</text>
+  <rect x="141" y="154" width="108" height="82" rx="12" fill="#F3F4F6"/>
+  <text x="195" y="224" text-anchor="middle" fill="#0046A4" font-size="12" font-family="sans-serif">외환</text>
+  <rect x="262" y="154" width="108" height="82" rx="12" fill="#F3F4F6"/>
+  <text x="316" y="224" text-anchor="middle" fill="#0046A4" font-size="12" font-family="sans-serif">보험</text>
+  <!-- Row 3 -->
+  <rect x="20" y="248" width="108" height="56" rx="12" fill="#F3F4F6"/>
+  <text x="74" y="284" text-anchor="middle" fill="#0046A4" font-size="12" font-family="sans-serif">카드</text>
+  <rect x="141" y="248" width="108" height="56" rx="12" fill="#F3F4F6"/>
+  <text x="195" y="284" text-anchor="middle" fill="#0046A4" font-size="12" font-family="sans-serif">ISA</text>
+  <rect x="262" y="248" width="108" height="56" rx="12" fill="#F3F4F6"/>
+  <text x="316" y="284" text-anchor="middle" fill="#0046A4" font-size="12" font-family="sans-serif">퇴직연금</text>
+</svg>

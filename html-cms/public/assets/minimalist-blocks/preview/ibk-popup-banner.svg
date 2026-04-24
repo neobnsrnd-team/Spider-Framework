@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 390 280" width="390" height="280">
+  <!-- 배경 -->
+  <rect width="390" height="280" fill="#DDE1E7"/>
+  <!-- Bottom Sheet -->
+  <rect x="0" y="60" width="390" height="220" rx="20" fill="#ffffff"/>
+  <!-- 헤더 영역 -->
+  <rect x="0" y="60" width="390" height="48" rx="0" fill="#ffffff"/>
+  <rect x="0" y="60" width="390" height="20" rx="20" fill="#ffffff"/>
+  <!-- 인디케이터 dots -->
+  <rect x="20" y="80" width="24" height="8" rx="4" fill="#0046A4"/>
+  <circle cx="54" cy="84" r="4" fill="#E5E7EB"/>
+  <circle cx="68" cy="84" r="4" fill="#E5E7EB"/>
+  <!-- 닫기 버튼 -->
+  <line x1="358" y1="76" x2="370" y2="88" stroke="#374151" stroke-width="2" stroke-linecap="round"/>
+  <line x1="370" y1="76" x2="358" y2="88" stroke="#374151" stroke-width="2" stroke-linecap="round"/>
+  <!-- 이미지 슬라이드 영역 -->
+  <rect x="0" y="108" width="390" height="140" fill="#E8F0FC"/>
+  <rect x="60" y="148" width="270" height="60" rx="8" fill="#C7D8F4" opacity="0.6"/>
+  <text x="195" y="184" text-anchor="middle" font-size="13" fill="#0046A4" font-family="-apple-system,sans-serif" font-weight="600">이미지 슬라이드</text>
+  <!-- 구분선 -->
+  <line x1="0" y1="248" x2="390" y2="248" stroke="#F3F4F6" stroke-width="1"/>
+  <!-- 보지 않기 체크박스 -->
+  <rect x="20" y="258" width="16" height="16" rx="3" fill="none" stroke="#E5E7EB" stroke-width="1.5"/>
+  <text x="44" y="270" font-size="12" fill="#6B7280" font-family="-apple-system,sans-serif">3일간 보지 않기</text>
+</svg>

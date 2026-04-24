@@ -1,0 +1,31 @@
+/* Particle Constellation Container */
+[data-cb-type="particle-constellation"] {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 20px 0;
+    background: transparent;
+}
+
+[data-cb-type="particle-constellation"] canvas {
+    display: block;
+    max-width: 100%;
+    height: auto;
+    border-radius: 8px;
+}
+
+/* Dark mode support (optional) */
+[data-cb-skin="dark"] [data-cb-type="particle-constellation"] {
+    background: transparent;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    [data-cb-type="particle-constellation"] {
+        padding: 10px 0;
+    }
+    
+    [data-cb-type="particle-constellation"] canvas {
+        border-radius: 4px;
+    }
+}

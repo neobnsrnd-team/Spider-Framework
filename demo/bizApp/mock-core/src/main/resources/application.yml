@@ -1,0 +1,26 @@
+spring:
+  application:
+    name: mock-core
+  config:
+    import: optional:file:.env[.properties]
+  main:
+    web-application-type: none
+    keep-alive: true
+  datasource:
+    url: ${DB_URL}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+    driver-class-name: oracle.jdbc.OracleDriver
+    hikari:
+      maximum-pool-size: 2
+      minimum-idle: 1
+
+tcp:
+  server:
+    port: ${TCP_SERVER_PORT}
+    handler-pool-size: ${TCP_SERVER_HANDLER_POOL_SIZE}
+    queue-capacity: ${TCP_SERVER_QUEUE_CAPACITY}
+
+logging:
+  level:
+    com.example.mockcore: DEBUG

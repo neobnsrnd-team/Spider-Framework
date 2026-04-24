@@ -1,15 +1,21 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org">
 <body>
-<!-- CMS 이미지 승인 관리 검색 프래그먼트 -->
 <div th:fragment="search" class="card border p-2 mb-3">
     <div class="d-flex flex-wrap align-items-center gap-2 mb-1">
         <label class="form-label mb-0 small fw-medium">승인상태</label>
         <select id="filterAssetState" class="form-select form-select-sm flex-fixed-130">
-            <option value="" selected>전체(WORK 제외)</option>
+            <option value="" selected>전체</option>
             <option value="PENDING">승인대기</option>
             <option value="APPROVED">승인완료</option>
             <option value="REJECTED">반려</option>
+        </select>
+
+        <label class="form-label mb-0 small fw-medium ms-2">노출여부</label>
+        <select id="filterUseYn" class="form-select form-select-sm flex-fixed-130">
+            <option value="" selected>전체</option>
+            <option value="Y">노출</option>
+            <option value="N">미노출</option>
         </select>
 
         <label class="form-label mb-0 small fw-medium ms-2">업로더</label>
@@ -18,9 +24,9 @@
                onkeypress="if(event.key === 'Enter') CmsAssetApprovalPage.load(1)">
 
         <label class="form-label mb-0 small fw-medium ms-2">카테고리</label>
-        <input type="text" id="filterBusinessCategory" class="form-control form-control-sm flex-fixed-130"
-               placeholder="카테고리"
-               onkeypress="if(event.key === 'Enter') CmsAssetApprovalPage.load(1)">
+        <select id="filterBusinessCategory" class="form-select form-select-sm flex-fixed-130">
+            <option value="">전체</option>
+        </select>
 
         <input type="text" id="filterSearch" class="form-control form-control-sm flex-fixed-200"
                placeholder="이미지명 또는 업로더명"
@@ -47,6 +53,9 @@
         </button>
         <button class="btn btn-outline-secondary btn-sm" onclick="CmsAssetApprovalPage.reset()">초기화</button>
     </div>
+</div>
+<div class="alert alert-info py-2 small" role="alert">
+    페이지 제작자가 승인 요청하지 않은 아직 작업 중인 이미지는 조회되지 않습니다.
 </div>
 </body>
 </html>

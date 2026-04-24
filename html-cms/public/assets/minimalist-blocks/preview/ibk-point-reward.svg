@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 390 200" width="390" height="200">
+  <rect width="390" height="200" fill="#ffffff"/>
+  <!-- 카드 배경 -->
+  <rect x="16" y="12" width="358" height="176" rx="12" fill="#ffffff" stroke="#E5E7EB" stroke-width="1"/>
+  <!-- 헤더 -->
+  <text x="32" y="44" font-family="-apple-system,BlinkMacSystemFont,sans-serif" font-size="15" font-weight="700" fill="#1A1A2E">IBK 포인트</text>
+  <!-- 구분선 -->
+  <line x1="32" y1="56" x2="358" y2="56" stroke="#F3F4F6" stroke-width="1"/>
+  <!-- 행 1 -->
+  <text x="32" y="80" font-family="-apple-system,BlinkMacSystemFont,sans-serif" font-size="13" fill="#6B7280">보유 포인트</text>
+  <text x="358" y="80" font-family="-apple-system,BlinkMacSystemFont,sans-serif" font-size="13" font-weight="600" fill="#1A1A2E" text-anchor="end">12,500 P</text>
+  <line x1="32" y1="90" x2="358" y2="90" stroke="#F3F4F6" stroke-width="1"/>
+  <!-- 행 2 -->
+  <text x="32" y="112" font-family="-apple-system,BlinkMacSystemFont,sans-serif" font-size="13" fill="#6B7280">이번달 적립</text>
+  <text x="358" y="112" font-family="-apple-system,BlinkMacSystemFont,sans-serif" font-size="13" font-weight="600" fill="#1A1A2E" text-anchor="end">1,200 P</text>
+  <line x1="32" y1="122" x2="358" y2="122" stroke="#F3F4F6" stroke-width="1"/>
+  <!-- 행 3 (소멸 예정) -->
+  <text x="32" y="144" font-family="-apple-system,BlinkMacSystemFont,sans-serif" font-size="13" fill="#6B7280">04.30 소멸 예정</text>
+  <text x="358" y="144" font-family="-apple-system,BlinkMacSystemFont,sans-serif" font-size="13" font-weight="600" fill="#E53E3E" text-anchor="end">500 P</text>
+  <!-- 버튼 2개 -->
+  <rect x="32" y="158" width="164" height="22" rx="6" fill="#0046A4"/>
+  <text x="114" y="173" font-family="-apple-system,BlinkMacSystemFont,sans-serif" font-size="12" font-weight="600" fill="#ffffff" text-anchor="middle">현금 전환</text>
+  <rect x="210" y="158" width="164" height="22" rx="6" fill="#E8F0FC"/>
+  <text x="292" y="173" font-family="-apple-system,BlinkMacSystemFont,sans-serif" font-size="12" font-weight="600" fill="#0046A4" text-anchor="middle">쇼핑 사용</text>
+</svg>

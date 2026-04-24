@@ -37,7 +37,16 @@
                     CASE WHEN lh.FILE_ID IS NOT NULL
                         THEN 'http://' || si.INSTANCE_IP || ':' || TO_CHAR(si.INSTANCE_PORT)
                              || '/cms/deployed/' || p.PAGE_ID || '.html'
-                    END                                                         AS deployedUrl
+                    END                                                         AS deployedUrl,
+                    TO_CHAR(p.BEGINNING_DATE, 'YYYY-MM-DD')                    AS beginningDate,
+                    TO_CHAR(p.EXPIRED_DATE,   'YYYY-MM-DD')                    AS expiredDate,
+                    p.IS_PUBLIC                                                 AS isPublic,
+                    <!-- 만료 여부: 종료일 경과 AND 현재 공개 중인 페이지만 "Y" -->
+                    CASE WHEN p.EXPIRED_DATE IS NOT NULL
+                              AND p.EXPIRED_DATE <![CDATA[<]]> SYSDATE
+                              AND p.IS_PUBLIC = 'Y'
+                         THEN 'Y' ELSE 'N'
+                    END                                                         AS isExpired
                 FROM SPW_CMS_PAGE p
                 LEFT JOIN (
                     SELECT
@@ -49,7 +58,9 @@
                             ORDER BY LAST_MODIFIED_DTIME DESC
                         ) AS RN
                     FROM FWK_CMS_FILE_SEND_HIS
+                    <!-- 만료 전용 이력(_expired.html)은 제외하여 정상 배포 이력만 미리보기 URL에 반영 -->
                     WHERE FILE_ID LIKE '%_v%.html'
+                      AND FILE_ID NOT LIKE '%_expired.html'
                 ) lh ON lh.PAGE_ID = p.PAGE_ID AND lh.RN = 1
                 LEFT JOIN FWK_CMS_SERVER_INSTANCE si ON lh.INSTANCE_ID = si.INSTANCE_ID
                 <include refid="approvedPageConditions"/>
@@ -120,5 +131,89 @@
           AND PAGE_TYPE     = 'PAGE'
     </select>
 
+    <!-- ==================== 만료수동처리 ==================== -->
+
+    <!--
+        만료 처리 대상 검증.
+        조건: EXPIRED_DATE < SYSDATE AND IS_PUBLIC='Y' AND USE_YN='Y'
+        조건 충족 시 'Y' 반환, 미충족(row 없음) 시 null 반환 → 서비스에서 NotFoundException 처리.
+        FILE_PATH 가 NULL 인 미배포 페이지도 만료 처리 가능하므로 SELECT 'Y' 로 존재 여부만 확인한다.
+    -->
+    <select id="findExpirableFilePath" resultType="string">
+        SELECT 'Y'
+        FROM SPW_CMS_PAGE
+        WHERE PAGE_ID      = #{pageId}
+          AND USE_YN       = 'Y'
+          AND IS_PUBLIC    = 'Y'
+          AND EXPIRED_DATE IS NOT NULL
+          AND EXPIRED_DATE <![CDATA[<]]> SYSDATE
+    </select>
+
+    <!--
+        pageId에 대한 최신 정상 배포 FILE_ID 반환 (예: PAGE001_v3.html).
+        만료 전용 이력(_expired.html)은 제외하여 정상 배포 버전만 추출.
+        이력 없으면 null 반환 → 서비스에서 v0 폴백 처리.
+    -->
+    <select id="findLatestDeployedFileId" resultType="string">
+        SELECT FILE_ID
+        FROM (
+            SELECT FILE_ID
+            FROM FWK_CMS_FILE_SEND_HIS
+            WHERE FILE_ID LIKE #{pageId} || '\_v%.html' ESCAPE '\'
+              AND FILE_ID NOT LIKE '%\_expired.html' ESCAPE '\'
+            ORDER BY LAST_MODIFIED_DTIME DESC
+        )
+        WHERE ROWNUM = 1
+    </select>
+
+    <!-- ALIVE_YN='Y' 서버 인스턴스 목록 — 만료 배포 순차 전송 대상 -->
+    <select id="findAliveServerInstances" resultType="com.example.admin_demo.domain.cmsdeployment.dto.CmsServerInstanceResponse">
+        SELECT
+            INSTANCE_ID     AS instanceId,
+            INSTANCE_IP     AS instanceIp,
+            TO_CHAR(INSTANCE_PORT) AS instancePort
+        FROM FWK_CMS_SERVER_INSTANCE
+        WHERE ALIVE_YN = 'Y'
+        ORDER BY INSTANCE_ID
+    </select>
+
+    <!--
+        FWK_CMS_FILE_SEND_HIS UPSERT (MERGE ON INSTANCE_ID + FILE_ID 복합 PK).
+        만료 전용 FILE_ID 패턴: {pageId}_v{version}_expired.html
+        — 정상 배포 이력({pageId}_v{n}.html)을 덮어쓰지 않도록 별도 키 사용 (#147)
+    -->
+    <insert id="upsertFileSendHis">
+        MERGE INTO FWK_CMS_FILE_SEND_HIS tgt
+        USING (
+            SELECT
+                #{instanceId}  AS INSTANCE_ID,
+                #{fileId}      AS FILE_ID
+            FROM DUAL
+        ) src
+        ON (tgt.INSTANCE_ID = src.INSTANCE_ID AND tgt.FILE_ID = src.FILE_ID)
+        WHEN MATCHED THEN
+            UPDATE SET
+                FILE_SIZE           = #{fileSize},
+                FILE_CRC_VALUE      = #{crcValue},
+                LAST_MODIFIED_DTIME = TO_CHAR(SYSDATE, 'YYYYMMDDHH24MISS'),
+                LAST_MODIFIER_ID    = #{userId}
+        WHEN NOT MATCHED THEN
+            INSERT (INSTANCE_ID, FILE_ID, FILE_SIZE, FILE_CRC_VALUE, LAST_MODIFIED_DTIME, LAST_MODIFIER_ID)
+            VALUES (#{instanceId}, #{fileId}, #{fileSize}, #{crcValue}, TO_CHAR(SYSDATE, 'YYYYMMDDHH24MISS'), #{userId})
+    </insert>
+
+    <!--
+        만료 처리 완료 후 페이지 상태 업데이트.
+        FILE_PATH_BACK: 기존 배포 경로 백업 (복구 시 참조용)
+        IS_PUBLIC: 'N'으로 변경하여 만료수동처리 버튼 재노출 방지
+    -->
+    <update id="expirePage">
+        UPDATE SPW_CMS_PAGE
+        SET
+            IS_PUBLIC        = 'N',
+            FILE_PATH_BACK   = FILE_PATH,
+            LAST_MODIFIER_ID = #{userId}
+        WHERE PAGE_ID = #{pageId}
+    </update>
 
 </mapper>

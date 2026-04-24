@@ -99,10 +99,14 @@
                     <encoding>UTF-8</encoding>
                 </configuration>
             </plugin>
-            <!-- demo/backend Spring Boot 전환 전까지 standalone 실행을 위해 유지 -->
+            <!-- classifier=exec: 실행용 fat JAR는 spider-link-exec.jar로 분리,
+                 spider-link.jar는 일반 라이브러리 JAR로 유지 → admin 등 의존 프로젝트에서 클래스 참조 가능 -->
             <plugin>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
+                <configuration>
+                    <classifier>exec</classifier>
+                </configuration>
             </plugin>
         </plugins>
     </build>

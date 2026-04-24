@@ -1,66 +1,101 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org">
 <body>
-<!-- CMS 이미지 업로드 모달 프래그먼트 (Issue #65) -->
 <div th:fragment="modal">
     <div class="modal fade" id="assetUploadModal" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog modal-lg">
+        <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
             <div class="modal-content">
                 <div class="modal-header">
                     <h5 class="modal-title">
-                        <i class="bi bi-upload"></i> 이미지 업로드
+                        <i class="bi bi-cloud-upload"></i> 이미지 업로드
                     </h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
 
-                    <!-- 드롭존: input 은 드롭존 밖에 두어 클릭 버블링 루프를 방지한다. -->
-                    <div id="assetUploadDropzone" class="asset-upload-dropzone text-center p-4 mb-3">
-                        <i class="bi bi-cloud-arrow-up fs-1 text-body-secondary"></i>
-                        <p class="mb-1">이미지 파일을 여기로 드래그하거나 클릭하여 선택하세요.</p>
-                        <p class="small text-body-secondary mb-0">
-                            지원 형식: PNG, JPG, JPEG, GIF, WebP · 최대 20MB
-                        </p>
+                    <!-- 안내 문구 -->
+                    <div class="alert alert-info py-2 px-3 small mb-3 d-flex align-items-start gap-2">
+                        <i class="bi bi-info-circle-fill mt-1"></i>
+                        <div>
+                            업로드한 이미지는 선택한 <strong>업무 카테고리</strong> 기준으로 관리됩니다.
+                        </div>
                     </div>
-                    <input type="file" id="assetUploadFileInput" class="d-none"
-                           accept="image/png,image/jpeg,image/gif,image/webp"/>
 
-                    <!-- 선택된 파일 미리보기 -->
-                    <div id="assetUploadPreviewWrap" class="d-none mb-3">
-                        <div class="d-flex align-items-start gap-3">
-                            <img id="assetUploadPreview" alt="preview"
-                                 style="width:120px;height:120px;object-fit:cover;border:1px solid #dee2e6;border-radius:4px;background:#f8f9fa;"/>
-                            <div class="flex-grow-1 small">
-                                <div><strong>파일명:</strong> <span id="assetUploadPreviewName">-</span></div>
-                                <div><strong>크기:</strong> <span id="assetUploadPreviewSize">-</span></div>
-                                <div><strong>형식:</strong> <span id="assetUploadPreviewType">-</span></div>
-                                <button type="button" class="btn btn-outline-secondary btn-xs mt-2"
-                                        id="btnAssetUploadClear">
-                                    <i class="bi bi-x"></i> 파일 제거
-                                </button>
+                    <!-- STEP 1. 파일 선택 -->
+                    <div class="asset-upload-step mb-4">
+                        <div class="asset-upload-step-header d-flex align-items-center gap-2 mb-2">
+                            <span class="asset-upload-step-number">1</span>
+                            <strong>이미지 파일 선택</strong>
+                            <span class="text-danger small">*</span>
+                        </div>
+
+                        <!-- 파일이 선택되지 않은 상태: 드롭존 -->
+                        <div id="assetUploadDropzone" class="asset-upload-dropzone text-center p-4">
+                            <i class="bi bi-cloud-arrow-up display-5 text-body-secondary d-block mb-2"></i>
+                            <p class="mb-1"><strong>클릭하여 선택</strong> 하거나, 이곳으로 파일을 끌어다 놓으세요.</p>
+                            <p class="small text-body-secondary mb-0">
+                                지원 형식: PNG · JPG · JPEG · GIF · WebP &nbsp;|&nbsp; 최대 20MB
+                            </p>
+                        </div>
+
+                        <input type="file" id="assetUploadFileInput" class="d-none"
+                               accept="image/png,image/jpeg,image/gif,image/webp"/>
+
+                        <!-- 파일이 선택된 상태: 미리보기 -->
+                        <div id="assetUploadPreviewWrap" class="asset-upload-preview d-none mt-2 p-3">
+                            <div class="d-flex align-items-start gap-3">
+                                <img id="assetUploadPreview" alt="선택된 이미지 미리보기"
+                                     class="asset-upload-preview-img"/>
+                                <div class="flex-grow-1">
+                                    <div class="fw-semibold mb-2 text-break" id="assetUploadPreviewName">-</div>
+                                    <div class="small text-body-secondary d-flex flex-wrap gap-3 mb-2">
+                                        <span><i class="bi bi-hdd"></i> <span id="assetUploadPreviewSize">-</span></span>
+                                        <span><i class="bi bi-file-earmark-image"></i> <span id="assetUploadPreviewType">-</span></span>
+                                    </div>
+                                    <div class="d-flex gap-2">
+                                        <button type="button" class="btn btn-outline-secondary btn-sm"
+                                                id="btnAssetUploadClear">
+                                            <i class="bi bi-x-circle"></i> 다른 파일 선택
+                                        </button>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
 
-                    <!-- 메타데이터 입력 -->
-                    <div class="row g-3">
-                        <div class="col-md-6">
-                            <label for="assetUploadCategory" class="form-label small">업무 카테고리 (선택)</label>
-                            <input type="text" id="assetUploadCategory" class="form-control form-control-sm"
-                                   maxlength="50"/>
+                    <!-- STEP 2. 정보 입력 -->
+                    <div class="asset-upload-step">
+                        <div class="asset-upload-step-header d-flex align-items-center gap-2 mb-2">
+                            <span class="asset-upload-step-number">2</span>
+                            <strong>이미지 정보 입력</strong>
                         </div>
-                        <div class="col-12">
-                            <label for="assetUploadDesc" class="form-label small">이미지 설명 (선택)</label>
-                            <textarea id="assetUploadDesc" class="form-control form-control-sm" rows="2"
-                                      maxlength="1000"></textarea>
+
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label for="assetUploadCategory" class="form-label">
+                                    업무 카테고리 <span class="text-danger">*</span>
+                                </label>
+                                <select id="assetUploadCategory" class="form-select form-select-sm">
+                                    <option value="COMMON" selected>공통</option>
+                                </select>
+                                <div class="form-text">이미지가 사용될 업무 영역을 선택하세요.</div>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="assetUploadDesc" class="form-label">이미지 설명 <span class="text-body-secondary small">(선택)</span></label>
+                                <textarea id="assetUploadDesc" class="form-control form-control-sm" rows="3"
+                                          maxlength="1000"
+                                          placeholder="이미지의 용도나 특이사항을 입력하세요. (최대 1000자)"></textarea>
+                            </div>
                         </div>
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">취소</button>
+                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">
+                        <i class="bi bi-x-lg"></i> 취소
+                    </button>
                     <button type="button" class="btn btn-primary btn-sm" id="btnAssetUploadSubmit" disabled>
                         <span id="assetUploadSpinner" class="spinner-border spinner-border-sm d-none me-1"></span>
-                        <i class="bi bi-upload"></i> 업로드
+                        <i class="bi bi-cloud-upload"></i> 이미지 업로드
                     </button>
                 </div>
             </div>

@@ -16,10 +16,12 @@
         a.ASSET_ID                                                      AS assetId,
         a.ASSET_NAME                                                    AS assetName,
         a.BUSINESS_CATEGORY                                             AS businessCategory,
+        c.CODE_NAME                                                     AS businessCategoryName,
         a.MIME_TYPE                                                     AS mimeType,
         a.FILE_SIZE                                                     AS fileSize,
         a.ASSET_URL                                                     AS assetUrl,
         a.ASSET_STATE                                                   AS assetState,
+        a.USE_YN                                                        AS useYn,
         a.REJECTED_REASON                                               AS rejectedReason,
         a.CREATE_USER_ID                                                AS createUserId,
         a.CREATE_USER_NAME                                              AS createUserName,
@@ -48,7 +50,6 @@
 
     <sql id="approvalListWhere">
         <where>
-            a.USE_YN = 'Y'
             <choose>
                 <when test="req.assetState != null and req.assetState != ''">
                     AND a.ASSET_STATE = #{req.assetState}
@@ -63,6 +64,9 @@
             </if>
             <if test="req.businessCategory != null and req.businessCategory != ''">
                 AND a.BUSINESS_CATEGORY = #{req.businessCategory}
+            </if>
+            <if test="req.useYn != null and req.useYn != ''">
+                AND a.USE_YN = #{req.useYn}
             </if>
             <if test="req.search != null and req.search != ''">
                 AND (
@@ -115,6 +119,10 @@
                 SELECT
                 <include refid="listColumns"/>
                 FROM SPW_CMS_ASSET a
+                LEFT JOIN FWK_CODE c
+                  ON c.CODE_GROUP_ID = 'CMS00001'
+                 AND c.CODE = a.BUSINESS_CATEGORY
+                 AND c.USE_YN = 'Y'
                 <include refid="myListWhere"/>
                 <include refid="orderBy"/>
             ) INNER_QRY
@@ -125,6 +133,10 @@
     <select id="countMyList" resultType="long">
         SELECT COUNT(*)
         FROM SPW_CMS_ASSET a
+        LEFT JOIN FWK_CODE c
+          ON c.CODE_GROUP_ID = 'CMS00001'
+         AND c.CODE = a.BUSINESS_CATEGORY
+         AND c.USE_YN = 'Y'
         <include refid="myListWhere"/>
     </select>
 
@@ -136,6 +148,10 @@
                 SELECT
                 <include refid="listColumns"/>
                 FROM SPW_CMS_ASSET a
+                LEFT JOIN FWK_CODE c
+                  ON c.CODE_GROUP_ID = 'CMS00001'
+                 AND c.CODE = a.BUSINESS_CATEGORY
+                 AND c.USE_YN = 'Y'
                 <include refid="approvalListWhere"/>
                 <include refid="orderBy"/>
             ) INNER_QRY
@@ -146,6 +162,10 @@
     <select id="countApprovalList" resultType="long">
         SELECT COUNT(*)
         FROM SPW_CMS_ASSET a
+        LEFT JOIN FWK_CODE c
+          ON c.CODE_GROUP_ID = 'CMS00001'
+         AND c.CODE = a.BUSINESS_CATEGORY
+         AND c.USE_YN = 'Y'
         <include refid="approvalListWhere"/>
     </select>
 
@@ -155,7 +175,6 @@
         SELECT COUNT(*)
         FROM SPW_CMS_ASSET
         WHERE ASSET_ID = #{assetId}
-          AND USE_YN   = 'Y'
     </select>
 
     <select id="findAssetStateById" resultType="string">
@@ -179,12 +198,14 @@
             a.ASSET_ID                                                  AS assetId,
             a.ASSET_NAME                                                AS assetName,
             a.BUSINESS_CATEGORY                                         AS businessCategory,
+            c.CODE_NAME                                                 AS businessCategoryName,
             a.MIME_TYPE                                                 AS mimeType,
             a.FILE_SIZE                                                 AS fileSize,
             a.ASSET_PATH                                                AS assetPath,
             a.ASSET_URL                                                 AS assetUrl,
             a.ASSET_DESC                                                AS assetDesc,
             a.ASSET_STATE                                               AS assetState,
+            a.USE_YN                                                    AS useYn,
             a.REJECTED_REASON                                           AS rejectedReason,
             a.CREATE_USER_ID                                            AS createUserId,
             a.CREATE_USER_NAME                                          AS createUserName,
@@ -192,8 +213,11 @@
             TO_CHAR(a.CREATE_DATE, 'YYYY-MM-DD HH24:MI:SS')             AS createDate,
             TO_CHAR(a.LAST_MODIFIED_DTIME, 'YYYY-MM-DD HH24:MI:SS')     AS lastModifiedDtime
         FROM SPW_CMS_ASSET a
+        LEFT JOIN FWK_CODE c
+          ON c.CODE_GROUP_ID = 'CMS00001'
+         AND c.CODE = a.BUSINESS_CATEGORY
+         AND c.USE_YN = 'Y'
         WHERE a.ASSET_ID = #{assetId}
-          AND a.USE_YN   = 'Y'
     </select>
 
     <!-- ==================== 상태 전이 UPDATE ==================== -->
@@ -219,6 +243,15 @@
         WHERE ASSET_ID    = #{assetId}
           AND ASSET_STATE = #{expectedFrom}
           AND USE_YN      = 'Y'
+    </update>
+
+    <update id="updateUseYn">
+        UPDATE SPW_CMS_ASSET
+        SET USE_YN = #{useYn},
+            LAST_MODIFIER_ID = #{modifierId},
+            LAST_MODIFIER_NAME = #{modifierName},
+            LAST_MODIFIED_DTIME = SYSTIMESTAMP
+        WHERE ASSET_ID = #{assetId}
     </update>
 
 </mapper>

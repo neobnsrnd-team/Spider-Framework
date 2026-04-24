@@ -252,6 +252,32 @@
             $('.cms-create-template-selected-name').text($template.find('.cms-create-template-title').text());
         },
 
+        /**
+         * 템플릿 목록 동적 로드 — GET /api/cms-dashboard/templates
+         * 페이지 초기화 시 1회 호출. 중복 방지를 위해 blank 외 기존 항목을 먼저 제거한다.
+         * XSS 방지: pageName은 jQuery .text()로 설정하여 HTML 이스케이프 처리.
+         */
+        _loadTemplates: function() {
+            fetch('/api/cms-dashboard/templates')
+                .then(r => r.json())
+                .then(res => {
+                    if (!res.success || !res.data) return;
+                    const $list = $('.cms-create-template-list');
+                    // 이전에 동적으로 추가된 항목 제거 (중복 방지)
+                    $list.find('.cms-create-template:not([data-template-id="blank"])').remove();
+                    res.data.forEach(function(t) {
+                        const $btn = $('<button type="button" class="cms-create-template"></button>');
+                        $btn.attr('data-template-id', t.pageId);
+                        const $radio = $('<span class="cms-create-template-radio"></span>');
+                        const $title = $('<span class="cms-create-template-title"></span>').text(t.pageName);
+                        const $desc  = $('<span class="cms-create-template-desc">미리 구성된 템플릿으로 시작합니다.</span>');
+                        $btn.append($radio).append($('<span></span>').append($title).append($desc));
+                        $list.append($btn);
+                    });
+                })
+                .catch(() => {}); // 로드 실패 시 빈 페이지만으로 정상 동작
+        },
+
         updateCreateButtonState: function(creating) {
             const hasName = !!$('#createPageName').val().trim();
             $('#btnCreatePageConfirm')
@@ -372,6 +398,7 @@
         CmsDashboardPage.itemsPerPage = parseInt($('#limitRows').val()) || 10;
         CmsDashboardPage.attachSortHandlers();
         CmsDashboardPage.load(1);
+        CmsDashboardPage._loadTemplates();
 
         $('#limitRows').on('change', function() {
             CmsDashboardPage.itemsPerPage = parseInt($(this).val()) || 10;
@@ -381,7 +408,8 @@
         $('.cms-create-view-mode').on('click', function() {
             CmsDashboardPage.selectCreateViewMode($(this).data('view-mode'));
         });
-        $('.cms-create-template').on('click', function() {
+        // 이벤트 위임 — _loadTemplates()로 동적 추가된 버튼에도 적용
+        $('.cms-create-template-list').on('click', '.cms-create-template', function() {
             CmsDashboardPage.selectCreateTemplate($(this).data('template-id'));
         });
         $('#createPageName').on('input', function() {

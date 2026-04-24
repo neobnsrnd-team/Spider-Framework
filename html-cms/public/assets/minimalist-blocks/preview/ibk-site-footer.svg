@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 390 180" width="390" height="180">
+  <rect width="390" height="180" fill="#F9FAFB"/>
+  <text x="16" y="28" fill="#374151" font-size="10" font-family="sans-serif">개인정보 처리방침 | 신용정보활용체제 | 전자민원접수 | 권익위 부패·공익신고</text>
+  <text x="16" y="46" fill="#374151" font-size="10" font-family="sans-serif">보호금융상품등록부 | 상품공시실 | 위치기반서비스 이용약관 | 고객센터</text>
+  <text x="16" y="66" fill="#374151" font-size="10" font-family="sans-serif">국내 1588-2588, 1566-2566 / 해외 82-31-888-800</text>
+  <text x="16" y="84" fill="#6B7280" font-size="10" font-family="sans-serif">Copyright. IBK(INDUSTRIAL BANK OF KOREA) All rights reserved.</text>
+  <!-- Dropdowns -->
+  <rect x="16" y="96" width="140" height="26" rx="4" fill="#fff" stroke="#E5E7EB" stroke-width="1"/>
+  <text x="28" y="114" fill="#374151" font-size="10" font-family="sans-serif">IBK 관련사이트</text>
+  <rect x="164" y="96" width="140" height="26" rx="4" fill="#fff" stroke="#E5E7EB" stroke-width="1"/>
+  <text x="176" y="114" fill="#374151" font-size="10" font-family="sans-serif">IBK 관계사</text>
+  <!-- Social icons -->
+  <rect x="16" y="136" width="26" height="26" rx="6" fill="#FF0000"/>
+  <rect x="50" y="136" width="26" height="26" rx="6" fill="#1877F2"/>
+  <rect x="84" y="136" width="26" height="26" rx="6" fill="#DD2A7B"/>
+  <rect x="118" y="136" width="26" height="26" rx="6" fill="#03C75A"/>
+  <!-- TOP button -->
+  <circle cx="362" cy="149" r="18" fill="#fff" stroke="#E5E7EB" stroke-width="1"/>
+  <path d="M355 153l7-8 7 8" stroke="#6B7280" stroke-width="2" fill="none" stroke-linecap="round"/>
+</svg>

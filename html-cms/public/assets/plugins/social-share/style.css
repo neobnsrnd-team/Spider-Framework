@@ -1,0 +1,157 @@
+/* social-share/style.css */
+
+/* Container */
+/* [data-cb-type="social-share"] {
+    border-top: 1px solid #e5e7eb;
+    padding-top: 24px;
+    margin-top: 24px;
+} */
+
+[data-cb-type="social-share"] .share-container {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+/* Alignment options */
+[data-cb-type="social-share"] .share-container[data-alignment="left"] {
+    justify-content: flex-start;
+}
+
+[data-cb-type="social-share"] .share-container[data-alignment="center"] {
+    justify-content: center;
+}
+
+[data-cb-type="social-share"] .share-container[data-alignment="right"] {
+    justify-content: flex-end;
+}
+
+/* Label */
+[data-cb-type="social-share"] .share-label {
+    font-size: 14px;
+    color: #6b7280;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    font-weight: 500;
+}
+
+/* Buttons wrapper */
+[data-cb-type="social-share"] .share-buttons {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+/* Individual button */
+[data-cb-type="social-share"] .share-btn {
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    background: transparent;
+    color: #111827;
+    cursor: pointer;
+    transition: color 0.2s ease;
+    padding: 0;
+    border-radius: 4px;
+}
+
+[data-cb-type="social-share"] .share-btn:hover {
+    color: #6b7280;
+}
+
+[data-cb-type="social-share"] .share-btn svg {
+    width: 16px;
+    height: 16px;
+}
+
+/* Copy success state */
+[data-cb-type="social-share"] .share-more {
+    position: relative;
+}
+
+[data-cb-type="social-share"] .share-dropdown {
+    position: absolute;
+    top: calc(100% + 8px);
+    right: 0;
+    background: #ffffff;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    padding: 4px;
+    min-width: 140px;
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(-8px);
+    transition: opacity 0.2s ease, transform 0.2s ease, visibility 0.2s;
+    z-index: 100;
+}
+
+[data-cb-type="social-share"] .share-dropdown.show {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0);
+}
+
+[data-cb-type="social-share"] .share-dropdown button {
+    width: 100%;
+    padding: 8px 12px;
+    border: none;
+    background: transparent;
+    color: #374151;
+    font-size: 14px;
+    text-align: left;
+    cursor: pointer;
+    border-radius: 4px;
+    transition: background-color 0.15s ease;
+}
+
+[data-cb-type="social-share"] .share-dropdown button:hover {
+    background-color: #f3f4f6;
+}
+
+/* Dark Mode Support */
+[data-cb-skin="dark"] [data-cb-type="social-share"] {
+    border-top-color: #374151;
+}
+
+[data-cb-skin="dark"] [data-cb-type="social-share"] .share-label {
+    color: #9ca3af;
+}
+
+[data-cb-skin="dark"] [data-cb-type="social-share"] .share-btn {
+    color: #f9fafb;
+}
+
+[data-cb-skin="dark"] [data-cb-type="social-share"] .share-btn:hover {
+    color: #d1d5db;
+}
+
+[data-cb-skin="dark"] [data-cb-type="social-share"] .share-dropdown {
+    background: #1f2937;
+    border-color: #374151;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.6);
+}
+
+[data-cb-skin="dark"] [data-cb-type="social-share"] .share-dropdown button {
+    color: #e5e7eb;
+}
+
+[data-cb-skin="dark"] [data-cb-type="social-share"] .share-dropdown button:hover {
+    background-color: #374151;
+}
+
+/* Responsive */
+@media (max-width: 640px) {
+    [data-cb-type="social-share"] .share-container {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 12px;
+    }
+    
+    [data-cb-type="social-share"] .share-buttons {
+        width: 100%;
+    }
+}

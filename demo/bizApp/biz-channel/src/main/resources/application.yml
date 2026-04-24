@@ -1,0 +1,37 @@
+spring:
+  application:
+    name: biz-channel
+  config:
+    import: optional:file:.env[.properties]
+  datasource:
+    url: ${DB_URL}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+    driver-class-name: oracle.jdbc.OracleDriver
+    hikari:
+      maximum-pool-size: 2
+      minimum-idle: 1
+
+server:
+  port: ${SERVER_PORT}
+
+biz:
+  auth:
+    host: ${BIZ_AUTH_HOST}
+    port: ${BIZ_AUTH_PORT}
+  transfer:
+    host: ${BIZ_TRANSFER_HOST}
+    port: ${BIZ_TRANSFER_PORT}
+
+jwt:
+  secret: ${JWT_SECRET}
+  refresh-secret: ${JWT_REFRESH_SECRET}
+  access-expires-in: ${JWT_ACCESS_EXPIRES_IN}
+  refresh-expires-in: ${JWT_REFRESH_EXPIRES_IN}
+
+admin:
+  secret: ${ADMIN_SECRET}
+
+logging:
+  level:
+    com.example.bizchannel: DEBUG

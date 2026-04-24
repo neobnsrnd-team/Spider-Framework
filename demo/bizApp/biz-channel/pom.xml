@@ -1,0 +1,111 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0
+         https://maven.apache.org/xsd/maven-4.0.0.xsd">
+
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>com.example</groupId>
+        <artifactId>biz-app</artifactId>
+        <version>0.0.1-SNAPSHOT</version>
+    </parent>
+
+    <artifactId>biz-channel</artifactId>
+    <packaging>jar</packaging>
+    <name>biz-channel</name>
+    <description>채널AP — HTTP port 18080, React 프론트엔드 요청을 수신하여 인증AP/이체AP 로 중계하는 Spring Boot 웹 서버</description>
+
+    <dependencies>
+        <!-- HTTP 서버 (내장 Tomcat + Jackson 포함) -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-web</artifactId>
+        </dependency>
+
+        <!-- spider-link 연계엔진 (버전은 부모 dependencyManagement 에서 관리) -->
+        <dependency>
+            <groupId>com.example</groupId>
+            <artifactId>spider-link</artifactId>
+        </dependency>
+
+        <!-- AP 서버 간 공통 커맨드 상수 (버전은 부모 dependencyManagement 에서 관리) -->
+        <dependency>
+            <groupId>com.example</groupId>
+            <artifactId>biz-common</artifactId>
+        </dependency>
+
+        <!-- JJWT API — JWT 생성·검증 인터페이스 -->
+        <dependency>
+            <groupId>io.jsonwebtoken</groupId>
+            <artifactId>jjwt-api</artifactId>
+            <version>0.12.6</version>
+        </dependency>
+        <!-- JJWT 구현체 — 런타임에만 필요 -->
+        <dependency>
+            <groupId>io.jsonwebtoken</groupId>
+            <artifactId>jjwt-impl</artifactId>
+            <version>0.12.6</version>
+            <scope>runtime</scope>
+        </dependency>
+        <!-- JJWT Jackson 직렬화 지원 — 런타임에만 필요 -->
+        <dependency>
+            <groupId>io.jsonwebtoken</groupId>
+            <artifactId>jjwt-jackson</artifactId>
+            <version>0.12.6</version>
+            <scope>runtime</scope>
+        </dependency>
+
+        <!-- JDBC + Oracle — FWK_MESSAGE_INSTANCE 전문 이력 기록 -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-jdbc</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.oracle.database.jdbc</groupId>
+            <artifactId>ojdbc11</artifactId>
+            <scope>runtime</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.oracle.database.jdbc</groupId>
+            <artifactId>ucp</artifactId>
+            <scope>runtime</scope>
+        </dependency>
+
+        <!-- Lombok — 컴파일 타임 코드 생성, 런타임 불필요 -->
+        <dependency>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+            <version>${lombok.version}</version>
+            <optional>true</optional>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <!-- 실행 가능한 Fat JAR 생성 -->
+            <plugin>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>repackage</id>
+                        <goals>
+                            <goal>repackage</goal>
+                        </goals>
+                    </execution>
+                </executions>
+                <configuration>
+                    <!-- Lombok 은 런타임 불필요 — Fat JAR 에서 제외 -->
+                    <excludes>
+                        <exclude>
+                            <groupId>org.projectlombok</groupId>
+                            <artifactId>lombok</artifactId>
+                        </exclude>
+                    </excludes>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+</project>

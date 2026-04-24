@@ -1,0 +1,63 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 260" width="300" height="260">
+  <rect width="300" height="260" fill="white" rx="12"/>
+
+  <!-- 상단 타이틀 -->
+  <line x1="0" y1="44" x2="300" y2="44" stroke="#E5E7EB" stroke-width="2"/>
+  <text x="150" y="28" font-family="sans-serif" font-size="13" fill="#1A1A2E" font-weight="800" text-anchor="middle">이용안내</text>
+  <line x1="116" y1="33" x2="184" y2="33" stroke="#1A1A2E" stroke-width="2"/>
+
+  <!-- 항목 1 — 열림 -->
+  <rect x="0" y="44" width="300" height="36" fill="white"/>
+  <text x="16" y="67" font-family="sans-serif" font-size="12" fill="#1A1A2E" font-weight="600">서비스 이용 안내</text>
+  <!-- chevron up -->
+  <polyline points="274,60 280,54 286,60" fill="none" stroke="#9CA3AF" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+  <line x1="0" y1="80" x2="300" y2="80" stroke="#E8F0FC" stroke-width="1"/>
+
+  <!-- 항목 1 콘텐츠 — 불렛 텍스트 -->
+  <text x="16" y="94" font-family="sans-serif" font-size="9" fill="#374151">· 지난달 이용실적에 따른 월간 통합 할인한도</text>
+
+  <!-- 항목 1 콘텐츠 — 테이블 -->
+  <rect x="16" y="100" width="268" height="18" fill="#F9FAFB" rx="0"/>
+  <line x1="16" y1="100" x2="284" y2="100" stroke="#E5E7EB" stroke-width="0.8"/>
+  <line x1="16" y1="118" x2="284" y2="118" stroke="#E5E7EB" stroke-width="0.8"/>
+  <line x1="150" y1="100" x2="150" y2="150" stroke="#E5E7EB" stroke-width="0.8"/>
+  <line x1="16" y1="100" x2="16" y2="150" stroke="#E5E7EB" stroke-width="0.8"/>
+  <line x1="284" y1="100" x2="284" y2="150" stroke="#E5E7EB" stroke-width="0.8"/>
+  <text x="83" y="113" font-family="sans-serif" font-size="8" fill="#374151" font-weight="600" text-anchor="middle">지난달 이용실적</text>
+  <text x="217" y="113" font-family="sans-serif" font-size="8" fill="#374151" font-weight="600" text-anchor="middle">월 통합 할인 한도</text>
+  <line x1="16" y1="126" x2="284" y2="126" stroke="#E5E7EB" stroke-width="0.8"/>
+  <text x="83" y="121" font-family="sans-serif" font-size="8" fill="#374151" text-anchor="middle">10만원 이상</text>
+  <text x="217" y="121" font-family="sans-serif" font-size="8" fill="#374151" text-anchor="middle">5천원</text>
+  <line x1="16" y1="134" x2="284" y2="134" stroke="#E5E7EB" stroke-width="0.8"/>
+  <text x="83" y="129" font-family="sans-serif" font-size="8" fill="#374151" text-anchor="middle">20만원 이상</text>
+  <text x="217" y="129" font-family="sans-serif" font-size="8" fill="#374151" text-anchor="middle">1만원</text>
+  <line x1="16" y1="142" x2="284" y2="142" stroke="#E5E7EB" stroke-width="0.8"/>
+  <text x="83" y="137" font-family="sans-serif" font-size="8" fill="#374151" text-anchor="middle">30만원 이상</text>
+  <text x="217" y="137" font-family="sans-serif" font-size="8" fill="#374151" text-anchor="middle">2만원</text>
+  <line x1="16" y1="150" x2="284" y2="150" stroke="#E5E7EB" stroke-width="0.8"/>
+  <text x="83" y="145" font-family="sans-serif" font-size="8" fill="#374151" text-anchor="middle">50만원 이상</text>
+  <text x="217" y="145" font-family="sans-serif" font-size="8" fill="#374151" text-anchor="middle">3만원</text>
+
+  <text x="16" y="162" font-family="sans-serif" font-size="9" fill="#374151">· 통합 할인한도 적용 대상 서비스: 대중교통, 국군 콘도, 레스토랑 ...</text>
+
+  <!-- 항목 2 — 닫힘 -->
+  <line x1="0" y1="170" x2="300" y2="170" stroke="#E5E7EB" stroke-width="1"/>
+  <rect x="0" y="170" width="300" height="30" fill="white"/>
+  <text x="16" y="190" font-family="sans-serif" font-size="12" fill="#1A1A2E" font-weight="600">서비스 제공 조건</text>
+  <!-- chevron down -->
+  <polyline points="274,181 280,187 286,181" fill="none" stroke="#9CA3AF" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+
+  <!-- 항목 3 — 닫힘 -->
+  <line x1="0" y1="200" x2="300" y2="200" stroke="#E5E7EB" stroke-width="1"/>
+  <rect x="0" y="200" width="300" height="30" fill="white"/>
+  <text x="16" y="220" font-family="sans-serif" font-size="12" fill="#1A1A2E" font-weight="600">유의사항</text>
+  <!-- chevron down -->
+  <polyline points="274,211 280,217 286,211" fill="none" stroke="#9CA3AF" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+
+  <!-- 항목 4 — 닫힘 -->
+  <line x1="0" y1="230" x2="300" y2="230" stroke="#E5E7EB" stroke-width="1"/>
+  <rect x="0" y="230" width="300" height="30" fill="white"/>
+  <text x="16" y="250" font-family="sans-serif" font-size="12" fill="#1A1A2E" font-weight="600">분쟁 처리 안내</text>
+  <!-- chevron down -->
+  <polyline points="274,241 280,247 286,241" fill="none" stroke="#9CA3AF" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

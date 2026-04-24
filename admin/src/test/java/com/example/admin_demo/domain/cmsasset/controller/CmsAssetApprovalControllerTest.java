@@ -12,6 +12,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.example.admin_demo.domain.cmsasset.client.CmsBuilderClient;
 import com.example.admin_demo.domain.cmsasset.dto.CmsAssetDetailResponse;
 import com.example.admin_demo.domain.cmsasset.dto.CmsAssetListResponse;
 import com.example.admin_demo.domain.cmsasset.service.CmsAssetService;
@@ -53,6 +54,10 @@ class CmsAssetApprovalControllerTest {
 
     @MockitoBean
     private CmsAssetService cmsAssetService;
+
+    /** @WebMvcTest 컨텍스트에서 CmsBuilderClient의 RestClient 빈을 사용할 수 없으므로 mock 처리 */
+    @MockitoBean
+    private CmsBuilderClient cmsBuilderClient;
 
     private static final String ASSET_ID = "ASSET-001";
     private static final String BASE_URL = "/api/cms-admin/asset-approvals";
