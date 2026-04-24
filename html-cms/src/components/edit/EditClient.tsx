@@ -2871,10 +2871,11 @@ export default function EditClient({
             {/* ── 이미지 교체 picker 모달 (iframe으로 /cms/files 렌더) ──
                 - #fileEmbedImage 클릭 인터셉트 시 열림
                 - iframe 내부에서 완료/닫기 시 postMessage로 모달 닫기 요청 수신
-                - 반응형 크기: 기본 1280×900, 화면이 좁으면 95vw/95vh로 제한 */}
+                - 반응형 크기: 기본 1280×900, 화면이 좁으면 95vw/95vh로 제한
+                - z-index: 편집 패널(99998/99999)과 TableEditorModal(100001)보다 위로 → 1,000,000 */}
             {imagePickerOpen && (
                 <div
-                    className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50"
+                    className="fixed inset-0 z-[1000000] flex items-center justify-center bg-black/50"
                     onClick={(e) => {
                         // 바깥(오버레이) 클릭 시 닫기 — 내부 iframe 클릭은 제외
                         if (e.target === e.currentTarget) {

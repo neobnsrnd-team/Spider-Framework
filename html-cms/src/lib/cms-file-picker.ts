@@ -56,12 +56,14 @@ export function openCmsFilesPicker(onSelect: (url: string) => void) {
     if (existing) existing.remove();
 
     // 오버레이 — 반투명 배경. 외곽 클릭 시 닫기.
+    // z-index: 편집 패널(EventBanner 등)이 99998/99999, TableEditorModal이 100001을 사용 →
+    // 이들 모두 위에 뜨도록 1,000,000 부여. (picker는 편집 패널에서 호출되므로 반드시 최상위)
     const overlay = document.createElement('div');
     overlay.id = MODAL_ID;
     overlay.style.cssText = [
         'position:fixed',
         'inset:0',
-        'z-index:9999',
+        'z-index:1000000',
         'display:flex',
         'align-items:center',
         'justify-content:center',
