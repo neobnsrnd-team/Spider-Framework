@@ -14,7 +14,10 @@ import com.example.admin_demo.domain.cmsasset.client.dto.CmsBuilderUploadApiResp
 import com.example.admin_demo.domain.cmsasset.dto.CmsAssetUploadResponse;
 import com.example.admin_demo.domain.cmsasset.mapper.CmsAssetMapper;
 import com.example.admin_demo.domain.cmsasset.validator.AssetUploadValidator;
+import com.example.admin_demo.domain.code.dto.CodeResponse;
+import com.example.admin_demo.domain.code.service.CodeService;
 import com.example.admin_demo.global.exception.InvalidInputException;
+import java.util.List;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -32,6 +35,9 @@ class CmsAssetServiceUploadTest {
     private CmsAssetMapper cmsAssetMapper;
 
     @Mock
+    private CodeService codeService;
+
+    @Mock
     private CmsBuilderClient cmsBuilderClient;
 
     @Mock
@@ -47,6 +53,8 @@ class CmsAssetServiceUploadTest {
     @DisplayName("[업로드] 정상 흐름 — validator → CMS 호출 → CmsAssetUploadResponse 반환")
     void uploadAsset_happyPath_returnsResponse() {
         MockMultipartFile file = new MockMultipartFile("file", "a.png", "image/png", new byte[] {1, 2, 3});
+        given(codeService.getCodesByCodeGroupId(CmsAssetService.ASSET_CATEGORY_CODE_GROUP_ID))
+                .willReturn(List.of(CodeResponse.builder().code("카테고리A").useYn("Y").build()));
         given(cmsBuilderClient.upload(eq(file), eq(USER_ID), eq(USER_NAME), eq("카테고리A"), eq("설명")))
                 .willReturn(buildCmsResponse("uuid-1", "/static/a.png"));
 
@@ -72,16 +80,18 @@ class CmsAssetServiceUploadTest {
     }
 
     @Test
-    @DisplayName("[업로드] 빈/공백 메타데이터는 null 로 유지된 채 CMS 호출에 그대로 전달")
+    @DisplayName("[업로드] 빈/공백 메타데이터는 DEFAULT_BUSINESS_CATEGORY 로 정규화되어 CMS 호출에 전달")
     void uploadAsset_blankMetadata_passedAsIs() {
         MockMultipartFile file = new MockMultipartFile("file", "a.png", "image/png", new byte[] {1});
+        given(codeService.getCodesByCodeGroupId(CmsAssetService.ASSET_CATEGORY_CODE_GROUP_ID))
+                .willReturn(List.of(CodeResponse.builder().code(CmsAssetService.DEFAULT_BUSINESS_CATEGORY).useYn("Y").build()));
         given(cmsBuilderClient.upload(any(), any(), any(), any(), any()))
                 .willReturn(buildCmsResponse("uuid-2", "/static/b.png"));
 
         cmsAssetService.uploadAsset(file, "   ", "", USER_ID, USER_NAME);
 
-        // Controller 가 @RequestParam 으로 받은 원시값을 그대로 전달하므로 Service 는 정규화하지 않는다.
-        then(cmsBuilderClient).should().upload(file, USER_ID, USER_NAME, "   ", "");
+        // 공백 카테고리는 DEFAULT_BUSINESS_CATEGORY("COMMON")로 정규화되어 CMS에 전달된다.
+        then(cmsBuilderClient).should().upload(file, USER_ID, USER_NAME, CmsAssetService.DEFAULT_BUSINESS_CATEGORY, "");
     }
 
     private CmsBuilderUploadApiResponse buildCmsResponse(String assetId, String url) {

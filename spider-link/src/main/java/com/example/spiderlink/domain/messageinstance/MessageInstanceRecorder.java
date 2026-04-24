@@ -92,7 +92,7 @@ public class MessageInstanceRecorder {
         insertHttp(requestId, "O", "RES", uri, data, success, port);
     }
 
-    /** HTTP 로그 전용 insert — CHANNEL_TYPE=HTTP, MESSAGE_ID=URI */
+    /** HTTP 로그 전용 insert — CHANNEL_TYPE=HTTP, MESSAGE_ID=URI, USER_ID=SYSTEM (HTTP 구간은 userId 컨텍스트 없음) */
     private void insertHttp(String requestId, String ioType, String reqResType,
                             String uri, String data, boolean success, int port) {
         try {
@@ -102,16 +102,16 @@ public class MessageInstanceRecorder {
                     "INSERT INTO FWK_MESSAGE_INSTANCE (" +
                     "  MESSAGE_SNO, TRX_ID, ORG_ID, IO_TYPE, REQ_RES_TYPE, MESSAGE_ID," +
                     "  TRX_TRACKING_NO, LOG_DTIME, LAST_LOG_DTIME, LAST_RT_CODE," +
-                    "  INSTANCE_ID, RETRY_TRX_YN, MESSAGE_DATA, TRX_DTIME, CHANNEL_TYPE, URI, SUCCESS_YN" +
+                    "  INSTANCE_ID, RETRY_TRX_YN, MESSAGE_DATA, TRX_DTIME, CHANNEL_TYPE, URI, SUCCESS_YN, USER_ID" +
                     ") VALUES (" +
-                    "  FWK_MESSAGE_INSTANCE_SEQ.NEXTVAL,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?" +
+                    "  FWK_MESSAGE_INSTANCE_SEQ.NEXTVAL,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?" +
                     ")",
                     requestId, appName, ioType, reqResType, uri,
                     requestId, dtime, dtime,
                     success ? "SUCCESS" : "FAIL",
                     instanceId, "N",
                     data, dtime, "HTTP", uri,
-                    success ? "Y" : "N"
+                    success ? "Y" : "N", "SYSTEM"
             );
         } catch (Exception e) {
             log.warn("[MessageInstanceRecorder] HTTP 로그 기록 실패 — uri={}: {}", uri, e.getMessage());
@@ -163,16 +163,16 @@ public class MessageInstanceRecorder {
                     "INSERT INTO FWK_MESSAGE_INSTANCE (" +
                     "  MESSAGE_SNO, TRX_ID, ORG_ID, IO_TYPE, REQ_RES_TYPE, MESSAGE_ID," +
                     "  TRX_TRACKING_NO, LOG_DTIME, LAST_LOG_DTIME, LAST_RT_CODE," +
-                    "  INSTANCE_ID, RETRY_TRX_YN, MESSAGE_DATA, TRX_DTIME, CHANNEL_TYPE, URI, SUCCESS_YN" +
+                    "  INSTANCE_ID, RETRY_TRX_YN, MESSAGE_DATA, TRX_DTIME, CHANNEL_TYPE, URI, SUCCESS_YN, USER_ID" +
                     ") VALUES (" +
-                    "  FWK_MESSAGE_INSTANCE_SEQ.NEXTVAL,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?" +
+                    "  FWK_MESSAGE_INSTANCE_SEQ.NEXTVAL,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?" +
                     ")",
                     trxId, appName, ioType, reqResType, command,
                     trackingNo, dtime, dtime,
                     success ? "SUCCESS" : "FAIL",
                     instanceId, "N",
                     data, dtime, "TCP", command,
-                    success ? "Y" : "N"
+                    success ? "Y" : "N", "SYSTEM"
             );
         } catch (Exception e) {
             log.warn("[MessageInstanceRecorder] DB 기록 실패 — command={}: {}", command, e.getMessage());
