@@ -3,8 +3,12 @@ name: CI
 on:
   push:
     branches: [main]
+    paths-ignore:
+      - 'html-cms/**'
   pull_request:
     branches: [main]
+    paths-ignore:
+      - 'html-cms/**'
 
 # PR에 테스트 결과 코멘트/체크 게시에 필요한 권한
 permissions:
