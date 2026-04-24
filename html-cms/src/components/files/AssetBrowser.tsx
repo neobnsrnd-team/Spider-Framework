@@ -239,13 +239,29 @@ export default function AssetBrowser({ assetOrigin = '' }: AssetBrowserProps) {
         setSelectedUrl((prev) => (prev === url ? null : url));
     }
 
-    // 우측 상단 X — 팝업 창 닫기
+    // 우측 상단 X — 팝업 창 또는 iframe 모달 닫기
+    // - 팝업(window.opener 존재) → window.close()
+    // - iframe(window.parent !== window) → 부모에 PICKER_CLOSE postMessage 전송
     // window.history.back()은 사용하지 않음:
     //   Next.js SSR 인증 redirect 등으로 opener가 null이 되는 경우,
     //   history.back()이 에디터 메인 창이 아닌 팝업 창의 히스토리를 이동시켜
     //   에디터 화면으로 돌아오지 못하는 버그가 생긴다.
     function handleClose() {
         if (typeof window === 'undefined') return;
+
+        // 팝업 창 — 브라우저가 opener를 신뢰하는 경우
+        if (window.opener) {
+            window.close();
+            return;
+        }
+
+        // iframe 모달 — 부모(EditClient)에게 닫기 요청
+        if (window.parent && window.parent !== window) {
+            window.parent.postMessage({ type: 'PICKER_CLOSE' }, '*');
+            return;
+        }
+
+        // 단독 창으로 접근 시 fallback — close() 시도
         window.close();
     }
 

@@ -338,6 +338,11 @@ export default function EditClient({
     // 슬라이드 편집 모달 (promo-banner / product-gallery)
     const [slideEditorBlock, setSlideEditorBlock] = useState<HTMLElement | null>(null);
 
+    // 이미지 교체 picker 모달 — #fileEmbedImage 인터셉트 시 /cms/files를 iframe으로 띄움
+    // 별도 브라우저 창(window.open) 대신 에디터 DOM 내부 모달로 표시해
+    // 주소창 노출·팝업 차단·별개 창 수명 문제를 제거한다.
+    const [imagePickerOpen, setImagePickerOpen] = useState(false);
+
     // ── 현재 탭의 뷰 모드 (생성 시 결정, 이후 변경 불가) ─────────────────
     const currentTab = tabs.find((t) => t.id === bank);
     const viewMode: ViewMode = normalizeViewMode(currentTab?.viewMode);
@@ -1897,7 +1902,7 @@ export default function EditClient({
     // ── ContentBuilder 기본 "이미지 변경" 버튼 인터셉트 ─────────────
     // ContentBuilder의 `#fileEmbedImage` (이미지 블록·헤더 이미지 변경) 는
     // filePicker/imageSelect 옵션을 경유하지 않고 OS 파일 선택창을 직접 띄움.
-    // → 클릭을 캡처 단계에서 가로채서 승인 이미지 브라우저(/files) 팝업으로 우회
+    // → 클릭을 캡처 단계에서 가로채서 승인 이미지 브라우저(/files) 모달로 우회
     const imageReplaceTargetRef = useRef<HTMLImageElement | null>(null);
 
     useEffect(() => {
@@ -1915,8 +1920,8 @@ export default function EditClient({
             const activeImg = (builderRef.current as any)?.activeImage as HTMLImageElement | null;
             imageReplaceTargetRef.current = activeImg ?? null;
 
-            // 팝업으로 /files 오픈 (postMessage 타겟은 window.opener 경로 사용)
-            window.open(nextApi('/files'), 'spw-image-browser', 'width=1280,height=900,scrollbars=yes,resizable=yes');
+            // iframe 모달로 /files 오픈 (postMessage 타겟은 window.parent 경로 사용)
+            setImagePickerOpen(true);
         };
 
         document.addEventListener('click', handleFileInputClick, true);
@@ -1928,11 +1933,13 @@ export default function EditClient({
     // - ASSETS_SELECTED: 다건 — 완료 버튼 경유
     //   · 교체 모드 (imageReplaceTargetRef 가 있을 때): 첫 URL 로 activeImage src 교체
     //   · 삽입 모드: selectAsset 루프 호출
+    // - PICKER_CLOSE: iframe 모달 내부 닫기 버튼에서 부모에게 모달 종료 요청
     useEffect(() => {
         const handleMessage = (event: MessageEvent) => {
             switch (event.data.type) {
                 case 'ASSET_SELECTED':
                     builderRef.current?.selectAsset(event.data.url);
+                    setImagePickerOpen(false);
                     window.focus();
                     break;
                 case 'ASSETS_SELECTED': {
@@ -1950,9 +1957,15 @@ export default function EditClient({
                         // 일반 삽입 모드
                         urls.forEach((url) => builderRef.current?.selectAsset(url));
                     }
+                    setImagePickerOpen(false);
                     window.focus();
                     break;
                 }
+                case 'PICKER_CLOSE':
+                    // iframe 내부 AssetBrowser의 닫기(X) 버튼 → 모달 종료
+                    imageReplaceTargetRef.current = null;
+                    setImagePickerOpen(false);
+                    break;
                 default:
                     break;
             }
@@ -2844,6 +2857,31 @@ export default function EditClient({
 
             {/* ── 새 페이지 추가 모달 ── */}
             {showAddTab && <CreatePageModal onClose={() => setShowAddTab(false)} canWrite={canWrite} />}
+
+            {/* ── 이미지 교체 picker 모달 (iframe으로 /cms/files 렌더) ──
+                - #fileEmbedImage 클릭 인터셉트 시 열림
+                - iframe 내부에서 완료/닫기 시 postMessage로 모달 닫기 요청 수신
+                - 반응형 크기: 기본 1280×900, 화면이 좁으면 95vw/95vh로 제한 */}
+            {imagePickerOpen && (
+                <div
+                    className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50"
+                    onClick={(e) => {
+                        // 바깥(오버레이) 클릭 시 닫기 — 내부 iframe 클릭은 제외
+                        if (e.target === e.currentTarget) {
+                            imageReplaceTargetRef.current = null;
+                            setImagePickerOpen(false);
+                        }
+                    }}
+                >
+                    <div className="relative h-[900px] max-h-[95vh] w-[1280px] max-w-[95vw] overflow-hidden rounded-lg bg-white shadow-xl">
+                        <iframe
+                            src={nextApi('/files')}
+                            className="h-full w-full border-0"
+                            title="이미지 선택"
+                        />
+                    </div>
+                </div>
+            )}
 
             {infoToast && <Toast message={infoToast} />}
         </>
