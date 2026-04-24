@@ -181,12 +181,13 @@ cp .env.example .env
 
 | 변수 | 배포 서버 값 | 설명 |
 | --- | --- | --- |
-| `CMS_ADMIN_BASE_URL` | `https://admin.example.com` | spider-admin 운영 URL (인증 연동) |
-| `CMS_BASE_URL` | `https://cms.example.com` | 배포된 HTML에서 에셋을 로드하는 CMS 기준 URL |
-| `NEXT_PUBLIC_JAVA_API_BASE_URL` | `https://admin.example.com` | 브라우저 fetch에서 사용하는 admin API URL |
-| `NEXT_PUBLIC_SPIDER_ADMIN_BASE_URL` | `https://admin.example.com` | 상단 네비게이션 링크용 admin UI URL |
-| `DEPLOY_SECRET` | 운영 시크릿 (충분히 복잡한 값) | spider-admin `CMS_DEPLOY_SECRET`과 반드시 동일 |
-| `AUTH_BYPASS` | 설정하지 않거나 `false` | 운영에서는 반드시 제거 또는 false |
+| `CMS_BASE_URL` | `http://133.186.135.23` | 배포된 HTML에서 에셋을 로드하는 CMS nginx URL |
+| `CMS_ADMIN_BASE_URL` | `http://133.186.135.23:8080` | spider-admin 운영 URL — 인증(`/api/auth/me`) 연동용. `AUTH_BYPASS=true`인 경우 미사용 |
+| `NEXT_PUBLIC_JAVA_API_BASE_URL` | `http://133.186.135.23:8080` | 브라우저 fetch에서 사용하는 admin API URL |
+| `NEXT_PUBLIC_SPIDER_ADMIN_BASE_URL` | `http://133.186.135.23:8080` | 상단 네비게이션 링크용 admin UI URL |
+| `CORS_ALLOWED_ORIGINS` | `http://133.186.135.23:8080,http://133.186.135.23:3001` | admin 등 외부 오리진에서 CMS API 호출을 허용할 출처 목록 |
+| `DEPLOY_SECRET` | `springware-deploy-secret-change-me` | spider-admin `CMS_DEPLOY_SECRET`과 반드시 동일한 값 |
+| `AUTH_BYPASS` | 설정하지 않거나 `false` | 현재 `true`로 설정됨 — 운영 전 반드시 제거 또는 `false`로 변경 |
 | `ENABLE_INTERNAL_SCHEDULER` | `true` (단일 인스턴스) | 다중 인스턴스 운영 시 하나만 `true`, 나머지 `false` |
 | `CMS_INSTANCE_ID` | `CMS-01` 등 고유 값 | 다중 인스턴스 운영 시 각 서버에 고유 값 부여 |
 
