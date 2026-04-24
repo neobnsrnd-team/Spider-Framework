@@ -5,6 +5,7 @@ import com.example.admin_demo.domain.sqlquery.dto.SqlQueryCreateRequest;
 import com.example.admin_demo.domain.sqlquery.dto.SqlQueryHistoryResponse;
 import com.example.admin_demo.domain.sqlquery.dto.SqlQueryResponse;
 import com.example.admin_demo.domain.sqlquery.dto.SqlQuerySearchRequest;
+import com.example.admin_demo.domain.sqlquery.dto.SqlQueryTestRequest;
 import com.example.admin_demo.domain.sqlquery.dto.SqlQueryTestResponse;
 import com.example.admin_demo.domain.sqlquery.dto.SqlQueryUpdateRequest;
 import com.example.admin_demo.domain.sqlquery.service.SqlQueryService;
@@ -93,9 +94,10 @@ public class SqlQueryController {
 
     @PostMapping("/{queryId}/test")
     @PreAuthorize("hasAuthority('SQL_QUERY:W')")
-    public ResponseEntity<ApiResponse<SqlQueryTestResponse>> testQuery(@PathVariable String queryId) {
+    public ResponseEntity<ApiResponse<SqlQueryTestResponse>> testQuery(
+            @PathVariable String queryId, @RequestBody(required = false) SqlQueryTestRequest request) {
         log.info("POST /api/sql-queries/{}/test", queryId);
-        return ResponseEntity.ok(ApiResponse.success(sqlQueryService.testQuery(queryId)));
+        return ResponseEntity.ok(ApiResponse.success(sqlQueryService.testQuery(queryId, request)));
     }
 
     @PostMapping("/{queryId}/backup")

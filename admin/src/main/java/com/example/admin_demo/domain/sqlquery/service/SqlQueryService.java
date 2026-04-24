@@ -5,6 +5,7 @@ import com.example.admin_demo.domain.sqlquery.dto.SqlQueryCreateRequest;
 import com.example.admin_demo.domain.sqlquery.dto.SqlQueryHistoryResponse;
 import com.example.admin_demo.domain.sqlquery.dto.SqlQueryResponse;
 import com.example.admin_demo.domain.sqlquery.dto.SqlQuerySearchRequest;
+import com.example.admin_demo.domain.sqlquery.dto.SqlQueryTestRequest;
 import com.example.admin_demo.domain.sqlquery.dto.SqlQueryTestResponse;
 import com.example.admin_demo.domain.sqlquery.dto.SqlQueryUpdateRequest;
 import com.example.admin_demo.domain.sqlquery.mapper.SqlQueryMapper;
@@ -179,10 +180,10 @@ public class SqlQueryService {
     /**
      * 저장된 SQL 쿼리를 어드민 datasource로 실행해 결과를 반환한다.
      *
-     * <p>MyBatis #{param} 바인딩 변수는 NULL로 치환하고, 최대 50행으로 제한한다.
-     * SELECT 이외의 DML/DDL은 오류 응답으로 반환한다.
+     * <p>파라미터가 제공된 경우 실제 값으로 바인딩하고, 없으면 #{}/? 를 NULL로 치환해 실행한다.
+     * SELECT 이외의 DML/DDL은 오류 응답으로 반환하며 최대 50행으로 제한한다.
      */
-    public SqlQueryTestResponse testQuery(String queryId) {
+    public SqlQueryTestResponse testQuery(String queryId, SqlQueryTestRequest request) {
         SqlQueryResponse query = getById(queryId);
 
         String rawSql = query.getSqlQuery();
@@ -218,8 +219,21 @@ public class SqlQueryService {
                     .build();
         }
 
-        // 바인딩 변수 치환: MyBatis #{varname} 및 구버전 iBatis #VARNAME# 모두 NULL로 대체
-        String execSql = cleanedSql.replaceAll("#\\{[^}]+\\}", "NULL").replaceAll("#[A-Za-z0-9_.]+#", "NULL");
+        List<String> params = (request != null) ? request.getParams() : null;
+        boolean hasParams = params != null && !params.isEmpty();
+
+        String execSql;
+        Object[] args;
+
+        if (hasParams) {
+            // 실제 파라미터 바인딩: #{varname}과 구버전 iBatis #VARNAME# 모두 JDBC ?로 치환
+            execSql = cleanedSql.replaceAll("#\\{[^}]+\\}", "?").replaceAll("#[A-Za-z0-9_.]+#", "?");
+            args = params.toArray(new Object[0]);
+        } else {
+            // 파라미터 미제공 — 바인딩 변수를 NULL로 치환 (기존 동작 유지)
+            execSql = cleanedSql.replaceAll("#\\{[^}]+\\}", "NULL").replaceAll("#[A-Za-z0-9_.]+#", "NULL");
+            args = null;
+        }
 
         // Oracle 미지원 DB2 격리 수준 힌트 제거 (WITH UR / WITH CS / WITH RS / WITH RR)
         execSql = execSql.replaceAll("(?i)\\s+WITH\\s+(UR|CS|RS|RR)\\s*$", "");
@@ -236,7 +250,9 @@ public class SqlQueryService {
         long start = System.currentTimeMillis();
         try {
             List<String> columns = new ArrayList<>();
-            List<Map<String, Object>> rows = jdbcTemplate.query(limitedSql, rs -> {
+
+            // ResultSetExtractor를 변수로 추출해 파라미터 유무에 따라 분기 호출
+            org.springframework.jdbc.core.ResultSetExtractor<List<Map<String, Object>>> extractor = rs -> {
                 List<Map<String, Object>> result = new ArrayList<>();
                 ResultSetMetaData meta = rs.getMetaData();
                 int colCount = meta.getColumnCount();
@@ -252,7 +268,11 @@ public class SqlQueryService {
                     result.add(row);
                 }
                 return result;
-            });
+            };
+
+            List<Map<String, Object>> rows = (args != null)
+                    ? jdbcTemplate.query(limitedSql, extractor, args)
+                    : jdbcTemplate.query(limitedSql, extractor);
 
             return SqlQueryTestResponse.builder()
                     .columns(columns)
