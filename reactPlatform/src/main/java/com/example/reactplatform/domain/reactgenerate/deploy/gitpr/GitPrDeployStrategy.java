@@ -6,18 +6,19 @@
  * <p>PR 생성 흐름:
  * <ol>
  *   <li>base 브랜치의 최신 커밋 SHA 조회</li>
- *   <li>{@code feature/react-{codeId}} 브랜치 생성</li>
+ *   <li>{@code reactplatform/{codeId}} 브랜치 생성</li>
  *   <li>UI 컴포넌트 파일({component-path}/{ComponentName}.tsx) 커밋</li>
  *   <li>Container scaffold 파일({container-path}/{ComponentName}Container.tsx) 커밋</li>
  *   <li>PR 생성</li>
  * </ol>
  *
- * <p>GitHub API 호출 실패는 비치명적으로 처리한다 — DB 승인은 이미 커밋되었으므로
- * 예외를 던지지 않고 로그만 남긴다.
+ * <p>GitHub API 호출 실패는 예외를 던지지 않고 {@link DeployResult#failure}로 반환한다.
+ * DB 승인은 이미 커밋된 상태이므로 배포 실패가 트랜잭션에 영향을 주지 않는다.
  */
 package com.example.reactplatform.domain.reactgenerate.deploy.gitpr;
 
 import com.example.reactplatform.domain.reactgenerate.deploy.ContainerScaffoldGenerator;
+import com.example.reactplatform.domain.reactgenerate.deploy.DeployResult;
 import com.example.reactplatform.domain.reactgenerate.deploy.ReactDeployProperties;
 import com.example.reactplatform.domain.reactgenerate.deploy.ReactDeployStrategy;
 import lombok.RequiredArgsConstructor;
@@ -32,10 +33,10 @@ public class GitPrDeployStrategy implements ReactDeployStrategy {
     private final ContainerScaffoldGenerator scaffoldGenerator;
 
     @Override
-    public void deploy(String codeId, String reactCode) {
+    public DeployResult deploy(String codeId, String reactCode) {
         if (reactCode == null || reactCode.isBlank()) {
             log.warn("[git-pr] React 코드가 비어 있어 PR 생성을 건너뜁니다. codeId={}", codeId);
-            return;
+            return DeployResult.failure("React 코드가 비어 있습니다.");
         }
 
         ReactDeployProperties.GitPr gitPr = properties.getGitPr();
@@ -70,16 +71,21 @@ public class GitPrDeployStrategy implements ReactDeployStrategy {
                     scaffoldCode,
                     "feat: Container scaffold 추가 — " + scaffoldFileName);
 
-            // 5. PR 생성
+            // 5. 기존 열린 PR이 있으면 재사용, 없으면 신규 생성
             String prTitle = "feat: [React 코드 배포] " + componentName + " — " + codeId;
             String prBody = buildPrBody(componentName, codeId, componentFilePath, containerFilePath);
-            String prUrl = gitPrApiClient.createPullRequest(branchName, gitPr.getBaseBranch(), prTitle, prBody);
+            String existingPrUrl = gitPrApiClient.findOpenPrUrl(branchName);
+            String prUrl = existingPrUrl != null
+                    ? existingPrUrl
+                    : gitPrApiClient.createPullRequest(branchName, gitPr.getBaseBranch(), prTitle, prBody);
 
             log.info("[git-pr] 배포 완료 — codeId={}, pr={}", codeId, prUrl);
+            return DeployResult.success(prUrl);
 
         } catch (Exception e) {
             // GitHub API 실패는 비치명적 — DB 승인은 이미 커밋됨
             log.error("[git-pr] PR 생성 실패 — codeId={}, branch={}", codeId, branchName, e);
+            return DeployResult.failure(e.getMessage());
         }
     }
 

@@ -69,10 +69,11 @@ public class GitPrApiClient {
 
     /**
      * 지정한 SHA를 기점으로 새 브랜치를 생성한다.
+     * 브랜치가 이미 존재하면(422) base SHA로 강제 리셋하여 이전 배포 내용을 덮어쓴다.
      *
-     * @param branchName 생성할 브랜치명 (예: {@code feature/react-{codeId}})
+     * @param branchName 생성할 브랜치명 (예: {@code reactplatform/{codeId}})
      * @param sha        브랜치의 시작점이 될 커밋 SHA
-     * @throws InternalException 브랜치 생성 실패 시
+     * @throws InternalException 브랜치 생성 및 리셋 모두 실패 시
      */
     public void createBranch(String branchName, String sha) {
         String url = GITHUB_API_BASE + "/repos/{owner}/{repo}/git/refs";
@@ -83,9 +84,61 @@ public class GitPrApiClient {
             restTemplate.exchange(url, HttpMethod.POST, new HttpEntity<>(body, jsonAuthHeaders()), Map.class,
                     owner, repo);
             log.info("[git-pr] 브랜치 생성 완료 — branch={}", branchName);
+        } catch (HttpClientErrorException.UnprocessableEntity e) {
+            // 브랜치가 이미 존재하는 경우 — base SHA로 강제 리셋하여 덮어쓴다
+            log.info("[git-pr] 브랜치 이미 존재함, base SHA로 리셋 — branch={}", branchName);
+            resetBranch(branchName, sha);
         } catch (HttpClientErrorException e) {
             throw new InternalException(
                     "GitHub 브랜치 생성 실패 — branch=" + branchName + ", status=" + e.getStatusCode(), e);
+        }
+    }
+
+    /**
+     * 기존 브랜치를 지정한 SHA로 강제 리셋한다 ({@code force: true}).
+     *
+     * @param branchName 리셋할 브랜치명
+     * @param sha        리셋할 목표 커밋 SHA
+     * @throws InternalException 리셋 실패 시
+     */
+    public void resetBranch(String branchName, String sha) {
+        String url = GITHUB_API_BASE + "/repos/{owner}/{repo}/git/refs/heads/{branch}";
+        Map<String, Object> body = Map.of("sha", sha, "force", true);
+        try {
+            restTemplate.exchange(url, HttpMethod.PATCH, new HttpEntity<>(body, jsonAuthHeaders()), Map.class,
+                    owner, repo, branchName);
+            log.info("[git-pr] 브랜치 리셋 완료 — branch={}", branchName);
+        } catch (HttpClientErrorException e) {
+            throw new InternalException(
+                    "GitHub 브랜치 리셋 실패 — branch=" + branchName + ", status=" + e.getStatusCode(), e);
+        }
+    }
+
+    /**
+     * 해당 브랜치에 이미 열린 PR이 있으면 그 URL을 반환하고, 없으면 {@code null}을 반환한다.
+     *
+     * @param head 소스 브랜치명 (예: {@code reactplatform/{codeId}})
+     * @return 열린 PR의 html_url, 없으면 null
+     */
+    @SuppressWarnings("unchecked")
+    public String findOpenPrUrl(String head) {
+        // head 파라미터는 "{owner}:{branch}" 형식이어야 한다
+        String url = GITHUB_API_BASE + "/repos/{owner}/{repo}/pulls?state=open&head={owner}:{head}";
+        try {
+            ResponseEntity<java.util.List> response = restTemplate.exchange(
+                    url, HttpMethod.GET, new HttpEntity<>(authHeaders()), java.util.List.class,
+                    owner, repo, owner, head);
+            java.util.List<Map<String, Object>> list = response.getBody();
+            if (list != null && !list.isEmpty()) {
+                String prUrl = (String) list.get(0).get("html_url");
+                log.info("[git-pr] 기존 열린 PR 발견 — head={}, url={}", head, prUrl);
+                return prUrl;
+            }
+            return null;
+        } catch (HttpClientErrorException e) {
+            // PR 조회 실패는 치명적이지 않으므로 null 반환 후 신규 PR 생성으로 진행
+            log.warn("[git-pr] 기존 PR 조회 실패 — head={}, status={}", head, e.getStatusCode());
+            return null;
         }
     }
 

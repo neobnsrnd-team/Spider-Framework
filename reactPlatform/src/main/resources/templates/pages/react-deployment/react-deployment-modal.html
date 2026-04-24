@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<!-- 코드별 배포 이력 상세 모달 Fragment -->
+<div th:fragment="modal">
+<div class="modal fade" id="deployHisModal" tabindex="-1"
+     aria-labelledby="deployHisModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="deployHisModalLabel">
+                    <i class="bi bi-clock-history text-primary me-1"></i>배포 이력 상세
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="닫기"></button>
+            </div>
+            <div class="modal-body">
+                <p class="text-body-secondary small mb-2">
+                    코드 ID: <strong id="deployHisModalCodeId"></strong>
+                </p>
+
+                <!-- 이력 테이블 -->
+                <div class="table-responsive">
+                    <table class="table table-sm table-hover sp-data-grid mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th class="text-center" style="width:50px;">No</th>
+                                <th class="text-center" style="width:90px;">배포 모드</th>
+                                <th class="text-center" style="width:100px;">결과</th>
+                                <th class="text-center" style="width:90px;">실행자</th>
+                                <th class="text-center" style="width:140px;">배포 일시</th>
+                                <th class="text-center">PR URL / 실패 사유</th>
+                            </tr>
+                        </thead>
+                        <tbody id="deployHisModalTableBody">
+                            <tr>
+                                <td colspan="6" class="text-center py-4 text-body-secondary">
+                                    조회 중...
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- 모달 내 페이지네이션 -->
+                <div class="d-flex justify-content-between align-items-center mt-2">
+                    <nav>
+                        <ul class="pagination pagination-sm mb-0" id="deployHisModalPagination"></ul>
+                    </nav>
+                    <span class="text-body-secondary small" id="deployHisModalPageInfo"></span>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">닫기</button>
+            </div>
+        </div>
+    </div>
+</div>
+</div>
+</body>
+</html>

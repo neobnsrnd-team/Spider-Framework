@@ -21,3 +21,6 @@ menu-resource:
     v3_react_approval:
       R: REACT_APPROVAL:R
       W: REACT_APPROVAL:W
+    v3_react_deploy:
+      R: REACT_DEPLOY:R
+      W: REACT_DEPLOY:W

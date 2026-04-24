@@ -8,7 +8,7 @@
  */
 package com.example.reactplatform.domain.reactgenerate.service;
 
-import com.example.reactplatform.domain.reactgenerate.deploy.ReactDeployStrategy;
+import com.example.reactplatform.domain.reactdeploy.service.ReactDeployService;
 import com.example.reactplatform.domain.reactgenerate.dto.ReactApprovalResponse;
 import com.example.reactplatform.domain.reactgenerate.dto.ReactGenerateApprovalResponse;
 import com.example.reactplatform.domain.reactgenerate.dto.ReactGenerateHistoryResponse;
@@ -36,7 +36,7 @@ import org.springframework.transaction.support.TransactionSynchronizationManager
 public class ReactApprovalService {
 
     private final ReactGenerateMapper reactGenerateMapper;
-    private final ReactDeployStrategy deployStrategy;
+    private final ReactDeployService reactDeployService;
 
     private static final DateTimeFormatter FORMATTER = DateTimeFormatter.ofPattern("yyyyMMddHHmmss");
 
@@ -103,13 +103,14 @@ public class ReactApprovalService {
         }
         log.info("승인 완료 — codeId: {}, approver: {}", id, approverUserId);
 
-        // 트랜잭션 커밋 성공 후 배포 전략을 실행한다.
+        // 트랜잭션 커밋 성공 후 배포를 실행하고 결과를 FWK_REACT_DEPLOY_HIS에 기록한다.
         // afterCommit에서 실행하여 DB 롤백 시 배포가 수행되지 않도록 보장한다.
         String reactCode = existing.getReactCode();
+        String approverId = approverUserId;
         TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
             @Override
             public void afterCommit() {
-                deployStrategy.deploy(id, reactCode);
+                reactDeployService.deployAndRecord(id, reactCode, approverId);
             }
         });
 
@@ -164,6 +165,7 @@ public class ReactApprovalService {
             int page,
             int size,
             String status,
+            String codeId,
             String approvalUserId,
             String createUserId,
             String fromDate,
@@ -176,8 +178,9 @@ public class ReactApprovalService {
         int endRow = offset + size;
         // 빈 문자열은 null로 통일하여 mapper의 전체 조회 분기를 타도록 한다
         // status: APPROVED/REJECTED 외의 값이 들어오면 거부 (이력 API 범위 제한)
-        String s = validateAndNormalizeStatus(nullIfBlank(status));
+        String s  = validateAndNormalizeStatus(nullIfBlank(status));
         // LIKE 검색 파라미터: %, _, \ 를 이스케이프하여 의도치 않은 와일드카드 동작 방지
+        String ci = escapeLike(nullIfBlank(codeId));
         String au = escapeLike(nullIfBlank(approvalUserId));
         String cu = escapeLike(nullIfBlank(createUserId));
         String fd = nullIfBlank(fromDate);
@@ -188,8 +191,8 @@ public class ReactApprovalService {
             throw new InvalidInputException("시작 날짜는 종료 날짜보다 이전이어야 합니다.");
         }
         List<ReactGenerateHistoryResponse> list =
-                reactGenerateMapper.selectApprovalHistory(offset, endRow, s, au, cu, fd, td);
-        int totalCount = reactGenerateMapper.selectApprovalHistoryCount(s, au, cu, fd, td);
+                reactGenerateMapper.selectApprovalHistory(offset, endRow, s, ci, au, cu, fd, td);
+        int totalCount = reactGenerateMapper.selectApprovalHistoryCount(s, ci, au, cu, fd, td);
         return Map.of("list", list, "totalCount", totalCount, "page", page, "size", size);
     }
 

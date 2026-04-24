@@ -1194,7 +1194,7 @@ CREATE TABLE FWK_CODE_TEMPLATE (
 
 
 -- =============================================================
--- 16. React Generate (1 table) — reactPlatform 프로젝트에서 사용
+-- 16. React Platform (2 table) — reactPlatform 프로젝트에서 사용
 -- =============================================================
 
 CREATE TABLE FWK_REACT_CODE_HIS (
@@ -1213,6 +1213,29 @@ CREATE TABLE FWK_REACT_CODE_HIS (
     CONSTRAINT PK_REACT_CODE_HIS PRIMARY KEY (CODE_ID),
     CONSTRAINT CHK_REACT_GEN_STATUS CHECK (STATUS IN ('GENERATED', 'FAILED', 'PENDING_APPROVAL', 'APPROVED', 'REJECTED'))
 );
+
+CREATE TABLE FWK_REACT_DEPLOY_HIS (
+    DEPLOY_ID              VARCHAR2(36)   NOT NULL,
+    CODE_ID                VARCHAR2(36)   NOT NULL,
+    DEPLOY_MODE            VARCHAR2(10)   NOT NULL,
+    DEPLOY_STATUS          VARCHAR2(10)   NOT NULL,
+    FAIL_REASON            CLOB,
+    PR_URL                 VARCHAR2(500),
+    LAST_UPDATE_DTIME      VARCHAR2(14)   DEFAULT TO_CHAR(SYSDATE, 'YYYYMMDDHH24MISS') NOT NULL,
+    LAST_UPDATE_USER_ID    VARCHAR2(20)   NOT NULL,
+    CONSTRAINT PK_REACT_DEPLOY_HIS PRIMARY KEY (DEPLOY_ID),
+    CONSTRAINT FK_REACT_DEPLOY_CODE FOREIGN KEY (CODE_ID)
+        REFERENCES FWK_REACT_CODE_HIS (CODE_ID),
+    CONSTRAINT CHK_REACT_DEPLOY_STATUS
+        CHECK (DEPLOY_STATUS IN ('SUCCESS', 'FAILED')),
+    CONSTRAINT CHK_REACT_DEPLOY_MODE
+        CHECK (DEPLOY_MODE IN ('local', 'git-pr'))
+);
+
+-- CODE_ID 기반 배포 이력 조회 성능
+CREATE INDEX IDX_REACT_DEPLOY_CODE ON FWK_REACT_DEPLOY_HIS (CODE_ID);
+-- 최근 배포 현황 조회 성능
+CREATE INDEX IDX_REACT_DEPLOY_DTIME ON FWK_REACT_DEPLOY_HIS (LAST_UPDATE_DTIME DESC);
 
 -- =============================================================
 -- 17. FWK_CODE_TEMPLATE (1 table)
@@ -1233,7 +1256,7 @@ CREATE TABLE D_SPIDERLINK.FWK_CODE_TEMPLATE (
 );
 
 -- =============================================================
--- 17. CMS 페이지 관리 (3 tables)
+-- 18. CMS 페이지 관리 (3 tables)
 -- =============================================================
 
 CREATE TABLE SPW_CMS_PAGE (

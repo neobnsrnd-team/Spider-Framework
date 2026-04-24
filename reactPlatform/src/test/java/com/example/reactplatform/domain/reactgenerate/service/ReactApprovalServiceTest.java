@@ -20,7 +20,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import com.example.reactplatform.domain.reactgenerate.deploy.ReactDeployStrategy;
+import com.example.reactplatform.domain.reactdeploy.service.ReactDeployService;
 import com.example.reactplatform.domain.reactgenerate.dto.ReactGenerateApprovalResponse;
 import com.example.reactplatform.domain.reactgenerate.dto.ReactGenerateHistoryResponse;
 import com.example.reactplatform.domain.reactgenerate.dto.ReactGenerateResponse;
@@ -49,7 +49,7 @@ class ReactApprovalServiceTest {
     private ReactGenerateMapper reactGenerateMapper;
 
     @Mock
-    private ReactDeployStrategy deployStrategy;
+    private ReactDeployService reactDeployService;
 
     @InjectMocks
     private ReactApprovalService service;
@@ -82,7 +82,7 @@ class ReactApprovalServiceTest {
         }
 
         @Test
-        @DisplayName("approve() 직후에는 deploy()가 호출되지 않고 afterCommit() 이후 호출된다")
+        @DisplayName("approve() 직후에는 deployAndRecord()가 호출되지 않고 afterCommit() 이후 호출된다")
         void approve_deployCalledAfterTransactionCommit_notBefore() {
             try (MockedStatic<TransactionSynchronizationManager> mocked =
                     mockStatic(TransactionSynchronizationManager.class)) {
@@ -101,25 +101,28 @@ class ReactApprovalServiceTest {
 
                 service.approve("code-01", "approver");
 
-                // approve() 반환 직후 — deploy 미호출 확인
-                verify(deployStrategy, never()).deploy(any(), any());
+                // approve() 반환 직후 — deployAndRecord 미호출 확인
+                verify(reactDeployService, never()).deployAndRecord(any(), any(), any());
 
                 // 트랜잭션 커밋 시뮬레이션
                 syncCaptor.getValue().afterCommit();
 
-                // afterCommit() 이후 — deploy 호출 확인
-                verify(deployStrategy).deploy("code-01", "export default function Foo() {}");
+                // afterCommit() 이후 — deployAndRecord 호출 확인
+                verify(reactDeployService).deployAndRecord(
+                        eq("code-01"),
+                        eq("export default function Foo() {}"),
+                        eq("approver"));
             }
         }
 
         @Test
-        @DisplayName("존재하지 않는 codeId 승인 시 NotFoundException이 발생하고 deploy는 실행되지 않는다")
+        @DisplayName("존재하지 않는 codeId 승인 시 NotFoundException이 발생하고 deployAndRecord는 실행되지 않는다")
         void approve_notFound_throwsNotFoundException() {
             when(reactGenerateMapper.selectById("unknown")).thenReturn(null);
 
             assertThatThrownBy(() -> service.approve("unknown", "approver"))
                     .isInstanceOf(NotFoundException.class);
-            verify(deployStrategy, never()).deploy(any(), any());
+            verify(reactDeployService, never()).deployAndRecord(any(), any(), any());
         }
 
         @Test
@@ -140,7 +143,6 @@ class ReactApprovalServiceTest {
         @Test
         @DisplayName("코드 요청자 본인이 승인 시도하면 InvalidInputException이 발생한다")
         void approve_selfApproval_throwsInvalidInputException() {
-            // 요청자와 승인자가 동일한 userId
             when(reactGenerateMapper.selectById("code-01")).thenReturn(pendingRecord("sameUser"));
 
             assertThatThrownBy(() -> service.approve("code-01", "sameUser"))
@@ -156,7 +158,6 @@ class ReactApprovalServiceTest {
                 mocked.when(() -> TransactionSynchronizationManager.registerSynchronization(any()))
                         .thenAnswer(invocation -> null);
                 when(reactGenerateMapper.selectById("code-01")).thenReturn(pendingRecord("creator"));
-                // 0행 반환 — 다른 요청이 먼저 상태를 변경한 상황
                 when(reactGenerateMapper.updateStatusConditional(
                                 anyString(), anyString(), anyString(), anyString(), any(), anyString()))
                         .thenReturn(0);
@@ -187,7 +188,7 @@ class ReactApprovalServiceTest {
                                 eq(ReactGenerateStatus.APPROVED.name()),
                                 eq("approver"),
                                 anyString(),
-                                isNull(), // 승인 시 failReason은 null
+                                isNull(),
                                 eq(ReactGenerateStatus.PENDING_APPROVAL.name()));
             }
         }
@@ -316,7 +317,6 @@ class ReactApprovalServiceTest {
 
             service.getHistory(1, 10, null, "user%01", "dept_A", null, null);
 
-            // % → \%, _ → \_ 이스케이프 확인
             verify(reactGenerateMapper)
                     .selectApprovalHistory(
                             anyInt(), anyInt(), isNull(), eq("user\\%01"), eq("dept\\_A"), isNull(), isNull());

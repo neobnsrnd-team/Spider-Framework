@@ -86,6 +86,7 @@ public interface ReactGenerateMapper {
      * @param offset         시작 오프셋 (0-based)
      * @param endRow         마지막 행 번호 (inclusive)
      * @param status         상태 필터 (null/빈 문자열이면 APPROVED/REJECTED 전체)
+     * @param codeId         Code ID 부분 일치 (null/빈 문자열이면 미적용)
      * @param approvalUserId 처리자 ID 부분 일치 (null/빈 문자열이면 미적용)
      * @param createUserId   요청자 ID 부분 일치 (null/빈 문자열이면 미적용)
      * @param fromDate       처리일시 시작 (yyyyMMdd, null/빈 문자열이면 미적용)
@@ -96,6 +97,7 @@ public interface ReactGenerateMapper {
             @Param("offset") int offset,
             @Param("endRow") int endRow,
             @Param("status") String status,
+            @Param("codeId") String codeId,
             @Param("approvalUserId") String approvalUserId,
             @Param("createUserId") String createUserId,
             @Param("fromDate") String fromDate,
@@ -104,6 +106,7 @@ public interface ReactGenerateMapper {
     /** 승인 이력 전체 건수를 반환한다 (페이지네이션용). */
     int selectApprovalHistoryCount(
             @Param("status") String status,
+            @Param("codeId") String codeId,
             @Param("approvalUserId") String approvalUserId,
             @Param("createUserId") String createUserId,
             @Param("fromDate") String fromDate,

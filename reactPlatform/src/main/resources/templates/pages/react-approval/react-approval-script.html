@@ -226,6 +226,7 @@ const ReactApprovalHis = window.ReactApprovalHis = {
         // 나의 승인 이력 체크 시 승인자 ID를 현재 로그인 사용자로 고정
         const myOnly = $('#chkHisMyOnly').is(':checked');
         this.appliedSearch = {
+            codeId:          $('#hisSearchCodeId').val().trim(),
             status:          $('#hisSearchStatus').val(),
             approvalUserId:  myOnly ? CURRENT_USER_ID : $('#hisSearchApprovalUserId').val().trim(),
             createUserId:    $('#hisSearchCreateUserId').val().trim(),
@@ -385,6 +386,7 @@ const ReactApprovalDetail = window.ReactApprovalDetail = {
     render: function (data) {
         this.currentStatus = data.status;
         const statusInfo = APPROVAL_STATUS_LABEL[data.status] || { text: data.status, cls: 'bg-secondary' };
+        $('#approvalDetailCodeId').text(data.codeId || '—');
         const safeUrl    = HtmlUtils.escape(data.figmaUrl || '');
 
         // 안전한 URL(http/https)만 href 속성을 설정하고, 그 외에는 링크 없이 텍스트만 표시 (XSS 방지)
@@ -508,6 +510,7 @@ $(document).ready(function () {
 
     // ── 검색 초기화
     $('#btnSearchReset').on('click', function () {
+        $('#hisSearchCodeId').val('');
         $('#hisSearchStatus').val('');
         $('#hisSearchApprovalUserId').val('').prop('disabled', false);
         $('#hisSearchCreateUserId').val('');

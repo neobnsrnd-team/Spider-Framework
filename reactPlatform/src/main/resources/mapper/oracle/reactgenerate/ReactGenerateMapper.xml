@@ -53,6 +53,9 @@
     <!-- 목록 조회에 사용하는 WHERE 조건 Fragment (selectList/selectCount 공유) -->
     <sql id="historyWhereConditions">
         <where>
+            <if test="req.codeId != null and req.codeId != ''">
+                AND CODE_ID LIKE '%' || #{req.codeId} || '%' ESCAPE '\'
+            </if>
             <if test="req.status != null and req.status != ''">
                 AND STATUS = #{req.status}
             </if>
@@ -180,6 +183,9 @@
                     STATUS IN ('APPROVED', 'REJECTED')
                 </otherwise>
             </choose>
+            <if test="codeId != null and codeId != ''">
+                AND CODE_ID LIKE '%' || #{codeId} || '%' ESCAPE '\'
+            </if>
             <if test="approvalUserId != null and approvalUserId != ''">
                 AND APPROVAL_USER_ID LIKE '%' || #{approvalUserId} || '%' ESCAPE '\'
             </if>

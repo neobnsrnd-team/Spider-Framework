@@ -92,21 +92,55 @@ class GitPrApiClientTest {
     void createBranch_success_sendsCorrectPayload() {
         server.expect(requestTo(BASE_URL + "/git/refs"))
                 .andExpect(method(HttpMethod.POST))
-                .andExpect(jsonPath("$.ref").value("refs/heads/feature/react-code-01"))
+                .andExpect(jsonPath("$.ref").value("refs/heads/reactplatform/code-01"))
                 .andExpect(jsonPath("$.sha").value("abc123"))
                 .andRespond(withSuccess("{}", MediaType.APPLICATION_JSON));
 
-        client.createBranch("feature/react-code-01", "abc123");
+        client.createBranch("reactplatform/code-01", "abc123");
         server.verify();
     }
 
     @Test
-    @DisplayName("createBranch: 이미 존재하는 브랜치면 InternalException이 발생한다")
-    void createBranch_conflict_throwsInternalException() {
+    @DisplayName("createBranch: 이미 존재하는 브랜치(422)면 resetBranch를 호출하여 정상 완료된다")
+    void createBranch_alreadyExists_resetsExistingBranch() {
+        // 1st: POST → 422 (branch already exists)
         server.expect(requestTo(BASE_URL + "/git/refs"))
+                .andExpect(method(HttpMethod.POST))
+                .andRespond(withStatus(HttpStatus.UNPROCESSABLE_ENTITY));
+        // 2nd: PATCH → 200 (reset branch)
+        server.expect(requestTo(BASE_URL + "/git/refs/heads/reactplatform/code-01"))
+                .andExpect(method(HttpMethod.PATCH))
+                .andExpect(jsonPath("$.sha").value("abc123"))
+                .andExpect(jsonPath("$.force").value(true))
+                .andRespond(withSuccess("{}", MediaType.APPLICATION_JSON));
+
+        assertThatNoException().isThrownBy(() -> client.createBranch("reactplatform/code-01", "abc123"));
+        server.verify();
+    }
+
+    // ========== resetBranch ==========
+
+    @Test
+    @DisplayName("resetBranch: 올바른 SHA와 force:true가 PATCH 본문에 포함되어 전송된다")
+    void resetBranch_success_sendsCorrectPayload() {
+        server.expect(requestTo(BASE_URL + "/git/refs/heads/reactplatform/code-01"))
+                .andExpect(method(HttpMethod.PATCH))
+                .andExpect(jsonPath("$.sha").value("newsha"))
+                .andExpect(jsonPath("$.force").value(true))
+                .andRespond(withSuccess("{}", MediaType.APPLICATION_JSON));
+
+        assertThatNoException().isThrownBy(() -> client.resetBranch("reactplatform/code-01", "newsha"));
+        server.verify();
+    }
+
+    @Test
+    @DisplayName("resetBranch: 실패 시 InternalException이 발생한다")
+    void resetBranch_failure_throwsInternalException() {
+        server.expect(requestTo(BASE_URL + "/git/refs/heads/reactplatform/code-01"))
+                .andExpect(method(HttpMethod.PATCH))
                 .andRespond(withStatus(HttpStatus.UNPROCESSABLE_ENTITY));
 
-        assertThatThrownBy(() -> client.createBranch("feature/react-code-01", "abc123"))
+        assertThatThrownBy(() -> client.resetBranch("reactplatform/code-01", "newsha"))
                 .isInstanceOf(InternalException.class);
     }
 
@@ -123,11 +157,11 @@ class GitPrApiClientTest {
         server.expect(requestTo(BASE_URL + "/contents/src%2Fgenerated%2Ffoo.tsx"))
                 .andExpect(method(HttpMethod.PUT))
                 .andExpect(jsonPath("$.content").value(expectedEncoded))
-                .andExpect(jsonPath("$.branch").value("feature/react-01"))
+                .andExpect(jsonPath("$.branch").value("reactplatform/01"))
                 .andExpect(jsonPath("$.message").value("feat: add foo"))
                 .andRespond(withSuccess("{}", MediaType.APPLICATION_JSON));
 
-        client.createOrUpdateFile("feature/react-01", "src/generated/foo.tsx", content, "feat: add foo");
+        client.createOrUpdateFile("reactplatform/01", "src/generated/foo.tsx", content, "feat: add foo");
         server.verify();
     }
 
@@ -138,7 +172,7 @@ class GitPrApiClientTest {
                 .andRespond(withStatus(HttpStatus.FORBIDDEN));
 
         assertThatThrownBy(() -> client.createOrUpdateFile(
-                "feature/react-01", "src/generated/foo.tsx", "content", "commit msg"))
+                "reactplatform/01", "src/generated/foo.tsx", "content", "commit msg"))
                 .isInstanceOf(InternalException.class);
     }
 
@@ -149,14 +183,14 @@ class GitPrApiClientTest {
     void createPullRequest_success_returnsPrUrl() {
         server.expect(requestTo(BASE_URL + "/pulls"))
                 .andExpect(method(HttpMethod.POST))
-                .andExpect(jsonPath("$.head").value("feature/react-01"))
+                .andExpect(jsonPath("$.head").value("reactplatform/01"))
                 .andExpect(jsonPath("$.base").value("main"))
                 .andExpect(jsonPath("$.title").value("feat: PR title"))
                 .andRespond(withSuccess(
                         "{\"html_url\":\"https://github.com/test-owner/test-repo/pull/1\"}",
                         MediaType.APPLICATION_JSON));
 
-        String url = client.createPullRequest("feature/react-01", "main", "feat: PR title", "PR body");
+        String url = client.createPullRequest("reactplatform/01", "main", "feat: PR title", "PR body");
 
         assertThat(url).isEqualTo("https://github.com/test-owner/test-repo/pull/1");
         server.verify();
@@ -169,9 +203,42 @@ class GitPrApiClientTest {
                 .andRespond(withStatus(HttpStatus.UNPROCESSABLE_ENTITY));
 
         assertThatThrownBy(() -> client.createPullRequest(
-                "feature/react-01", "main", "title", "body"))
+                "reactplatform/01", "main", "title", "body"))
                 .isInstanceOf(InternalException.class);
     }
+
+    // ========== findOpenPrUrl ==========
+
+    @Test
+    @DisplayName("findOpenPrUrl: 열린 PR이 있으면 html_url을 반환한다")
+    void findOpenPrUrl_found_returnsUrl() {
+        server.expect(requestTo(BASE_URL + "/pulls?state=open&head=test-owner:reactplatform/code-01"))
+                .andExpect(method(HttpMethod.GET))
+                .andExpect(header("Authorization", "Bearer " + TOKEN))
+                .andRespond(withSuccess(
+                        "[{\"html_url\":\"https://github.com/test-owner/test-repo/pull/5\"}]",
+                        MediaType.APPLICATION_JSON));
+
+        String url = client.findOpenPrUrl("reactplatform/code-01");
+
+        assertThat(url).isEqualTo("https://github.com/test-owner/test-repo/pull/5");
+        server.verify();
+    }
+
+    @Test
+    @DisplayName("findOpenPrUrl: 열린 PR이 없으면 null을 반환한다")
+    void findOpenPrUrl_notFound_returnsNull() {
+        server.expect(requestTo(BASE_URL + "/pulls?state=open&head=test-owner:reactplatform/code-01"))
+                .andExpect(method(HttpMethod.GET))
+                .andRespond(withSuccess("[]", MediaType.APPLICATION_JSON));
+
+        String url = client.findOpenPrUrl("reactplatform/code-01");
+
+        assertThat(url).isNull();
+        server.verify();
+    }
+
+    // ========== X-GitHub-Api-Version 헤더 ==========
 
     @Test
     @DisplayName("모든 요청에 GitHub API 버전 헤더가 포함된다")

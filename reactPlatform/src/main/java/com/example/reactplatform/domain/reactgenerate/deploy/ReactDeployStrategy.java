@@ -13,6 +13,7 @@ public interface ReactDeployStrategy {
      *
      * @param codeId    승인된 코드 ID (파일명·브랜치명 등에 사용)
      * @param reactCode 배포할 React TSX 코드
+     * @return 배포 결과 — 성공 여부, PR URL(git-pr 모드), 실패 사유를 포함
      */
-    void deploy(String codeId, String reactCode);
+    DeployResult deploy(String codeId, String reactCode);
 }

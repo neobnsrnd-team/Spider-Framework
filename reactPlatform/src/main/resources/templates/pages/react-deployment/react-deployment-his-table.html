@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<!-- 배포 이력 테이블 Fragment -->
+<div th:fragment="table" class="table-responsive">
+    <table class="table table-sm table-hover sp-data-grid" id="deployHisTable">
+        <thead class="table-light">
+            <tr>
+                <th class="text-center" style="width:50px;">No</th>
+                <th class="text-center" style="width:200px;">코드 ID</th>
+                <th class="text-center" style="width:100px;">배포 모드</th>
+                <th class="text-center" style="width:110px;">배포 결과</th>
+                <th class="text-center" style="width:100px;">실행자</th>
+                <th class="text-center" style="width:150px;">배포 일시</th>
+                <th class="text-center">PR URL / 실패 사유</th>
+            </tr>
+        </thead>
+        <tbody id="deployHisTableBody">
+            <tr>
+                <td colspan="7" class="text-center py-4 text-body-secondary">
+                    조회 중...
+                </td>
+            </tr>
+        </tbody>
+    </table>
+</div>
+</body>
+</html>
