@@ -17,7 +17,7 @@ public class RestTemplateConfig {
 
     @Bean
     public RestTemplate restTemplate(RestTemplateBuilder builder) {
-        return builder.connectTimeout(Duration.ofSeconds(5)) // 연결 타임아웃: 5초
+        return builder.connectTimeout(Duration.ofSeconds(5)) // 연결 타임아웃: 5초 (WAS Reload 등 응답이 느릴 수 있는 내부 API 호출 대비)
                 .readTimeout(Duration.ofSeconds(10)) // 읽기 타임아웃: 10초
                 .requestFactory(() -> new BufferingClientHttpRequestFactory(new SimpleClientHttpRequestFactory()))
                 .build();
