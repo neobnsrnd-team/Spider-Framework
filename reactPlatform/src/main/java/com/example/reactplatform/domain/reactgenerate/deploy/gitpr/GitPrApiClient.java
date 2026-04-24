@@ -16,8 +16,10 @@ package com.example.reactplatform.domain.reactgenerate.deploy.gitpr;
 
 import com.example.reactplatform.global.exception.InternalException;
 import java.util.Base64;
+import java.util.List;
 import java.util.Map;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
@@ -124,15 +126,16 @@ public class GitPrApiClient {
      * @param head 소스 브랜치명 (예: {@code reactplatform/{codeId}})
      * @return 열린 PR의 html_url, 없으면 null
      */
-    @SuppressWarnings("unchecked")
     public String findOpenPrUrl(String head) {
         // head 파라미터는 "{owner}:{branch}" 형식이어야 한다
         String url = GITHUB_API_BASE + "/repos/{owner}/{repo}/pulls?state=open&head={owner}:{head}";
         try {
-            ResponseEntity<java.util.List> response = restTemplate.exchange(
-                    url, HttpMethod.GET, new HttpEntity<>(authHeaders()), java.util.List.class,
+            // ParameterizedTypeReference로 제네릭 타입 정보를 유지하여 타입 안전성 확보
+            ResponseEntity<List<Map<String, Object>>> response = restTemplate.exchange(
+                    url, HttpMethod.GET, new HttpEntity<>(authHeaders()),
+                    new ParameterizedTypeReference<List<Map<String, Object>>>() {},
                     owner, repo, owner, head);
-            java.util.List<Map<String, Object>> list = response.getBody();
+            List<Map<String, Object>> list = response.getBody();
             if (list != null && !list.isEmpty()) {
                 String prUrl = (String) list.get(0).get("html_url");
                 log.info("[git-pr] 기존 열린 PR 발견 — head={}, url={}", head, prUrl);

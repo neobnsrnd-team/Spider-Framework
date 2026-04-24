@@ -102,7 +102,8 @@ public class GitPrDeployStrategy implements ReactDeployStrategy {
             java.nio.file.Path comp = java.nio.file.Path.of(componentPath.replace("\\", "/")).normalize();
             java.nio.file.Path cont = java.nio.file.Path.of(containerPath.replace("\\", "/")).normalize();
             String relative = cont.relativize(comp).toString().replace("\\", "/");
-            return relative.startsWith(".") ? relative : "./" + relative;
+            // 경로가 동일할 때 relative는 "" → "./" 반환 시 import 경로에 이중 슬래시가 생기므로 "." 반환
+            return relative.isEmpty() ? "." : (relative.startsWith(".") ? relative : "./" + relative);
         } catch (Exception e) {
             log.warn("[git-pr] import 경로 계산 실패 — fallback '../generated' 사용");
             return "../generated";

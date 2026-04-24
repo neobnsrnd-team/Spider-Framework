@@ -23,6 +23,7 @@ import com.example.reactplatform.domain.reactgenerate.dto.ReactGenerateResponse;
 import com.example.reactplatform.domain.reactgenerate.mapper.ReactGenerateMapper;
 import com.example.reactplatform.global.exception.InvalidInputException;
 import com.example.reactplatform.global.exception.NotFoundException;
+import com.example.reactplatform.global.util.SqlUtils;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
@@ -30,7 +31,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.regex.Pattern;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -47,10 +47,11 @@ public class ReactDeployService {
 
     private static final DateTimeFormatter FORMATTER = DateTimeFormatter.ofPattern("yyyyMMddHHmmss");
 
-    /** LIKE 검색 인젝션 방지용 이스케이프 패턴 */
-    private static final Pattern LIKE_ESCAPE = Pattern.compile("[%_\\\\]");
-
-    /** 진행 중인 재배포 codeId 집합 — 동일 codeId의 동시 요청을 방지한다. */
+    /**
+     * 진행 중인 재배포 codeId 집합 — 동일 codeId의 동시 요청을 방지한다.
+     * 단일 인스턴스 내에서만 유효하며, 다중 인스턴스 수평 확장 시 Redis 분산 락으로 대체해야 한다.
+     * TODO: 다중 인스턴스 환경 전환 시 Redisson 또는 Spring Integration Lock 적용 검토
+     */
     private final Set<String> inProgressCodeIds = ConcurrentHashMap.newKeySet();
 
     /**
@@ -119,7 +120,7 @@ public class ReactDeployService {
     public Map<String, Object> findDeployList(int page, int size, String search) {
         int offset = (page - 1) * size;
         int endRow = offset + size;
-        String escaped = escapeLike(nullIfBlank(search));
+        String escaped = SqlUtils.escapeLike(nullIfBlank(search));
         List<ReactDeployListResponse> list = reactDeployMapper.selectDeployList(offset, endRow, escaped);
         int totalCount = reactDeployMapper.selectDeployListCount(escaped);
         return Map.of("list", list, "totalCount", totalCount, "page", page, "size", size);
@@ -136,7 +137,7 @@ public class ReactDeployService {
     public Map<String, Object> findAllHistoryList(int page, int size, String search) {
         int offset = (page - 1) * size;
         int endRow = offset + size;
-        String escaped = escapeLike(nullIfBlank(search));
+        String escaped = SqlUtils.escapeLike(nullIfBlank(search));
         List<ReactDeployHistoryResponse> list = reactDeployMapper.selectAllHistoryList(offset, endRow, escaped);
         int totalCount = reactDeployMapper.selectAllHistoryCount(escaped);
         return Map.of("list", list, "totalCount", totalCount, "page", page, "size", size);
@@ -186,11 +187,5 @@ public class ReactDeployService {
 
     private static String nullIfBlank(String value) {
         return (value != null && !value.isBlank()) ? value : null;
-    }
-
-    /** Oracle LIKE 검색 와일드카드(%, _, \)를 이스케이프한다. */
-    private static String escapeLike(String value) {
-        if (value == null) return null;
-        return value.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_");
     }
 }

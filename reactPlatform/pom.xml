@@ -134,6 +134,13 @@
 			<scope>test</scope>
 		</dependency>
 
+		<!-- Mockito 5.x inline mock maker — byte-buddy-agent 경로를 maven-dependency-plugin:properties로 동적 해석 -->
+		<dependency>
+			<groupId>net.bytebuddy</groupId>
+			<artifactId>byte-buddy-agent</artifactId>
+			<scope>test</scope>
+		</dependency>
+
 		<!-- H2 Database (로그 저장용) -->
 		<dependency>
 			<groupId>com.h2database</groupId>
@@ -266,12 +273,27 @@
 				</configuration>
 			</plugin>
 
+			<!-- byte-buddy-agent 경로를 ${net.bytebuddy:byte-buddy-agent:jar} 속성으로 동적 해석 -->
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-dependency-plugin</artifactId>
+				<executions>
+					<execution>
+						<id>get-byte-buddy-agent-path</id>
+						<phase>initialize</phase>
+						<goals>
+							<goal>properties</goal>
+						</goals>
+					</execution>
+				</executions>
+			</plugin>
+
 			<!-- Surefire: JaCoCo argLine + Mockito 5.x inline mock maker (Java 17 byte-buddy agent) -->
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-surefire-plugin</artifactId>
 				<configuration>
-					<argLine>@{argLine} -javaagent:C:/Users/minjee/.m2/repository/net/bytebuddy/byte-buddy-agent/1.15.11/byte-buddy-agent-1.15.11.jar</argLine>
+					<argLine>@{argLine} -javaagent:${net.bytebuddy:byte-buddy-agent:jar}</argLine>
 				</configuration>
 			</plugin>
 
