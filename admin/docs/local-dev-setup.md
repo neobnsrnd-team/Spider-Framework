@@ -145,6 +145,75 @@ cp .env.example .env
 | `DEPLOYED_UPLOAD_DIR` | `public/deployed` | 승인 완료 이미지 저장 디렉토리 |
 | `DEPLOYED_BASE_URL` | `/deployed/static` | 승인 이미지 클라이언트 접근 URL |
 
+### 2-2-1. 배포 서버 환경변수 설정
+
+로컬 개발과 달리 배포 서버는 Docker 컨테이너 2개(`cms`, `operation`)로 운영된다.  
+`.env` 대신 `.env.prod` 파일을 사용하며, `docker-compose-prod.yml`이 이 파일을 참조한다.
+
+**컨테이너 구성**
+
+| 컨테이너 | 포트 | 역할 |
+| --- | --- | --- |
+| `cms` | 3000 | CMS 관리자 서버 — 이미지 업로드·편집기·승인 API |
+| `operation` | 3001 | 운영 배포 서버 — 배포된 HTML 서빙, 이미지 업로드 차단 |
+
+`SERVER_MODE`는 docker-compose에서 컨테이너별로 자동 주입되므로 `.env.prod`에 별도 설정하지 않아도 된다.
+
+**파일 경로 (Docker Volume 기준)**
+
+배포 서버는 파일을 호스트의 `/data/uploads`, `/data/deployed`에 마운트해 관리한다.  
+컨테이너 내부 경로는 `/app/public/...`이므로 아래처럼 설정한다.
+
+| 변수 | 배포 서버 값 | 로컬 기본값 | 설명 |
+| --- | --- | --- | --- |
+| `ASSET_UPLOAD_DIR` | `/app/public/uploads` | `public/uploads` | 업로드 이미지 저장 경로 (컨테이너 내부 경로) |
+| `ASSET_BASE_URL` | `/static` | `/uploads` | nginx가 `/static/` → `/data/uploads/` 로 서빙 |
+| `DEPLOYED_UPLOAD_DIR` | `/app/public/deployed` | `public/deployed` | 승인 완료 이미지 저장 경로 (컨테이너 내부 경로) |
+| `DEPLOYED_BASE_URL` | `/deployed/static` | `/deployed/static` | nginx가 `/deployed/static/` → `/data/deployed/img/` 로 서빙 |
+| `DEPLOYED_IMG_SUBDIR` | `img` | `img` | 승인 이미지 서브 디렉토리 (변경 시 nginx 설정도 맞춰야 함) |
+
+> 호스트 디렉토리 사전 생성 필요:
+> ```bash
+> mkdir -p /data/uploads /data/deployed
+> ```
+
+**배포 서버에서 달라지는 주요 환경변수**
+
+| 변수 | 배포 서버 값 | 설명 |
+| --- | --- | --- |
+| `CMS_ADMIN_BASE_URL` | `https://admin.example.com` | spider-admin 운영 URL (인증 연동) |
+| `CMS_BASE_URL` | `https://cms.example.com` | 배포된 HTML에서 에셋을 로드하는 CMS 기준 URL |
+| `NEXT_PUBLIC_JAVA_API_BASE_URL` | `https://admin.example.com` | 브라우저 fetch에서 사용하는 admin API URL |
+| `NEXT_PUBLIC_SPIDER_ADMIN_BASE_URL` | `https://admin.example.com` | 상단 네비게이션 링크용 admin UI URL |
+| `DEPLOY_SECRET` | 운영 시크릿 (충분히 복잡한 값) | spider-admin `CMS_DEPLOY_SECRET`과 반드시 동일 |
+| `AUTH_BYPASS` | 설정하지 않거나 `false` | 운영에서는 반드시 제거 또는 false |
+| `ENABLE_INTERNAL_SCHEDULER` | `true` (단일 인스턴스) | 다중 인스턴스 운영 시 하나만 `true`, 나머지 `false` |
+| `CMS_INSTANCE_ID` | `CMS-01` 등 고유 값 | 다중 인스턴스 운영 시 각 서버에 고유 값 부여 |
+
+**배포 서버 실행**
+
+```bash
+cd html-cms
+
+# 빌드된 이미지 실행
+docker compose -f docker-compose-prod.yml up -d
+
+# 이미지 갱신 후 재시작
+docker compose -f docker-compose-prod.yml pull && \
+docker compose -f docker-compose-prod.yml up -d --no-deps cms operation
+```
+
+**nginx 설정 (`nginx/nginx.conf`)**
+
+두 컨테이너 앞에 nginx를 두어 포트별로 라우팅한다.
+
+| nginx 포트 | 처리 대상 | 설명 |
+| --- | --- | --- |
+| `80` | `cms` (3000) | CMS 관리자·편집기 접속. `/cms/static/` → `/data/uploads/` 정적 서빙 |
+| `8080` | `operation` (3001) | 현업 제작자 접속. `/cms/deployed/` → `/data/deployed/` 배포 HTML 직접 서빙 |
+
+---
+
 ### 2-3. 패키지 설치 (최초 1회)
 
 ```bash
