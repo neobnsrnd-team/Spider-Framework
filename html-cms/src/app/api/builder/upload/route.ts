@@ -1,4 +1,4 @@
-import crypto from 'crypto';
+import crypto, { timingSafeEqual } from 'crypto';
 import { mkdir, unlink, writeFile } from 'fs/promises';
 import { dirname, join } from 'path';
 
@@ -8,7 +8,23 @@ import { createAsset } from '@/db/repository/asset.repository';
 import { contentBuilderErrorResponse, getErrorMessage, successResponse } from '@/lib/api-response';
 import { normalizeCmsAssetCategory } from '@/lib/codes';
 import { canAccessCmsEdit, getCurrentUser } from '@/lib/current-user';
-import { ASSET_BASE_URL, ASSET_UPLOAD_DIR, SERVER_MODE } from '@/lib/env';
+import { ASSET_BASE_URL, ASSET_UPLOAD_DIR, DEPLOY_SECRET, SERVER_MODE } from '@/lib/env';
+
+/**
+ * Admin 백엔드 등 서버 간 호출 시 x-deploy-token 헤더로 인증한다.
+ * 타이밍 공격 방지를 위해 timingSafeEqual로 비교한다.
+ */
+function isValidToken(token: string | null): boolean {
+    if (!DEPLOY_SECRET || !token) return false;
+    try {
+        const expected = Buffer.from(DEPLOY_SECRET, 'utf8');
+        const received = Buffer.from(token, 'utf8');
+        if (expected.length !== received.length) return false;
+        return timingSafeEqual(expected, received);
+    } catch {
+        return false;
+    }
+}
 
 export async function POST(req: NextRequest) {
     if (SERVER_MODE === 'operation') {
@@ -28,13 +44,27 @@ export async function POST(req: NextRequest) {
     const assetDesc = formData.get('assetDesc')?.toString() || null;
 
     try {
-        const currentUser = await getCurrentUser();
-        if (!canAccessCmsEdit(currentUser)) {
-            return contentBuilderErrorResponse('Permission denied.');
-        }
+        const deployTokenValid = isValidToken(req.headers.get('x-deploy-token'));
 
-        const userId = bodyUserId ?? currentUser.userId;
-        const userName = bodyUserId ? (bodyUserName ?? userId) : currentUser.userName;
+        let userId: string;
+        let userName: string;
+
+        if (deployTokenValid) {
+            // 서버 간 호출(Admin 백엔드): 세션 쿠키 없이 form data의 userId/userName을 직접 사용
+            if (!bodyUserId) {
+                return contentBuilderErrorResponse('서버 간 호출 시 userId가 필요합니다.');
+            }
+            userId = bodyUserId;
+            userName = bodyUserName ?? bodyUserId;
+        } else {
+            // 브라우저 세션 호출: 기존 인증 흐름 유지
+            const currentUser = await getCurrentUser();
+            if (!canAccessCmsEdit(currentUser)) {
+                return contentBuilderErrorResponse('Permission denied.');
+            }
+            userId = bodyUserId ?? currentUser.userId;
+            userName = bodyUserId ? (bodyUserName ?? bodyUserId) : currentUser.userName;
+        }
         const businessCategory = await normalizeCmsAssetCategory(businessCategoryInput);
 
         const buffer = Buffer.from(await file.arrayBuffer());

@@ -76,7 +76,9 @@ public class CmsBuilderClient {
         MultiValueMap<String, Object> form = buildFormData(file, userId, userName, businessCategory, assetDesc);
 
         try {
-            CmsBuilderUploadApiResponse response = cmsBuilderRestClient
+            // cmsBuilderDeployRestClient 사용 — defaultHeader로 x-deploy-token이 자동 포함됨 (#177)
+            // upload 엔드포인트가 브라우저 직접 호출을 차단하고 서버 간 토큰 인증만 허용하도록 변경됨
+            CmsBuilderUploadApiResponse response = cmsBuilderDeployRestClient
                     .post()
                     .uri(properties.getUploadPath())
                     .contentType(MediaType.MULTIPART_FORM_DATA)
