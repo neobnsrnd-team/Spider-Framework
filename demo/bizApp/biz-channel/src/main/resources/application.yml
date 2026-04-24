@@ -1,37 +1,36 @@
 spring:
   application:
     name: biz-channel
+  config:
+    import: optional:file:.env[.properties]
   datasource:
-    url: ${DB_URL:jdbc:oracle:thin:@localhost:1521:XE}
-    username: ${DB_USERNAME:D_SPIDERLINK}
-    password: ${DB_PASSWORD:password}
+    url: ${DB_URL}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
     driver-class-name: oracle.jdbc.OracleDriver
+    hikari:
+      maximum-pool-size: 2
+      minimum-idle: 1
 
 server:
-  port: ${SERVER_PORT:18080}
+  port: ${SERVER_PORT}
 
 biz:
   auth:
-    # 인증AP(biz-auth) 접속 정보 — 환경변수로 오버라이드 가능
-    host: ${BIZ_AUTH_HOST:localhost}
-    port: ${BIZ_AUTH_PORT:19100}
+    host: ${BIZ_AUTH_HOST}
+    port: ${BIZ_AUTH_PORT}
   transfer:
-    # 이체AP(biz-transfer) 접속 정보 — 환경변수로 오버라이드 가능
-    host: ${BIZ_TRANSFER_HOST:localhost}
-    port: ${BIZ_TRANSFER_PORT:19200}
+    host: ${BIZ_TRANSFER_HOST}
+    port: ${BIZ_TRANSFER_PORT}
 
 jwt:
-  # HMAC-SHA256 서명 비밀 키 — 운영 환경에서는 반드시 환경변수로 교체
-  secret: ${JWT_SECRET:dev-secret-key-that-is-long-enough-for-hmac-256}
-  refresh-secret: ${JWT_REFRESH_SECRET:dev-refresh-secret-key-that-is-long-enough}
-  # 액세스 토큰 유효 시간 (ms) — 기본값 30분
-  access-expires-in: ${JWT_ACCESS_EXPIRES_IN:1800000}
-  # 리프레시 토큰 유효 시간 (ms) — 기본값 7일
-  refresh-expires-in: ${JWT_REFRESH_EXPIRES_IN:604800000}
+  secret: ${JWT_SECRET}
+  refresh-secret: ${JWT_REFRESH_SECRET}
+  access-expires-in: ${JWT_ACCESS_EXPIRES_IN}
+  refresh-expires-in: ${JWT_REFRESH_EXPIRES_IN}
 
 admin:
-  # 공지 관리 API 보호용 시크릿 — 운영 환경에서는 반드시 환경변수로 교체
-  secret: ${ADMIN_SECRET:admin-secret}
+  secret: ${ADMIN_SECRET}
 
 logging:
   level:

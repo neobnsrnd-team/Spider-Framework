@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 390 220" width="390" height="220">
+  <rect width="390" height="220" fill="#F5F7FA" rx="16"/>
+
+  <!-- 제목 -->
+  <text x="20" y="38" font-family="sans-serif" font-size="14" fill="#1A1A2E" font-weight="700">주요 혜택</text>
+
+  <!-- 카드 1 -->
+  <rect x="16" y="54" width="110" height="150" fill="#ffffff" rx="14" stroke="#E5E7EB" stroke-width="1"/>
+  <rect x="39" y="72" width="32" height="32" fill="#E8F0FC" rx="8"/>
+  <text x="55" y="93" font-family="sans-serif" font-size="16" text-anchor="middle">💰</text>
+  <text x="71" y="124" font-family="sans-serif" font-size="9" fill="#0046A4" font-weight="700" text-anchor="middle">30,000원</text>
+  <text x="71" y="136" font-family="sans-serif" font-size="9" fill="#0046A4" font-weight="700" text-anchor="middle">캐시백</text>
+  <text x="71" y="152" font-family="sans-serif" font-size="8" fill="#6B7280" text-anchor="middle">이벤트 참여</text>
+  <text x="71" y="163" font-family="sans-serif" font-size="8" fill="#6B7280" text-anchor="middle">완료 시</text>
+
+  <!-- 카드 2 -->
+  <rect x="140" y="54" width="110" height="150" fill="#ffffff" rx="14" stroke="#E5E7EB" stroke-width="1"/>
+  <rect x="163" y="72" width="32" height="32" fill="#E8F0FC" rx="8"/>
+  <text x="179" y="93" font-family="sans-serif" font-size="16" text-anchor="middle">📈</text>
+  <text x="195" y="124" font-family="sans-serif" font-size="9" fill="#0046A4" font-weight="700" text-anchor="middle">연 5.5%</text>
+  <text x="195" y="136" font-family="sans-serif" font-size="9" fill="#0046A4" font-weight="700" text-anchor="middle">우대금리</text>
+  <text x="195" y="152" font-family="sans-serif" font-size="8" fill="#6B7280" text-anchor="middle">최고 금리</text>
+  <text x="195" y="163" font-family="sans-serif" font-size="8" fill="#6B7280" text-anchor="middle">적용 시</text>
+
+  <!-- 카드 3 -->
+  <rect x="264" y="54" width="110" height="150" fill="#ffffff" rx="14" stroke="#E5E7EB" stroke-width="1"/>
+  <rect x="287" y="72" width="32" height="32" fill="#E8F0FC" rx="8"/>
+  <text x="303" y="93" font-family="sans-serif" font-size="16" text-anchor="middle">🎁</text>
+  <text x="319" y="124" font-family="sans-serif" font-size="9" fill="#0046A4" font-weight="700" text-anchor="middle">스타벅스</text>
+  <text x="319" y="136" font-family="sans-serif" font-size="9" fill="#0046A4" font-weight="700" text-anchor="middle">쿠폰</text>
+  <text x="319" y="152" font-family="sans-serif" font-size="8" fill="#6B7280" text-anchor="middle">추첨 1,000명</text>
+  <text x="319" y="163" font-family="sans-serif" font-size="8" fill="#6B7280" text-anchor="middle">증정</text>
+</svg>

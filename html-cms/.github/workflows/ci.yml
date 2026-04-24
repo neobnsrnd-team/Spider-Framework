@@ -1,0 +1,122 @@
+name: CI
+
+on:
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  # ── 1. Lint & Build ────────────────────────────────────────────────────────
+  lint-and-build:
+    name: Lint & Build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 코드 체크아웃
+        uses: actions/checkout@v4
+
+      - name: Node.js 설정
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: 의존성 설치
+        run: npm ci
+
+      - name: Prettier 포맷 검사
+        run: npm run format:check
+
+      - name: ESLint 검사
+        run: npm run lint
+
+      - name: 빌드 검사
+        # DB 연결은 런타임에만 발생 — 빌드 시 Oracle 환경변수 불필요
+        run: npm run build
+
+  # ── 2. Playwright E2E ─────────────────────────────────────────────────────
+  playwright:
+    name: Playwright E2E
+    needs: lint-and-build
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: 코드 체크아웃
+        uses: actions/checkout@v4
+
+      - name: Node.js 설정
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: 의존성 설치
+        run: npm ci
+
+      - name: Playwright 브라우저 캐시 확인
+        uses: actions/cache@v4
+        id: playwright-cache
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+
+      - name: Playwright Chromium 설치
+        if: steps.playwright-cache.outputs.cache-hit != 'true'
+        run: npx playwright install chromium --with-deps
+
+      - name: Playwright 시스템 의존성 설치 (캐시 히트 시)
+        if: steps.playwright-cache.outputs.cache-hit == 'true'
+        run: npx playwright install-deps chromium
+
+      - name: E2E 테스트 실행 (web 프로파일)
+        # CI에서는 web 단일 프로파일로 실행 — Oracle Client 미설치 환경이므로 DB 비활성화
+        run: npx playwright test --project=web
+        env:
+          CI: true
+          ORACLE_DISABLED: 'true'
+
+      - name: 테스트 리포트 아티팩트 저장
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: playwright-report
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 7
+
+  # ── 3. Code Quality (ESLint 정적 분석) ─────────────────────────────────────
+  code-quality:
+    name: 코드 품질 분석
+    needs: lint-and-build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 코드 체크아웃
+        uses: actions/checkout@v4
+
+      - name: Node.js 설정
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: 의존성 설치
+        run: npm ci
+
+      - name: ESLint 정적 분석 (보안 + 복잡도 + 코드 스멜)
+        # eslint-plugin-security: 보안 취약점 탐지
+        # complexity, max-depth, max-lines-per-function: 코드 복잡도 검사
+        run: npm run lint
+
+      - name: ESLint JSON 리포트 생성 (아티팩트 보관용)
+        run: npx eslint --format json --output-file eslint-report.json || true
+
+      - name: ESLint 리포트 아티팩트 저장
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: eslint-report
+          path: eslint-report.json
+          retention-days: 7

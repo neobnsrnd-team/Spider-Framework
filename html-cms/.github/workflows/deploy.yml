@@ -1,0 +1,339 @@
+name: Deploy
+
+on:
+  push:
+    branches:
+      - deploy
+  workflow_dispatch:
+
+env:
+  IMAGE_NAME: springware-cms
+
+jobs:
+  # ── Job 1: Lint & Build ──────────────────────────────────────────────────────
+  ci:
+    name: Lint & Build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 코드 체크아웃
+        uses: actions/checkout@v4
+
+      - name: Node.js 설정
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: 의존성 설치
+        run: npm ci
+
+      - name: Prettier 포맷 검사
+        run: npm run format:check
+
+      - name: ESLint 검사
+        run: npm run lint
+
+      - name: 빌드 검사
+        run: npm run build
+
+  # ── Job 2: Build & Push Docker Image ────────────────────────────────────────
+  docker:
+    name: Docker Build & Push
+    runs-on: ubuntu-latest
+    needs: ci
+
+    permissions:
+      contents: read
+
+    steps:
+      - name: 코드 체크아웃
+        uses: actions/checkout@v4
+
+      - name: Docker Buildx 설정
+        uses: docker/setup-buildx-action@v3
+
+      - name: Docker Hub 로그인
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Docker 메타데이터 추출
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ secrets.DOCKERHUB_USERNAME }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/deploy' }}
+            type=raw,value=deploy,enable=${{ github.ref == 'refs/heads/deploy' }}
+            type=sha,prefix=
+
+      - name: Docker 이미지 빌드 및 푸시
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./Dockerfile
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  # ── Job 3: Deploy to NHN Cloud ───────────────────────────────────────────────
+  deploy:
+    name: Deploy to NHN Cloud
+    runs-on: ubuntu-latest
+    needs: docker
+    if: github.ref == 'refs/heads/deploy'
+
+    permissions:
+      contents: read
+
+    env:
+      NHN_IDENTITY_URL: https://api-identity-infrastructure.nhncloudservice.com
+      NHN_NETWORK_URL: https://kr1-api-network-infrastructure.nhncloudservice.com
+      DOCKER_IMAGE: ${{ secrets.DOCKERHUB_USERNAME }}/springware-cms:latest
+
+    steps:
+      # ── 0. 코드 체크아웃 (docker-compose-prod.yml 전송용) ────────────────────
+      - name: 코드 체크아웃
+        uses: actions/checkout@v4
+
+      # ── 1. Runner 공인 IP 조회 ───────────────────────────────────────────────
+      - name: Runner 공인 IP 조회
+        id: ip
+        run: |
+          RUNNER_IP=$(curl -s https://api.ipify.org)
+          echo "runner_ip=${RUNNER_IP}" >> "$GITHUB_OUTPUT"
+          echo "Runner IP: ${RUNNER_IP}"
+
+      # ── 2. NHN Cloud IaaS 토큰 발급 ─────────────────────────────────────────
+      - name: NHN Cloud 토큰 발급
+        id: nhn_auth
+        run: |
+          RESPONSE=$(curl -s -w "\n%{http_code}" -X POST \
+            "${{ env.NHN_IDENTITY_URL }}/v2.0/tokens" \
+            -H "Content-Type: application/json" \
+            -d '{
+              "auth": {
+                "tenantId": "${{ secrets.NHN_TENANT_ID }}",
+                "passwordCredentials": {
+                  "username": "${{ secrets.NHN_API_USERNAME }}",
+                  "password": "${{ secrets.NHN_API_PASSWORD }}"
+                }
+              }
+            }')
+
+          HTTP_CODE=$(echo "$RESPONSE" | tail -1)
+          BODY=$(echo "$RESPONSE" | sed '$d')
+
+          if [[ "$HTTP_CODE" -lt 200 || "$HTTP_CODE" -ge 300 ]]; then
+            echo "::error::NHN Cloud 토큰 발급 실패 (HTTP ${HTTP_CODE})"
+            exit 1
+          fi
+
+          TOKEN=$(echo "$BODY" | jq -r '.access.token.id')
+          if [ -z "$TOKEN" ] || [ "$TOKEN" = "null" ]; then
+            echo "::error::토큰 추출 실패"
+            exit 1
+          fi
+
+          echo "::add-mask::${TOKEN}"
+          echo "token=${TOKEN}" >> "$GITHUB_OUTPUT"
+          echo "NHN Cloud 토큰 발급 완료"
+
+      # ── 3. 보안 그룹에 Runner IP SSH 허용 ───────────────────────────────────
+      - name: 보안 그룹 SSH 규칙 추가
+        id: sg_rule
+        run: |
+          RESPONSE=$(curl -s -w "\n%{http_code}" -X POST \
+            "${{ env.NHN_NETWORK_URL }}/v2.0/security-group-rules" \
+            -H "X-Auth-Token: ${{ steps.nhn_auth.outputs.token }}" \
+            -H "Content-Type: application/json" \
+            -d '{
+              "security_group_rule": {
+                "direction": "ingress",
+                "ethertype": "IPv4",
+                "port_range_min": 22,
+                "port_range_max": 22,
+                "protocol": "tcp",
+                "remote_ip_prefix": "${{ steps.ip.outputs.runner_ip }}/32",
+                "security_group_id": "${{ secrets.NHN_SECURITY_GROUP_ID }}"
+              }
+            }')
+
+          HTTP_CODE=$(echo "$RESPONSE" | tail -1)
+          BODY=$(echo "$RESPONSE" | sed '$d')
+
+          if [[ "$HTTP_CODE" -lt 200 || "$HTTP_CODE" -ge 300 ]]; then
+            echo "::error::보안 그룹 규칙 추가 실패 (HTTP ${HTTP_CODE}): ${BODY}"
+            exit 1
+          fi
+
+          RULE_ID=$(echo "$BODY" | jq -r '.security_group_rule.id')
+          echo "rule_id=${RULE_ID}" >> "$GITHUB_OUTPUT"
+          echo "보안 그룹 규칙 생성: ${RULE_ID}"
+
+      # ── 4. SSH 키 설정 ───────────────────────────────────────────────────────
+      - name: SSH 키 설정
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.DEPLOY_SSH_PRIVATE_KEY }}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          cat >> ~/.ssh/config << EOF
+          Host deploy-target
+            HostName ${{ secrets.DEPLOY_HOST }}
+            User ${{ secrets.DEPLOY_USER }}
+            IdentityFile ~/.ssh/deploy_key
+            StrictHostKeyChecking no
+            UserKnownHostsFile /dev/null
+            ConnectTimeout 30
+          EOF
+          chmod 600 ~/.ssh/config
+
+      # ── 5. SSH 접속 대기 ─────────────────────────────────────────────────────
+      - name: SSH 접속 확인
+        run: |
+          for i in $(seq 1 12); do
+            if ssh deploy-target "echo ok" 2>/dev/null; then
+              echo "SSH 접속 성공"
+              exit 0
+            fi
+            echo "시도 $i/12: SSH 준비 중, 5초 후 재시도..."
+            sleep 5
+          done
+          echo "::error::60초 내 SSH 접속 실패"
+          exit 1
+
+      # ── 6. /app 디렉토리 생성 및 설정 파일 전송 ────────────────────────────────
+      - name: 설정 파일 서버 전송
+        run: |
+          ssh deploy-target "mkdir -p /app"
+          scp docker-compose-prod.yml deploy-target:/app/docker-compose-prod.yml
+          scp nginx/nginx.conf deploy-target:/app/nginx.conf
+
+      # ── 6-1. Nginx 설정 적용 ─────────────────────────────────────────────────
+      - name: Nginx 설정 적용
+        run: |
+          ssh deploy-target bash -s << 'REMOTE_SCRIPT'
+            set -euo pipefail
+            sudo cp /app/nginx.conf /etc/nginx/sites-available/springware
+            sudo ln -sf /etc/nginx/sites-available/springware /etc/nginx/sites-enabled/springware
+            sudo nginx -t
+            sudo systemctl reload nginx
+            echo ">>> Nginx 설정 적용 완료"
+          REMOTE_SCRIPT
+
+      # ── 7. 기존 Docker 이미지 정리 ──────────────────────────────────────────
+      - name: 기존 Docker 이미지 정리
+        run: |
+          ssh deploy-target bash -s << 'REMOTE_SCRIPT'
+            set -euo pipefail
+            echo ">>> 정리 전 Docker 디스크 사용량"
+            docker system df || true
+            echo ">>> 미사용 이미지 삭제..."
+            docker image prune -af || true
+            echo ">>> 정리 후 Docker 디스크 사용량"
+            docker system df || true
+          REMOTE_SCRIPT
+
+      # ── 8. 서버에서 DockerHub 로그인 ─────────────────────────────────────────────
+      - name: 서버 DockerHub 로그인
+        run: |
+          ssh deploy-target "echo '${{ secrets.DOCKERHUB_TOKEN }}' | docker login -u '${{ secrets.DOCKERHUB_USERNAME }}' --password-stdin"
+
+      # ── 9. 최신 이미지 Pull ──────────────────────────────────────────────────
+      - name: Docker 이미지 Pull
+        run: |
+          ssh deploy-target "docker pull ${{ env.DOCKER_IMAGE }}"
+
+      # ── 10. 컨테이너 재시작 (cms + operation) ───────────────────────────────
+      - name: 컨테이너 배포
+        run: |
+          ssh deploy-target "cd /app && DOCKER_IMAGE=${{ env.DOCKER_IMAGE }} docker compose -f docker-compose-prod.yml up -d --force-recreate cms operation && docker compose -f docker-compose-prod.yml ps"
+
+      # ── 11. 헬스체크 — cms(3000) / operation(3001) ──────────────────────────
+      - name: 헬스체크
+        run: |
+          ssh deploy-target bash -s << 'REMOTE_SCRIPT'
+            set -euo pipefail
+            echo ">>> 앱 기동 대기 (15초)..."
+            sleep 15
+
+            check_health() {
+              local NAME=$1
+              local PORT=$2
+              for i in $(seq 1 6); do
+                HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" "http://localhost:${PORT}/cms/api/health" || true)
+                if [ "$HTTP_CODE" = "200" ]; then
+                  echo ">>> [${NAME}] 헬스체크 통과 (HTTP 200)"
+                  return 0
+                fi
+                echo "시도 $i/6: [${NAME}] HTTP ${HTTP_CODE}, 10초 후 재시도..."
+                sleep 10
+              done
+              echo "::error::[${NAME}] 헬스체크 실패"
+              return 1
+            }
+
+            check_health "cms" 3000
+            check_health "operation" 3001
+          REMOTE_SCRIPT
+
+      # ── ALWAYS: 댕글링 이미지 정리 ──────────────────────────────────────────
+      - name: 댕글링 이미지 정리
+        if: always()
+        run: |
+          ssh deploy-target bash -s << 'REMOTE_SCRIPT'
+            set -euo pipefail
+            echo ">>> 최종 Docker 이미지 정리"
+            docker image prune -af || true
+            docker system df || true
+          REMOTE_SCRIPT
+
+      # ── ALWAYS: 보안 그룹 규칙 삭제 ─────────────────────────────────────────
+      - name: 보안 그룹 규칙 삭제
+        if: always()
+        run: |
+          RULE_ID="${{ steps.sg_rule.outputs.rule_id }}"
+          TOKEN="${{ steps.nhn_auth.outputs.token }}"
+
+          if [ -z "$RULE_ID" ] || [ "$RULE_ID" = "null" ]; then
+            echo "삭제할 보안 그룹 규칙 없음"
+            exit 0
+          fi
+
+          if [ -z "$TOKEN" ] || [ "$TOKEN" = "null" ]; then
+            echo "::warning::토큰 없음 — 규칙 ${RULE_ID} 수동 삭제 필요"
+            exit 0
+          fi
+
+          HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" -X DELETE \
+            "${{ env.NHN_NETWORK_URL }}/v2.0/security-group-rules/${RULE_ID}" \
+            -H "X-Auth-Token: ${TOKEN}")
+
+          if [[ "$HTTP_CODE" -ge 200 && "$HTTP_CODE" -lt 300 ]]; then
+            echo "보안 그룹 규칙 ${RULE_ID} 삭제 완료"
+          else
+            echo "::warning::보안 그룹 규칙 ${RULE_ID} 삭제 실패 (HTTP ${HTTP_CODE})"
+          fi
+
+      # ── ALWAYS: SSH 키 정리 ──────────────────────────────────────────────────
+      - name: SSH 키 정리
+        if: always()
+        run: rm -f ~/.ssh/deploy_key ~/.ssh/config
+
+      # ── ALWAYS: 배포 요약 ────────────────────────────────────────────────────
+      - name: 배포 요약
+        if: always()
+        run: |
+          echo "## 배포 요약" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "| 항목 | 값 |" >> "$GITHUB_STEP_SUMMARY"
+          echo "|------|-----|" >> "$GITHUB_STEP_SUMMARY"
+          echo "| 이미지 | \`${{ env.DOCKER_IMAGE }}\` |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| 서버 | \`${{ secrets.DEPLOY_HOST }}\` |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Runner IP | \`${{ steps.ip.outputs.runner_ip }}\` |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| 보안 그룹 규칙 ID | \`${{ steps.sg_rule.outputs.rule_id }}\` |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| 상태 | \`${{ job.status }}\` |" >> "$GITHUB_STEP_SUMMARY"

@@ -1,0 +1,48 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 200" width="300" height="200">
+  <rect width="300" height="200" fill="white" rx="12"/>
+
+  <!-- Banner slide -->
+  <rect x="0" y="0" width="300" height="120" rx="12" fill="url(#grad1)"/>
+  <defs>
+    <linearGradient id="grad1" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#0046A4"/>
+      <stop offset="100%" style="stop-color:#0066CC"/>
+    </linearGradient>
+  </defs>
+  <rect x="0" y="108" width="300" height="12" fill="#0066CC"/>
+
+  <!-- Badge -->
+  <rect x="18" y="18" width="40" height="16" fill="rgba(255,255,255,0.25)" rx="8" stroke="rgba(255,255,255,0.4)" stroke-width="1"/>
+  <text x="38" y="30" font-family="sans-serif" font-size="9" fill="white" text-anchor="middle" font-weight="700">이벤트</text>
+
+  <!-- Slide title -->
+  <text x="18" y="58" font-family="sans-serif" font-size="20" fill="white" font-weight="800">특별 금리 혜택</text>
+  <!-- Slide desc -->
+  <text x="18" y="76" font-family="sans-serif" font-size="11" fill="rgba(255,255,255,0.85)">IBK 적금 가입 시 최고 4.5% 금리</text>
+  <!-- CTA -->
+  <rect x="18" y="86" width="80" height="22" fill="rgba(255,255,255,0.2)" rx="11" stroke="rgba(255,255,255,0.5)" stroke-width="1"/>
+  <text x="58" y="101" font-family="sans-serif" font-size="9" fill="white" text-anchor="middle" font-weight="600">자세히 보기 →</text>
+
+  <!-- Counter badge -->
+  <rect x="254" y="12" width="32" height="16" fill="rgba(0,0,0,0.3)" rx="8"/>
+  <text x="270" y="23" font-family="sans-serif" font-size="8" fill="white" text-anchor="middle">1 / 2</text>
+
+  <!-- Dots -->
+  <circle cx="136" cy="115" r="3" fill="#0046A4"/>
+  <rect x="140" y="112" width="18" height="6" fill="#0046A4" rx="3"/>
+  <circle cx="162" cy="115" r="3" fill="#D1D5DB"/>
+
+  <!-- Video section -->
+  <line x1="0" y1="124" x2="300" y2="124" stroke="#F3F4F6" stroke-width="1"/>
+  <text x="18" y="140" font-family="sans-serif" font-size="12" fill="#1A1A2E" font-weight="700">IBK 소개 영상</text>
+
+  <!-- YouTube embed placeholder -->
+  <rect x="12" y="148" width="276" height="44" fill="#000" rx="8"/>
+  <rect x="12" y="148" width="276" height="44" fill="#111827" rx="8"/>
+  <!-- Play button -->
+  <circle cx="150" cy="170" r="14" fill="rgba(255,255,255,0.15)"/>
+  <polygon points="145,164 145,176 159,170" fill="white"/>
+  <!-- YouTube logo area -->
+  <rect x="18" y="154" width="40" height="12" fill="#FF0000" rx="3" opacity="0.8"/>
+  <text x="38" y="163" font-family="sans-serif" font-size="7" fill="white" text-anchor="middle" font-weight="700">YouTube</text>
+</svg>

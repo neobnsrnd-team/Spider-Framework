@@ -1,0 +1,222 @@
+@import "tailwindcss";
+
+:root {
+  --background: #ffffff;
+  --foreground: #171717;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #0a0a0a;
+    --foreground: #ededed;
+  }
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: -apple-system, BlinkMacSystemFont, 'Malgun Gothic', 'Apple SD Gothic Neo', sans-serif;
+}
+
+a {
+    text-decoration: underline
+}
+/* 에디터 상단 네비바 버튼 — hover 상태 포함 */
+.nav-btn:hover {
+  background: #EBF4FF !important;
+  border-color: #0046A4 !important;
+  color: #0046A4 !important;
+}
+
+/* 슬라이드 편집 모달 열림 시 CB 툴바 강제 숨김 */
+body.spw-slide-modal-open .is-col-tool,
+body.spw-slide-modal-open .is-rte-tool {
+    display: none !important;
+}
+
+.btns {
+  @apply fixed bottom-8 left-8 flex gap-2;
+}
+
+.btns button {
+  @apply px-5 py-2.5 rounded-md text-sm font-medium
+         bg-white border border-[#e5e7eb] shadow-sm
+         hover:bg-[#EBF4FF] hover:border-[#0046A4] hover:text-[#0046A4]
+         focus:outline-none focus:ring-2 focus:ring-[#0046A4]/30
+         transition-all duration-200 cursor-pointer;
+}
+
+/* ── 모바일 앱 캔버스 — 플러그인 너비 맞춤 ──────────────────────────
+ * 390px 모바일 컨테이너 안에서 플러그인이 전체 너비(화면 가득)를 채우도록
+ */
+.container [data-cb-type] {
+    display: block;
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+}
+
+/* ContentBuilder 행/열 패딩 제거
+ * [data-cb-type]  : 플러그인 방식 컴포넌트 (loan-calculator 등 JS 의존)
+ * .spw-finance-col: 순수 HTML 변환 금융 컴포넌트 — handleInsertComponent에서 주입 */
+.container .is-col:has(> [data-cb-type]),
+.container .column:has(> [data-cb-type]),
+.container [class*="col"]:has(> [data-cb-type]),
+.container .column.spw-finance-col,
+.is-container .is-col:has(> [data-cb-type]),
+.is-container .column:has(> [data-cb-type]),
+.is-container [class*="col"]:has(> [data-cb-type]),
+.is-container .column.spw-finance-col {
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    flex: 0 0 100% !important;
+}
+
+/* 일반 .row도 패딩 없이 꽉 채움 */
+.container .row,
+.is-container .row {
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+}
+
+/* spw-finance-col을 포함한 row는 복제 시 세로로 쌓이도록 강제
+ * ContentBuilder 복제가 같은 row에 새 column을 추가할 때 가로 배치 방지 */
+.container .row:has(> .column.spw-finance-col),
+.is-container .row:has(> .column.spw-finance-col) {
+    flex-wrap: wrap !important;
+}
+.container .row:has(> .column.spw-finance-col) > .column,
+.is-container .row:has(> .column.spw-finance-col) > .column {
+    flex: 0 0 100% !important;
+    width: 100% !important;
+    max-width: 100% !important;
+}
+
+/* ── 미리보기 페이지(.is-container) — [data-cb-type] 블록 레벨 보장 ── */
+.is-container [data-cb-type] {
+    display: block;
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+}
+
+/* ── ContentBuilder RTE 툴바(← → 🔍 ✨ ≡ ...) 위치 보정 ─────────────
+ * 네비바(52px) 바로 아래, 캔버스 영역(뷰포트 - 우측패널 264px) 수평 중앙
+ */
+.is-rte-tool,
+.is-elementrte-tool {
+    top: 52px !important;
+    left: calc((100vw - 264px) / 2) !important;
+    transform: translateX(-50%) !important;
+}
+
+/* ── 행 도구(Row Toolbar) 위치 ────────────────────────────────────────
+ * 390px 모바일 컨테이너가 가운데 정렬되어 있어 오른쪽에 충분한 공간이 있으므로
+ * ContentBuilder 기본값(right: -40px)을 그대로 사용합니다.
+ */
+
+/* ── quickadd 팝업 버튼 크기 & 텍스트 조정 ──────────────────────────────
+ * 라이브러리 기본값(font-size:9px, height:60px)이 너무 작아 가독성 개선
+ */
+#_cbhtml .is-pop.quickadd button {
+    height: 76px !important;
+    font-size: 11px !important;
+    font-weight: 400 !important;
+    text-transform: none !important;
+}
+#_cbhtml .is-pop.quickadd button svg,
+#_cbhtml .is-pop.quickadd button img {
+    width: 20px !important;
+    height: 20px !important;
+}
+
+/* ── quickadd 팝업 열림 애니메이션 ──────────────────────────────────────
+ * ContentBuilder가 display:none → display:flex 전환 시 자동 재생
+ * pluginsettings 모달과 동일한 fade-in + scale-up 효과
+ */
+@keyframes quickadd-open {
+    from {
+        opacity: 0;
+        transform: scale(0.94) translateY(-6px);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+    }
+}
+
+#_cbhtml .is-pop.quickadd {
+    transform-origin: top center;
+    animation: quickadd-open 0.18s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+/* 겹치는 기능 버튼 숨김: 그리드 에디터(열 레이아웃 편집)는 금융 컴포넌트 편집 시 불필요 */
+.is-builder .is-tool.is-row-tool .row-grideditor {
+    display: none !important;
+}
+
+/* ── 에디터 캔버스에서 아코디언 항목 항상 펼침 ──────────────────────────
+ * .is-builder: ContentBuilder 에디터가 활성화된 경우에만 적용.
+ * 미리보기·배포 환경에는 .is-builder가 없으므로 토글 동작에 영향 없음.
+ */
+.is-builder .ia-body {
+    max-height: none !important;
+    overflow: visible !important;
+}
+.is-builder .ia-chevron {
+    transform: rotate(180deg) !important;
+}
+
+/* 열 도구(Column Toolbar) — 행 상단에 기본 배치 유지 */
+
+/* ── 캔버스 행 간격 ───────────────────────────────────────────────────
+ * 모든 row에 48px 상단 여백을 부여합니다.
+ * — 첫 번째 행: Row Tool이 RTE 툴바(top:52px, 높이~44px)에 가려지지 않도록 확보
+ * — 두 번째 행 이후: 열 도구(is-col-tool)가 이전 컴포넌트와 겹치지 않도록 확보
+ */
+.is-builder .row {
+    margin-top: 48px;
+}
+
+/* ── 미디어 영상 URL 편집 모달 — placeholder 색상 ── */
+#mv-url-input::placeholder {
+    color: #9ca3af;
+}
+
+/* ── 에디터에서 media-video iframe — 클릭을 래퍼 div로 전달 ──
+ * pointer-events:none으로 iframe이 클릭을 흡수하지 않도록 차단
+ * 뷰어(.is-builder 없음)에서는 정상 재생 가능
+ */
+.is-builder [data-component-id^="media-video"] iframe {
+    pointer-events: none;
+}
+
+/* ── ContentBuilder 로컬 파일 업로드 버튼 전면 차단 ──────────────────────────
+ * /cms/files 승인 이미지 브라우저만 사용하도록 OS 파일 선택 경로를 모두 숨긴다.
+ *
+ * [1] 배경 이미지 패널 — .image-larger1~4 래퍼 + 내부 .form-upload-larger
+ *     ContentBuilder 내부 자동 숨김이 모든 컨텍스트를 커버하지 못하므로 CSS로 강제 차단.
+ *
+ * [2] 링크 편집 모달 등 범용 업로드 버튼 — .div-anyfile-upload (.is-btn 래퍼)
+ *     .form-upload-larger 만 숨기면 부모 div(50×43 px)가 빈 공간으로 남으므로
+ *     래퍼 자체를 숨긴다. :has() 선택자로 form을 포함하는 .is-btn도 함께 차단.
+ */
+.form-upload-larger,
+.image-larger1,
+.image-larger2,
+.image-larger3,
+.image-larger4,
+.div-anyfile-upload,
+.is-btn:has(> .form-upload-larger),
+.input-upload:has(> .form-upload-larger) {
+    display: none !important;
+}

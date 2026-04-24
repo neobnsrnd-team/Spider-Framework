@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>Preview</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="">
+    <link rel="shortcut icon" href="#">  
+    
+    <link href="runtime/contentbuilder-runtime.css" rel="stylesheet"> 
+
+    <style>
+        .is-container {margin: 140px auto; max-width: 980px; width:100%; padding:0 20px; box-sizing: border-box;}
+    </style>
+</head>
+<body style="touch-action: pan-y">
+
+    <div class="is-container"></div>
+    
+    <script src="runtime/contentbuilder-runtime.min.js"></script>
+    <script>
+        var html = localStorage.getItem('preview-html');
+        
+        // Add saved HTML
+        const container = document.querySelector('.is-container');
+        container.innerHTML = '';
+        const range = document.createRange(); 
+        range.setStart(container, 0);
+        container.appendChild(
+            range.createContextualFragment(html) 
+        ); 
+
+        // Initialize runtime
+        const runtime = new ContentBuilderRuntime();
+        runtime.init();
+    </script>
+</body>
+</html>

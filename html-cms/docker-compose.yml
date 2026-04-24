@@ -1,0 +1,23 @@
+services:
+  oracle:
+    image: gvenzl/oracle-xe:21-slim
+    container_name: springware-oracle
+    ports:
+      - "${ORACLE_PORT:-1521}:1521"
+    environment:
+      ORACLE_PASSWORD: ${ORACLE_PASSWORD}
+      ORACLE_DATABASE: ${ORACLE_SERVICE:-XEPDB1}
+      APP_USER: ${ORACLE_USER}
+      APP_USER_PASSWORD: ${ORACLE_PASSWORD}
+    volumes:
+      - oracle-data:/opt/oracle/oradata
+      - ./migrations:/container-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD", "healthcheck.sh"]
+      interval: 30s
+      timeout: 10s
+      retries: 10
+      start_period: 120s
+
+volumes:
+  oracle-data:

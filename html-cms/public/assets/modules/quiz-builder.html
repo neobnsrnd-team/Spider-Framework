@@ -1,0 +1,147 @@
+<!DOCTYPE HTML>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title></title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="">
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@0.7.4/dist/tailwind.min.css" rel="stylesheet">
+</head>
+<body class="m-6">
+    
+    <div style="max-width:500px">
+        <div class="my-4">
+            <label for="inpQuestion" class="block font-semibold mb-1">Question:</label>
+            <input id="inpQuestion" type="text" value="" class="border rounded-md py-2 px-3 w-full">
+        </div>
+        
+        <div class="my-4">
+            <label for="inpChoices" class="block font-semibold mb-1">Choices: (comma separated)</label>
+            <input id="inpChoices" type="text" value="" class="border rounded-md py-2 px-3 w-full">
+        </div>
+        
+        <div class="my-4">
+            <label for="inpAnswer" class="block font-semibold mb-1">Correct Answer:</label>
+            <input id="inpAnswer" type="text" value="" class="border rounded-md py-2 px-3 w-full">
+        </div>
+    </div>
+      
+    <script>
+        var activeModule = parent._cb.activeCol;
+        var isBlock = activeModule?true:false;
+        if(!isBlock) {
+            activeModule = parent._cb.doc.querySelector('.is-overlay-content[data-module-active]');
+        }
+
+        // Read settings (from data-settings attribute)
+        var settings = getSettings();
+        if (settings != 'undefined') {
+            var json = JSON.parse(settings);
+            document.querySelector("#inpQuestion").value = json.question; 
+            document.querySelector("#inpChoices").value = json.choices; 
+            document.querySelector("#inpAnswer").value = json.answer; 
+        }
+        
+        function construct() {
+            var inpQuestion = document.querySelector('#inpQuestion');
+            var inpChoices = document.querySelector('#inpChoices');
+            var inpAnswer = document.querySelector('#inpAnswer');
+
+            var choices = inpChoices.value;
+            var arrChoices = choices.split(',');
+            var radioHtml = '';
+            arrChoices.forEach(item => {
+                item = item.trim();
+                radioHtml += `<label><input type="radio" name="answer{id}" value="${item}" />${item}</label>`;
+            });
+
+            var html = `
+
+                <h3>${inpQuestion.value}</h3>
+                <div class="flex flex-col mt-4 mb-4">
+                ${radioHtml}
+                </div>
+                <button id="{id}" class="transition-all inline-block whitespace-nowrap cursor-pointer no-underline border-2 border-solid mr-2 mt-2 mb-1 py-2 size-17 border-current hover:border-current font-normal leading-14 rounded-full tracking-wide px-10" style="background-color: rgb(255, 255, 255);">Submit</button>
+    
+                <p id="result{id}"></p>
+
+                <scr`+`ipt>
+                    (function() {
+                        let docReady = function(fn) {
+                            let stateCheck = setInterval(function() {
+                                if (document.readyState !== "complete") return;
+                                clearInterval(stateCheck);
+                                try {
+                                    fn()
+                                } catch (e) {}
+                            }, 1);
+                        };
+                        docReady(function() {
+                            let btnSubmit = document.querySelector("#{id}");
+                            btnSubmit.addEventListener('click', ()=>{
+                                getSelectedChoice();
+                            });
+                        });
+                        function getSelectedChoice() {
+                            const radioButtons = document.getElementsByName("answer{id}");
+                            let selectedChoice = "";
+                            for (let i = 0; i < radioButtons.length; i++) {
+                                if (radioButtons[i].checked) {
+                                selectedChoice = radioButtons[i].value;
+                                break; // Exit the loop once a checked radio button is found
+                                }
+                            }
+                            if (selectedChoice !== "") {
+                                const divResult = document.querySelector("#result{id}");
+                                if(selectedChoice === '${inpAnswer.value}') {
+                                    divResult.innerHTML = 'Your answer: '+selectedChoice+'. <b>That is correct!</b>'
+                                } else {
+                                    divResult.innerHTML = 'Your answer: '+selectedChoice+'. That is incorrect!'
+                                }
+                            } else {
+                                alert("No choice selected");
+                            }
+                        }
+                    })();
+                </scr`+`ipt>`;
+
+            // Render module
+            if(isBlock) {
+                parent._cb.setModuleHtml(html); 
+            } else {
+                setHtml(html);
+            }
+
+            var settings = {};
+            settings.question = document.querySelector("#inpQuestion").value;
+            settings.choices = document.querySelector("#inpChoices").value;
+            settings.answer = document.querySelector("#inpAnswer").value;
+
+            // Save settings
+            if(isBlock) {
+                parent._cb.setModuleSettings(JSON.stringify(settings));
+            } else {
+                setSettings(JSON.stringify(settings));
+            }
+        }
+
+        function getSettings() {
+            var activeModule = parent._cb.activeCol;
+            var isBlock = activeModule?true:false;
+            if(!isBlock) {
+                activeModule = parent._cb.doc.querySelector('.is-overlay-content[data-module-active]');
+            }
+            return decodeURIComponent(activeModule.getAttribute('data-settings'));
+        }
+
+        function setHtml(html) {
+            parent.document.querySelector('#hidModuleCode').value = html;
+        }
+
+        function setSettings(settings) {
+            parent.document.querySelector('#hidModuleSettings').value = settings;
+        }
+    </script>
+
+</body>
+</html>

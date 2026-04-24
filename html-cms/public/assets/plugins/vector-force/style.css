@@ -1,0 +1,111 @@
+/* Vector Force Field Plugin Styles */
+
+[data-cb-type="vector-force"] {
+    position: relative;
+    width: 100%;
+    overflow: visible;
+    cursor: none;
+    margin: 0;
+    padding: 40px 20px;
+    background: transparent;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+/* Main text */
+.vf-text {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Arial', sans-serif;
+    position: relative;
+    user-select: none;
+    margin: 0;
+    padding: 0 20px;
+    text-align: center;
+    line-height: 1.1;
+    z-index: 2;
+}
+
+/* Individual letters */
+.vf-letter {
+    display: inline-block;
+    position: relative;
+    transition: color 0.3s ease;
+    will-change: transform;
+}
+
+/* Custom cursor */
+.vf-cursor {
+    border: 2px solid rgba(255, 255, 255, 0.5);
+    border-radius: 50%;
+    position: fixed;
+    pointer-events: none;
+    z-index: 9999;
+    transform: translate(-50%, -50%);
+    transition: transform 0.15s ease, border-color 0.2s ease;
+}
+
+/* Cursor glow */
+.vf-glow {
+    width: 200px;
+    height: 200px;
+    background: radial-gradient(
+        circle, 
+        rgba(100, 150, 255, 0.3) 0%, 
+        transparent 70%
+    );
+    border-radius: 50%;
+    position: fixed;
+    pointer-events: none;
+    z-index: 9998;
+    transform: translate(-50%, -50%);
+}
+
+/* Responsive adjustments */
+@media (max-width: 1024px) {
+    .vf-text {
+        font-size: clamp(3rem, 10vw, 8rem) !important;
+    }
+}
+
+@media (max-width: 768px) {
+    [data-cb-type="vector-force"] {
+        padding: 30px 10px;
+    }
+    
+    .vf-text {
+        font-size: clamp(2rem, 8vw, 6rem) !important;
+        padding: 0 10px;
+    }
+    
+    .vf-cursor {
+        width: 20px !important;
+        height: 20px !important;
+    }
+    
+    .vf-glow {
+        width: 150px;
+        height: 150px;
+    }
+}
+
+@media (max-width: 480px) {
+    [data-cb-type="vector-force"] {
+        padding: 20px 10px;
+    }
+    
+    .vf-text {
+        font-size: clamp(1.5rem, 6vw, 4rem) !important;
+    }
+}
+
+/* Touch device support */
+@media (hover: none) and (pointer: coarse) {
+    [data-cb-type="vector-force"] {
+        cursor: auto;
+    }
+    
+    .vf-cursor,
+    .vf-glow {
+        display: none;
+    }
+}

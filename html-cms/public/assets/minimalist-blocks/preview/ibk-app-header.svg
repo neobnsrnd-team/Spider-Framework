@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 390 56" width="390" height="56">
+  <rect width="390" height="56" fill="#ffffff"/>
+  <rect y="53.5" width="390" height="2.5" fill="#0046A4"/>
+  <!-- IBK 다이아몬드 로고 -->
+  <rect x="16" y="11" width="32" height="32" rx="4" fill="#0046A4"/>
+  <text x="32" y="31" text-anchor="middle" fill="white" font-size="9" font-weight="900" font-family="sans-serif">IBK</text>
+  <!-- 로고 텍스트 -->
+  <text x="56" y="33" fill="#1A1A2E" font-size="15" font-weight="800" font-family="sans-serif">IBK기업은행</text>
+  <!-- 전체메뉴 -->
+  <line x1="350" y1="21" x2="374" y2="21" stroke="#0046A4" stroke-width="2" stroke-linecap="round"/>
+  <line x1="353" y1="28" x2="374" y2="28" stroke="#0046A4" stroke-width="2" stroke-linecap="round"/>
+  <line x1="350" y1="35" x2="374" y2="35" stroke="#0046A4" stroke-width="2" stroke-linecap="round"/>
+  <text x="362" y="48" text-anchor="middle" fill="#374151" font-size="9" font-family="sans-serif">전체메뉴</text>
+</svg>
