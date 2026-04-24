@@ -1,0 +1,260 @@
+/* IBK Loan Calculator - Mobile First */
+[data-cb-type="loan-calculator"] {
+    container-type: inline-size;
+    --lc-accent: #0046A4;
+    --lc-accent-light: #E8F0FC;
+    position: relative;
+    background: #fff;
+    border-radius: 20px;
+    /* overflow: hidden 제거 — ContentBuilder 툴바 클리핑 방지 */
+    box-shadow: 0 2px 16px rgba(0, 70, 164, 0.07);
+    font-family: -apple-system, BlinkMacSystemFont, 'Malgun Gothic', sans-serif;
+}
+
+/* Tabs */
+[data-cb-type="loan-calculator"] .lc-tabs {
+    display: flex;
+    background: #F5F7FA;
+    padding: 6px;
+    gap: 4px;
+}
+
+[data-cb-type="loan-calculator"] .lc-tab {
+    flex: 1;
+    height: 44px;
+    border: none;
+    border-radius: 10px;
+    background: transparent;
+    color: #6B7280;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    -webkit-tap-highlight-color: transparent;
+    font-family: inherit;
+}
+
+[data-cb-type="loan-calculator"] .lc-tab.active {
+    background: #fff;
+    color: var(--lc-accent);
+    box-shadow: 0 2px 8px rgba(0, 70, 164, 0.12);
+}
+
+/* Body */
+[data-cb-type="loan-calculator"] .lc-body {
+    padding: 20px;
+}
+
+/* Panel */
+[data-cb-type="loan-calculator"] .lc-panel {
+    display: block;
+}
+
+/* Field */
+[data-cb-type="loan-calculator"] .lc-field {
+    margin-bottom: 20px;
+}
+
+[data-cb-type="loan-calculator"] .lc-label {
+    display: block;
+    font-size: 13px;
+    font-weight: 600;
+    color: #374151;
+    margin-bottom: 8px;
+}
+
+/* Input wrapper */
+[data-cb-type="loan-calculator"] .lc-input-wrap {
+    display: flex;
+    align-items: center;
+    background: #F5F7FA;
+    border-radius: 12px;
+    padding: 0 16px;
+    gap: 8px;
+    margin-bottom: 10px;
+    border: 2px solid transparent;
+    transition: border-color 0.2s ease;
+}
+
+[data-cb-type="loan-calculator"] .lc-input-wrap:focus-within {
+    border-color: var(--lc-accent);
+    background: #fff;
+}
+
+[data-cb-type="loan-calculator"] .lc-input {
+    flex: 1;
+    height: 52px;
+    border: none;
+    background: transparent;
+    font-size: 18px;
+    font-weight: 700;
+    color: #1A1A2E;
+    outline: none;
+    -webkit-appearance: none;
+    -moz-appearance: textfield;
+    font-variant-numeric: tabular-nums;
+    min-width: 0;
+}
+
+[data-cb-type="loan-calculator"] .lc-input::-webkit-outer-spin-button,
+[data-cb-type="loan-calculator"] .lc-input::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+[data-cb-type="loan-calculator"] .lc-unit {
+    font-size: 14px;
+    font-weight: 600;
+    color: #9CA3AF;
+    flex-shrink: 0;
+}
+
+/* Range slider */
+[data-cb-type="loan-calculator"] .lc-range {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 100%;
+    height: 4px;
+    border-radius: 2px;
+    background: #E5E7EB;
+    outline: none;
+    cursor: pointer;
+}
+
+[data-cb-type="loan-calculator"] .lc-range::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: var(--lc-accent);
+    cursor: pointer;
+    box-shadow: 0 2px 8px rgba(0, 70, 164, 0.35);
+    transition: transform 0.15s ease;
+}
+
+[data-cb-type="loan-calculator"] .lc-range::-webkit-slider-thumb:active {
+    transform: scale(1.25);
+}
+
+[data-cb-type="loan-calculator"] .lc-range::-moz-range-thumb {
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: var(--lc-accent);
+    cursor: pointer;
+    border: none;
+    box-shadow: 0 2px 8px rgba(0, 70, 164, 0.35);
+}
+
+[data-cb-type="loan-calculator"] .lc-range-labels {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 4px;
+    font-size: 10px;
+    color: #9CA3AF;
+}
+
+/* Result section */
+[data-cb-type="loan-calculator"] .lc-result {
+    background: var(--lc-accent-light);
+    border-radius: 14px;
+    padding: 16px;
+    margin-bottom: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+[data-cb-type="loan-calculator"] .lc-result-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+[data-cb-type="loan-calculator"] .lc-result-label {
+    font-size: 13px;
+    color: #6B7280;
+    font-weight: 500;
+}
+
+[data-cb-type="loan-calculator"] .lc-result-value {
+    font-size: 15px;
+    font-weight: 700;
+    color: #1A1A2E;
+    font-variant-numeric: tabular-nums;
+}
+
+[data-cb-type="loan-calculator"] .lc-result-total {
+    padding-top: 10px;
+    border-top: 1px solid rgba(0, 70, 164, 0.15);
+}
+
+[data-cb-type="loan-calculator"] .lc-result-total .lc-result-label {
+    color: var(--lc-accent);
+    font-weight: 700;
+}
+
+[data-cb-type="loan-calculator"] .lc-result-total .lc-result-value {
+    font-size: 20px;
+    color: var(--lc-accent);
+}
+
+/* Apply button */
+[data-cb-type="loan-calculator"] .lc-apply-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    background: var(--lc-accent);
+    color: #fff;
+    text-decoration: none;
+    font-size: 16px;
+    font-weight: 700;
+    height: 52px;
+    border-radius: 14px;
+    transition: opacity 0.2s ease;
+    -webkit-tap-highlight-color: transparent;
+    box-sizing: border-box;
+}
+
+[data-cb-type="loan-calculator"] .lc-apply-btn:active {
+    opacity: 0.85;
+}
+
+/* Dark mode */
+[data-cb-skin="dark"] [data-cb-type="loan-calculator"] {
+    background: #1F2937;
+}
+
+[data-cb-skin="dark"] [data-cb-type="loan-calculator"] .lc-tabs {
+    background: #111827;
+}
+
+[data-cb-skin="dark"] [data-cb-type="loan-calculator"] .lc-tab.active {
+    background: #1F2937;
+}
+
+[data-cb-skin="dark"] [data-cb-type="loan-calculator"] .lc-input-wrap {
+    background: #374151;
+}
+
+[data-cb-skin="dark"] [data-cb-type="loan-calculator"] .lc-input-wrap:focus-within {
+    background: #1F2937;
+}
+
+[data-cb-skin="dark"] [data-cb-type="loan-calculator"] .lc-input {
+    color: #F9FAFB;
+}
+
+[data-cb-skin="dark"] [data-cb-type="loan-calculator"] .lc-label {
+    color: #D1D5DB;
+}
+
+[data-cb-skin="dark"] [data-cb-type="loan-calculator"] .lc-result {
+    background: #111827;
+}
+
+[data-cb-skin="dark"] [data-cb-type="loan-calculator"] .lc-result-value {
+    color: #F9FAFB;
+}

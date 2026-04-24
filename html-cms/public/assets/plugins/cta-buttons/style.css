@@ -1,0 +1,121 @@
+/* CTA Buttons Container */
+[data-cb-type="cta-buttons"] {
+    display: flex;
+    gap: 16px;
+    justify-content: center;
+    align-items: center;
+    flex-wrap: wrap;
+    padding: 20px 0;
+}
+
+/* Button Base Styles */
+[data-cb-type="cta-buttons"] .cta-btn {
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-decoration: none;
+    display: inline-block;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+    white-space: nowrap;
+    /* Don't override inline styles from JavaScript */
+}
+
+/* Gradient Style */
+[data-cb-type="cta-buttons"] .cta-btn[data-style="gradient"] {
+    background: linear-gradient(135deg, var(--btn-color1) 0%, var(--btn-color2) 100%);
+    color: var(--btn-text-color);
+    border: none;
+}
+
+[data-cb-type="cta-buttons"] .cta-btn[data-style="gradient"][data-shadow="true"] {
+    box-shadow: 0 10px 40px color-mix(in srgb, var(--btn-color1) 25%, transparent);
+}
+
+[data-cb-type="cta-buttons"] .cta-btn[data-style="gradient"]:hover[data-shadow="true"] {
+    box-shadow: 0 15px 50px color-mix(in srgb, var(--btn-color1) 38%, transparent);
+}
+
+/* Solid Style */
+[data-cb-type="cta-buttons"] .cta-btn[data-style="solid"] {
+    background: var(--btn-color1);
+    color: var(--btn-text-color);
+    border: none;
+}
+
+[data-cb-type="cta-buttons"] .cta-btn[data-style="solid"][data-shadow="true"] {
+    box-shadow: 0 10px 40px color-mix(in srgb, var(--btn-color1) 25%, transparent);
+}
+
+[data-cb-type="cta-buttons"] .cta-btn[data-style="solid"]:hover {
+    background: var(--btn-color2);
+}
+
+[data-cb-type="cta-buttons"] .cta-btn[data-style="solid"]:hover[data-shadow="true"] {
+    box-shadow: 0 15px 50px color-mix(in srgb, var(--btn-color1) 38%, transparent);
+}
+
+/* Outline Style - Uses color1 for border, color2 for hover */
+[data-cb-type="cta-buttons"] .cta-btn[data-style="outline"] {
+    background: white;
+    color: var(--btn-text-color);
+    border: 1px solid var(--btn-color1);
+}
+
+[data-cb-type="cta-buttons"] .cta-btn[data-style="outline"][data-shadow="true"] {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+[data-cb-type="cta-buttons"] .cta-btn[data-style="outline"]:hover {
+    background: color-mix(in srgb, var(--btn-color2) 3%, transparent);
+    border-color: var(--btn-color2);
+}
+
+[data-cb-type="cta-buttons"] .cta-btn[data-style="outline"]:hover[data-shadow="true"] {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+/* Ghost Style - Transparent background, uses color1 for text and shadows */
+[data-cb-type="cta-buttons"] .cta-btn[data-style="ghost"] {
+    background: transparent;
+    color: var(--btn-color1);
+    border: none;
+}
+
+[data-cb-type="cta-buttons"] .cta-btn[data-style="ghost"][data-shadow="true"] {
+    box-shadow: 0 10px 40px color-mix(in srgb, var(--btn-color1) 25%, transparent);
+}
+
+[data-cb-type="cta-buttons"] .cta-btn[data-style="ghost"]:hover {
+    background: color-mix(in srgb, var(--btn-color1) 3%, transparent);
+    color: var(--btn-color1);
+}
+
+[data-cb-type="cta-buttons"] .cta-btn[data-style="ghost"]:hover[data-shadow="true"] {
+    box-shadow: 0 15px 50px color-mix(in srgb, var(--btn-color1) 37%, transparent);
+}
+
+/* Hover Lift Effect */
+[data-cb-type="cta-buttons"] .cta-btn[data-hover-lift="true"]:hover {
+    transform: translateY(-2px);
+}
+
+/* Dark Mode Support - Outline Style */
+[data-cb-skin="dark"] [data-cb-type="cta-buttons"] .cta-btn[data-style="outline"] {
+    background: transparent;
+}
+
+[data-cb-skin="dark"] [data-cb-type="cta-buttons"] .cta-btn[data-style="outline"]:hover {
+    background: color-mix(in srgb, var(--btn-color2) 8%, transparent);
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    [data-cb-type="cta-buttons"] {
+        flex-direction: column;
+        gap: 12px;
+    }
+    
+    [data-cb-type="cta-buttons"] .cta-btn {
+        width: 100%;
+        text-align: center;
+    }
+}

@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 390 210" width="390" height="210">
+  <rect width="390" height="210" fill="#ffffff"/>
+  <rect x="16" y="12" width="358" height="186" rx="12" fill="#ffffff" stroke="#E5E7EB" stroke-width="1"/>
+  <!-- 헤더 -->
+  <text x="32" y="40" font-family="-apple-system,BlinkMacSystemFont,sans-serif" font-size="15" font-weight="700" fill="#1A1A2E">포인트·리워드 현황</text>
+  <rect x="32" y="48" width="80" height="18" rx="4" fill="#E8F0FC"/>
+  <text x="72" y="61" font-family="-apple-system,BlinkMacSystemFont,sans-serif" font-size="11" fill="#0046A4" text-anchor="middle">IBK 신용대출</text>
+  <!-- 구분선 -->
+  <line x1="32" y1="74" x2="358" y2="74" stroke="#F3F4F6" stroke-width="1"/>
+  <!-- 행 1 -->
+  <text x="32" y="96" font-family="-apple-system,BlinkMacSystemFont,sans-serif" font-size="13" fill="#6B7280">대출 잔액</text>
+  <text x="358" y="96" font-family="-apple-system,BlinkMacSystemFont,sans-serif" font-size="13" font-weight="600" fill="#1A1A2E" text-anchor="end">15,000,000 원</text>
+  <line x1="32" y1="106" x2="358" y2="106" stroke="#F3F4F6" stroke-width="1"/>
+  <!-- 행 2 -->
+  <text x="32" y="126" font-family="-apple-system,BlinkMacSystemFont,sans-serif" font-size="13" fill="#6B7280">상환 진행률</text>
+  <text x="358" y="126" font-family="-apple-system,BlinkMacSystemFont,sans-serif" font-size="13" font-weight="600" fill="#0046A4" text-anchor="end">40%</text>
+  <!-- 진행률 바 -->
+  <rect x="32" y="132" width="326" height="6" rx="3" fill="#F3F4F6"/>
+  <rect x="32" y="132" width="130" height="6" rx="3" fill="#0046A4"/>
+  <line x1="32" y1="146" x2="358" y2="146" stroke="#F3F4F6" stroke-width="1"/>
+  <!-- 행 3 -->
+  <text x="32" y="166" font-family="-apple-system,BlinkMacSystemFont,sans-serif" font-size="13" fill="#6B7280">월 상환액</text>
+  <text x="358" y="166" font-family="-apple-system,BlinkMacSystemFont,sans-serif" font-size="13" font-weight="600" fill="#1A1A2E" text-anchor="end">350,000 원</text>
+  <!-- 버튼 -->
+  <rect x="32" y="176" width="326" height="16" rx="4" fill="#0046A4"/>
+  <text x="195" y="188" font-family="-apple-system,BlinkMacSystemFont,sans-serif" font-size="11" font-weight="600" fill="#ffffff" text-anchor="middle">상환하기</text>
+</svg>

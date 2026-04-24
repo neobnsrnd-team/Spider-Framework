@@ -1,0 +1,361 @@
+/* Video Embed Plugin Styles */
+
+/* Container */
+[data-cb-type="video-embed"] {
+    position: relative;
+    width: 100%;
+    max-width: 100%;
+    margin: 0 auto;
+}
+
+/* Video Wrapper */
+[data-cb-type="video-embed"] .video-wrapper {
+    position: relative;
+    width: 100%;
+    overflow: hidden;
+    background: #000;
+    border-radius: var(--border-radius, 8px);
+    display: block;
+}
+
+/* Video Element */
+[data-cb-type="video-embed"] .video-wrapper video {
+    width: 100%;
+    height: 100%;
+    display: block;
+    outline: none;
+    background: #000;
+}
+
+/* Loading State */
+[data-cb-type="video-embed"][data-loading="true"] {
+    opacity: 0.6;
+    pointer-events: none;
+}
+
+[data-cb-type="video-embed"][data-loading="true"]::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 40px;
+    height: 40px;
+    border: 3px solid rgba(255, 255, 255, 0.3);
+    border-top-color: #fff;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    z-index: 10;
+}
+
+@keyframes spin {
+    to { transform: translate(-50%, -50%) rotate(360deg); }
+}
+
+/* Video Controls Styling */
+[data-cb-type="video-embed"] .video-wrapper video::-webkit-media-controls-panel {
+    background: linear-gradient(to bottom, transparent 0%, rgba(0,0,0,0.7) 100%);
+}
+
+[data-cb-type="video-embed"] .video-wrapper video::-webkit-media-controls-play-button,
+[data-cb-type="video-embed"] .video-wrapper video::-webkit-media-controls-timeline,
+[data-cb-type="video-embed"] .video-wrapper video::-webkit-media-controls-volume-slider {
+    filter: brightness(1.2);
+}
+
+/* Hover Effects */
+[data-cb-type="video-embed"] .video-wrapper:hover {
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+}
+
+/* Focus States (Accessibility) */
+[data-cb-type="video-embed"] .video-wrapper video:focus-visible {
+    outline: 3px solid #3b82f6;
+    outline-offset: 4px;
+}
+
+/* Responsive Breakpoints */
+
+/* Large Desktop (1440px and up) */
+@media (min-width: 1440px) {
+    [data-cb-type="video-embed"] {
+        max-width: 1280px;
+    }
+}
+
+/* Desktop (1024px - 1439px) */
+@media (min-width: 1024px) and (max-width: 1439px) {
+    [data-cb-type="video-embed"] {
+        max-width: 1024px;
+    }
+}
+
+/* Tablet (768px - 1023px) */
+@media (min-width: 768px) and (max-width: 1023px) {
+    [data-cb-type="video-embed"] {
+        max-width: 100%;
+        padding: 0 16px;
+    }
+
+    [data-cb-type="video-embed"] .video-wrapper {
+        border-radius: calc(var(--border-radius, 8px) * 0.75);
+    }
+}
+
+/* Mobile Landscape (640px - 767px) */
+@media (min-width: 640px) and (max-width: 767px) {
+    [data-cb-type="video-embed"] {
+        padding: 0 12px;
+    }
+
+    [data-cb-type="video-embed"] .video-wrapper {
+        border-radius: calc(var(--border-radius, 8px) * 0.5);
+    }
+}
+
+/* Mobile Portrait (up to 639px) */
+@media (max-width: 639px) {
+    [data-cb-type="video-embed"] {
+        padding: 0 8px;
+    }
+
+    [data-cb-type="video-embed"] .video-wrapper {
+        border-radius: calc(var(--border-radius, 8px) * 0.5);
+    }
+
+    /* Smaller controls on mobile */
+    [data-cb-type="video-embed"] .video-wrapper video::-webkit-media-controls-panel {
+        height: 36px;
+    }
+}
+
+/* Small Mobile (up to 375px) */
+@media (max-width: 375px) {
+    [data-cb-type="video-embed"] {
+        padding: 0 4px;
+    }
+
+    [data-cb-type="video-embed"] .video-wrapper {
+        border-radius: 4px;
+    }
+}
+
+/* Orientation Specific Styles */
+
+/* Landscape Orientation */
+@media (orientation: landscape) and (max-height: 600px) {
+    [data-cb-type="video-embed"] .video-wrapper {
+        max-height: 70vh;
+    }
+}
+
+/* Portrait Orientation on Mobile */
+@media (orientation: portrait) and (max-width: 768px) {
+    [data-cb-type="video-embed"] .video-wrapper {
+        width: 100%;
+    }
+}
+
+/* High DPI Displays (Retina) */
+@media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
+    [data-cb-type="video-embed"] .video-wrapper {
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+    }
+}
+
+/* Dark Mode Support */
+@media (prefers-color-scheme: dark) {
+    [data-cb-type="video-embed"] .video-wrapper {
+        background: #1a1a1a;
+    }
+
+    [data-cb-type="video-embed"][data-loading="true"]::after {
+        border-color: rgba(255, 255, 255, 0.2);
+        border-top-color: rgba(255, 255, 255, 0.8);
+    }
+}
+
+/* Reduced Motion Support (Accessibility) */
+@media (prefers-reduced-motion: reduce) {
+    [data-cb-type="video-embed"] .video-wrapper {
+        transition: none !important;
+    }
+
+    [data-cb-type="video-embed"][data-loading="true"]::after {
+        animation: none !important;
+    }
+
+    [data-cb-type="video-embed"] .video-wrapper:hover {
+        box-shadow: none;
+    }
+}
+
+/* High Contrast Mode Support (Accessibility) */
+@media (prefers-contrast: high) {
+    [data-cb-type="video-embed"] .video-wrapper {
+        border: 2px solid currentColor;
+    }
+
+    [data-cb-type="video-embed"] .video-wrapper video:focus-visible {
+        outline-width: 4px;
+    }
+}
+
+/* Print Styles */
+@media print {
+    [data-cb-type="video-embed"] {
+        page-break-inside: avoid;
+    }
+
+    [data-cb-type="video-embed"] .video-wrapper {
+        border: 1px solid #000;
+        box-shadow: none;
+    }
+
+    [data-cb-type="video-embed"]::after {
+        content: 'Video: ' attr(data-cb-video-url);
+        display: block;
+        padding: 10px;
+        text-align: center;
+        font-size: 12px;
+        color: #666;
+    }
+}
+
+/* Container Queries (Modern Browsers) */
+@supports (container-type: inline-size) {
+    [data-cb-type="video-embed"] {
+        container-type: inline-size;
+        container-name: video-embed;
+    }
+
+    /* Adjust for small containers */
+    @container video-embed (max-width: 400px) {
+        [data-cb-type="video-embed"] .video-wrapper {
+            border-radius: 4px;
+        }
+    }
+
+    /* Adjust for medium containers */
+    @container video-embed (min-width: 401px) and (max-width: 768px) {
+        [data-cb-type="video-embed"] .video-wrapper {
+            border-radius: 6px;
+        }
+    }
+
+    /* Adjust for large containers */
+    @container video-embed (min-width: 769px) {
+        [data-cb-type="video-embed"] .video-wrapper {
+            border-radius: var(--border-radius, 8px);
+        }
+    }
+}
+
+/* Fullscreen Support */
+[data-cb-type="video-embed"] .video-wrapper video:fullscreen {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+}
+
+[data-cb-type="video-embed"] .video-wrapper video:-webkit-full-screen {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+}
+
+[data-cb-type="video-embed"] .video-wrapper video:-moz-full-screen {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+}
+
+[data-cb-type="video-embed"] .video-wrapper video:-ms-fullscreen {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+}
+
+/* Picture-in-Picture Support */
+[data-cb-type="video-embed"] .video-wrapper video:picture-in-picture {
+    border: none;
+    box-shadow: none;
+}
+
+/* No Video State */
+[data-cb-type="video-embed"] .video-wrapper:empty::after {
+    content: 'No video source';
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
+    min-height: 200px;
+    color: #9ca3af;
+    font-size: 14px;
+    background: #f3f4f6;
+}
+
+/* Error State */
+[data-cb-type="video-embed"][data-error="true"] .video-wrapper::after {
+    content: 'Video failed to load';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    color: #ef4444;
+    font-size: 14px;
+    font-weight: 500;
+    z-index: 5;
+}
+
+/* Custom Aspect Ratio Classes */
+[data-cb-type="video-embed"][data-cb-aspect-ratio="16/9"] .video-wrapper {
+    aspect-ratio: 16 / 9;
+}
+
+[data-cb-type="video-embed"][data-cb-aspect-ratio="4/3"] .video-wrapper {
+    aspect-ratio: 4 / 3;
+}
+
+[data-cb-type="video-embed"][data-cb-aspect-ratio="1/1"] .video-wrapper {
+    aspect-ratio: 1 / 1;
+}
+
+[data-cb-type="video-embed"][data-cb-aspect-ratio="21/9"] .video-wrapper {
+    aspect-ratio: 21 / 9;
+}
+
+[data-cb-type="video-embed"][data-cb-aspect-ratio="9/16"] .video-wrapper {
+    aspect-ratio: 9 / 16;
+}
+
+[data-cb-type="video-embed"][data-cb-aspect-ratio="auto"] .video-wrapper {
+    aspect-ratio: auto;
+    height: auto;
+}
+
+/* Performance Optimization */
+[data-cb-type="video-embed"] .video-wrapper video {
+    will-change: transform;
+    transform: translateZ(0);
+    backface-visibility: hidden;
+}
+
+/* Prevent layout shift during load */
+[data-cb-type="video-embed"] .video-wrapper {
+    min-height: 200px;
+}
+
+/* Touch Device Optimizations */
+@media (hover: none) and (pointer: coarse) {
+    [data-cb-type="video-embed"] .video-wrapper:hover {
+        box-shadow: none;
+    }
+
+    /* Larger touch targets on mobile */
+    [data-cb-type="video-embed"] .video-wrapper video::-webkit-media-controls {
+        min-height: 44px;
+    }
+}

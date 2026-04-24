@@ -1,0 +1,1121 @@
+<!DOCTYPE HTML>
+<html>
+<head>
+<meta charset="utf-8">
+<title></title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content=""> 
+<link href="assets/scripts/formbuilderai/formbuilderai.css" rel="stylesheet">
+<script src="assets/scripts/formbuilderai/formbuilderai.min.js"></script> 
+
+<link rel="stylesheet" href="assets/scripts/tabs/tabs.css">
+<script src="assets/scripts/tabs/tabs.js"></script>
+<style>
+body {
+    margin: 0;
+    font-family: system-ui, sans-serif;
+    font-size:1rem;
+    font-weight:400;
+    line-height:1.4; 
+    color: #3c3c3c;
+    
+    display: flex;
+    height: 100vh;
+    overflow: hidden;
+    flex-direction: column;
+}
+.dark body {
+    background-color: #111;
+    color: #f9fafb;
+} 
+
+.topbar {
+    display: none;
+    width: 100%;
+    height: 64px;
+    z-index: 2;
+    align-items: center;
+    gap: 10px;
+    box-sizing: border-box;
+    padding: 0 20px;
+    box-shadow: 0 1px 3px 0 #00000021;
+}
+body.show-nav .topbar {
+    display: flex;
+}
+.dark .topbar {
+    box-shadow: 0 1px 3px 0 #ffffff57;
+}
+
+.view-builder,
+.view-templates {
+    display: none;
+    box-sizing: border-box;
+    width: 100%;    
+    /* height: calc(100vh - 64px); */
+    height: 100vh;
+}
+body.show-nav .view-builder,
+body.show-nav .view-templates {
+    height: calc(100vh - 64px);
+}
+
+.view-builder.active { display: flex; }
+.view-templates.active { display: block; padding: 0 15px 20px; overflow-y: auto; }
+
+.btn-templates, 
+.btn-edit {
+    font-family: system-ui, sans-serif;
+    font-size: 0.95rem;
+    font-weight: 400;
+    background: transparent;
+    color: inherit;
+    padding: 6px 16px;
+    border: none;
+    border-radius:50px;
+    cursor: pointer;
+}
+.btn-templates.active,
+.btn-edit.active {
+    background: #111;
+    color: #f3f3f3;
+    cursor: default;
+}
+.dark .btn-templates,
+.dark .btn-edit {
+    background: #4d4d4d;
+    color: inherit;
+}
+.dark .btn-templates.active,
+.dark .btn-edit.active {
+    background: transparent;
+}
+
+.content {
+    padding: 0;
+    box-sizing: border-box;
+    width: 100%;
+    height: 100%;
+    position: relative;
+}
+
+.content-inner {
+    padding: 25px;
+    box-sizing: border-box;
+    width: 100%;    
+    height: 100%;
+    position: relative;
+    overflow-y: auto;
+}
+
+.content-inner-container {
+    max-width: 500px;
+    margin: 2.5rem auto 3.5rem;
+}
+
+.sidebar {
+    width: 100%;
+    max-width: 590px;
+    flex: none;
+    padding: 0;
+    box-sizing: border-box;
+    background: #fff;
+    border-left: 1px solid #ddd;
+}
+.dark .sidebar {
+    background: #111;
+    border-left: 1px solid #dddddd40;
+}
+
+/* Tabs style adjustments */
+.tab-panel {
+    /* height: calc(100vh - 134px); */
+    height: calc(100vh - 45px);
+    overflow-y: auto;
+}
+body.show-nav .tab-panel {
+    height: calc(100vh - 134px);
+}
+
+.tab-list {
+    padding-top: 0px;
+}
+body.show-nav .tab-list {
+    padding-top: 25px;
+}
+
+/* Sidebar toggle */
+.sidebar-toggle {
+    display: none;
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    z-index: 1001;
+    width: 40px;
+    padding: 10px;
+    background-color: #111;
+    color: #fff;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    cursor: pointer;
+}
+@media (max-width: 1050px) {
+    .sidebar {
+        position: fixed;
+        right: -80%;
+        top: 0;
+        height: 100vh;
+        width: 80%;
+        transition: right 0.3s;
+        z-index: 1000;
+    }
+    .sidebar.active {
+        right: 0;
+    }
+    .sidebar-toggle {
+        display: block;
+    }
+}
+
+/* Adjustments */
+.app-filters {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    background: #fff;
+    padding: 15px 10px 0px;
+    box-shadow: 0px 10px 20px #ffffff;
+}
+.dark .app-filters {
+    background: #000000;
+    box-shadow: 0px 10px 20px #000000;
+}
+.result-container {
+    margin-top: 20px
+}
+
+.form-settings-custom {
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+    font-size: 0.925rem;
+    max-width: 460px;
+    margin-top: 25px;
+}
+
+/* Overlay from ContentBox */
+.is-overlay {
+    position:absolute;
+    left:0px;
+    top:0px;
+    right:0px;
+    bottom:0px;
+    overflow:hidden;
+    z-index: -1;
+}
+.is-overlay .is-overlay-bg {
+    position:absolute;left:0px;top:0px;width:100%;height:100%;
+    background-size:cover;
+    background-repeat:no-repeat;
+    background-position:50% 60%;
+}
+.is-overlay .is-overlay-color {
+    position:absolute;left:0px;top:0px;width:100%;height:100%;
+    background-color: rgb(0, 0, 0);opacity: 0.05;
+}      
+.opacity-0 { opacity: 0 !important }
+.opacity-2 { opacity: 0.02 !important }
+.opacity-4 { opacity: 0.04 !important }
+.opacity-5 { opacity: 0.05 !important }
+.opacity-6 { opacity: 0.06 !important }
+.opacity-8 { opacity: 0.08 !important }
+.opacity-10 { opacity: 0.1 !important }
+.opacity-12 { opacity: 0.12 !important }
+.opacity-15 { opacity: 0.15 !important }
+.opacity-20 { opacity: 0.2 !important }
+.opacity-25 { opacity: 0.25 !important }
+.opacity-30 { opacity: 0.3 !important }
+.opacity-35 { opacity: 0.35 !important }
+.opacity-40 { opacity: 0.4 !important }
+.opacity-45 { opacity: 0.45 !important }
+.opacity-50 { opacity: 0.5 !important }
+.opacity-55 { opacity: 0.55 !important }
+.opacity-60 { opacity: 0.6 !important }
+.opacity-65 { opacity: 0.65 !important }
+.opacity-70 { opacity: 0.7 !important }
+.opacity-75 { opacity: 0.75 !important }
+.opacity-80 { opacity: 0.8 !important }
+.opacity-85 { opacity: 0.85 !important }
+.opacity-90 { opacity: 0.9 !important }
+.opacity-95 { opacity: 0.95 !important }
+.opacity-100 { opacity: 1 !important }  
+
+.form-settings-custom-title {
+    font-size: 1.2rem;
+    font-weight: 500;
+    margin-top: 10px;
+}
+.field-desc { 
+    font-size: 12px; 
+    opacity: 0.7; 
+    margin: 0 0 4px; 
+}
+</style>
+
+</head>
+<body>
+
+<nav class="topbar" role="navigation">
+    <button data-lang 
+        class="nav-button btn-edit" 
+        aria-label="Switch to Edit view"
+    >Edit</button>
+    <button data-lang 
+        class="nav-button btn-templates" 
+        aria-label="Switch to Templates view"
+        aria-current="page"
+    >Templates</button>
+</nav>
+
+<div class="view-builder">
+
+    <div class="content">
+
+        <div class="content-inner">
+            <div class="content-inner-container">
+                <div class="form-preview"></div>
+                <div class="workflow-result"></div>
+            </div>
+        </div>
+
+    </div>
+
+    <div class="sidebar">
+
+        <div class="tabs">
+            <div class="tab-list" role="tablist">
+                <button role="tab" class="tab" aria-selected="false" data-lang>Edit Form</button>
+                <button role="tab" class="tab tab-workflow" aria-selected="false" style="display:none" data-lang>Workflow</button>
+                <button role="tab" class="tab" aria-selected="false" data-lang>Settings</button>
+                <button role="tab" class="tab" aria-selected="false" data-lang>Designer</button>
+                <button role="tab" class="tab tab-generate" aria-selected="false" data-lang-title="Generate" style="display:none; padding: 12px 20px;">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" style="width:16px;height: 16px;">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904 9 18.75l-.813-2.846a4.5 4.5 0 0 0-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 0 0 3.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 0 0 3.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 0 0-3.09 3.09ZM18.259 8.715 18 9.75l-.259-1.035a3.375 3.375 0 0 0-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 0 0 2.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 0 0 2.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 0 0-2.456 2.456ZM16.894 20.567 16.5 21.75l-.394-1.183a2.25 2.25 0 0 0-1.423-1.423L13.5 18.75l1.183-.394a2.25 2.25 0 0 0 1.423-1.423l.394-1.183.394 1.183a2.25 2.25 0 0 0 1.423 1.423l1.183.394-1.183.394a2.25 2.25 0 0 0-1.423 1.423Z" />
+                      </svg>
+                </button>
+            </div>
+
+            <div class="tab-panel" role="tabpanel" hidden>
+                <div class="form-editor"></div>
+            </div>
+            <div class="tab-panel" role="tabpanel" hidden>
+                <div class="form-workflow"></div>
+            </div>
+            <div class="tab-panel" role="tabpanel" hidden>
+                <div class="form-settings"></div>
+
+                <div class="form-settings-custom fb-ui">
+                    <label class="field result-selector-field" style="display:none">
+                        <span data-lang>Result Selector:</span>
+                        <div data-lang class="field-desc">CSS selector for the element where the result will be displayed.</div>
+                        <input id="inpResultSelector" class="inp-base" type="text" value="" placeholder="e.g., #resultContainer, .result-container">
+                    </label>
+
+                    <div class="form-settings-custom-title" data-lang>Form Submission Settings</div>
+
+                    <label class="field">
+                        <span data-lang>Form Action:</span>
+                        <input id="inpFormAction" class="inp-base" type="text" value="">
+                    </label>
+                    <label class="field">
+                        <span data-lang>Submission Type:</span>
+                        <select id="inpSubmissionType" class="inp-base">
+                            <option value="" data-lang>JSON Submission</option>
+                            <option value="standard" data-lang>Standard Form Submission</option>
+                        </select>
+                    </label>
+                    <label class="field">
+                        <span data-lang>Thank You Message:</span>
+                        <input id="inpThankYouMessage" class="inp-base" type="text" value="">
+                    </label>
+                    <label class="field">
+                        <span data-lang>Error Message:</span>
+                        <input id="inpErrorMessage" class="inp-base" type="text" value="">
+                    </label>
+                    <label class="field">
+                        <span data-lang>reCAPTCHA Site Key (v2):</span>
+                        <input id="inpReCaptchaSiteKey" class="inp-base" type="text" value="">
+                    </label>
+                </div>
+                
+            </div>
+            <div class="tab-panel" role="tabpanel" hidden>
+                <div class="form-designer"></div>
+            </div>
+            <div class="tab-panel" role="tabpanel" hidden>
+                <div class="form-generator"></div>
+            </div>
+        </div>
+
+    </div>
+
+    <button class="sidebar-toggle">☰</button>
+</div>
+
+<div class="view-templates active">
+    <div class="form-templates"></div>
+</div>
+    
+<script>
+const workflow = false;
+
+var activeModule = parent._cb.activeCol;
+var isBlock = activeModule?true:false;
+if(!isBlock) {
+    activeModule = parent._cb.doc.querySelector('.is-overlay-content[data-module-active]');
+}
+
+var builder;
+
+var docReady = function (fn) {
+    var stateCheck = setInterval(function () {
+        if (document.readyState !== "complete") return;
+        clearInterval(stateCheck);
+        fn();
+        // try { fn() } catch (e) { }
+    }, 1);
+};
+
+var lang, defaultTextGenerationProvider, model, model2, sendCommandUrl, sendCommandStreamUrl;
+var generationModels_OpenAI, generationModels_OpenRouter;
+var defaultMediaGenerationProvider, mediaGenerationProvider;
+var generateMediaUrl_OpenAI_CreateImage, generateMediaUrl_OpenAI_CreateImageEdit, generateMediaUrl_Google;
+var headers, customData;
+var uploadMediaUrl_Fal, uploadBase64Url_Fal;
+var generateMediaUrl_Fal, checkRequestStatusUrl_Fal, getResultUrl_Fal;
+var minimizeImageUrl, cleanup;
+var assetsFolder, templatesUrl, templateFilters;
+var colors;
+
+docReady(function () {
+
+    // Read settings (from data-settings attribute)
+    var settings = getSettings();
+    var jsonForm;
+    var jsonTheme = {};
+    if (settings != 'undefined') {
+        var json = JSON.parse(settings);
+        document.querySelector('#inpFormAction').value = json.formAction;
+        document.querySelector('#inpReCaptchaSiteKey').value = json.siteKey || '';
+        document.querySelector('#inpSubmissionType').value = json.submissionType || '';
+        document.querySelector('#inpThankYouMessage').value = unescapeHTML(json.thankYouMessage);
+        document.querySelector('#inpErrorMessage').value = unescapeHTML(json.errorMessage);
+
+        document.querySelector('#inpResultSelector').value = json.resultSelector || '';
+
+        jsonForm = json.json; 
+        jsonTheme = json.jsonTheme || {}; 
+        jsonWorkflow = json.jsonWorkflow; 
+    }
+    
+    const editor = parent.contentbox || parent._cb;
+
+    // Parameters
+    lang = parent._txt || [];
+    defaultTextGenerationProvider = editor.defaultTextGenerationProvider || 'openai';
+    model = editor.model || 'gpt-4o-mini';
+    model2 = editor.model2 || 'gpt-4o-mini';
+    sendCommandUrl = editor.sendCommandUrl || '';
+    sendCommandStreamUrl = editor.sendCommandStreamUrl || '';
+
+    generationModels_OpenAI = editor.generationModels_OpenAI || [
+        {
+            model: 'gpt-4o-mini',
+            name:  'GPT-4o-mini'
+        },
+        {
+            model: 'gpt-4o',
+            name:  'GPT-4o'
+        },
+        {
+            model: 'gpt-4.1-nano',
+            name:  'GPT-4.1-nano'
+        },
+        {
+            model: 'gpt-4.1-mini',
+            name:  'GPT-4.1-mini'
+        },
+        {
+            model: 'gpt-4.1',
+            name:  'GPT-4.1'
+        },
+    ];
+
+    generationModels_OpenRouter = editor.generationModels_OpenRouter || [
+        {
+            model: 'openai/gpt-4o-mini',
+            name:  'OpenAI: GPT-4o-mini'
+        },
+        {
+            model: 'openai/gpt-4o-2024-11-20',
+            name:  'OpenAI: GPT-4o'
+        },
+        {
+            model: 'anthropic/claude-3.7-sonnet',
+            name:  'Anthropic: Claude 3.7 Sonnet'
+        },
+        {
+            model: 'anthropic/claude-3.5-sonnet',
+            name:  'Anthropic: Claude 3.5 Sonnet'
+        },
+        {
+            model: 'anthropic/claude-3.5-haiku',
+            name:  'Anthropic: Claude 3.5 Haiku'
+        },
+        {
+            model: 'google/gemini-2.0-flash-lite-001',
+            name:  'Google: Gemini 2.0 Flash Lite'
+        },
+        {
+            model: 'google/gemini-2.0-flash-001',
+            name:  'Google: Gemini 2.0 Flash'
+        },
+        {
+            model: 'qwen/qwen-2.5-72b-instruct',
+            name:  'Qwen2.5 72B Instruct'
+        },
+        {
+            model: 'deepseek/deepseek-r1',
+            name:  'DeepSeek: R1'
+        },
+        {
+            model: 'meta-llama/llama-4-maverick',
+            name:  'Meta: Llama 4 Maverick'
+        },
+        {
+            model: 'meta-llama/llama-4-scout',
+            name:  'Meta: Llama 4 Scout'
+        },
+        {
+            model: 'meta-llama/llama-3.3-70b-instruct',
+            name:  'Meta: Llama 3.3 70B Instruct'
+        }
+    ];
+
+    imageToggle = editor.imageToggle || false;
+    videoToggle = editor.videoToggle || false;
+    audioToggle = editor.audioToggle || false;
+
+    defaultMediaGenerationProvider = editor.defaultMediaGenerationProvider || 'fal';
+    mediaGenerationProviders = editor.mediaGenerationProviders || [
+        {
+            name: 'Fal',
+            value: 'fal'
+        },
+        {
+            name: 'OpenAI',
+            value: 'openai'
+        },
+    ];
+
+    uploadMediaUrl_Fal = editor.uploadMediaUrl_Fal || '';
+    uploadBase64Url_Fal = editor.uploadBase64Url_Fal || '';
+    generateMediaUrl_Fal = editor.generateMediaUrl_Fal || '';
+    checkRequestStatusUrl_Fal = editor.checkRequestStatusUrl_Fal || '';
+    getResultUrl_Fal = editor.getResultUrl_Fal || '';
+    minimizeImageUrl = editor.minimizeImageUrl || '';
+    cleanup = editor.cleanup || '';
+
+    generateMediaUrl_OpenAI_CreateImage = editor.generateMediaUrl_OpenAI_CreateImage || '';
+    generateMediaUrl_OpenAI_CreateImageEdit = editor.generateMediaUrl_OpenAI_CreateImageEdit || '';
+    generateMediaUrl_Google = editor.generateMediaUrl_Google || '';
+
+    assetsFolder = editor.assetsFolder; // || 'assets/formfiles/';
+    templatesUrl = editor.templatesUrl; // || 'assets/templates.json';
+    templateFilters = editor.templateFilters || [];
+    templatesConfig = editor.templatesConfig || {
+        fal: false
+    };
+
+    headers = editor.headers || {};
+    customData = editor.customData || {};
+
+    exampleImageUrl = editor.exampleImageUrl || 'assets/formfiles/ai-V8Khk.jpg';
+    exampleVideoUrl = editor.exampleVideoUrl || 'assets/formfiles/ai-thhyR.mp4';
+    exampleAudioUrl = editor.exampleAudioUrl || 'assets/formfiles/ai-3EVMb.wav';
+    
+    saveResults = editor.saveResults || true;
+
+    colors = editor.colors || ['#ff9f01', '#f57c00', '#e64918', '#d32f2f', '#5d4038', '#37474f', '#353535',
+        '#fbc02c', '#b0b42a', '#689f39', '#c21f5b', '#7b21a2', '#522da8', '#616161',
+        '#01b8c9', '#009688', '#388d3c', '#0388d0', '#1465c0', '#2f3f9e', '#9e9e9e'];
+
+    if(sendCommandUrl && workflow==true) {
+        const tabWorkflow = document.querySelector('.tab-workflow');
+        tabWorkflow.style.display = '';
+        const div = document.querySelector('.result-selector-field');
+        div.style.display = '';
+    }
+
+    if(sendCommandUrl) {
+        const tabGenerate = document.querySelector('.tab-generate');
+        tabGenerate.style.display = '';
+    }
+
+    // Navigation
+    const btnTemplates = document.querySelector('.btn-templates');
+    const btnEdit = document.querySelector('.btn-edit');
+    const builderView = document.querySelector('.view-builder');
+    const templatesView = document.querySelector('.view-templates');
+    const sidebar = document.querySelector('.sidebar');
+    const sidebarToggle = document.querySelector('.sidebar-toggle');
+
+    // View Control Functions
+    function setView(view) {
+        // Hide all views
+        builderView.classList.remove('active');
+        templatesView.classList.remove('active');
+
+        // Show selected view
+        if (view === 'templates') {
+            templatesView.classList.add('active');
+            if(btnTemplates) btnTemplates.classList.add('active');
+            if(btnEdit) btnEdit.classList.remove('active');
+            localStorage.setItem('_builder_view', 'templates');
+        } else {
+            builderView.classList.add('active');
+            if(btnEdit) btnEdit.classList.add('active');
+            if(btnTemplates) btnTemplates.classList.remove('active');
+            localStorage.setItem('_builder_view', 'builder');
+        }
+    }
+    if(btnTemplates && btnEdit) {
+        btnTemplates.addEventListener('click', () => setView('templates'));
+        btnEdit.addEventListener('click', () => setView('builder'));
+
+        // // Initialize view based on localStorage (must set before FormBuilderAI init)
+        // const savedView = localStorage.getItem('_builder_view') || 'builder';
+        // setView(savedView);
+        setView('builder');
+    } else {
+        setView('builder');
+    }
+
+    builder = new FormBuilderAI({
+        // consoleLog: true,
+        lang,
+        
+        builderSelector: '.form-editor', 
+        workflowSelector: '.form-workflow',
+        settingsSelector: '.form-settings',
+        designerSelector: '.form-designer',
+        previewSelector: '.form-preview',
+        resultSelector: '.workflow-result',
+
+        templatesSelector: '.form-templates',
+
+        // form generator
+        generatorSelector: '.form-generator',
+        language:'English',
+        languageSelection: true,
+
+        // Using OpenAI:
+        defaultTextGenerationProvider,
+        model, // for content generation
+        model2, // for processing (function calling)
+        sendCommandUrl, 
+        sendCommandStreamUrl,
+
+        generationModels_OpenAI,
+        generationModels_OpenRouter,
+
+        /*
+        // Using OpenRouter:
+        defaultTextGenerationProvider,
+        model: 'openai/gpt-4o-mini', // for content generation
+        model2: 'openai/gpt-4o-mini', // for processing (function calling)
+        sendCommandUrl, 
+        sendCommandStreamUrl,
+        */
+
+        // Media Generation
+
+        imageToggle,
+        videoToggle,
+        audioToggle,
+
+        defaultMediaGenerationProvider,
+        mediaGenerationProviders,
+
+        // Upload Endpoints:
+        uploadMediaUrl_Fal, 
+        uploadBase64Url_Fal,
+                
+        // Fal Integration Endpoints:
+        generateMediaUrl_Fal, // request generation
+        checkRequestStatusUrl_Fal, // check generation status
+        getResultUrl_Fal, // receive result
+
+        // Optimization & Cleanup Endpoints:
+        minimizeImageUrl, // minimize image file size
+        cleanup, // cleanup input files
+
+        // OpenAI Integration Endpoints:
+        generateMediaUrl_OpenAI_CreateImage, 
+        generateMediaUrl_OpenAI_CreateImageEdit, 
+
+        // Google Gemini Flash Integration Endpoints: (experimental)
+        generateMediaUrl_Google,
+
+        // Enable templates:
+        assetsFolder,
+        templatesUrl, 
+        templateFilters,
+        templatesConfig,
+        /*
+        // To disable Media Generation templates
+        templateFilters: [], 
+        templatesConfig: {
+            fal: false,
+        },
+        */
+
+        /*
+        headers: {}, // Custom headers for every server (API) request.
+        customData: { // This will be included in every server (API) request.
+            user_id: 3,
+            form_id: 5,
+            other: 'somevalue'
+        }
+        */
+        headers,
+        customData,
+
+        // Default image, video and audio for element
+        exampleImageUrl,
+        exampleVideoUrl,
+        exampleAudioUrl,
+    
+        saveResults,
+
+        colors
+
+    }).on('templateSelect', (template) => {
+
+        setView('dashboard');
+
+        console.log('Selected template:', template);
+
+        // Load/render form
+        const formData = JSON.stringify(template.form);
+        builder.load(formData);
+
+        // Load workflow
+        const workflowData = JSON.stringify(template.workflow);
+        builder.loadWorkflow(workflowData);
+
+        // Save selected
+        localStorage.setItem('myFormData_MediaGeneration', formData); // save form
+        localStorage.setItem('myWorkflowData_MediaGeneration', workflowData); // save workflowtop: 0, behavior: 'smooth' });
+
+    }).on('change', (formData) => {
+
+        console.log('Form updated:', JSON.parse(formData));
+        localStorage.setItem('myFormData_MediaGeneration', formData); // save form
+
+    }).on('workflowChange', (workflowData) => {
+
+        console.log('Workflow updated:', JSON.parse(workflowData));
+        localStorage.setItem('myWorkflowData_MediaGeneration', workflowData); // save workflow
+
+    }).on('themeChange', (themeData) => {
+
+        localStorage.setItem('themeData', themeData); // save theme
+
+    }).on('formGenerate', (formData) => {
+
+        // reload
+        builder.load(formData); // Show Editor
+        builder.view(formData); // Show Form
+
+        // // Set theme
+        // let exampleTheme = {};
+        // let initialTheme = JSON.stringify(exampleTheme);
+        // let themeData = localStorage.getItem('myThemeData') || initialTheme; 
+        // builder.setTheme(themeData); 
+
+        // // Show Designer
+        // builder.showDesigner();
+
+    }).on('resultReady', ({ previewText, markdown, html, media }) => {
+
+        // For saving the result
+
+    });
+   
+    //Load Templates
+    builder.loadTemplates();
+
+    // Set theme
+    let initialTheme = JSON.stringify(jsonTheme);
+    builder.setTheme(initialTheme); 
+
+    let formData = JSON.stringify(jsonForm); 
+    builder.load(formData); // Show Editor
+
+    // builder.view(formData); // Show Form
+
+    // Show Designer
+    builder.showDesigner();
+
+    // Show Settings
+    builder.showSettings();
+
+    // Show Generator
+    // builder.showGenerator();
+
+    // Load Workflow
+    let exampleWorkflow = {
+        "steps": []
+    };
+    let workflowData = JSON.stringify(exampleWorkflow);
+    if(jsonWorkflow) {
+        workflowData = JSON.stringify(jsonWorkflow);
+    }
+    builder.loadWorkflow(workflowData);
+
+    // Tabs
+    document.querySelectorAll('.tabs').forEach(tabs => new Tabs(tabs));
+    
+    // Sidebar interactions
+    sidebarToggle.addEventListener('click', () => 
+        sidebar.classList.toggle('active')
+    );
+
+    // Close sidebar on outside click (mobile)
+    document.addEventListener('click', (e) => {
+        if (window.innerWidth <= 1050 && 
+            sidebar.classList.contains('active') && 
+            !sidebar.contains(e.target) && 
+            !sidebarToggle.contains(e.target)) {
+            sidebar.classList.remove('active');
+        }
+    });
+
+    // Close sidebar on desktop resize
+    window.addEventListener('resize', () => {
+        if (window.innerWidth > 1050) {
+            sidebar.classList.remove('active');
+        }
+    });
+
+    // Set bg
+    const panelPreview = document.querySelector('.content');
+    const activeModule = parent._cb.activeCol;
+    if(activeModule) {
+        const section = activeModule.closest('.is-box');
+        let overlay, overlayBg;
+        if(section) {
+            overlay = section.querySelector('.is-overlay');
+            if (overlay && panelPreview) {
+                const clonedOverlay = overlay.cloneNode(true);
+                // panelPreview.appendChild(clonedOverlay);
+                panelPreview.insertBefore(clonedOverlay, panelPreview.firstChild);
+            }
+        }
+    }
+});
+
+function escapeHTML(str) {
+    if (typeof str !== "string") return str;
+    return str
+        .replace(/'/g, "&#39;")
+        .replace(/`/g, "&#96;"); // Escape backtick
+}
+function unescapeHTML(str) {
+    if (typeof str !== "string") return str;
+    return str
+        .replace(/&#39;/g, "'") // Unescape single quotes
+        .replace(/&#96;/g, "`"); // Unescape backticks
+}
+function construct() {
+
+    var formAction = document.querySelector('#inpFormAction').value;
+    var thankYouMessage = escapeHTML(document.querySelector('#inpThankYouMessage').value);
+    var errorMessage = escapeHTML(document.querySelector('#inpErrorMessage').value);
+    var reCaptchaSiteKey = document.querySelector('#inpReCaptchaSiteKey').value;
+    var submissionType = document.querySelector('#inpSubmissionType').value;
+
+    var resultSelector = document.querySelector('#inpResultSelector').value;
+
+    var formData = builder.get();
+    var workflowData = builder.getWorkflow();
+
+    var themeData = builder.getTheme(activeModule);
+
+    var json = JSON.parse(formData);
+    var jsonTheme = JSON.parse(themeData);
+    var jsonWorkflow = JSON.parse(workflowData);
+
+    var buttonText = json.submitText;
+
+    var html = `
+        <div id="_style_{id}" style="display:none">
+            #{id} {
+                transition: all 0.3s ease-out;
+                height: auto;
+            }
+            #{id}.collapsed {
+                overflow: hidden;
+                height: 0;
+            }
+            #status_{id} {
+                transition: all 0.3s ease-out;
+                height: auto;
+            }
+            #status_{id}.collapsed {
+                overflow: hidden;
+                height: 0;
+            }
+
+            .tool-container {
+                max-width: 500px;
+            }
+        </div>
+        <div class="tool-container">
+            <form id="form_{id}" method="POST" action="${formAction}" style="padding: 25px 0 20px">
+                <div id="{id}"></div>
+
+                <div id="status_{id}" class="collapsed"></div>
+            </form>
+            <div class="result_{id}"></div>
+        </div>
+
+        <scr` + `ipt>
+            var css = document.querySelector('#_style_{id}').innerHTML;
+            var head = document.getElementsByTagName('head')[0];
+            var s = document.createElement('style');
+            s.appendChild(document.createTextNode(css));
+            head.appendChild(s);
+            
+            var docReady = function(fn) {
+                var stateCheck = setInterval(function() {
+                    if (document.readyState !== "complete") return;
+                    clearInterval(stateCheck);
+                        fn()
+                }, 1);
+            };
+            var loadScriptByURL = function (id, url, callback) {
+                var isScriptExist = document.getElementById(id);
+                if (!isScriptExist) {
+                    var script = document.createElement("script");
+                    script.type = "text/javascript";
+                    script.src = url;
+                    script.id = id;
+                    script.onload = function () {
+                        if (callback) callback();
+                    };
+                    document.body.appendChild(script);
+                }
+                if (isScriptExist && callback) callback();
+            }
+            docReady(function() {
+
+                var elm = document.getElementById('{id}');
+                if(!elm) return;
+                var form = document.querySelector('#form_{id}');
+
+                var reChaptchaSiteKey = '${reCaptchaSiteKey}';
+                
+                var viewer = new FormViewer(elm, {
+                    resultSelector: '${resultSelector || '.result_{id}'}',
+
+                    model: '${model}', 
+                    model2: '${model2}', 
+                    sendCommandUrl: '${sendCommandUrl}', 
+                    sendCommandStreamUrl: '${sendCommandStreamUrl}',
+
+                    // Upload Endpoints
+                    uploadMediaUrl_Fal: '${uploadMediaUrl_Fal}', 
+                    uploadBase64Url_Fal: '${uploadBase64Url_Fal}', 
+
+                    // Fal Integration Endpoints:
+                    generateMediaUrl_Fal: '${generateMediaUrl_Fal}', 
+                    checkRequestStatusUrl_Fal: '${checkRequestStatusUrl_Fal}',
+                    getResultUrl_Fal: '${getResultUrl_Fal}', 
+
+                    // Optimization & Cleanup Endpoints:
+                    minimizeImageUrl: '${minimizeImageUrl}', 
+                    cleanup: '${cleanup}', 
+
+                    generateMediaUrl_OpenAI_CreateImage: '${generateMediaUrl_OpenAI_CreateImage}', 
+                    generateMediaUrl_OpenAI_CreateImageEdit: '${generateMediaUrl_OpenAI_CreateImageEdit}', 
+
+                    captchaContainer: reChaptchaSiteKey?true:false,
+                    captchaContainerClassName: 'captchaWidget'
+                });
+
+                var json = ${formData}; 
+                var jsonTheme = ${themeData};
+                var jsonWorkflow = ${workflowData};
+                
+                viewer.setTheme(JSON.stringify(jsonTheme), form); // Apply theme
+                viewer.view(JSON.stringify(json)); // Render form
+                viewer.loadWorkflow(JSON.stringify(jsonWorkflow));
+
+                var statusInfo = document.querySelector('#status_{id}');
+                
+                var captchaWidget{id};
+                if(reChaptchaSiteKey) {
+                    loadScriptByURL('recaptcha-key', 'https://www.google.com/recaptcha/api.js', function () {
+                        const interval = setInterval(() => {
+                            if (window.grecaptcha) {
+                                clearInterval(interval);
+                                captchaWidget{id} = grecaptcha.render(form.querySelector('.captchaWidget'), {
+                                    'sitekey' : reChaptchaSiteKey
+                                });
+                            }
+                        }, 100); // Poll every 100ms to ensure grecaptcha is ready
+                    });
+                }
+
+                async function handleSubmit(event) {
+                    event.preventDefault();
+
+                    if(reChaptchaSiteKey) {
+                        var token = grecaptcha.getResponse(captchaWidget{id});
+                        if(!token) return false;
+                    }
+
+                    var btnSend = form.querySelector('.btn-submitform');
+
+                    btnSend.innerHTML = '<svg class="animate-spin" style="margin-right:7px;width:20px;height:20px" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>${buttonText}';
+
+                    var data = new FormData(form);
+
+                    // for (var pair of data.entries()) {
+                    //     console.log(pair[0] + ': ' + pair[1]);
+                    // }
+
+                    const response = await fetch(form.action, {
+                        method: form.method,
+                        body: data,
+                        headers: {
+                            'Accept': 'application/json'
+                        }
+                    });
+
+                    const result = await response.json();
+
+                    if(!result.error) {
+                        statusInfo.innerHTML = '<div class="text-center pt-6 pb-4"><i class="bi bi-send-check size-64"></i>' +
+                        '</div><div class="leading-14 text-center size-38 pb-4">${thankYouMessage}</div>';
+                        form.reset();
+
+                        // elm.classList.add('collapsed');
+                        setTimeout(function(){
+                            statusInfo.classList.remove('collapsed');
+                        },300);
+
+                    } else {
+                        statusInfo.innerHTML = '<div class="leading-14 text-center size-38 pt-4 pb-4">${errorMessage}</div>';
+                    
+                        // elm.classList.toggle('collapsed');
+                        setTimeout(function(){
+                            // statusInfo.innerHTML = data.error;
+                            statusInfo.classList.remove('collapsed');
+                        },300);
+                    }
+
+                    if(reChaptchaSiteKey) {
+                        grecaptcha.reset(captchaWidget{id}); // Reset reCAPTCHA widget
+                    }
+
+                    btnSend.innerHTML = '${buttonText}';
+                }
+
+                function handleSubmitStandard(event) {
+                    event.preventDefault();
+
+                    if(reChaptchaSiteKey) {
+                        var token = grecaptcha.getResponse(captchaWidget{id});
+                        if(!token) return false;
+                    }
+
+                    event.target.submit();
+                }
+
+                var submissionType = '${submissionType}';
+                if(submissionType==='standard') {
+                    form.enctype = "multipart/form-data";
+                    form.addEventListener('submit', handleSubmitStandard);
+                } else {
+                    form.addEventListener('submit', handleSubmit);
+                }
+                // viewer.settings.onSubmit = handleSubmit;
+            });
+        </scr` + `ipt>`;
+
+    // Render module
+    if(isBlock) {
+        parent._cb.setModuleHtml(html); 
+    } else {
+        setHtml(html);
+    }
+
+    var settings = {};
+    settings.resultSelector = resultSelector;
+    settings.formAction = formAction;
+    settings.thankYouMessage = thankYouMessage;
+    settings.errorMessage = errorMessage;
+    settings.siteKey = reCaptchaSiteKey;
+    settings.submissionType = submissionType;
+    settings.json = json;
+    settings.jsonTheme = jsonTheme;
+    settings.jsonWorkflow = jsonWorkflow;
+
+    // Save settings
+    if(isBlock) {
+        parent._cb.setModuleSettings(JSON.stringify(settings));
+    } else {
+        setSettings(JSON.stringify(settings));
+    }
+}
+
+function getSettings() {
+    var activeModule = parent._cb.activeCol;
+    var isBlock = activeModule?true:false;
+    if(!isBlock) {
+        activeModule = parent._cb.doc.querySelector('.is-overlay-content[data-module-active]');
+    }
+    return decodeURIComponent(activeModule.getAttribute('data-settings'));
+}
+
+function setHtml(html) {
+    parent.document.querySelector('#hidModuleCode').value = html;
+}
+
+function setSettings(settings) {
+    parent.document.querySelector('#hidModuleSettings').value = settings;
+}
+
+// Language file stuff
+function applyLang() {
+    let elms = document.querySelectorAll('[data-lang]');
+    elms.forEach(function(elm){
+        elm.innerHTML = parent._cb.out(elm.innerHTML);
+    });
+
+    elms = document.querySelectorAll('[data-lang-title]');
+
+    elms.forEach(function(elm){
+        elm.setAttribute('title', parent._cb.out(elm.getAttribute('title')) || elm.getAttribute('data-lang-title'));
+    });
+}
+applyLang();
+
+// --------- Form Builder ------------
+
+</script>
+</body>
+</html>

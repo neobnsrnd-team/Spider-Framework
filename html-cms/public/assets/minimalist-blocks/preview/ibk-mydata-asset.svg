@@ -1,0 +1,44 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 390 230" width="390" height="230">
+  <rect width="390" height="230" fill="#ffffff"/>
+  <rect x="16" y="12" width="358" height="206" rx="12" fill="#ffffff" stroke="#E5E7EB" stroke-width="1"/>
+
+  <!-- 헤더 -->
+  <text x="32" y="36" font-family="-apple-system,BlinkMacSystemFont,sans-serif" font-size="14" font-weight="700" fill="#1A1A2E">내 자산 현황</text>
+  <rect x="262" y="22" width="96" height="18" rx="4" fill="#E8F0FC"/>
+  <text x="310" y="35" font-family="-apple-system,BlinkMacSystemFont,sans-serif" font-size="11" fill="#0046A4" text-anchor="middle">2024.04.06</text>
+
+  <!-- 도넛 차트 -->
+  <circle cx="88" cy="105" r="44" fill="none" stroke="#E5E7EB" stroke-width="1"/>
+  <!-- conic-gradient 대신 원호로 표현 -->
+  <path d="M88 61 A44 44 0 1 1 87.9 61" fill="none" stroke="#E5E7EB" stroke-width="16"/>
+  <path d="M88 61 A44 44 0 0 1 130.2 123" fill="none" stroke="#0046A4" stroke-width="16"/>
+  <path d="M130.2 123 A44 44 0 0 1 71.6 147.2" fill="none" stroke="#10B981" stroke-width="16"/>
+  <path d="M71.6 147.2 A44 44 0 0 1 46.2 82.8" fill="none" stroke="#F59E0B" stroke-width="16"/>
+  <path d="M46.2 82.8 A44 44 0 0 1 88 61" fill="none" stroke="#EF4444" stroke-width="16"/>
+  <circle cx="88" cy="105" r="28" fill="#ffffff"/>
+
+  <!-- 총 자산 -->
+  <text x="160" y="94" font-family="-apple-system,BlinkMacSystemFont,sans-serif" font-size="11" fill="#6B7280">총 자산</text>
+  <text x="160" y="115" font-family="-apple-system,BlinkMacSystemFont,sans-serif" font-size="15" font-weight="700" fill="#1A1A2E">42,500,000 원</text>
+
+  <!-- 범례 -->
+  <rect x="160" y="125" width="8" height="8" rx="2" fill="#0046A4"/>
+  <text x="173" y="133" font-family="-apple-system,BlinkMacSystemFont,sans-serif" font-size="10" fill="#6B7280">예금·적금 59%</text>
+  <rect x="250" y="125" width="8" height="8" rx="2" fill="#10B981"/>
+  <text x="263" y="133" font-family="-apple-system,BlinkMacSystemFont,sans-serif" font-size="10" fill="#6B7280">투자 28%</text>
+  <rect x="160" y="140" width="8" height="8" rx="2" fill="#F59E0B"/>
+  <text x="173" y="148" font-family="-apple-system,BlinkMacSystemFont,sans-serif" font-size="10" fill="#6B7280">연금 13%</text>
+  <rect x="250" y="140" width="8" height="8" rx="2" fill="#EF4444"/>
+  <text x="263" y="148" font-family="-apple-system,BlinkMacSystemFont,sans-serif" font-size="10" fill="#6B7280">대출 10%</text>
+
+  <!-- 구분선 -->
+  <line x1="32" y1="162" x2="358" y2="162" stroke="#F3F4F6" stroke-width="1"/>
+
+  <!-- 순자산 -->
+  <text x="32" y="182" font-family="-apple-system,BlinkMacSystemFont,sans-serif" font-size="13" fill="#6B7280">순자산</text>
+  <text x="358" y="182" font-family="-apple-system,BlinkMacSystemFont,sans-serif" font-size="13" font-weight="600" fill="#0046A4" text-anchor="end">37,500,000 원</text>
+
+  <!-- 버튼 -->
+  <rect x="32" y="194" width="326" height="18" rx="4" fill="#0046A4"/>
+  <text x="195" y="207" font-family="-apple-system,BlinkMacSystemFont,sans-serif" font-size="11" font-weight="600" fill="#ffffff" text-anchor="middle">자산 상세 보기</text>
+</svg>

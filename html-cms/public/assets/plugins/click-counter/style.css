@@ -1,0 +1,12 @@
+
+[data-cb-type="click-counter"] {
+    cursor: pointer;
+    padding: 10px 20px;
+    background: #f0f0f0;
+    border-radius: 5px;
+    display: inline-block;
+}
+
+[data-cb-type="click-counter"]:hover {
+    background: #e0e0e0;
+}

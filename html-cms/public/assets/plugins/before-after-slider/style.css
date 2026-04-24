@@ -1,0 +1,265 @@
+/* Before/After Slider Container */
+[data-cb-type="before-after-slider"] {
+    position: relative;
+    width: 100%;
+    overflow: hidden;
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+[data-cb-type="before-after-slider"] .ba-container {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    overflow: hidden;
+    user-select: none;
+    -webkit-user-select: none;
+}
+
+/* Before and After Sections */
+[data-cb-type="before-after-slider"] .ba-before,
+[data-cb-type="before-after-slider"] .ba-after {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+}
+
+[data-cb-type="before-after-slider"] .ba-before {
+    z-index: 2;
+    overflow: hidden;
+}
+
+[data-cb-type="before-after-slider"] .ba-after {
+    z-index: 1;
+}
+
+/* Before layer should always cover the whole container; we reveal it via clip-path */
+[data-cb-type="before-after-slider"] .ba-before {
+    width: 100%;
+    height: 100%;
+    overflow: hidden; /* already present, just reaffirming */
+}
+
+/* (optional, but helps older browsers gracefully) */
+[data-cb-type="before-after-slider"] .ba-before {
+    -webkit-clip-path: inset(0 50% 0 0); /* default ~50% reveal horizontally */
+    clip-path: inset(0 50% 0 0);
+}
+
+
+/* Images */
+[data-cb-type="before-after-slider"] .ba-before img,
+[data-cb-type="before-after-slider"] .ba-after img {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+    pointer-events: none;
+}
+/* Labels */
+[data-cb-type="before-after-slider"] .ba-label-before,
+[data-cb-type="before-after-slider"] .ba-label-after {
+    position: absolute;
+    padding: 8px 16px;
+    background: rgba(0, 0, 0, 0.75);
+    color: white;
+    font-size: 14px;
+    font-weight: 500;
+    border-radius: 6px;
+    z-index: 10;
+    pointer-events: none;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    width: fit-content;
+    max-width: max-content;
+}
+
+/* Horizontal orientation labels */
+[data-cb-type="before-after-slider"]:not([data-cb-orientation="vertical"]) .ba-label-before {
+    top: 20px;
+    left: 20px;
+}
+
+[data-cb-type="before-after-slider"]:not([data-cb-orientation="vertical"]) .ba-label-after {
+    top: 20px;
+    right: 20px;
+}
+
+/* Vertical orientation labels */
+[data-cb-type="before-after-slider"][data-cb-orientation="vertical"] .ba-label-before {
+    top: 20px;
+    left: 20px;
+}
+
+[data-cb-type="before-after-slider"][data-cb-orientation="vertical"] .ba-label-after {
+    bottom: 20px;
+    left: 20px;
+}
+
+/* Hide labels when showLabels is false */
+[data-cb-type="before-after-slider"][data-cb-show-labels="false"] .ba-label-before,
+[data-cb-type="before-after-slider"][data-cb-show-labels="false"] .ba-label-after {
+    display: none !important;
+}
+
+[data-cb-type="before-after-slider"] .ba-label-before {
+    left: 20px;
+}
+
+[data-cb-type="before-after-slider"] .ba-label-after {
+    right: 20px;
+}
+
+/* Slider Line */
+[data-cb-type="before-after-slider"] .ba-slider {
+    position: absolute;
+    z-index: 3;
+    cursor: ew-resize;
+}
+
+/* Horizontal slider */
+[data-cb-type="before-after-slider"]:not([data-cb-orientation="vertical"]) .ba-slider {
+    left: 50%;
+    top: 0;
+    bottom: 0;
+    width: 4px;
+    background: white;
+    box-shadow: 0 0 8px rgba(0, 0, 0, 0.3);
+    transform: translateX(-50%);
+}
+
+/* Vertical slider */
+[data-cb-type="before-after-slider"][data-cb-orientation="vertical"] .ba-slider {
+    top: 50%;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: white;
+    box-shadow: 0 0 8px rgba(0, 0, 0, 0.3);
+    transform: translateY(-50%);
+    cursor: ns-resize;
+}
+
+/* Handle */
+[data-cb-type="before-after-slider"] .ba-handle {
+    position: absolute;
+    width: 48px;
+    height: 48px;
+    background: white;
+    border-radius: 50%;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+[data-cb-type="before-after-slider"] .ba-handle:hover {
+    transform: scale(1.1);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+[data-cb-type="before-after-slider"] .ba-handle:active {
+    transform: scale(0.95);
+}
+
+/* Horizontal handle positioning */
+[data-cb-type="before-after-slider"]:not([data-cb-orientation="vertical"]) .ba-handle {
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+}
+
+/* Vertical handle positioning */
+[data-cb-type="before-after-slider"][data-cb-orientation="vertical"] .ba-handle {
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+}
+
+/* Handle Styles - Arrows */
+[data-cb-type="before-after-slider"] .ba-handle::before,
+[data-cb-type="before-after-slider"] .ba-handle::after {
+    content: '';
+    position: absolute;
+    width: 0;
+    height: 0;
+    border-style: solid;
+}
+
+/* Horizontal arrows */
+[data-cb-type="before-after-slider"]:not([data-cb-orientation="vertical"]) .ba-handle::before {
+    left: 10px;
+    border-width: 6px 8px 6px 0;
+    border-color: transparent #333 transparent transparent;
+}
+
+[data-cb-type="before-after-slider"]:not([data-cb-orientation="vertical"]) .ba-handle::after {
+    right: 10px;
+    border-width: 6px 0 6px 8px;
+    border-color: transparent transparent transparent #333;
+}
+
+/* Vertical arrows */
+[data-cb-type="before-after-slider"][data-cb-orientation="vertical"] .ba-handle::before {
+    top: 10px;
+    border-width: 0 6px 8px 6px;
+    border-color: transparent transparent #333 transparent;
+}
+
+[data-cb-type="before-after-slider"][data-cb-orientation="vertical"] .ba-handle::after {
+    bottom: 10px;
+    border-width: 8px 6px 0 6px;
+    border-color: #333 transparent transparent transparent;
+}
+
+/* Dark Mode Support */
+[data-cb-skin="dark"] [data-cb-type="before-after-slider"] {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+}
+
+[data-cb-skin="dark"] [data-cb-type="before-after-slider"] .ba-label-before,
+[data-cb-skin="dark"] [data-cb-type="before-after-slider"] .ba-label-after {
+    background: rgba(255, 255, 255, 0.9);
+    color: #111;
+}
+
+[data-cb-skin="dark"] [data-cb-type="before-after-slider"] .ba-slider {
+    background: #f0f0f0;
+}
+
+[data-cb-skin="dark"] [data-cb-type="before-after-slider"] .ba-handle {
+    background: #f0f0f0;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    [data-cb-type="before-after-slider"] .ba-container {
+        aspect-ratio: 4 / 3;
+    }
+    
+    [data-cb-type="before-after-slider"] .ba-label-before,
+    [data-cb-type="before-after-slider"] .ba-label-after {
+        font-size: 12px;
+        padding: 6px 12px;
+        top: 12px;
+    }
+    
+    [data-cb-type="before-after-slider"] .ba-label-before {
+        left: 12px;
+    }
+    
+    [data-cb-type="before-after-slider"] .ba-label-after {
+        right: 12px;
+    }
+    
+    [data-cb-type="before-after-slider"] .ba-handle {
+        width: 40px;
+        height: 40px;
+    }
+}

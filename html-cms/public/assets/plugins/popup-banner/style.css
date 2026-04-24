@@ -1,0 +1,167 @@
+/* public/assets/plugins/popup-banner/style.css */
+
+/* ── 오버레이 ── */
+.pb-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 9998;
+    opacity: 0;
+    transition: opacity 0.25s ease;
+    -webkit-tap-highlight-color: transparent;
+}
+.pb-overlay.pb-visible {
+    opacity: 1;
+}
+
+/* ── Bottom Sheet 시트 — 뷰 모드별 너비 ── */
+.pb-sheet {
+    position: fixed;
+    left: 50%;
+    bottom: 0;
+    z-index: 9999;
+    /* 기본(mobile): 390px */
+    --pb-max-width: 390px;
+    max-width: var(--pb-max-width);
+    width: 100%;
+    background: #ffffff;
+    border-radius: 20px 20px 0 0;
+    box-shadow: 0 -4px 24px rgba(0, 0, 0, 0.12);
+    transform: translateX(-50%) translateY(100%);
+    transition: transform 0.25s ease;
+    font-family: -apple-system, BlinkMacSystemFont, 'Malgun Gothic', 'Apple SD Gothic Neo', sans-serif;
+    -webkit-overflow-scrolling: touch;
+}
+.pb-sheet.pb-visible {
+    transform: translateX(-50%) translateY(0);
+}
+/* web: 전체 너비 */
+body[data-view-mode="web"] .pb-sheet {
+    --pb-max-width: 100%;
+}
+/* responsive(iframe embed): iframe 전체 너비 */
+body[data-view-mode="responsive"] .pb-sheet {
+    --pb-max-width: 100%;
+}
+
+/* ── 에디터 모드: inline 고정 표시 ── */
+[data-component-id^="popup-banner"] .pb-sheet--editor {
+    position: relative;
+    transform: none;
+    border-radius: 20px 20px 0 0;
+    box-shadow: 0 -4px 24px rgba(0, 0, 0, 0.08);
+    font-family: -apple-system, BlinkMacSystemFont, 'Malgun Gothic', 'Apple SD Gothic Neo', sans-serif;
+}
+
+/* ── 상단 헤더 (닫기 버튼) ── */
+.pb-header {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    padding: 10px 12px 4px;
+}
+
+/* ── 인디케이터 — 슬라이드 이미지 하단 중간 (절대 위치) ── */
+.pb-indicators {
+    position: absolute;
+    bottom: 12px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 2;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+.pb-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.6);
+    transition: all 0.25s ease;
+    flex-shrink: 0;
+}
+.pb-dot.pb-dot--active {
+    width: 24px;
+    border-radius: 4px;
+    background: #ffffff;
+}
+
+.pb-close-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    padding: 0;
+    color: #374151;
+    -webkit-tap-highlight-color: transparent;
+    flex-shrink: 0;
+}
+.pb-close-btn:active {
+    opacity: 0.7;
+}
+
+/* ── 슬라이드 영역 ── */
+.pb-slide-wrapper {
+    position: relative; /* 인디케이터 절대 위치 기준 */
+    overflow: hidden;
+    width: 100%;
+    /* 기본(mobile): 390px 기준 비율 */
+    height: 200px;
+}
+body[data-view-mode="web"] .pb-slide-wrapper,
+body[data-view-mode="responsive"] .pb-slide-wrapper {
+    height: 320px;
+}
+.pb-slide-track {
+    display: flex;
+    height: 100%;
+    transition: transform 0.25s ease;
+    will-change: transform;
+}
+.pb-slide-item {
+    flex: 0 0 100%;
+    width: 100%;
+    height: 100%;
+    display: block;
+    text-decoration: none;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+}
+.pb-slide-item img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+    pointer-events: none;
+    user-select: none;
+}
+
+/* ── 하단 "N일간 보지 않기" ── */
+.pb-footer {
+    display: flex;
+    align-items: center;
+    padding: 12px 20px 16px;
+    border-top: 1px solid #F3F4F6;
+    gap: 8px;
+    min-height: 44px;
+    box-sizing: border-box;
+}
+.pb-hide-checkbox {
+    width: 18px;
+    height: 18px;
+    accent-color: #0046A4;
+    cursor: pointer;
+    flex-shrink: 0;
+}
+.pb-hide-label {
+    font-size: 13px;
+    color: #6B7280;
+    cursor: pointer;
+    line-height: 1.4;
+    -webkit-tap-highlight-color: transparent;
+    user-select: none;
+}

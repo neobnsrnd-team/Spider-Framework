@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 390 200" width="390" height="200">
+  <rect width="390" height="200" fill="#ffffff"/>
+  <!-- 카드 배경 -->
+  <rect x="16" y="12" width="358" height="176" rx="12" fill="#ffffff" stroke="#E5E7EB" stroke-width="1"/>
+  <!-- 헤더 -->
+  <text x="32" y="40" font-family="-apple-system,BlinkMacSystemFont,sans-serif" font-size="15" font-weight="700" fill="#1A1A2E">내 대출 현황</text>
+  <!-- 대출명 뱃지 -->
+  <rect x="32" y="50" width="90" height="18" rx="4" fill="#E8F0FC"/>
+  <text x="77" y="63" font-family="-apple-system,BlinkMacSystemFont,sans-serif" font-size="11" fill="#0046A4" text-anchor="middle">IBK 신용대출</text>
+  <!-- 구분선 -->
+  <line x1="32" y1="76" x2="358" y2="76" stroke="#F3F4F6" stroke-width="1"/>
+  <!-- 행 1 -->
+  <text x="32" y="98" font-family="-apple-system,BlinkMacSystemFont,sans-serif" font-size="13" fill="#6B7280">대출 잔액</text>
+  <text x="358" y="98" font-family="-apple-system,BlinkMacSystemFont,sans-serif" font-size="13" font-weight="600" fill="#1A1A2E" text-anchor="end">15,000,000 원</text>
+  <line x1="32" y1="108" x2="358" y2="108" stroke="#F3F4F6" stroke-width="1"/>
+  <!-- 행 2 -->
+  <text x="32" y="128" font-family="-apple-system,BlinkMacSystemFont,sans-serif" font-size="13" fill="#6B7280">월 상환액</text>
+  <text x="358" y="128" font-family="-apple-system,BlinkMacSystemFont,sans-serif" font-size="13" font-weight="600" fill="#1A1A2E" text-anchor="end">350,000 원</text>
+  <line x1="32" y1="138" x2="358" y2="138" stroke="#F3F4F6" stroke-width="1"/>
+  <!-- 행 3 -->
+  <text x="32" y="158" font-family="-apple-system,BlinkMacSystemFont,sans-serif" font-size="13" fill="#6B7280">다음 납부일</text>
+  <text x="358" y="158" font-family="-apple-system,BlinkMacSystemFont,sans-serif" font-size="13" font-weight="600" fill="#E53E3E" text-anchor="end">05.15</text>
+  <!-- 버튼 -->
+  <rect x="32" y="168" width="326" height="14" rx="4" fill="#0046A4"/>
+  <text x="195" y="179" font-family="-apple-system,BlinkMacSystemFont,sans-serif" font-size="11" font-weight="600" fill="#ffffff" text-anchor="middle">상환하기</text>
+</svg>

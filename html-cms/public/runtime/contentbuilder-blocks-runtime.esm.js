@@ -1,0 +1,11084 @@
+const Mt = Date.now();
+function fe() {
+  let c = {}, e = !0, i = 0, t = arguments.length;
+  Object.prototype.toString.call(arguments[0]) === "[object Boolean]" && (e = arguments[0], i++);
+  let n = (s) => {
+    for (let r in s)
+      Object.prototype.hasOwnProperty.call(s, r) && (e && Object.prototype.toString.call(s[r]) === "[object Object]" ? c[r] = fe(!0, c[r], s[r]) : c[r] = s[r]);
+  };
+  for (; i < t; i++) {
+    let s = arguments[i];
+    n(s);
+  }
+  return c;
+}
+function X(c, e) {
+  if ((ge(c) || c === window || c === document) && (c = [c]), !$t(c) && !Ce(c) && (c = [c]), si(c) != 0) {
+    if ($t(c) && !Ce(c)) {
+      let i = c.length, t = 0;
+      for (; t < i && e.call(c[t], c[t], t, c) !== !1; t++)
+        ;
+    } else if (Ce(c)) {
+      for (let i in c)
+        if (Z(c, i) && e.call(c[i], c[i], i, c) === !1)
+          break;
+    }
+  }
+}
+function qt(c, e = null, i = null) {
+  const t = c[Mt] = c[Mt] || [], n = { all: t, evt: null, found: null };
+  return e && i && si(t) > 0 && X(t, (s, r) => {
+    if (s.eventName == e && s.fn.toString() == i.toString())
+      return n.found = !0, n.evt = r, !1;
+  }), n;
+}
+function oe(c, { onElement: e, withCallback: i, avoidDuplicate: t = !0, once: n = !1, useCapture: s = !1 } = {}, r) {
+  let o = e || [];
+  Pe(o) && (o = document.querySelectorAll(o));
+  function a(d) {
+    G(i) && i.call(r, d, this), n && a.destroy();
+  }
+  return a.destroy = function() {
+    X(o, (d) => {
+      const u = qt(d, c, a);
+      u.found && u.all.splice(u.evt, 1), d.removeEventListener && d.removeEventListener(c, a, s);
+    });
+  }, X(o, (d) => {
+    const u = qt(d, c, a);
+    (d.addEventListener && t && !u.found || !t) && (d.addEventListener(c, a, s), u.all.push({ eventName: c, fn: a }));
+  }), a;
+}
+function H(c, e) {
+  X(e.split(" "), (i) => c.classList.add(i));
+}
+function J(c, e) {
+  X(e.split(" "), (i) => c.classList.remove(i));
+}
+function te(c, e) {
+  return c.classList.contains(e);
+}
+function ue(c, e) {
+  for (; c !== document.body; ) {
+    if (c = c.parentElement, !c)
+      return !1;
+    if (typeof c.matches == "function" ? c.matches(e) : c.msMatchesSelector(e))
+      return c;
+  }
+}
+function Le(c, e = "", i = !1) {
+  if (!c || e === "")
+    return !1;
+  if (e === "none")
+    return G(i) && i(), !1;
+  const t = wi(), n = e.split(" ");
+  X(n, (s) => {
+    H(c, "g" + s);
+  }), oe(t, {
+    onElement: c,
+    avoidDuplicate: !1,
+    once: !0,
+    withCallback: (s, r) => {
+      X(n, (o) => {
+        J(r, "g" + o);
+      }), G(i) && i();
+    }
+  });
+}
+function Fe(c, e = "") {
+  if (e === "")
+    return c.style.webkitTransform = "", c.style.MozTransform = "", c.style.msTransform = "", c.style.OTransform = "", c.style.transform = "", !1;
+  c.style.webkitTransform = e, c.style.MozTransform = e, c.style.msTransform = e, c.style.OTransform = e, c.style.transform = e;
+}
+function It(c) {
+  c.style.display = "block";
+}
+function ot(c) {
+  c.style.display = "none";
+}
+function _e(c) {
+  let e = document.createDocumentFragment(), i = document.createElement("div");
+  for (i.innerHTML = c; i.firstChild; )
+    e.appendChild(i.firstChild);
+  return e;
+}
+function ti() {
+  return {
+    width: window.innerWidth || document.documentElement.clientWidth || document.body.clientWidth,
+    height: window.innerHeight || document.documentElement.clientHeight || document.body.clientHeight
+  };
+}
+function wi() {
+  let c, e = document.createElement("fakeelement"), i = {
+    animation: "animationend",
+    OAnimation: "oAnimationEnd",
+    MozAnimation: "animationend",
+    WebkitAnimation: "webkitAnimationEnd"
+  };
+  for (c in i)
+    if (e.style[c] !== void 0)
+      return i[c];
+}
+function xi() {
+  let c, e = document.createElement("fakeelement");
+  const i = {
+    transition: "transitionend",
+    OTransition: "oTransitionEnd",
+    MozTransition: "transitionend",
+    WebkitTransition: "webkitTransitionEnd"
+  };
+  for (c in i)
+    if (e.style[c] !== void 0)
+      return i[c];
+}
+function ki(c) {
+  let { url: e, allow: i, callback: t, appendTo: n } = c, s = document.createElement("iframe");
+  return s.className = "vimeo-video gvideo", s.src = e, s.style.width = "100%", s.style.height = "100%", i && s.setAttribute("allow", i), s.onload = function() {
+    s.onload = null, H(s, "node-ready"), G(t) && t();
+  }, n && n.appendChild(s), s;
+}
+function at(c, e, i, t) {
+  if (c()) {
+    e();
+    return;
+  }
+  i || (i = 100);
+  let n = setInterval(() => {
+    c() && (clearInterval(n), e());
+  }, i);
+}
+function Ot(c, e, i) {
+  if (re(c)) {
+    console.error("Inject assets error");
+    return;
+  }
+  if (G(e) && (i = e, e = !1), Pe(e) && e in window) {
+    G(i) && i();
+    return;
+  }
+  let t;
+  if (c.indexOf(".css") !== -1) {
+    if (t = document.querySelectorAll('link[href="' + c + '"]'), t && t.length > 0) {
+      G(i) && i();
+      return;
+    }
+    const s = document.getElementsByTagName("head")[0], r = s.querySelectorAll('link[rel="stylesheet"]'), o = document.createElement("link");
+    o.rel = "stylesheet", o.type = "text/css", o.href = c, o.media = "all", r ? s.insertBefore(o, r[0]) : s.appendChild(o), G(i) && i();
+    return;
+  }
+  if (t = document.querySelectorAll('script[src="' + c + '"]'), t && t.length > 0) {
+    if (G(i)) {
+      if (Pe(e))
+        return at(
+          () => typeof window[e] < "u",
+          () => {
+            i();
+          }
+        ), !1;
+      i();
+    }
+    return;
+  }
+  let n = document.createElement("script");
+  n.type = "text/javascript", n.src = c, n.onload = () => {
+    if (G(i)) {
+      if (Pe(e))
+        return at(
+          () => typeof window[e] < "u",
+          () => {
+            i();
+          }
+        ), !1;
+      i();
+    }
+  }, document.body.appendChild(n);
+}
+function bt() {
+  return typeof window > "u" ? !1 : "navigator" in window && window.navigator.userAgent.match(/(iPad)|(iPhone)|(iPod)|(Android)|(PlayBook)|(BB10)|(BlackBerry)|(Opera Mini)|(IEMobile)|(webOS)|(MeeGo)/i);
+}
+function _i() {
+  return typeof document > "u" ? !1 : bt() !== null || document.createTouch !== void 0 || "ontouchstart" in window || "onmsgesturechange" in window || navigator.msMaxTouchPoints;
+}
+function G(c) {
+  return typeof c == "function";
+}
+function Pe(c) {
+  return typeof c == "string";
+}
+function ge(c) {
+  return !!(c && c.nodeType && c.nodeType == 1);
+}
+function ii(c) {
+  return Array.isArray(c);
+}
+function $t(c) {
+  return c && c.length && isFinite(c.length);
+}
+function Ce(c) {
+  return typeof c === "object" && c != null && !G(c) && !ii(c);
+}
+function re(c) {
+  return c == null;
+}
+function Z(c, e) {
+  return c !== null && hasOwnProperty.call(c, e);
+}
+function si(c) {
+  if (Ce(c)) {
+    if (c.keys)
+      return c.keys().length;
+    let e = 0;
+    for (let i in c)
+      Z(c, i) && e++;
+    return e;
+  } else
+    return c.length;
+}
+function Ge(c) {
+  return !isNaN(parseFloat(c)) && isFinite(c);
+}
+function Nt(c = -1) {
+  const e = document.querySelectorAll(".gbtn[data-taborder]:not(.disabled)");
+  if (!e.length)
+    return !1;
+  if (e.length == 1)
+    return e[0];
+  typeof c == "string" && (c = parseInt(c));
+  const i = [];
+  X(e, (o) => {
+    i.push(o.getAttribute("data-taborder"));
+  });
+  const t = Math.max.apply(Math, i.map((o) => parseInt(o)));
+  let n = c < 0 ? 1 : c + 1;
+  n > t && (n = "1");
+  const r = i.filter((o) => o >= parseInt(n)).sort()[0];
+  return document.querySelector(`.gbtn[data-taborder="${r}"]`);
+}
+function Si(c) {
+  if (c.events.hasOwnProperty("keyboard"))
+    return !1;
+  c.events.keyboard = oe("keydown", {
+    onElement: window,
+    withCallback: (e, i) => {
+      e = e || window.event;
+      const t = e.keyCode;
+      if (t == 9) {
+        const n = document.querySelector(".gbtn.focused");
+        if (!n) {
+          const a = document.activeElement && document.activeElement.nodeName ? document.activeElement.nodeName.toLocaleLowerCase() : !1;
+          if (a == "input" || a == "textarea" || a == "button")
+            return;
+        }
+        e.preventDefault();
+        const s = document.querySelectorAll(".gbtn[data-taborder]");
+        if (!s || s.length <= 0)
+          return;
+        if (!n) {
+          const a = Nt();
+          a && (a.focus(), H(a, "focused"));
+          return;
+        }
+        let r = n.getAttribute("data-taborder"), o = Nt(r);
+        J(n, "focused"), o && (o.focus(), H(o, "focused"));
+      }
+      t == 39 && c.nextSlide(), t == 37 && c.prevSlide(), t == 27 && c.close();
+    }
+  });
+}
+function Xe(c) {
+  return Math.sqrt(c.x * c.x + c.y * c.y);
+}
+function Ti(c, e) {
+  return c.x * e.x + c.y * e.y;
+}
+function Ei(c, e) {
+  var i = Xe(c) * Xe(e);
+  if (i === 0)
+    return 0;
+  var t = Ti(c, e) / i;
+  return t > 1 && (t = 1), Math.acos(t);
+}
+function Li(c, e) {
+  return c.x * e.y - e.x * c.y;
+}
+function Ci(c, e) {
+  var i = Ei(c, e);
+  return Li(c, e) > 0 && (i *= -1), i * 180 / Math.PI;
+}
+class Ri {
+  constructor(e) {
+    this.handlers = [], this.el = e;
+  }
+  add(e) {
+    this.handlers.push(e);
+  }
+  del(e) {
+    e || (this.handlers = []);
+    for (var i = this.handlers.length; i >= 0; i--)
+      this.handlers[i] === e && this.handlers.splice(i, 1);
+  }
+  dispatch() {
+    for (var e = 0, i = this.handlers.length; e < i; e++) {
+      var t = this.handlers[e];
+      typeof t == "function" && t.apply(this.el, arguments);
+    }
+  }
+}
+function ee(c, e) {
+  var i = new Ri(c);
+  return i.add(e), i;
+}
+class Ai {
+  constructor(e, i) {
+    this.element = typeof e == "string" ? document.querySelector(e) : e, this.start = this.start.bind(this), this.move = this.move.bind(this), this.end = this.end.bind(this), this.cancel = this.cancel.bind(this), this.element.addEventListener("touchstart", this.start, !1), this.element.addEventListener("touchmove", this.move, !1), this.element.addEventListener("touchend", this.end, !1), this.element.addEventListener("touchcancel", this.cancel, !1), this.preV = { x: null, y: null }, this.pinchStartLen = null, this.zoom = 1, this.isDoubleTap = !1;
+    var t = function() {
+    };
+    this.rotate = ee(this.element, i.rotate || t), this.touchStart = ee(this.element, i.touchStart || t), this.multipointStart = ee(this.element, i.multipointStart || t), this.multipointEnd = ee(this.element, i.multipointEnd || t), this.pinch = ee(this.element, i.pinch || t), this.swipe = ee(this.element, i.swipe || t), this.tap = ee(this.element, i.tap || t), this.doubleTap = ee(this.element, i.doubleTap || t), this.longTap = ee(this.element, i.longTap || t), this.singleTap = ee(this.element, i.singleTap || t), this.pressMove = ee(this.element, i.pressMove || t), this.twoFingerPressMove = ee(this.element, i.twoFingerPressMove || t), this.touchMove = ee(this.element, i.touchMove || t), this.touchEnd = ee(this.element, i.touchEnd || t), this.touchCancel = ee(this.element, i.touchCancel || t), this.translateContainer = this.element, this._cancelAllHandler = this.cancelAll.bind(this), window.addEventListener("scroll", this._cancelAllHandler), this.delta = null, this.last = null, this.now = null, this.tapTimeout = null, this.singleTapTimeout = null, this.longTapTimeout = null, this.swipeTimeout = null, this.x1 = this.x2 = this.y1 = this.y2 = null, this.preTapPosition = { x: null, y: null };
+  }
+  start(e) {
+    if (!e.touches)
+      return;
+    const i = ["a", "button", "input"];
+    if (e.target && e.target.nodeName && i.indexOf(e.target.nodeName.toLowerCase()) >= 0) {
+      console.log("ignore drag for this touched element", e.target.nodeName.toLowerCase());
+      return;
+    }
+    this.now = Date.now(), this.x1 = e.touches[0].pageX, this.y1 = e.touches[0].pageY, this.delta = this.now - (this.last || this.now), this.touchStart.dispatch(e, this.element), this.preTapPosition.x !== null && (this.isDoubleTap = this.delta > 0 && this.delta <= 250 && Math.abs(this.preTapPosition.x - this.x1) < 30 && Math.abs(this.preTapPosition.y - this.y1) < 30, this.isDoubleTap && clearTimeout(this.singleTapTimeout)), this.preTapPosition.x = this.x1, this.preTapPosition.y = this.y1, this.last = this.now;
+    var t = this.preV, n = e.touches.length;
+    if (n > 1) {
+      this._cancelLongTap(), this._cancelSingleTap();
+      var s = { x: e.touches[1].pageX - this.x1, y: e.touches[1].pageY - this.y1 };
+      t.x = s.x, t.y = s.y, this.pinchStartLen = Xe(t), this.multipointStart.dispatch(e, this.element);
+    }
+    this._preventTap = !1, this.longTapTimeout = setTimeout(
+      (function() {
+        this.longTap.dispatch(e, this.element), this._preventTap = !0;
+      }).bind(this),
+      750
+    );
+  }
+  move(e) {
+    if (e.touches) {
+      var i = this.preV, t = e.touches.length, n = e.touches[0].pageX, s = e.touches[0].pageY;
+      if (this.isDoubleTap = !1, t > 1) {
+        var r = e.touches[1].pageX, o = e.touches[1].pageY, a = { x: e.touches[1].pageX - n, y: e.touches[1].pageY - s };
+        i.x !== null && (this.pinchStartLen > 0 && (e.zoom = Xe(a) / this.pinchStartLen, this.pinch.dispatch(e, this.element)), e.angle = Ci(a, i), this.rotate.dispatch(e, this.element)), i.x = a.x, i.y = a.y, this.x2 !== null && this.sx2 !== null ? (e.deltaX = (n - this.x2 + r - this.sx2) / 2, e.deltaY = (s - this.y2 + o - this.sy2) / 2) : (e.deltaX = 0, e.deltaY = 0), this.twoFingerPressMove.dispatch(e, this.element), this.sx2 = r, this.sy2 = o;
+      } else {
+        if (this.x2 !== null) {
+          e.deltaX = n - this.x2, e.deltaY = s - this.y2;
+          var d = Math.abs(this.x1 - this.x2), u = Math.abs(this.y1 - this.y2);
+          (d > 10 || u > 10) && (this._preventTap = !0);
+        } else
+          e.deltaX = 0, e.deltaY = 0;
+        this.pressMove.dispatch(e, this.element);
+      }
+      this.touchMove.dispatch(e, this.element), this._cancelLongTap(), this.x2 = n, this.y2 = s, t > 1 && e.preventDefault();
+    }
+  }
+  end(e) {
+    if (e.changedTouches) {
+      this._cancelLongTap();
+      var i = this;
+      e.touches.length < 2 && (this.multipointEnd.dispatch(e, this.element), this.sx2 = this.sy2 = null), this.x2 && Math.abs(this.x1 - this.x2) > 30 || this.y2 && Math.abs(this.y1 - this.y2) > 30 ? (e.direction = this._swipeDirection(this.x1, this.x2, this.y1, this.y2), this.swipeTimeout = setTimeout(function() {
+        i.swipe.dispatch(e, i.element);
+      }, 0)) : (this.tapTimeout = setTimeout(function() {
+        i._preventTap || i.tap.dispatch(e, i.element), i.isDoubleTap && (i.doubleTap.dispatch(e, i.element), i.isDoubleTap = !1);
+      }, 0), i.isDoubleTap || (i.singleTapTimeout = setTimeout(function() {
+        i.singleTap.dispatch(e, i.element);
+      }, 250))), this.touchEnd.dispatch(e, this.element), this.preV.x = 0, this.preV.y = 0, this.zoom = 1, this.pinchStartLen = null, this.x1 = this.x2 = this.y1 = this.y2 = null;
+    }
+  }
+  cancelAll() {
+    this._preventTap = !0, clearTimeout(this.singleTapTimeout), clearTimeout(this.tapTimeout), clearTimeout(this.longTapTimeout), clearTimeout(this.swipeTimeout);
+  }
+  cancel(e) {
+    this.cancelAll(), this.touchCancel.dispatch(e, this.element);
+  }
+  _cancelLongTap() {
+    clearTimeout(this.longTapTimeout);
+  }
+  _cancelSingleTap() {
+    clearTimeout(this.singleTapTimeout);
+  }
+  _swipeDirection(e, i, t, n) {
+    return Math.abs(e - i) >= Math.abs(t - n) ? e - i > 0 ? "Left" : "Right" : t - n > 0 ? "Up" : "Down";
+  }
+  on(e, i) {
+    this[e] && this[e].add(i);
+  }
+  off(e, i) {
+    this[e] && this[e].del(i);
+  }
+  destroy() {
+    return this.singleTapTimeout && clearTimeout(this.singleTapTimeout), this.tapTimeout && clearTimeout(this.tapTimeout), this.longTapTimeout && clearTimeout(this.longTapTimeout), this.swipeTimeout && clearTimeout(this.swipeTimeout), this.element.removeEventListener("touchstart", this.start), this.element.removeEventListener("touchmove", this.move), this.element.removeEventListener("touchend", this.end), this.element.removeEventListener("touchcancel", this.cancel), this.rotate.del(), this.touchStart.del(), this.multipointStart.del(), this.multipointEnd.del(), this.pinch.del(), this.swipe.del(), this.tap.del(), this.doubleTap.del(), this.longTap.del(), this.singleTap.del(), this.pressMove.del(), this.twoFingerPressMove.del(), this.touchMove.del(), this.touchEnd.del(), this.touchCancel.del(), this.preV = this.pinchStartLen = this.zoom = this.isDoubleTap = this.delta = this.last = this.now = this.tapTimeout = this.singleTapTimeout = this.longTapTimeout = this.swipeTimeout = this.x1 = this.x2 = this.y1 = this.y2 = this.preTapPosition = this.rotate = this.touchStart = this.multipointStart = this.multipointEnd = this.pinch = this.swipe = this.tap = this.doubleTap = this.longTap = this.singleTap = this.pressMove = this.touchMove = this.touchEnd = this.touchCancel = this.twoFingerPressMove = null, window.removeEventListener("scroll", this._cancelAllHandler), null;
+  }
+}
+function lt(c) {
+  const e = xi(), i = window.innerWidth || document.documentElement.clientWidth || document.body.clientWidth;
+  let t = te(c, "gslide-media") ? c : c.querySelector(".gslide-media"), n = ue(t, ".ginner-container"), s = c.querySelector(".gslide-description");
+  i > 769 && (t = n), H(t, "greset"), Fe(t, "translate3d(0, 0, 0)"), oe(e, {
+    onElement: t,
+    once: !0,
+    withCallback: (r, o) => {
+      J(t, "greset");
+    }
+  }), t.style.opacity = "", s && (s.style.opacity = "");
+}
+function Mi(c) {
+  if (c.events.hasOwnProperty("touch"))
+    return !1;
+  let e = ti(), i = e.width, t = e.height, n = !1, s = null, r = null, o = null, a = !1, d = 1, u = 4.5, l = 1, h = !1, p = !1, b = null, w = null, _ = null, g = null, v, f, m = 0, y = 0, k = !1, x = !1, S = {}, E = {}, L = 0, M = 0, C;
+  const D = document.getElementById("glightbox-slider"), O = document.querySelector(".goverlay"), $ = new Ai(D, {
+    touchStart: (R) => {
+      if (n = !0, (te(R.targetTouches[0].target, "ginner-container") || ue(R.targetTouches[0].target, ".gslide-desc") || R.targetTouches[0].target.nodeName.toLowerCase() == "a") && (n = !1), ue(R.targetTouches[0].target, ".gslide-inline") && !te(R.targetTouches[0].target.parentNode, "gslide-inline") && (n = !1), n) {
+        if (E = R.targetTouches[0], S.pageX = R.targetTouches[0].pageX, S.pageY = R.targetTouches[0].pageY, L = R.targetTouches[0].clientX, M = R.targetTouches[0].clientY, s = c.activeSlide, r = s.querySelector(".gslide-media"), C = s.querySelector(".gslide-inline"), o = null, te(r, "gslide-image") && (o = r.querySelector("img")), (window.innerWidth || document.documentElement.clientWidth || document.body.clientWidth) > 769 && (r = s.querySelector(".ginner-container")), J(O, "greset"), R.pageX > 20 && R.pageX < window.innerWidth - 20)
+          return;
+        R.preventDefault();
+      }
+    },
+    touchMove: (R) => {
+      if (!n || (E = R.targetTouches[0], h || p))
+        return;
+      if (C && C.offsetHeight > t) {
+        const U = S.pageX - E.pageX;
+        if (Math.abs(U) <= 13)
+          return !1;
+      }
+      a = !0;
+      let q = R.targetTouches[0].clientX, A = R.targetTouches[0].clientY, T = L - q, N = M - A;
+      Math.abs(T) > Math.abs(N) ? (k = !1, x = !0) : (x = !1, k = !0), v = E.pageX - S.pageX, m = v * 100 / i, f = E.pageY - S.pageY, y = f * 100 / t;
+      let P;
+      if (k && o && (P = 1 - Math.abs(f) / t, O.style.opacity = P, c.settings.touchFollowAxis && (m = 0)), x && (P = 1 - Math.abs(v) / i, r.style.opacity = P, c.settings.touchFollowAxis && (y = 0)), !o)
+        return Fe(r, `translate3d(${m}%, 0, 0)`);
+      Fe(r, `translate3d(${m}%, ${y}%, 0)`);
+    },
+    touchEnd: () => {
+      if (!n)
+        return;
+      if (a = !1, p || h) {
+        _ = b, g = w;
+        return;
+      }
+      const R = Math.abs(parseInt(y)), q = Math.abs(parseInt(m));
+      if (R > 29 && o) {
+        c.close();
+        return;
+      }
+      if (R < 29 && q < 25)
+        return H(O, "greset"), O.style.opacity = 1, lt(r);
+    },
+    multipointEnd: () => {
+      setTimeout(() => {
+        h = !1;
+      }, 50);
+    },
+    multipointStart: () => {
+      h = !0, d = l || 1;
+    },
+    pinch: (R) => {
+      if (!o || a)
+        return !1;
+      h = !0, o.scaleX = o.scaleY = d * R.zoom;
+      let q = d * R.zoom;
+      if (p = !0, q <= 1) {
+        p = !1, q = 1, g = null, _ = null, b = null, w = null, o.setAttribute("style", "");
+        return;
+      }
+      q > u && (q = u), o.style.transform = `scale3d(${q}, ${q}, 1)`, l = q;
+    },
+    pressMove: (R) => {
+      if (p && !h) {
+        var q = E.pageX - S.pageX, A = E.pageY - S.pageY;
+        _ && (q = q + _), g && (A = A + g), b = q, w = A;
+        let T = `translate3d(${q}px, ${A}px, 0)`;
+        l && (T += ` scale3d(${l}, ${l}, 1)`), Fe(o, T);
+      }
+    },
+    swipe: (R) => {
+      if (!p) {
+        if (h) {
+          h = !1;
+          return;
+        }
+        if (R.direction == "Left") {
+          if (c.index == c.elements.length - 1)
+            return lt(r);
+          c.nextSlide();
+        }
+        if (R.direction == "Right") {
+          if (c.index == 0)
+            return lt(r);
+          c.prevSlide();
+        }
+      }
+    }
+  });
+  c.events.touch = $;
+}
+class qi {
+  constructor(e, i, t = null) {
+    if (this.img = e, this.slide = i, this.onclose = t, this.img.setZoomEvents)
+      return !1;
+    this.active = !1, this.zoomedIn = !1, this.dragging = !1, this.currentX = null, this.currentY = null, this.initialX = null, this.initialY = null, this.xOffset = 0, this.yOffset = 0, this.img.addEventListener("mousedown", (n) => this.dragStart(n), !1), this.img.addEventListener("mouseup", (n) => this.dragEnd(n), !1), this.img.addEventListener("mousemove", (n) => this.drag(n), !1), this.img.addEventListener(
+      "click",
+      (n) => {
+        if (this.slide.classList.contains("dragging-nav"))
+          return this.zoomOut(), !1;
+        if (!this.zoomedIn)
+          return this.zoomIn();
+        this.zoomedIn && !this.dragging && this.zoomOut();
+      },
+      !1
+    ), this.img.setZoomEvents = !0;
+  }
+  zoomIn() {
+    let e = this.widowWidth();
+    if (this.zoomedIn || e <= 768)
+      return;
+    const i = this.img;
+    if (i.setAttribute("data-style", i.getAttribute("style")), i.style.maxWidth = i.naturalWidth + "px", i.style.maxHeight = i.naturalHeight + "px", i.naturalWidth > e) {
+      let t = e / 2 - i.naturalWidth / 2;
+      this.setTranslate(this.img.parentNode, t, 0);
+    }
+    this.slide.classList.add("zoomed"), this.zoomedIn = !0;
+  }
+  zoomOut() {
+    this.img.parentNode.setAttribute("style", ""), this.img.setAttribute("style", this.img.getAttribute("data-style")), this.slide.classList.remove("zoomed"), this.zoomedIn = !1, this.currentX = null, this.currentY = null, this.initialX = null, this.initialY = null, this.xOffset = 0, this.yOffset = 0, this.onclose && typeof this.onclose == "function" && this.onclose();
+  }
+  dragStart(e) {
+    if (e.preventDefault(), !this.zoomedIn) {
+      this.active = !1;
+      return;
+    }
+    e.type === "touchstart" ? (this.initialX = e.touches[0].clientX - this.xOffset, this.initialY = e.touches[0].clientY - this.yOffset) : (this.initialX = e.clientX - this.xOffset, this.initialY = e.clientY - this.yOffset), e.target === this.img && (this.active = !0, this.img.classList.add("dragging"));
+  }
+  dragEnd(e) {
+    e.preventDefault(), this.initialX = this.currentX, this.initialY = this.currentY, this.active = !1, setTimeout(() => {
+      this.dragging = !1, this.img.isDragging = !1, this.img.classList.remove("dragging");
+    }, 100);
+  }
+  drag(e) {
+    this.active && (e.preventDefault(), e.type === "touchmove" ? (this.currentX = e.touches[0].clientX - this.initialX, this.currentY = e.touches[0].clientY - this.initialY) : (this.currentX = e.clientX - this.initialX, this.currentY = e.clientY - this.initialY), this.xOffset = this.currentX, this.yOffset = this.currentY, this.img.isDragging = !0, this.dragging = !0, this.setTranslate(this.img, this.currentX, this.currentY));
+  }
+  onMove(e) {
+    if (!this.zoomedIn)
+      return;
+    let i = e.clientX - this.img.naturalWidth / 2, t = e.clientY - this.img.naturalHeight / 2;
+    this.setTranslate(this.img, i, t);
+  }
+  setTranslate(e, i, t) {
+    e.style.transform = "translate3d(" + i + "px, " + t + "px, 0)";
+  }
+  widowWidth() {
+    return window.innerWidth || document.documentElement.clientWidth || document.body.clientWidth;
+  }
+}
+class Pt {
+  constructor(e = {}) {
+    let { dragEl: i, toleranceX: t = 40, toleranceY: n = 65, slide: s = null, instance: r = null } = e;
+    this.el = i, this.active = !1, this.dragging = !1, this.currentX = null, this.currentY = null, this.initialX = null, this.initialY = null, this.xOffset = 0, this.yOffset = 0, this.direction = null, this.lastDirection = null, this.toleranceX = t, this.toleranceY = n, this.toleranceReached = !1, this.dragContainer = this.el, this.slide = s, this.instance = r, this.el.addEventListener("mousedown", (o) => this.dragStart(o), !1), this.el.addEventListener("mouseup", (o) => this.dragEnd(o), !1), this.el.addEventListener("mousemove", (o) => this.drag(o), !1);
+  }
+  dragStart(e) {
+    if (this.slide.classList.contains("zoomed")) {
+      this.active = !1;
+      return;
+    }
+    e.type === "touchstart" ? (this.initialX = e.touches[0].clientX - this.xOffset, this.initialY = e.touches[0].clientY - this.yOffset) : (this.initialX = e.clientX - this.xOffset, this.initialY = e.clientY - this.yOffset);
+    let i = e.target.nodeName.toLowerCase(), t = ["input", "select", "textarea", "button", "a"];
+    if (e.target.classList.contains("nodrag") || ue(e.target, ".nodrag") || t.indexOf(i) !== -1) {
+      this.active = !1;
+      return;
+    }
+    e.preventDefault(), (e.target === this.el || i !== "img" && ue(e.target, ".gslide-inline")) && (this.active = !0, this.el.classList.add("dragging"), this.dragContainer = ue(e.target, ".ginner-container"));
+  }
+  dragEnd(e) {
+    e && e.preventDefault(), this.initialX = 0, this.initialY = 0, this.currentX = null, this.currentY = null, this.initialX = null, this.initialY = null, this.xOffset = 0, this.yOffset = 0, this.active = !1, this.doSlideChange && (this.instance.preventOutsideClick = !0, this.doSlideChange == "right" && this.instance.prevSlide(), this.doSlideChange == "left" && this.instance.nextSlide()), this.doSlideClose && this.instance.close(), this.toleranceReached || this.setTranslate(this.dragContainer, 0, 0, !0), setTimeout(() => {
+      this.instance.preventOutsideClick = !1, this.toleranceReached = !1, this.lastDirection = null, this.dragging = !1, this.el.isDragging = !1, this.el.classList.remove("dragging"), this.slide.classList.remove("dragging-nav"), this.dragContainer.style.transform = "", this.dragContainer.style.transition = "";
+    }, 100);
+  }
+  drag(e) {
+    if (this.active) {
+      e.preventDefault(), this.slide.classList.add("dragging-nav"), e.type === "touchmove" ? (this.currentX = e.touches[0].clientX - this.initialX, this.currentY = e.touches[0].clientY - this.initialY) : (this.currentX = e.clientX - this.initialX, this.currentY = e.clientY - this.initialY), this.xOffset = this.currentX, this.yOffset = this.currentY, this.el.isDragging = !0, this.dragging = !0, this.doSlideChange = !1, this.doSlideClose = !1;
+      let i = Math.abs(this.currentX), t = Math.abs(this.currentY);
+      if (i > 0 && i >= Math.abs(this.currentY) && (!this.lastDirection || this.lastDirection == "x")) {
+        this.yOffset = 0, this.lastDirection = "x", this.setTranslate(this.dragContainer, this.currentX, 0);
+        let n = this.shouldChange();
+        if (!this.instance.settings.dragAutoSnap && n && (this.doSlideChange = n), this.instance.settings.dragAutoSnap && n) {
+          this.instance.preventOutsideClick = !0, this.toleranceReached = !0, this.active = !1, this.instance.preventOutsideClick = !0, this.dragEnd(null), n == "right" && this.instance.prevSlide(), n == "left" && this.instance.nextSlide();
+          return;
+        }
+      }
+      if (this.toleranceY > 0 && t > 0 && t >= i && (!this.lastDirection || this.lastDirection == "y")) {
+        this.xOffset = 0, this.lastDirection = "y", this.setTranslate(this.dragContainer, 0, this.currentY);
+        let n = this.shouldClose();
+        !this.instance.settings.dragAutoSnap && n && (this.doSlideClose = !0), this.instance.settings.dragAutoSnap && n && this.instance.close();
+        return;
+      }
+    }
+  }
+  shouldChange() {
+    let e = !1;
+    if (Math.abs(this.currentX) >= this.toleranceX) {
+      let t = this.currentX > 0 ? "right" : "left";
+      (t == "left" && this.slide !== this.slide.parentNode.lastChild || t == "right" && this.slide !== this.slide.parentNode.firstChild) && (e = t);
+    }
+    return e;
+  }
+  shouldClose() {
+    let e = !1;
+    return Math.abs(this.currentY) >= this.toleranceY && (e = !0), e;
+  }
+  setTranslate(e, i, t, n = !1) {
+    n ? e.style.transition = "all .2s ease" : e.style.transition = "", e.style.transform = `translate3d(${i}px, ${t}px, 0)`;
+  }
+}
+function Ii(c, e, i, t) {
+  const n = c.querySelector(".gslide-media");
+  let s = new Image(), r = "gSlideTitle_" + i, o = "gSlideDesc_" + i;
+  s.addEventListener("load", () => {
+    G(t) && t();
+  }, !1), s.src = e.href, e.sizes != "" && e.srcset != "" && (s.sizes = e.sizes, s.srcset = e.srcset), s.alt = "", !re(e.alt) && e.alt !== "" && (s.alt = e.alt), e.title !== "" && s.setAttribute("aria-labelledby", r), e.description !== "" && s.setAttribute("aria-describedby", o), e.hasOwnProperty("_hasCustomWidth") && e._hasCustomWidth && (s.style.width = e.width), e.hasOwnProperty("_hasCustomHeight") && e._hasCustomHeight && (s.style.height = e.height), n.insertBefore(s, n.firstChild);
+}
+function Oi(c, e, i, t) {
+  const n = c.querySelector(".ginner-container"), s = "gvideo" + i, r = c.querySelector(".gslide-media"), o = this.getAllPlayers();
+  H(n, "gvideo-container"), r.insertBefore(_e('<div class="gvideo-wrapper"></div>'), r.firstChild);
+  const a = c.querySelector(".gvideo-wrapper");
+  Ot(this.settings.plyr.css, "Plyr");
+  let d = e.href, u = e?.videoProvider, l = !1;
+  r.style.maxWidth = e.width, Ot(this.settings.plyr.js, "Plyr", () => {
+    if (!u && d.match(/vimeo\.com\/([0-9]*)/) && (u = "vimeo"), !u && (d.match(/(youtube\.com|youtube-nocookie\.com)\/watch\?v=([a-zA-Z0-9\-_]+)/) || d.match(/youtu\.be\/([a-zA-Z0-9\-_]+)/) || d.match(/(youtube\.com|youtube-nocookie\.com)\/embed\/([a-zA-Z0-9\-_]+)/)) && (u = "youtube"), u === "local" || !u) {
+      u = "local";
+      let w = '<video id="' + s + '" ';
+      w += `style="background:#000; max-width: ${e.width};" `, w += 'preload="metadata" ', w += 'x-webkit-airplay="allow" ', w += "playsinline ", w += "controls ", w += 'class="gvideo-local">', w += `<source src="${d}">`, w += "</video>", l = _e(w);
+    }
+    const h = l || _e(`<div id="${s}" data-plyr-provider="${u}" data-plyr-embed-id="${d}"></div>`);
+    H(a, `${u}-video gvideo`), a.appendChild(h), a.setAttribute("data-id", s), a.setAttribute("data-index", i);
+    const p = Z(this.settings.plyr, "config") ? this.settings.plyr.config : {}, b = new Plyr("#" + s, p);
+    b.on("ready", (w) => {
+      o[s] = w.detail.plyr, G(t) && t();
+    }), at(
+      () => c.querySelector("iframe") && c.querySelector("iframe").dataset.ready == "true",
+      () => {
+        this.resize(c);
+      }
+    ), b.on("enterfullscreen", Dt), b.on("exitfullscreen", Dt);
+  });
+}
+function Dt(c) {
+  const e = ue(c.target, ".gslide-media");
+  c.type === "enterfullscreen" && H(e, "fullscreen"), c.type === "exitfullscreen" && J(e, "fullscreen");
+}
+function $i(c, e, i, t) {
+  const n = c.querySelector(".gslide-media"), s = Z(e, "href") && e.href ? e.href.split("#").pop().trim() : !1, r = Z(e, "content") && e.content ? e.content : !1;
+  let o;
+  if (r && (Pe(r) && (o = _e(`<div class="ginlined-content">${r}</div>`)), ge(r))) {
+    r.style.display == "none" && (r.style.display = "block");
+    const a = document.createElement("div");
+    a.className = "ginlined-content", a.appendChild(r), o = a;
+  }
+  if (s) {
+    let a = document.getElementById(s);
+    if (!a)
+      return !1;
+    const d = a.cloneNode(!0);
+    d.style.height = e.height, d.style.maxWidth = e.width, H(d, "ginlined-content"), o = d;
+  }
+  if (!o)
+    return console.error("Unable to append inline slide content", e), !1;
+  n.style.height = e.height, n.style.width = e.width, n.appendChild(o), this.events["inlineclose" + s] = oe("click", {
+    onElement: n.querySelectorAll(".gtrigger-close"),
+    withCallback: (a) => {
+      a.preventDefault(), this.close();
+    }
+  }), G(t) && t();
+}
+function Ni(c, e, i, t) {
+  const n = c.querySelector(".gslide-media"), s = ki({
+    url: e.href,
+    callback: t
+  });
+  n.parentNode.style.maxWidth = e.width, n.parentNode.style.height = e.height, n.appendChild(s);
+}
+class Pi {
+  constructor(e = {}) {
+    this.defaults = {
+      href: "",
+      sizes: "",
+      srcset: "",
+      title: "",
+      type: "",
+      videoProvider: "",
+      description: "",
+      alt: "",
+      descPosition: "bottom",
+      effect: "",
+      width: "",
+      height: "",
+      content: !1,
+      zoomable: !0,
+      draggable: !0
+    }, Ce(e) && (this.defaults = fe(this.defaults, e));
+  }
+  /**
+   * Get source type
+   * gte the source type of a url
+   *
+   * @param {string} url
+   */
+  sourceType(e) {
+    let i = e;
+    return e = e.toLowerCase(), e.match(/\.(jpeg|jpg|jpe|gif|png|apn|webp|avif|svg)/) !== null ? "image" : e.match(/(youtube\.com|youtube-nocookie\.com)\/watch\?v=([a-zA-Z0-9\-_]+)/) || e.match(/youtu\.be\/([a-zA-Z0-9\-_]+)/) || e.match(/(youtube\.com|youtube-nocookie\.com)\/embed\/([a-zA-Z0-9\-_]+)/) || e.match(/vimeo\.com\/([0-9]*)/) || e.match(/\.(mp4|ogg|webm|mov)/) !== null ? "video" : e.match(/\.(mp3|wav|wma|aac|ogg)/) !== null ? "audio" : e.indexOf("#") > -1 && i.split("#").pop().trim() !== "" ? "inline" : e.indexOf("goajax=true") > -1 ? "ajax" : "external";
+  }
+  parseConfig(e, i) {
+    let t = fe({ descPosition: i.descPosition }, this.defaults);
+    if (Ce(e) && !ge(e)) {
+      Z(e, "type") || (Z(e, "content") && e.content ? e.type = "inline" : Z(e, "href") && (e.type = this.sourceType(e.href)));
+      let o = fe(t, e);
+      return this.setSize(o, i), o;
+    }
+    let n = "", s = e.getAttribute("data-glightbox"), r = e.nodeName.toLowerCase();
+    if (r === "a" && (n = e.href), r === "img" && (n = e.src, t.alt = e.alt), t.href = n, X(t, (o, a) => {
+      Z(i, a) && a !== "width" && (t[a] = i[a]);
+      const d = e.dataset[a];
+      re(d) || (t[a] = this.sanitizeValue(d));
+    }), t.content && (t.type = "inline"), !t.type && n && (t.type = this.sourceType(n)), re(s)) {
+      if (!t.title && r == "a") {
+        let o = e.title;
+        !re(o) && o !== "" && (t.title = o);
+      }
+      if (!t.title && r == "img") {
+        let o = e.alt;
+        !re(o) && o !== "" && (t.title = o);
+      }
+    } else {
+      let o = [];
+      X(t, (a, d) => {
+        o.push(";\\s?" + d);
+      }), o = o.join("\\s?:|"), s.trim() !== "" && X(t, (a, d) => {
+        const u = s, l = "s?" + d + "s?:s?(.*?)(" + o + "s?:|$)", h = new RegExp(l), p = u.match(h);
+        if (p && p.length && p[1]) {
+          const b = p[1].trim().replace(/;\s*$/, "");
+          t[d] = this.sanitizeValue(b);
+        }
+      });
+    }
+    if (t.description && t.description.substring(0, 1) === ".") {
+      let o;
+      try {
+        o = document.querySelector(t.description).innerHTML;
+      } catch (a) {
+        if (!(a instanceof DOMException))
+          throw a;
+      }
+      o && (t.description = o);
+    }
+    if (!t.description) {
+      let o = e.querySelector(".glightbox-desc");
+      o && (t.description = o.innerHTML);
+    }
+    return this.setSize(t, i, e), this.slideConfig = t, t;
+  }
+  /**
+   * Set slide data size
+   * set the correct size dependin
+   * on the slide type
+   *
+   * @param { object } data
+   * @param { object } settings
+   * @return { object }
+   */
+  setSize(e, i, t = null) {
+    const n = e.type == "video" ? this.checkSize(i.videosWidth) : this.checkSize(i.width), s = this.checkSize(i.height);
+    return e.width = Z(e, "width") && e.width !== "" ? this.checkSize(e.width) : n, e.height = Z(e, "height") && e.height !== "" ? this.checkSize(e.height) : s, t && e.type == "image" && (e._hasCustomWidth = !!t.dataset.width, e._hasCustomHeight = !!t.dataset.height), e;
+  }
+  /**
+   * [checkSize size
+   * check if the passed size has a correct unit
+   *
+   * @param {string} size
+   * @return {string}
+   */
+  checkSize(e) {
+    return Ge(e) ? `${e}px` : e;
+  }
+  /**
+   * Sanitize data attributes value
+   *
+   * @param string val
+   * @return mixed
+   */
+  sanitizeValue(e) {
+    return e !== "true" && e !== "false" ? e : e === "true";
+  }
+}
+class ze {
+  constructor(e, i, t) {
+    this.element = e, this.instance = i, this.index = t;
+  }
+  /**
+   * Set slide content
+   *
+   * @param {node} slide
+   * @param {object} data
+   * @param {function} callback
+   */
+  setContent(e = null, i = !1) {
+    if (te(e, "loaded"))
+      return !1;
+    const t = this.instance.settings, n = this.slideConfig, s = bt();
+    G(t.beforeSlideLoad) && t.beforeSlideLoad({
+      index: this.index,
+      slide: e,
+      player: !1
+    });
+    let r = n.type, o = n.descPosition, a = e.querySelector(".gslide-media"), d = e.querySelector(".gslide-title"), u = e.querySelector(".gslide-desc"), l = e.querySelector(".gdesc-inner"), h = i, p = "gSlideTitle_" + this.index, b = "gSlideDesc_" + this.index;
+    if (G(t.afterSlideLoad) && (h = () => {
+      G(i) && i(), t.afterSlideLoad({
+        index: this.index,
+        slide: e,
+        player: this.instance.getSlidePlayerInstance(this.index)
+      });
+    }), n.title == "" && n.description == "" ? l && l.parentNode.parentNode.removeChild(l.parentNode) : (d && n.title !== "" ? (d.id = p, d.innerHTML = n.title) : d.parentNode.removeChild(d), u && n.description !== "" ? (u.id = b, s && t.moreLength > 0 ? (n.smallDescription = this.slideShortDesc(n.description, t.moreLength, t.moreText), u.innerHTML = n.smallDescription, this.descriptionEvents(u, n)) : u.innerHTML = n.description) : u.parentNode.removeChild(u), H(a.parentNode, `desc-${o}`), H(l.parentNode, `description-${o}`)), H(a, `gslide-${r}`), H(e, "loaded"), r === "video") {
+      Oi.apply(this.instance, [e, n, this.index, h]);
+      return;
+    }
+    if (r === "external") {
+      Ni.apply(this, [e, n, this.index, h]);
+      return;
+    }
+    if (r === "inline") {
+      $i.apply(this.instance, [e, n, this.index, h]), n.draggable && new Pt({
+        dragEl: e.querySelector(".gslide-inline"),
+        toleranceX: t.dragToleranceX,
+        toleranceY: t.dragToleranceY,
+        slide: e,
+        instance: this.instance
+      });
+      return;
+    }
+    if (r === "image") {
+      Ii(e, n, this.index, () => {
+        const w = e.querySelector("img");
+        n.draggable && new Pt({
+          dragEl: w,
+          toleranceX: t.dragToleranceX,
+          toleranceY: t.dragToleranceY,
+          slide: e,
+          instance: this.instance
+        }), n.zoomable && w.naturalWidth > w.offsetWidth && (H(w, "zoomable"), new qi(w, e, () => {
+          this.instance.resize();
+        })), G(h) && h();
+      });
+      return;
+    }
+    G(h) && h();
+  }
+  slideShortDesc(e, i = 50, t = !1) {
+    let n = document.createElement("div");
+    n.innerHTML = e;
+    let s = n.innerText, r = t;
+    if (e = s.trim(), e.length <= i)
+      return e;
+    let o = e.substr(0, i - 1);
+    return r ? (n = null, o + '... <a href="#" class="desc-more">' + t + "</a>") : o;
+  }
+  descriptionEvents(e, i) {
+    let t = e.querySelector(".desc-more");
+    if (!t)
+      return !1;
+    oe("click", {
+      onElement: t,
+      withCallback: (n, s) => {
+        n.preventDefault();
+        const r = document.body;
+        let o = ue(s, ".gslide-desc");
+        if (!o)
+          return !1;
+        o.innerHTML = i.description, H(r, "gdesc-open");
+        let a = oe("click", {
+          onElement: [r, ue(o, ".gslide-description")],
+          withCallback: (d, u) => {
+            d.target.nodeName.toLowerCase() !== "a" && (J(r, "gdesc-open"), H(r, "gdesc-closed"), o.innerHTML = i.smallDescription, this.descriptionEvents(o, i), setTimeout(() => {
+              J(r, "gdesc-closed");
+            }, 400), a.destroy());
+          }
+        });
+      }
+    });
+  }
+  /**
+   * Create Slide Node
+   *
+   * @return { node }
+   */
+  create() {
+    return _e(this.instance.settings.slideHTML);
+  }
+  /**
+   * Get slide config
+   * returns each individual slide config
+   * it uses SlideConfigParser
+   * each slide can overwrite a global setting
+   * read more in the SlideConfigParser class
+   *
+   * @return { object }
+   */
+  getConfig() {
+    !ge(this.element) && !this.element.hasOwnProperty("draggable") && (this.element.draggable = this.instance.settings.draggable);
+    const e = new Pi(this.instance.settings.slideExtraAttributes);
+    return this.slideConfig = e.parseConfig(this.element, this.instance.settings), this.slideConfig;
+  }
+}
+const Di = "3.2.0", Ht = bt(), zt = _i();
+let ct;
+typeof document > "u" || (ct = document.getElementsByTagName("html")[0]);
+const yt = {
+  selector: ".glightbox",
+  elements: null,
+  skin: "clean",
+  theme: "clean",
+  closeButton: !0,
+  startAt: null,
+  autoplayVideos: !0,
+  autofocusVideos: !0,
+  descPosition: "bottom",
+  width: "900px",
+  height: "506px",
+  videosWidth: "960px",
+  beforeSlideChange: null,
+  afterSlideChange: null,
+  beforeSlideLoad: null,
+  afterSlideLoad: null,
+  slideInserted: null,
+  slideRemoved: null,
+  slideExtraAttributes: null,
+  onOpen: null,
+  onClose: null,
+  loop: !1,
+  zoomable: !0,
+  draggable: !0,
+  dragAutoSnap: !1,
+  dragToleranceX: 40,
+  dragToleranceY: 65,
+  preload: !0,
+  oneSlidePerOpen: !1,
+  touchNavigation: !0,
+  touchFollowAxis: !0,
+  keyboardNavigation: !0,
+  closeOnOutsideClick: !0,
+  plugins: !1,
+  plyr: {
+    css: "https://cdn.plyr.io/3.6.12/plyr.css",
+    js: "https://cdn.plyr.io/3.6.12/plyr.js",
+    config: {
+      ratio: "16:9",
+      // or '4:3'
+      fullscreen: { enabled: !0, iosNative: !0 },
+      youtube: {
+        noCookie: !0,
+        rel: 0,
+        showinfo: 0,
+        iv_load_policy: 3
+        // eslint-disable-line camelcase
+      },
+      vimeo: {
+        byline: !1,
+        portrait: !1,
+        title: !1,
+        transparent: !1
+      }
+    }
+  },
+  openEffect: "zoom",
+  // fade, zoom, none
+  closeEffect: "zoom",
+  // fade, zoom, none
+  slideEffect: "slide",
+  // fade, slide, zoom, none
+  moreText: "See more",
+  moreLength: 60,
+  cssEfects: {
+    fade: { in: "fadeIn", out: "fadeOut" },
+    zoom: { in: "zoomIn", out: "zoomOut" },
+    slide: { in: "slideInRight", out: "slideOutLeft" },
+    slideBack: { in: "slideInLeft", out: "slideOutRight" },
+    none: { in: "none", out: "none" }
+  },
+  svg: {
+    close: '<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px" viewBox="0 0 512 512" xml:space="preserve"><g><g><path d="M505.943,6.058c-8.077-8.077-21.172-8.077-29.249,0L6.058,476.693c-8.077,8.077-8.077,21.172,0,29.249C10.096,509.982,15.39,512,20.683,512c5.293,0,10.586-2.019,14.625-6.059L505.943,35.306C514.019,27.23,514.019,14.135,505.943,6.058z"/></g></g><g><g><path d="M505.942,476.694L35.306,6.059c-8.076-8.077-21.172-8.077-29.248,0c-8.077,8.076-8.077,21.171,0,29.248l470.636,470.636c4.038,4.039,9.332,6.058,14.625,6.058c5.293,0,10.587-2.019,14.624-6.057C514.018,497.866,514.018,484.771,505.942,476.694z"/></g></g></svg>',
+    next: '<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px" viewBox="0 0 477.175 477.175" xml:space="preserve"> <g><path d="M360.731,229.075l-225.1-225.1c-5.3-5.3-13.8-5.3-19.1,0s-5.3,13.8,0,19.1l215.5,215.5l-215.5,215.5c-5.3,5.3-5.3,13.8,0,19.1c2.6,2.6,6.1,4,9.5,4c3.4,0,6.9-1.3,9.5-4l225.1-225.1C365.931,242.875,365.931,234.275,360.731,229.075z"/></g></svg>',
+    prev: '<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px" viewBox="0 0 477.175 477.175" xml:space="preserve"><g><path d="M145.188,238.575l215.5-215.5c5.3-5.3,5.3-13.8,0-19.1s-13.8-5.3-19.1,0l-225.1,225.1c-5.3,5.3-5.3,13.8,0,19.1l225.1,225c2.6,2.6,6.1,4,9.5,4s6.9-1.3,9.5-4c5.3-5.3,5.3-13.8,0-19.1L145.188,238.575z"/></g></svg>'
+  }
+};
+yt.slideHTML = `<div class="gslide">
+    <div class="gslide-inner-content">
+        <div class="ginner-container">
+            <div class="gslide-media">
+            </div>
+            <div class="gslide-description">
+                <div class="gdesc-inner">
+                    <h4 class="gslide-title"></h4>
+                    <div class="gslide-desc"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>`;
+yt.lightboxHTML = `<div id="glightbox-body" class="glightbox-container" tabindex="-1" role="dialog" aria-hidden="false">
+    <div class="gloader visible"></div>
+    <div class="goverlay"></div>
+    <div class="gcontainer">
+    <div id="glightbox-slider" class="gslider"></div>
+    <button class="gclose gbtn" aria-label="Close" data-taborder="3">{closeSVG}</button>
+    <button class="gprev gbtn" aria-label="Previous" data-taborder="2">{prevSVG}</button>
+    <button class="gnext gbtn" aria-label="Next" data-taborder="1">{nextSVG}</button>
+</div>
+</div>`;
+class Ut {
+  constructor(e = {}) {
+    this.customOptions = e, this.settings = fe(yt, e), this.effectsClasses = this.getAnimationClasses(), this.videoPlayers = {}, this.apiEvents = [], this.fullElementsList = !1;
+  }
+  init() {
+    const e = this.getSelector();
+    e && (this.baseEvents = oe("click", {
+      onElement: e,
+      withCallback: (i, t) => {
+        i.preventDefault(), this.open(t);
+      }
+    })), this.elements = this.getElements();
+  }
+  open(e = null, i = null) {
+    if (this.elements.length === 0)
+      return !1;
+    this.activeSlide = null, this.prevActiveSlideIndex = null, this.prevActiveSlide = null;
+    let t = Ge(i) ? i : this.settings.startAt;
+    if (ge(e)) {
+      const o = e.getAttribute("data-gallery");
+      o && (this.fullElementsList = this.elements, this.elements = this.getGalleryElements(this.elements, o)), re(t) && (t = this.getElementIndex(e), t < 0 && (t = 0));
+    }
+    Ge(t) || (t = 0), this.build(), Le(this.overlay, this.settings.openEffect === "none" ? "none" : this.settings.cssEfects.fade.in);
+    const n = document.body, s = window.innerWidth - document.documentElement.clientWidth;
+    if (s > 0) {
+      var r = document.createElement("style");
+      r.type = "text/css", r.className = "gcss-styles", r.innerText = `.gscrollbar-fixer {margin-right: ${s}px}`, document.head.appendChild(r), H(n, "gscrollbar-fixer");
+    }
+    H(n, "glightbox-open"), H(ct, "glightbox-open"), Ht && (H(document.body, "glightbox-mobile"), this.settings.slideEffect = "slide"), this.showSlide(t, !0), this.elements.length === 1 ? (H(this.prevButton, "glightbox-button-hidden"), H(this.nextButton, "glightbox-button-hidden")) : (J(this.prevButton, "glightbox-button-hidden"), J(this.nextButton, "glightbox-button-hidden")), this.lightboxOpen = !0, this.trigger("open"), G(this.settings.onOpen) && this.settings.onOpen(), zt && this.settings.touchNavigation && Mi(this), this.settings.keyboardNavigation && Si(this);
+  }
+  /**
+   * Open at specific index
+   * @param {int} index
+   */
+  openAt(e = 0) {
+    this.open(null, e);
+  }
+  /**
+   * Set Slide
+   */
+  showSlide(e = 0, i = !1) {
+    It(this.loader), this.index = parseInt(e);
+    let t = this.slidesContainer.querySelector(".current");
+    t && J(t, "current"), this.slideAnimateOut();
+    let n = this.slidesContainer.querySelectorAll(".gslide")[e];
+    if (te(n, "loaded"))
+      this.slideAnimateIn(n, i), ot(this.loader);
+    else {
+      It(this.loader);
+      const s = this.elements[e], r = {
+        index: this.index,
+        slide: n,
+        //this will be removed in the future
+        slideNode: n,
+        slideConfig: s.slideConfig,
+        slideIndex: this.index,
+        trigger: s.node,
+        player: null
+      };
+      this.trigger("slide_before_load", r), s.instance.setContent(n, () => {
+        ot(this.loader), this.resize(), this.slideAnimateIn(n, i), this.trigger("slide_after_load", r);
+      });
+    }
+    this.slideDescription = n.querySelector(".gslide-description"), this.slideDescriptionContained = this.slideDescription && te(this.slideDescription.parentNode, "gslide-media"), this.settings.preload && (this.preloadSlide(e + 1), this.preloadSlide(e - 1)), this.updateNavigationClasses(), this.activeSlide = n;
+  }
+  /**
+   * Preload slides
+   * @param  {Int}  index slide index
+   * @return {null}
+   */
+  preloadSlide(e) {
+    if (e < 0 || e > this.elements.length - 1 || re(this.elements[e]))
+      return !1;
+    let i = this.slidesContainer.querySelectorAll(".gslide")[e];
+    if (te(i, "loaded"))
+      return !1;
+    const t = this.elements[e], n = t.type, s = {
+      index: e,
+      slide: i,
+      //this will be removed in the future
+      slideNode: i,
+      slideConfig: t.slideConfig,
+      slideIndex: e,
+      trigger: t.node,
+      player: null
+    };
+    this.trigger("slide_before_load", s), n === "video" || n === "external" ? setTimeout(() => {
+      t.instance.setContent(i, () => {
+        this.trigger("slide_after_load", s);
+      });
+    }, 200) : t.instance.setContent(i, () => {
+      this.trigger("slide_after_load", s);
+    });
+  }
+  /**
+   * Load previous slide
+   * calls goToslide
+   */
+  prevSlide() {
+    this.goToSlide(this.index - 1);
+  }
+  /**
+   * Load next slide
+   * calls goToslide
+   */
+  nextSlide() {
+    this.goToSlide(this.index + 1);
+  }
+  /**
+   * Go to sldei
+   * calls set slide
+   * @param {Int} - index
+   */
+  goToSlide(e = !1) {
+    if (this.prevActiveSlide = this.activeSlide, this.prevActiveSlideIndex = this.index, !this.loop() && (e < 0 || e > this.elements.length - 1))
+      return !1;
+    e < 0 ? e = this.elements.length - 1 : e >= this.elements.length && (e = 0), this.showSlide(e);
+  }
+  /**
+   * Insert slide
+   *
+   * @param { object } data
+   * @param { numeric } position
+   */
+  insertSlide(e = {}, i = -1) {
+    i < 0 && (i = this.elements.length);
+    const t = new ze(e, this, i), n = t.getConfig(), s = fe({}, n), r = t.create(), o = this.elements.length - 1;
+    s.index = i, s.node = !1, s.instance = t, s.slideConfig = n, this.elements.splice(i, 0, s);
+    let a = null, d = null;
+    if (this.slidesContainer) {
+      if (i > o)
+        this.slidesContainer.appendChild(r);
+      else {
+        let u = this.slidesContainer.querySelectorAll(".gslide")[i];
+        this.slidesContainer.insertBefore(r, u);
+      }
+      (this.settings.preload && this.index == 0 && i == 0 || this.index - 1 == i || this.index + 1 == i) && this.preloadSlide(i), this.index === 0 && i === 0 && (this.index = 1), this.updateNavigationClasses(), a = this.slidesContainer.querySelectorAll(".gslide")[i], d = this.getSlidePlayerInstance(i), s.slideNode = a;
+    }
+    this.trigger("slide_inserted", {
+      index: i,
+      slide: a,
+      slideNode: a,
+      slideConfig: n,
+      slideIndex: i,
+      trigger: null,
+      player: d
+    }), G(this.settings.slideInserted) && this.settings.slideInserted({
+      index: i,
+      slide: a,
+      player: d
+    });
+  }
+  /**
+   * Remove slide
+   *
+   * @param { numeric } position
+   */
+  removeSlide(e = -1) {
+    if (e < 0 || e > this.elements.length - 1)
+      return !1;
+    const i = this.slidesContainer && this.slidesContainer.querySelectorAll(".gslide")[e];
+    i && (this.getActiveSlideIndex() == e && (e == this.elements.length - 1 ? this.prevSlide() : this.nextSlide()), i.parentNode.removeChild(i)), this.elements.splice(e, 1), this.trigger("slide_removed", e), G(this.settings.slideRemoved) && this.settings.slideRemoved(e);
+  }
+  /**
+   * Slide In
+   * @return {null}
+   */
+  slideAnimateIn(e, i) {
+    let t = e.querySelector(".gslide-media"), n = e.querySelector(".gslide-description"), s = {
+      index: this.prevActiveSlideIndex,
+      slide: this.prevActiveSlide,
+      //this will be removed in the future
+      slideNode: this.prevActiveSlide,
+      slideIndex: this.prevActiveSlide,
+      slideConfig: re(this.prevActiveSlideIndex) ? null : this.elements[this.prevActiveSlideIndex].slideConfig,
+      trigger: re(this.prevActiveSlideIndex) ? null : this.elements[this.prevActiveSlideIndex].node,
+      player: this.getSlidePlayerInstance(this.prevActiveSlideIndex)
+    }, r = {
+      index: this.index,
+      slide: this.activeSlide,
+      //this will be removed in the future
+      slideNode: this.activeSlide,
+      slideConfig: this.elements[this.index].slideConfig,
+      slideIndex: this.index,
+      trigger: this.elements[this.index].node,
+      player: this.getSlidePlayerInstance(this.index)
+    };
+    if (t.offsetWidth > 0 && n && (ot(n), n.style.display = ""), J(e, this.effectsClasses), i)
+      Le(e, this.settings.cssEfects[this.settings.openEffect].in, () => {
+        this.settings.autoplayVideos && this.slidePlayerPlay(e), this.trigger("slide_changed", {
+          prev: s,
+          current: r
+        }), G(this.settings.afterSlideChange) && this.settings.afterSlideChange.apply(this, [s, r]);
+      });
+    else {
+      let o = this.settings.slideEffect, a = o !== "none" ? this.settings.cssEfects[o].in : o;
+      this.prevActiveSlideIndex > this.index && this.settings.slideEffect == "slide" && (a = this.settings.cssEfects.slideBack.in), Le(e, a, () => {
+        this.settings.autoplayVideos && this.slidePlayerPlay(e), this.trigger("slide_changed", {
+          prev: s,
+          current: r
+        }), G(this.settings.afterSlideChange) && this.settings.afterSlideChange.apply(this, [s, r]);
+      });
+    }
+    setTimeout(() => {
+      this.resize(e);
+    }, 100), H(e, "current");
+  }
+  /**
+   * Slide out
+   */
+  slideAnimateOut() {
+    if (!this.prevActiveSlide)
+      return !1;
+    let e = this.prevActiveSlide;
+    J(e, this.effectsClasses), H(e, "prev");
+    let i = this.settings.slideEffect, t = i !== "none" ? this.settings.cssEfects[i].out : i;
+    this.slidePlayerPause(e), this.trigger("slide_before_change", {
+      prev: {
+        index: this.prevActiveSlideIndex,
+        //this will be removed in the future
+        slide: this.prevActiveSlide,
+        //this will be removed in the future
+        slideNode: this.prevActiveSlide,
+        slideIndex: this.prevActiveSlideIndex,
+        slideConfig: re(this.prevActiveSlideIndex) ? null : this.elements[this.prevActiveSlideIndex].slideConfig,
+        trigger: re(this.prevActiveSlideIndex) ? null : this.elements[this.prevActiveSlideIndex].node,
+        player: this.getSlidePlayerInstance(this.prevActiveSlideIndex)
+      },
+      current: {
+        index: this.index,
+        //this will be removed in the future
+        slide: this.activeSlide,
+        //this will be removed in the future
+        slideNode: this.activeSlide,
+        slideIndex: this.index,
+        slideConfig: this.elements[this.index].slideConfig,
+        trigger: this.elements[this.index].node,
+        player: this.getSlidePlayerInstance(this.index)
+      }
+    }), G(this.settings.beforeSlideChange) && this.settings.beforeSlideChange.apply(this, [
+      {
+        index: this.prevActiveSlideIndex,
+        slide: this.prevActiveSlide,
+        player: this.getSlidePlayerInstance(this.prevActiveSlideIndex)
+      },
+      {
+        index: this.index,
+        slide: this.activeSlide,
+        player: this.getSlidePlayerInstance(this.index)
+      }
+    ]), this.prevActiveSlideIndex > this.index && this.settings.slideEffect == "slide" && (t = this.settings.cssEfects.slideBack.out), Le(e, t, () => {
+      let n = e.querySelector(".ginner-container"), s = e.querySelector(".gslide-media"), r = e.querySelector(".gslide-description");
+      n.style.transform = "", s.style.transform = "", J(s, "greset"), s.style.opacity = "", r && (r.style.opacity = ""), J(e, "prev");
+    });
+  }
+  /**
+   * Get all defined players
+   */
+  getAllPlayers() {
+    return this.videoPlayers;
+  }
+  /**
+   * Get player at index
+   *
+   * @param index
+   * @return bool|object
+   */
+  getSlidePlayerInstance(e) {
+    const i = "gvideo" + e, t = this.getAllPlayers();
+    return Z(t, i) && t[i] ? t[i] : !1;
+  }
+  /**
+   * Stop video at specified
+   * node or index
+   *
+   * @param slide node or index
+   * @return void
+   */
+  stopSlideVideo(e) {
+    if (ge(e)) {
+      let t = e.querySelector(".gvideo-wrapper");
+      t && (e = t.getAttribute("data-index"));
+    }
+    console.log("stopSlideVideo is deprecated, use slidePlayerPause");
+    const i = this.getSlidePlayerInstance(e);
+    i && i.playing && i.pause();
+  }
+  /**
+   * Stop player at specified index
+   *
+   * @param slide node or index
+   * @return void
+   */
+  slidePlayerPause(e) {
+    if (ge(e)) {
+      let t = e.querySelector(".gvideo-wrapper");
+      t && (e = t.getAttribute("data-index"));
+    }
+    const i = this.getSlidePlayerInstance(e);
+    i && i.playing && i.pause();
+  }
+  /**
+   * Play video at specified
+   * node or index
+   *
+   * @param slide node or index
+   * @return void
+   */
+  playSlideVideo(e) {
+    if (ge(e)) {
+      let t = e.querySelector(".gvideo-wrapper");
+      t && (e = t.getAttribute("data-index"));
+    }
+    console.log("playSlideVideo is deprecated, use slidePlayerPlay");
+    const i = this.getSlidePlayerInstance(e);
+    i && !i.playing && i.play();
+  }
+  /**
+   * Play media player at specified
+   * node or index
+   *
+   * @param slide node or index
+   * @return void
+   */
+  slidePlayerPlay(e) {
+    if (Ht && !this.settings.plyr.config?.muted)
+      return;
+    if (ge(e)) {
+      let t = e.querySelector(".gvideo-wrapper");
+      t && (e = t.getAttribute("data-index"));
+    }
+    const i = this.getSlidePlayerInstance(e);
+    i && !i.playing && (i.play(), this.settings.autofocusVideos && i.elements.container.focus());
+  }
+  /**
+   * Set the entire elements
+   * in the gallery, it replaces all
+   * the existing elements
+   * with the specified list
+   *
+   * @param {array}  elements
+   */
+  setElements(e) {
+    this.settings.elements = !1;
+    const i = [];
+    e && e.length && X(e, (t, n) => {
+      const s = new ze(t, this, n), r = s.getConfig(), o = fe({}, r);
+      o.slideConfig = r, o.instance = s, o.index = n, i.push(o);
+    }), this.elements = i, this.lightboxOpen && (this.slidesContainer.innerHTML = "", this.elements.length && (X(this.elements, () => {
+      let t = _e(this.settings.slideHTML);
+      this.slidesContainer.appendChild(t);
+    }), this.showSlide(0, !0)));
+  }
+  /**
+   * Return the index
+   * of the specified node,
+   * this node is for example an image, link, etc.
+   * that when clicked it opens the lightbox
+   * its position in the elements array can change
+   * when using insertSlide or removeSlide so we
+   * need to find it in the elements list
+   *
+   * @param {node} node
+   * @return bool|int
+   */
+  getElementIndex(e) {
+    let i = !1;
+    return X(this.elements, (t, n) => {
+      if (Z(t, "node") && t.node == e)
+        return i = n, !0;
+    }), i;
+  }
+  /**
+   * Get elements
+   * returns an array containing all
+   * the elements that must be displayed in the
+   * lightbox
+   *
+   * @return { array }
+   */
+  getElements() {
+    let e = [];
+    this.elements = this.elements ? this.elements : [], !re(this.settings.elements) && ii(this.settings.elements) && this.settings.elements.length && X(this.settings.elements, (n, s) => {
+      const r = new ze(n, this, s), o = r.getConfig(), a = fe({}, o);
+      a.node = !1, a.index = s, a.instance = r, a.slideConfig = o, e.push(a);
+    });
+    let i = !1;
+    return this.getSelector() && (i = document.querySelectorAll(this.getSelector())), i && X(i, (n, s) => {
+      const r = new ze(n, this, s), o = r.getConfig(), a = fe({}, o);
+      a.node = n, a.index = s, a.instance = r, a.slideConfig = o, a.gallery = n.getAttribute("data-gallery"), e.push(a);
+    }), e;
+  }
+  /**
+   * Return only the elements
+   * from a specific gallery
+   *
+   * @return array
+   */
+  getGalleryElements(e, i) {
+    return e.filter((t) => t.gallery == i);
+  }
+  /**
+   * Get selector
+   */
+  getSelector() {
+    return this.settings.elements ? !1 : this.settings.selector && this.settings.selector.substring(0, 5) == "data-" ? `*[${this.settings.selector}]` : this.settings.selector;
+  }
+  /**
+   * Get the active slide
+   */
+  getActiveSlide() {
+    return this.slidesContainer.querySelectorAll(".gslide")[this.index];
+  }
+  /**
+   * Get the active index
+   */
+  getActiveSlideIndex() {
+    return this.index;
+  }
+  /**
+   * Get the defined
+   * effects as string
+   */
+  getAnimationClasses() {
+    let e = [];
+    for (let i in this.settings.cssEfects)
+      if (this.settings.cssEfects.hasOwnProperty(i)) {
+        let t = this.settings.cssEfects[i];
+        e.push(`g${t.in}`), e.push(`g${t.out}`);
+      }
+    return e.join(" ");
+  }
+  /**
+   * Build the structure
+   * @return {null}
+   */
+  build() {
+    if (this.built)
+      return !1;
+    const e = document.body.childNodes, i = [];
+    X(e, (d) => {
+      d.parentNode == document.body && d.nodeName.charAt(0) !== "#" && d.hasAttribute && !d.hasAttribute("aria-hidden") && (i.push(d), d.setAttribute("aria-hidden", "true"));
+    });
+    const t = Z(this.settings.svg, "next") ? this.settings.svg.next : "", n = Z(this.settings.svg, "prev") ? this.settings.svg.prev : "", s = Z(this.settings.svg, "close") ? this.settings.svg.close : "";
+    let r = this.settings.lightboxHTML;
+    r = r.replace(/{nextSVG}/g, t), r = r.replace(/{prevSVG}/g, n), r = r.replace(/{closeSVG}/g, s), r = _e(r), document.body.appendChild(r);
+    const o = document.getElementById("glightbox-body");
+    this.modal = o;
+    let a = o.querySelector(".gclose");
+    this.prevButton = o.querySelector(".gprev"), this.nextButton = o.querySelector(".gnext"), this.overlay = o.querySelector(".goverlay"), this.loader = o.querySelector(".gloader"), this.slidesContainer = document.getElementById("glightbox-slider"), this.bodyHiddenChildElms = i, this.events = {}, H(this.modal, "glightbox-" + this.settings.skin), this.settings.closeButton && a && (this.events.close = oe("click", {
+      onElement: a,
+      withCallback: (d, u) => {
+        d.preventDefault(), this.close();
+      }
+    })), a && !this.settings.closeButton && a.parentNode.removeChild(a), this.nextButton && (this.events.next = oe("click", {
+      onElement: this.nextButton,
+      withCallback: (d, u) => {
+        d.preventDefault(), this.nextSlide();
+      }
+    })), this.prevButton && (this.events.prev = oe("click", {
+      onElement: this.prevButton,
+      withCallback: (d, u) => {
+        d.preventDefault(), this.prevSlide();
+      }
+    })), this.settings.closeOnOutsideClick && (this.events.outClose = oe("click", {
+      onElement: o,
+      withCallback: (d, u) => {
+        !this.preventOutsideClick && !te(document.body, "glightbox-mobile") && !ue(d.target, ".ginner-container") && !ue(d.target, ".gbtn") && !te(d.target, "gnext") && !te(d.target, "gprev") && this.close();
+      }
+    })), X(this.elements, (d, u) => {
+      this.slidesContainer.appendChild(d.instance.create()), d.slideNode = this.slidesContainer.querySelectorAll(".gslide")[u];
+    }), zt && H(document.body, "glightbox-touch"), this.events.resize = oe("resize", {
+      onElement: window,
+      withCallback: () => {
+        this.resize();
+      }
+    }), this.built = !0;
+  }
+  /**
+   * Handle resize
+   * Create only to handle
+   * when the height of the screen
+   * is lower than the slide content
+   * this helps to resize videos vertically
+   * and images with description
+   */
+  resize(e = null) {
+    if (e = e || this.activeSlide, !e || te(e, "zoomed"))
+      return;
+    const i = ti(), t = e.querySelector(".gvideo-wrapper"), n = e.querySelector(".gslide-image"), s = this.slideDescription;
+    let r = i.width, o = i.height;
+    if (r <= 768 ? H(document.body, "glightbox-mobile") : J(document.body, "glightbox-mobile"), !t && !n)
+      return;
+    let a = !1;
+    if (s && (te(s, "description-bottom") || te(s, "description-top")) && !te(s, "gabsolute") && (a = !0), n) {
+      if (r <= 768)
+        n.querySelector("img");
+      else if (a) {
+        let d = s.offsetHeight, u = n.querySelector("img");
+        const h = this.elements[this.index].node.getAttribute("data-height") ?? "100vh";
+        u.setAttribute("style", `max-height: calc(${h} - ${d}px)`), s.setAttribute("style", `max-width: ${u.offsetWidth}px;`);
+      }
+    }
+    if (t) {
+      let d = Z(this.settings.plyr.config, "ratio") ? this.settings.plyr.config.ratio : "";
+      if (!d) {
+        const b = t.clientWidth, w = t.clientHeight, _ = b / w;
+        d = `${b / _}:${w / _}`;
+      }
+      let u = d.split(":"), l = this.settings.videosWidth, h = this.settings.videosWidth;
+      Ge(l) || l.indexOf("px") !== -1 ? h = parseInt(l) : l.indexOf("vw") !== -1 ? h = r * parseInt(l) / 100 : l.indexOf("vh") !== -1 ? h = o * parseInt(l) / 100 : l.indexOf("%") !== -1 ? h = r * parseInt(l) / 100 : h = parseInt(t.clientWidth);
+      let p = h / (parseInt(u[0]) / parseInt(u[1]));
+      if (p = Math.floor(p), a && (o = o - s.offsetHeight), h > r || p > o || o < p && r > h) {
+        let b = t.offsetWidth, w = t.offsetHeight, _ = o / w, g = { width: b * _ };
+        t.parentNode.setAttribute("style", `max-width: ${g.width}px`), a && s.setAttribute("style", `max-width: ${g.width}px;`);
+      } else
+        t.parentNode.style.maxWidth = `${l}`, a && s.setAttribute("style", `max-width: ${l};`);
+    }
+  }
+  /**
+   * Reload Lightbox
+   * reload and apply events to nodes
+   */
+  reload() {
+    this.init();
+  }
+  /**
+   * Update navigation classes on slide change
+   */
+  updateNavigationClasses() {
+    const e = this.loop();
+    J(this.nextButton, "disabled"), J(this.prevButton, "disabled"), this.index == 0 && this.elements.length - 1 == 0 ? (H(this.prevButton, "disabled"), H(this.nextButton, "disabled")) : this.index === 0 && !e ? H(this.prevButton, "disabled") : this.index === this.elements.length - 1 && !e && H(this.nextButton, "disabled");
+  }
+  /**
+   * Handle loop config
+   */
+  loop() {
+    let e = Z(this.settings, "loopAtEnd") ? this.settings.loopAtEnd : null;
+    return e = Z(this.settings, "loop") ? this.settings.loop : e, e;
+  }
+  /**
+   * Close Lightbox
+   * closes the lightbox and removes the slides
+   * and some classes
+   */
+  close() {
+    if (!this.lightboxOpen) {
+      if (this.events) {
+        for (let e in this.events)
+          this.events.hasOwnProperty(e) && this.events[e].destroy();
+        this.events = null;
+      }
+      return !1;
+    }
+    if (this.closing)
+      return !1;
+    this.closing = !0, this.slidePlayerPause(this.activeSlide), this.fullElementsList && (this.elements = this.fullElementsList), this.bodyHiddenChildElms.length && X(this.bodyHiddenChildElms, (e) => {
+      e.removeAttribute("aria-hidden");
+    }), H(this.modal, "glightbox-closing"), Le(this.overlay, this.settings.openEffect == "none" ? "none" : this.settings.cssEfects.fade.out), Le(this.activeSlide, this.settings.cssEfects[this.settings.closeEffect].out, () => {
+      if (this.activeSlide = null, this.prevActiveSlideIndex = null, this.prevActiveSlide = null, this.built = !1, this.events) {
+        for (let t in this.events)
+          this.events.hasOwnProperty(t) && this.events[t].destroy();
+        this.events = null;
+      }
+      const e = document.body;
+      J(ct, "glightbox-open"), J(e, "glightbox-open touching gdesc-open glightbox-touch glightbox-mobile gscrollbar-fixer"), this.modal.parentNode.removeChild(this.modal), this.trigger("close"), G(this.settings.onClose) && this.settings.onClose();
+      const i = document.querySelector(".gcss-styles");
+      i && i.parentNode.removeChild(i), this.lightboxOpen = !1, this.closing = null;
+    });
+  }
+  /**
+   * Destroy lightbox
+   * and all events
+   */
+  destroy() {
+    this.close(), this.clearAllEvents(), this.baseEvents && this.baseEvents.destroy();
+  }
+  /**
+   * Set event
+   */
+  on(e, i, t = !1) {
+    if (!e || !G(i))
+      throw new TypeError("Event name and callback must be defined");
+    this.apiEvents.push({ evt: e, once: t, callback: i });
+  }
+  /**
+   * Set event
+   */
+  once(e, i) {
+    this.on(e, i, !0);
+  }
+  /**
+   * Triggers an specific event
+   * with data
+   *
+   * @param string eventName
+   */
+  trigger(e, i = null) {
+    const t = [];
+    X(this.apiEvents, (n, s) => {
+      const { evt: r, once: o, callback: a } = n;
+      r == e && (a(i), o && t.push(s));
+    }), t.length && X(t, (n) => this.apiEvents.splice(n, 1));
+  }
+  /**
+   * Removes all events
+   * set using the API
+   */
+  clearAllEvents() {
+    this.apiEvents.splice(0, this.apiEvents.length);
+  }
+  /**
+   * Get Version
+   */
+  version() {
+    return Di;
+  }
+}
+/*!
+ * Glide.js v3.7.1
+ * (c) 2013-2024 Jędrzej Chałubek (https://github.com/jedrzejchalubek/)
+ * Released under the MIT License.
+ */
+function jt(c, e) {
+  var i = Object.keys(c);
+  if (Object.getOwnPropertySymbols) {
+    var t = Object.getOwnPropertySymbols(c);
+    e && (t = t.filter(function(n) {
+      return Object.getOwnPropertyDescriptor(c, n).enumerable;
+    })), i.push.apply(i, t);
+  }
+  return i;
+}
+function Bt(c) {
+  for (var e = 1; e < arguments.length; e++) {
+    var i = arguments[e] != null ? arguments[e] : {};
+    e % 2 ? jt(Object(i), !0).forEach(function(t) {
+      zi(c, t, i[t]);
+    }) : Object.getOwnPropertyDescriptors ? Object.defineProperties(c, Object.getOwnPropertyDescriptors(i)) : jt(Object(i)).forEach(function(t) {
+      Object.defineProperty(c, t, Object.getOwnPropertyDescriptor(i, t));
+    });
+  }
+  return c;
+}
+function Ve(c) {
+  "@babel/helpers - typeof";
+  return typeof Symbol == "function" && typeof Symbol.iterator == "symbol" ? Ve = function(e) {
+    return typeof e;
+  } : Ve = function(e) {
+    return e && typeof Symbol == "function" && e.constructor === Symbol && e !== Symbol.prototype ? "symbol" : typeof e;
+  }, Ve(c);
+}
+function et(c, e) {
+  if (!(c instanceof e))
+    throw new TypeError("Cannot call a class as a function");
+}
+function Hi(c, e) {
+  for (var i = 0; i < e.length; i++) {
+    var t = e[i];
+    t.enumerable = t.enumerable || !1, t.configurable = !0, "value" in t && (t.writable = !0), Object.defineProperty(c, t.key, t);
+  }
+}
+function tt(c, e, i) {
+  return e && Hi(c.prototype, e), c;
+}
+function zi(c, e, i) {
+  return e in c ? Object.defineProperty(c, e, {
+    value: i,
+    enumerable: !0,
+    configurable: !0,
+    writable: !0
+  }) : c[e] = i, c;
+}
+function Ui(c, e) {
+  if (typeof e != "function" && e !== null)
+    throw new TypeError("Super expression must either be null or a function");
+  c.prototype = Object.create(e && e.prototype, {
+    constructor: {
+      value: c,
+      writable: !0,
+      configurable: !0
+    }
+  }), e && ut(c, e);
+}
+function Re(c) {
+  return Re = Object.setPrototypeOf ? Object.getPrototypeOf : function(i) {
+    return i.__proto__ || Object.getPrototypeOf(i);
+  }, Re(c);
+}
+function ut(c, e) {
+  return ut = Object.setPrototypeOf || function(t, n) {
+    return t.__proto__ = n, t;
+  }, ut(c, e);
+}
+function ji() {
+  if (typeof Reflect > "u" || !Reflect.construct || Reflect.construct.sham) return !1;
+  if (typeof Proxy == "function") return !0;
+  try {
+    return Boolean.prototype.valueOf.call(Reflect.construct(Boolean, [], function() {
+    })), !0;
+  } catch {
+    return !1;
+  }
+}
+function Bi(c) {
+  if (c === void 0)
+    throw new ReferenceError("this hasn't been initialised - super() hasn't been called");
+  return c;
+}
+function Fi(c, e) {
+  if (e && (typeof e == "object" || typeof e == "function"))
+    return e;
+  if (e !== void 0)
+    throw new TypeError("Derived constructors may only return object or undefined");
+  return Bi(c);
+}
+function Gi(c) {
+  var e = ji();
+  return function() {
+    var t = Re(c), n;
+    if (e) {
+      var s = Re(this).constructor;
+      n = Reflect.construct(t, arguments, s);
+    } else
+      n = t.apply(this, arguments);
+    return Fi(this, n);
+  };
+}
+function Vi(c, e) {
+  for (; !Object.prototype.hasOwnProperty.call(c, e) && (c = Re(c), c !== null); )
+    ;
+  return c;
+}
+function We() {
+  return typeof Reflect < "u" && Reflect.get ? We = Reflect.get : We = function(e, i, t) {
+    var n = Vi(e, i);
+    if (n) {
+      var s = Object.getOwnPropertyDescriptor(n, i);
+      return s.get ? s.get.call(arguments.length < 3 ? e : t) : s.value;
+    }
+  }, We.apply(this, arguments);
+}
+var Wi = {
+  /**
+   * Type of the movement.
+   *
+   * Available types:
+   * `slider` - Rewinds slider to the start/end when it reaches the first or last slide.
+   * `carousel` - Changes slides without starting over when it reaches the first or last slide.
+   *
+   * @type {String}
+   */
+  type: "slider",
+  /**
+   * Start at specific slide number defined with zero-based index.
+   *
+   * @type {Number}
+   */
+  startAt: 0,
+  /**
+   * A number of slides visible on the single viewport.
+   *
+   * @type {Number}
+   */
+  perView: 1,
+  /**
+   * Focus currently active slide at a specified position in the track.
+   *
+   * Available inputs:
+   * `center` - Current slide will be always focused at the center of a track.
+   * `0,1,2,3...` - Current slide will be focused on the specified zero-based index.
+   *
+   * @type {String|Number}
+   */
+  focusAt: 0,
+  /**
+   * A size of the gap added between slides.
+   *
+   * @type {Number}
+   */
+  gap: 10,
+  /**
+   * Change slides after a specified interval. Use `false` for turning off autoplay.
+   *
+   * @type {Number|Boolean}
+   */
+  autoplay: !1,
+  /**
+   * Stop autoplay on mouseover event.
+   *
+   * @type {Boolean}
+   */
+  hoverpause: !0,
+  /**
+   * Allow for changing slides with left and right keyboard arrows.
+   *
+   * @type {Boolean}
+   */
+  keyboard: !0,
+  /**
+   * Stop running `perView` number of slides from the end. Use this
+   * option if you don't want to have an empty space after
+   * a slider. Works only with `slider` type and a
+   * non-centered `focusAt` setting.
+   *
+   * @type {Boolean}
+   */
+  bound: !1,
+  /**
+   * Minimal swipe distance needed to change the slide. Use `false` for turning off a swiping.
+   *
+   * @type {Number|Boolean}
+   */
+  swipeThreshold: 80,
+  /**
+   * Minimal mouse drag distance needed to change the slide. Use `false` for turning off a dragging.
+   *
+   * @type {Number|Boolean}
+   */
+  dragThreshold: 120,
+  /**
+   * A number of slides moved on single swipe.
+   *
+   * Available types:
+   * `` - Moves slider by one slide per swipe
+   * `|` - Moves slider between views per swipe (number of slides defined in `perView` options)
+   *
+   * @type {String}
+   */
+  perSwipe: "",
+  /**
+   * Moving distance ratio of the slides on a swiping and dragging.
+   *
+   * @type {Number}
+   */
+  touchRatio: 0.5,
+  /**
+   * Angle required to activate slides moving on swiping or dragging.
+   *
+   * @type {Number}
+   */
+  touchAngle: 45,
+  /**
+   * Duration of the animation in milliseconds.
+   *
+   * @type {Number}
+   */
+  animationDuration: 400,
+  /**
+   * Allows looping the `slider` type. Slider will rewind to the first/last slide when it's at the start/end.
+   *
+   * @type {Boolean}
+   */
+  rewind: !0,
+  /**
+   * Duration of the rewinding animation of the `slider` type in milliseconds.
+   *
+   * @type {Number}
+   */
+  rewindDuration: 800,
+  /**
+   * Easing function for the animation.
+   *
+   * @type {String}
+   */
+  animationTimingFunc: "cubic-bezier(.165, .840, .440, 1)",
+  /**
+   * Wait for the animation to finish until the next user input can be processed
+   *
+   * @type {boolean}
+   */
+  waitForTransition: !0,
+  /**
+   * Throttle costly events at most once per every wait milliseconds.
+   *
+   * @type {Number}
+   */
+  throttle: 10,
+  /**
+   * Moving direction mode.
+   *
+   * Available inputs:
+   * - 'ltr' - left to right movement,
+   * - 'rtl' - right to left movement.
+   *
+   * @type {String}
+   */
+  direction: "ltr",
+  /**
+   * The distance value of the next and previous viewports which
+   * have to peek in the current view. Accepts number and
+   * pixels as a string. Left and right peeking can be
+   * set up separately with a directions object.
+   *
+   * For example:
+   * `100` - Peek 100px on the both sides.
+   * { before: 100, after: 50 }` - Peek 100px on the left side and 50px on the right side.
+   *
+   * @type {Number|String|Object}
+   */
+  peek: 0,
+  /**
+   * Defines how many clones of current viewport will be generated.
+   *
+   * @type {Number}
+   */
+  cloningRatio: 1,
+  /**
+   * Collection of options applied at specified media breakpoints.
+   * For example: display two slides per view under 800px.
+   * `{
+   *   '800px': {
+   *     perView: 2
+   *   }
+   * }`
+   */
+  breakpoints: {},
+  /**
+   * Collection of internally used HTML classes.
+   *
+   * @todo Refactor `slider` and `carousel` properties to single `type: { slider: '', carousel: '' }` object
+   * @type {Object}
+   */
+  classes: {
+    swipeable: "glide--swipeable",
+    dragging: "glide--dragging",
+    direction: {
+      ltr: "glide--ltr",
+      rtl: "glide--rtl"
+    },
+    type: {
+      slider: "glide--slider",
+      carousel: "glide--carousel"
+    },
+    slide: {
+      clone: "glide__slide--clone",
+      active: "glide__slide--active"
+    },
+    arrow: {
+      disabled: "glide__arrow--disabled"
+    },
+    nav: {
+      active: "glide__bullet--active"
+    }
+  }
+};
+function me(c) {
+  console.error("[Glide warn]: ".concat(c));
+}
+function Q(c) {
+  return parseInt(c);
+}
+function Yi(c) {
+  return parseFloat(c);
+}
+function dt(c) {
+  return typeof c == "string";
+}
+function Ae(c) {
+  var e = Ve(c);
+  return e === "function" || e === "object" && !!c;
+}
+function Je(c) {
+  return typeof c == "function";
+}
+function ni(c) {
+  return typeof c > "u";
+}
+function ht(c) {
+  return c.constructor === Array;
+}
+function Xi(c, e, i) {
+  var t = {};
+  for (var n in e)
+    Je(e[n]) ? t[n] = e[n](c, t, i) : me("Extension must be a function");
+  for (var s in t)
+    Je(t[s].mount) && t[s].mount();
+  return t;
+}
+function V(c, e, i) {
+  Object.defineProperty(c, e, i);
+}
+function Ji(c) {
+  return Object.keys(c).sort().reduce(function(e, i) {
+    return e[i] = c[i], e[i], e;
+  }, {});
+}
+function pt(c, e) {
+  var i = Object.assign({}, c, e);
+  if (e.hasOwnProperty("classes")) {
+    i.classes = Object.assign({}, c.classes, e.classes);
+    var t = ["direction", "type", "slide", "arrow", "nav"];
+    t.forEach(function(n) {
+      e.classes.hasOwnProperty(n) && (i.classes[n] = Bt(Bt({}, c.classes[n]), e.classes[n]));
+    });
+  }
+  return e.hasOwnProperty("breakpoints") && (i.breakpoints = Object.assign({}, c.breakpoints, e.breakpoints)), i;
+}
+var Zi = /* @__PURE__ */ (function() {
+  function c() {
+    var e = arguments.length > 0 && arguments[0] !== void 0 ? arguments[0] : {};
+    et(this, c), this.events = e, this.hop = e.hasOwnProperty;
+  }
+  return tt(c, [{
+    key: "on",
+    value: function(i, t) {
+      if (ht(i)) {
+        for (var n = 0; n < i.length; n++)
+          this.on(i[n], t);
+        return;
+      }
+      this.hop.call(this.events, i) || (this.events[i] = []);
+      var s = this.events[i].push(t) - 1;
+      return {
+        remove: function() {
+          delete this.events[i][s];
+        }
+      };
+    }
+    /**
+     * Runs registered handlers for specified event.
+     *
+     * @param {String|Array} event
+     * @param {Object=} context
+     */
+  }, {
+    key: "emit",
+    value: function(i, t) {
+      if (ht(i)) {
+        for (var n = 0; n < i.length; n++)
+          this.emit(i[n], t);
+        return;
+      }
+      this.hop.call(this.events, i) && this.events[i].forEach(function(s) {
+        s(t || {});
+      });
+    }
+  }]), c;
+})(), Qi = /* @__PURE__ */ (function() {
+  function c(e) {
+    var i = arguments.length > 1 && arguments[1] !== void 0 ? arguments[1] : {};
+    et(this, c), this._c = {}, this._t = [], this._e = new Zi(), this.disabled = !1, this.selector = e, this.settings = pt(Wi, i), this.index = this.settings.startAt;
+  }
+  return tt(c, [{
+    key: "mount",
+    value: function() {
+      var i = arguments.length > 0 && arguments[0] !== void 0 ? arguments[0] : {};
+      return this._e.emit("mount.before"), Ae(i) ? this._c = Xi(this, i, this._e) : me("You need to provide a object on `mount()`"), this._e.emit("mount.after"), this;
+    }
+    /**
+     * Collects an instance `translate` transformers.
+     *
+     * @param  {Array} transformers Collection of transformers.
+     * @return {Void}
+     */
+  }, {
+    key: "mutate",
+    value: function() {
+      var i = arguments.length > 0 && arguments[0] !== void 0 ? arguments[0] : [];
+      return ht(i) ? this._t = i : me("You need to provide a array on `mutate()`"), this;
+    }
+    /**
+     * Updates glide with specified settings.
+     *
+     * @param {Object} settings
+     * @return {Glide}
+     */
+  }, {
+    key: "update",
+    value: function() {
+      var i = arguments.length > 0 && arguments[0] !== void 0 ? arguments[0] : {};
+      return this.settings = pt(this.settings, i), i.hasOwnProperty("startAt") && (this.index = i.startAt), this._e.emit("update"), this;
+    }
+    /**
+     * Change slide with specified pattern. A pattern must be in the special format:
+     * `>` - Move one forward
+     * `<` - Move one backward
+     * `={i}` - Go to {i} zero-based slide (eq. '=1', will go to second slide)
+     * `>>` - Rewinds to end (last slide)
+     * `<<` - Rewinds to start (first slide)
+     * `|>` - Move one viewport forward
+     * `|<` - Move one viewport backward
+     *
+     * @param {String} pattern
+     * @return {Glide}
+     */
+  }, {
+    key: "go",
+    value: function(i) {
+      return this._c.Run.make(i), this;
+    }
+    /**
+     * Move track by specified distance.
+     *
+     * @param {String} distance
+     * @return {Glide}
+     */
+  }, {
+    key: "move",
+    value: function(i) {
+      return this._c.Transition.disable(), this._c.Move.make(i), this;
+    }
+    /**
+     * Destroy instance and revert all changes done by this._c.
+     *
+     * @return {Glide}
+     */
+  }, {
+    key: "destroy",
+    value: function() {
+      return this._e.emit("destroy"), this;
+    }
+    /**
+     * Start instance autoplaying.
+     *
+     * @param {Boolean|Number} interval Run autoplaying with passed interval regardless of `autoplay` settings
+     * @return {Glide}
+     */
+  }, {
+    key: "play",
+    value: function() {
+      var i = arguments.length > 0 && arguments[0] !== void 0 ? arguments[0] : !1;
+      return i && (this.settings.autoplay = i), this._e.emit("play"), this;
+    }
+    /**
+     * Stop instance autoplaying.
+     *
+     * @return {Glide}
+     */
+  }, {
+    key: "pause",
+    value: function() {
+      return this._e.emit("pause"), this;
+    }
+    /**
+     * Sets glide into a idle status.
+     *
+     * @return {Glide}
+     */
+  }, {
+    key: "disable",
+    value: function() {
+      return this.disabled = !0, this;
+    }
+    /**
+     * Sets glide into a active status.
+     *
+     * @return {Glide}
+     */
+  }, {
+    key: "enable",
+    value: function() {
+      return this.disabled = !1, this;
+    }
+    /**
+     * Adds cuutom event listener with handler.
+     *
+     * @param  {String|Array} event
+     * @param  {Function} handler
+     * @return {Glide}
+     */
+  }, {
+    key: "on",
+    value: function(i, t) {
+      return this._e.on(i, t), this;
+    }
+    /**
+     * Checks if glide is a precised type.
+     *
+     * @param  {String} name
+     * @return {Boolean}
+     */
+  }, {
+    key: "isType",
+    value: function(i) {
+      return this.settings.type === i;
+    }
+    /**
+     * Gets value of the core options.
+     *
+     * @return {Object}
+     */
+  }, {
+    key: "settings",
+    get: function() {
+      return this._o;
+    },
+    set: function(i) {
+      Ae(i) ? this._o = i : me("Options must be an `object` instance.");
+    }
+    /**
+     * Gets current index of the slider.
+     *
+     * @return {Object}
+     */
+  }, {
+    key: "index",
+    get: function() {
+      return this._i;
+    },
+    set: function(i) {
+      this._i = Q(i);
+    }
+    /**
+     * Gets type name of the slider.
+     *
+     * @return {String}
+     */
+  }, {
+    key: "type",
+    get: function() {
+      return this.settings.type;
+    }
+    /**
+     * Gets value of the idle status.
+     *
+     * @return {Boolean}
+     */
+  }, {
+    key: "disabled",
+    get: function() {
+      return this._d;
+    },
+    set: function(i) {
+      this._d = !!i;
+    }
+  }]), c;
+})();
+function Ki(c, e, i) {
+  var t = {
+    /**
+     * Initializes autorunning of the glide.
+     *
+     * @return {Void}
+     */
+    mount: function() {
+      this._o = !1;
+    },
+    /**
+     * Makes glides running based on the passed moving schema.
+     *
+     * @param {String} move
+     */
+    make: function(d) {
+      var u = this;
+      c.disabled || (!c.settings.waitForTransition || c.disable(), this.move = d, i.emit("run.before", this.move), this.calculate(), i.emit("run", this.move), e.Transition.after(function() {
+        u.isStart() && i.emit("run.start", u.move), u.isEnd() && i.emit("run.end", u.move), u.isOffset() && (u._o = !1, i.emit("run.offset", u.move)), i.emit("run.after", u.move), c.enable();
+      }));
+    },
+    /**
+     * Calculates current index based on defined move.
+     *
+     * @return {Number|Undefined}
+     */
+    calculate: function() {
+      var d = this.move, u = this.length, l = d.steps, h = d.direction, p = 1;
+      if (h === "=") {
+        if (c.settings.bound && Q(l) > u) {
+          c.index = u;
+          return;
+        }
+        c.index = l;
+        return;
+      }
+      if (h === ">" && l === ">") {
+        c.index = u;
+        return;
+      }
+      if (h === "<" && l === "<") {
+        c.index = 0;
+        return;
+      }
+      if (h === "|" && (p = c.settings.perView || 1), h === ">" || h === "|" && l === ">") {
+        var b = n(p);
+        b > u && (this._o = !0), c.index = s(b, p);
+        return;
+      }
+      if (h === "<" || h === "|" && l === "<") {
+        var w = r(p);
+        w < 0 && (this._o = !0), c.index = o(w, p);
+        return;
+      }
+      me("Invalid direction pattern [".concat(h).concat(l, "] has been used"));
+    },
+    /**
+     * Checks if we are on the first slide.
+     *
+     * @return {Boolean}
+     */
+    isStart: function() {
+      return c.index <= 0;
+    },
+    /**
+     * Checks if we are on the last slide.
+     *
+     * @return {Boolean}
+     */
+    isEnd: function() {
+      return c.index >= this.length;
+    },
+    /**
+     * Checks if we are making a offset run.
+     *
+     * @param {String} direction
+     * @return {Boolean}
+     */
+    isOffset: function() {
+      var d = arguments.length > 0 && arguments[0] !== void 0 ? arguments[0] : void 0;
+      return d ? this._o ? d === "|>" ? this.move.direction === "|" && this.move.steps === ">" : d === "|<" ? this.move.direction === "|" && this.move.steps === "<" : this.move.direction === d : !1 : this._o;
+    },
+    /**
+     * Checks if bound mode is active
+     *
+     * @return {Boolean}
+     */
+    isBound: function() {
+      return c.isType("slider") && c.settings.focusAt !== "center" && c.settings.bound;
+    }
+  };
+  function n(a) {
+    var d = c.index;
+    return c.isType("carousel") ? d + a : d + (a - d % a);
+  }
+  function s(a, d) {
+    var u = t.length;
+    return a <= u ? a : c.isType("carousel") ? a - (u + 1) : c.settings.rewind ? t.isBound() && !t.isEnd() ? u : 0 : t.isBound() ? u : Math.floor(u / d) * d;
+  }
+  function r(a) {
+    var d = c.index;
+    if (c.isType("carousel"))
+      return d - a;
+    var u = Math.ceil(d / a);
+    return (u - 1) * a;
+  }
+  function o(a, d) {
+    var u = t.length;
+    return a >= 0 ? a : c.isType("carousel") ? a + (u + 1) : c.settings.rewind ? t.isBound() && t.isStart() ? u : Math.floor(u / d) * d : 0;
+  }
+  return V(t, "move", {
+    /**
+     * Gets value of the move schema.
+     *
+     * @returns {Object}
+     */
+    get: function() {
+      return this._m;
+    },
+    /**
+     * Sets value of the move schema.
+     *
+     * @returns {Object}
+     */
+    set: function(d) {
+      var u = d.substr(1);
+      this._m = {
+        direction: d.substr(0, 1),
+        steps: u ? Q(u) ? Q(u) : u : 0
+      };
+    }
+  }), V(t, "length", {
+    /**
+     * Gets value of the running distance based
+     * on zero-indexing number of slides.
+     *
+     * @return {Number}
+     */
+    get: function() {
+      var d = c.settings, u = e.Html.slides.length;
+      return this.isBound() ? u - 1 - (Q(d.perView) - 1) + Q(d.focusAt) : u - 1;
+    }
+  }), V(t, "offset", {
+    /**
+     * Gets status of the offsetting flag.
+     *
+     * @return {Boolean}
+     */
+    get: function() {
+      return this._o;
+    }
+  }), t;
+}
+function Ft() {
+  return (/* @__PURE__ */ new Date()).getTime();
+}
+function it(c, e) {
+  var i = arguments.length > 2 && arguments[2] !== void 0 ? arguments[2] : {}, t, n, s, r, o = 0, a = function() {
+    o = i.leading === !1 ? 0 : Ft(), t = null, r = c.apply(n, s), t || (n = s = null);
+  }, d = function() {
+    var l = Ft();
+    !o && i.leading === !1 && (o = l);
+    var h = e - (l - o);
+    return n = this, s = arguments, h <= 0 || h > e ? (t && (clearTimeout(t), t = null), o = l, r = c.apply(n, s), t || (n = s = null)) : !t && i.trailing !== !1 && (t = setTimeout(a, h)), r;
+  };
+  return d.cancel = function() {
+    clearTimeout(t), o = 0, t = n = s = null;
+  }, d;
+}
+var Ue = {
+  ltr: ["marginLeft", "marginRight"],
+  rtl: ["marginRight", "marginLeft"]
+};
+function es(c, e, i) {
+  var t = {
+    /**
+     * Applies gaps between slides. First and last
+     * slides do not receive it's edge margins.
+     *
+     * @param {HTMLCollection} slides
+     * @return {Void}
+     */
+    apply: function(s) {
+      for (var r = 0, o = s.length; r < o; r++) {
+        var a = s[r].style, d = e.Direction.value;
+        r !== 0 ? a[Ue[d][0]] = "".concat(this.value / 2, "px") : a[Ue[d][0]] = "", r !== s.length - 1 ? a[Ue[d][1]] = "".concat(this.value / 2, "px") : a[Ue[d][1]] = "";
+      }
+    },
+    /**
+     * Removes gaps from the slides.
+     *
+     * @param {HTMLCollection} slides
+     * @returns {Void}
+    */
+    remove: function(s) {
+      for (var r = 0, o = s.length; r < o; r++) {
+        var a = s[r].style;
+        a.marginLeft = "", a.marginRight = "";
+      }
+    }
+  };
+  return V(t, "value", {
+    /**
+     * Gets value of the gap.
+     *
+     * @returns {Number}
+     */
+    get: function() {
+      return Q(c.settings.gap);
+    }
+  }), V(t, "grow", {
+    /**
+     * Gets additional dimensions value caused by gaps.
+     * Used to increase width of the slides wrapper.
+     *
+     * @returns {Number}
+     */
+    get: function() {
+      return t.value * e.Sizes.length;
+    }
+  }), V(t, "reductor", {
+    /**
+     * Gets reduction value caused by gaps.
+     * Used to subtract width of the slides.
+     *
+     * @returns {Number}
+     */
+    get: function() {
+      var s = c.settings.perView;
+      return t.value * (s - 1) / s;
+    }
+  }), i.on(["build.after", "update"], it(function() {
+    t.apply(e.Html.wrapper.children);
+  }, 30)), i.on("destroy", function() {
+    t.remove(e.Html.wrapper.children);
+  }), t;
+}
+function ri(c) {
+  if (c && c.parentNode) {
+    for (var e = c.parentNode.firstChild, i = []; e; e = e.nextSibling)
+      e.nodeType === 1 && e !== c && i.push(e);
+    return i;
+  }
+  return [];
+}
+function ft(c) {
+  return Array.prototype.slice.call(c);
+}
+var ts = '[data-glide-el="track"]';
+function is(c, e, i) {
+  var t = {
+    /**
+     * Setup slider HTML nodes.
+     *
+     * @param {Glide} glide
+     */
+    mount: function() {
+      this.root = c.selector, this.track = this.root.querySelector(ts), this.collectSlides();
+    },
+    /**
+     * Collect slides
+     */
+    collectSlides: function() {
+      this.slides = ft(this.wrapper.children).filter(function(s) {
+        return !s.classList.contains(c.settings.classes.slide.clone);
+      });
+    }
+  };
+  return V(t, "root", {
+    /**
+     * Gets node of the glide main element.
+     *
+     * @return {Object}
+     */
+    get: function() {
+      return t._r;
+    },
+    /**
+     * Sets node of the glide main element.
+     *
+     * @return {Object}
+     */
+    set: function(s) {
+      dt(s) && (s = document.querySelector(s)), s !== null ? t._r = s : me("Root element must be a existing Html node");
+    }
+  }), V(t, "track", {
+    /**
+     * Gets node of the glide track with slides.
+     *
+     * @return {Object}
+     */
+    get: function() {
+      return t._t;
+    },
+    /**
+     * Sets node of the glide track with slides.
+     *
+     * @return {Object}
+     */
+    set: function(s) {
+      t._t = s;
+    }
+  }), V(t, "wrapper", {
+    /**
+     * Gets node of the slides wrapper.
+     *
+     * @return {Object}
+     */
+    get: function() {
+      return t.track.children[0];
+    }
+  }), i.on("update", function() {
+    t.collectSlides();
+  }), t;
+}
+function ss(c, e, i) {
+  var t = {
+    /**
+     * Setups how much to peek based on settings.
+     *
+     * @return {Void}
+     */
+    mount: function() {
+      this.value = c.settings.peek;
+    }
+  };
+  return V(t, "value", {
+    /**
+     * Gets value of the peek.
+     *
+     * @returns {Number|Object}
+     */
+    get: function() {
+      return t._v;
+    },
+    /**
+     * Sets value of the peek.
+     *
+     * @param {Number|Object} value
+     * @return {Void}
+     */
+    set: function(s) {
+      Ae(s) ? (s.before = Q(s.before), s.after = Q(s.after)) : s = Q(s), t._v = s;
+    }
+  }), V(t, "reductor", {
+    /**
+     * Gets reduction value caused by peek.
+     *
+     * @returns {Number}
+     */
+    get: function() {
+      var s = t.value, r = c.settings.perView;
+      return Ae(s) ? s.before / r + s.after / r : s * 2 / r;
+    }
+  }), i.on(["resize", "update"], function() {
+    t.mount();
+  }), t;
+}
+function ns(c, e, i) {
+  var t = {
+    /**
+     * Constructs move component.
+     *
+     * @returns {Void}
+     */
+    mount: function() {
+      this._o = 0;
+    },
+    /**
+     * Calculates a movement value based on passed offset and currently active index.
+     *
+     * @param  {Number} offset
+     * @return {Void}
+     */
+    make: function() {
+      var s = this, r = arguments.length > 0 && arguments[0] !== void 0 ? arguments[0] : 0;
+      this.offset = r, i.emit("move", {
+        movement: this.value
+      }), e.Transition.after(function() {
+        i.emit("move.after", {
+          movement: s.value
+        });
+      });
+    }
+  };
+  return V(t, "offset", {
+    /**
+     * Gets an offset value used to modify current translate.
+     *
+     * @return {Object}
+     */
+    get: function() {
+      return t._o;
+    },
+    /**
+     * Sets an offset value used to modify current translate.
+     *
+     * @return {Object}
+     */
+    set: function(s) {
+      t._o = ni(s) ? 0 : Q(s);
+    }
+  }), V(t, "translate", {
+    /**
+     * Gets a raw movement value.
+     *
+     * @return {Number}
+     */
+    get: function() {
+      return e.Sizes.slideWidth * c.index;
+    }
+  }), V(t, "value", {
+    /**
+     * Gets an actual movement value corrected by offset.
+     *
+     * @return {Number}
+     */
+    get: function() {
+      var s = this.offset, r = this.translate;
+      return e.Direction.is("rtl") ? r + s : r - s;
+    }
+  }), i.on(["build.before", "run"], function() {
+    t.make();
+  }), t;
+}
+function rs(c, e, i) {
+  var t = {
+    /**
+     * Setups dimensions of slides.
+     *
+     * @return {Void}
+     */
+    setupSlides: function() {
+      for (var s = "".concat(this.slideWidth, "px"), r = e.Html.slides, o = 0; o < r.length; o++)
+        r[o].style.width = s;
+    },
+    /**
+     * Setups dimensions of slides wrapper.
+     *
+     * @return {Void}
+     */
+    setupWrapper: function() {
+      e.Html.wrapper.style.width = "".concat(this.wrapperSize, "px");
+    },
+    /**
+     * Removes applied styles from HTML elements.
+     *
+     * @returns {Void}
+     */
+    remove: function() {
+      for (var s = e.Html.slides, r = 0; r < s.length; r++)
+        s[r].style.width = "";
+      e.Html.wrapper.style.width = "";
+    }
+  };
+  return V(t, "length", {
+    /**
+     * Gets count number of the slides.
+     *
+     * @return {Number}
+     */
+    get: function() {
+      return e.Html.slides.length;
+    }
+  }), V(t, "width", {
+    /**
+     * Gets width value of the slider (visible area).
+     *
+     * @return {Number}
+     */
+    get: function() {
+      return e.Html.track.offsetWidth;
+    }
+  }), V(t, "wrapperSize", {
+    /**
+     * Gets size of the slides wrapper.
+     *
+     * @return {Number}
+     */
+    get: function() {
+      return t.slideWidth * t.length + e.Gaps.grow + e.Clones.grow;
+    }
+  }), V(t, "slideWidth", {
+    /**
+     * Gets width value of a single slide.
+     *
+     * @return {Number}
+     */
+    get: function() {
+      return t.width / c.settings.perView - e.Peek.reductor - e.Gaps.reductor;
+    }
+  }), i.on(["build.before", "resize", "update"], function() {
+    t.setupSlides(), t.setupWrapper();
+  }), i.on("destroy", function() {
+    t.remove();
+  }), t;
+}
+function os(c, e, i) {
+  var t = {
+    /**
+     * Init glide building. Adds classes, sets
+     * dimensions and setups initial state.
+     *
+     * @return {Void}
+     */
+    mount: function() {
+      i.emit("build.before"), this.typeClass(), this.activeClass(), i.emit("build.after");
+    },
+    /**
+     * Adds `type` class to the glide element.
+     *
+     * @return {Void}
+     */
+    typeClass: function() {
+      e.Html.root.classList.add(c.settings.classes.type[c.settings.type]);
+    },
+    /**
+     * Sets active class to current slide.
+     *
+     * @return {Void}
+     */
+    activeClass: function() {
+      var s = c.settings.classes, r = e.Html.slides[c.index];
+      r && (r.classList.add(s.slide.active), ri(r).forEach(function(o) {
+        o.classList.remove(s.slide.active);
+      }));
+    },
+    /**
+     * Removes HTML classes applied at building.
+     *
+     * @return {Void}
+     */
+    removeClasses: function() {
+      var s = c.settings.classes, r = s.type, o = s.slide;
+      e.Html.root.classList.remove(r[c.settings.type]), e.Html.slides.forEach(function(a) {
+        a.classList.remove(o.active);
+      });
+    }
+  };
+  return i.on(["destroy", "update"], function() {
+    t.removeClasses();
+  }), i.on(["resize", "update"], function() {
+    t.mount();
+  }), i.on("move.after", function() {
+    t.activeClass();
+  }), t;
+}
+function ls(c, e, i) {
+  var t = {
+    /**
+     * Create pattern map and collect slides to be cloned.
+     */
+    mount: function() {
+      this.items = [], c.isType("carousel") && (this.items = this.collect());
+    },
+    /**
+     * Collect clones with pattern.
+     *
+     * @return {[]}
+     */
+    collect: function() {
+      var s = arguments.length > 0 && arguments[0] !== void 0 ? arguments[0] : [], r = e.Html.slides, o = c.settings, a = o.perView, d = o.classes, u = o.cloningRatio;
+      if (r.length > 0)
+        for (var l = +!!c.settings.peek, h = a + l + Math.round(a / 2), p = r.slice(0, h).reverse(), b = r.slice(h * -1), w = 0; w < Math.max(u, Math.floor(a / r.length)); w++) {
+          for (var _ = 0; _ < p.length; _++) {
+            var g = p[_].cloneNode(!0);
+            g.classList.add(d.slide.clone), s.push(g);
+          }
+          for (var v = 0; v < b.length; v++) {
+            var f = b[v].cloneNode(!0);
+            f.classList.add(d.slide.clone), s.unshift(f);
+          }
+        }
+      return s;
+    },
+    /**
+     * Append cloned slides with generated pattern.
+     *
+     * @return {Void}
+     */
+    append: function() {
+      for (var s = this.items, r = e.Html, o = r.wrapper, a = r.slides, d = Math.floor(s.length / 2), u = s.slice(0, d).reverse(), l = s.slice(d * -1).reverse(), h = "".concat(e.Sizes.slideWidth, "px"), p = 0; p < l.length; p++)
+        o.appendChild(l[p]);
+      for (var b = 0; b < u.length; b++)
+        o.insertBefore(u[b], a[0]);
+      for (var w = 0; w < s.length; w++)
+        s[w].style.width = h;
+    },
+    /**
+     * Remove all cloned slides.
+     *
+     * @return {Void}
+     */
+    remove: function() {
+      for (var s = this.items, r = 0; r < s.length; r++)
+        e.Html.wrapper.removeChild(s[r]);
+    }
+  };
+  return V(t, "grow", {
+    /**
+     * Gets additional dimensions value caused by clones.
+     *
+     * @return {Number}
+     */
+    get: function() {
+      return (e.Sizes.slideWidth + e.Gaps.value) * t.items.length;
+    }
+  }), i.on("update", function() {
+    t.remove(), t.mount(), t.append();
+  }), i.on("build.before", function() {
+    c.isType("carousel") && t.append();
+  }), i.on("destroy", function() {
+    t.remove();
+  }), t;
+}
+var we = /* @__PURE__ */ (function() {
+  function c() {
+    var e = arguments.length > 0 && arguments[0] !== void 0 ? arguments[0] : {};
+    et(this, c), this.listeners = e;
+  }
+  return tt(c, [{
+    key: "on",
+    value: function(i, t, n) {
+      var s = arguments.length > 3 && arguments[3] !== void 0 ? arguments[3] : !1;
+      dt(i) && (i = [i]);
+      for (var r = 0; r < i.length; r++)
+        this.listeners[i[r]] = n, t.addEventListener(i[r], this.listeners[i[r]], s);
+    }
+    /**
+     * Removes event listeners from arrows HTML elements.
+     *
+     * @param  {String|Array} events
+     * @param  {Element|Window|Document} el
+     * @param  {Boolean|Object} capture
+     * @return {Void}
+     */
+  }, {
+    key: "off",
+    value: function(i, t) {
+      var n = arguments.length > 2 && arguments[2] !== void 0 ? arguments[2] : !1;
+      dt(i) && (i = [i]);
+      for (var s = 0; s < i.length; s++)
+        t.removeEventListener(i[s], this.listeners[i[s]], n);
+    }
+    /**
+     * Destroy collected listeners.
+     *
+     * @returns {Void}
+     */
+  }, {
+    key: "destroy",
+    value: function() {
+      delete this.listeners;
+    }
+  }]), c;
+})();
+function as(c, e, i) {
+  var t = new we(), n = {
+    /**
+     * Initializes window bindings.
+     */
+    mount: function() {
+      this.bind();
+    },
+    /**
+     * Binds `rezsize` listener to the window.
+     * It's a costly event, so we are debouncing it.
+     *
+     * @return {Void}
+     */
+    bind: function() {
+      t.on("resize", window, it(function() {
+        i.emit("resize");
+      }, c.settings.throttle));
+    },
+    /**
+     * Unbinds listeners from the window.
+     *
+     * @return {Void}
+     */
+    unbind: function() {
+      t.off("resize", window);
+    }
+  };
+  return i.on("destroy", function() {
+    n.unbind(), t.destroy();
+  }), n;
+}
+var cs = ["ltr", "rtl"], us = {
+  ">": "<",
+  "<": ">",
+  "=": "="
+};
+function ds(c, e, i) {
+  var t = {
+    /**
+     * Setups gap value based on settings.
+     *
+     * @return {Void}
+     */
+    mount: function() {
+      this.value = c.settings.direction;
+    },
+    /**
+     * Resolves pattern based on direction value
+     *
+     * @param {String} pattern
+     * @returns {String}
+     */
+    resolve: function(s) {
+      var r = s.slice(0, 1);
+      return this.is("rtl") ? s.split(r).join(us[r]) : s;
+    },
+    /**
+     * Checks value of direction mode.
+     *
+     * @param {String} direction
+     * @returns {Boolean}
+     */
+    is: function(s) {
+      return this.value === s;
+    },
+    /**
+     * Applies direction class to the root HTML element.
+     *
+     * @return {Void}
+     */
+    addClass: function() {
+      e.Html.root.classList.add(c.settings.classes.direction[this.value]);
+    },
+    /**
+     * Removes direction class from the root HTML element.
+     *
+     * @return {Void}
+     */
+    removeClass: function() {
+      e.Html.root.classList.remove(c.settings.classes.direction[this.value]);
+    }
+  };
+  return V(t, "value", {
+    /**
+     * Gets value of the direction.
+     *
+     * @returns {Number}
+     */
+    get: function() {
+      return t._v;
+    },
+    /**
+     * Sets value of the direction.
+     *
+     * @param {String} value
+     * @return {Void}
+     */
+    set: function(s) {
+      cs.indexOf(s) > -1 ? t._v = s : me("Direction value must be `ltr` or `rtl`");
+    }
+  }), i.on(["destroy", "update"], function() {
+    t.removeClass();
+  }), i.on("update", function() {
+    t.mount();
+  }), i.on(["build.before", "update"], function() {
+    t.addClass();
+  }), t;
+}
+function hs(c, e) {
+  return {
+    /**
+     * Negates the passed translate if glide is in RTL option.
+     *
+     * @param  {Number} translate
+     * @return {Number}
+     */
+    modify: function(t) {
+      return e.Direction.is("rtl") ? -t : t;
+    }
+  };
+}
+function ps(c, e) {
+  return {
+    /**
+     * Modifies passed translate value with number in the `gap` settings.
+     *
+     * @param  {Number} translate
+     * @return {Number}
+     */
+    modify: function(t) {
+      var n = Math.floor(t / e.Sizes.slideWidth);
+      return t + e.Gaps.value * n;
+    }
+  };
+}
+function fs(c, e) {
+  return {
+    /**
+     * Adds to the passed translate width of the half of clones.
+     *
+     * @param  {Number} translate
+     * @return {Number}
+     */
+    modify: function(t) {
+      return t + e.Clones.grow / 2;
+    }
+  };
+}
+function gs(c, e) {
+  return {
+    /**
+     * Modifies passed translate value with a `peek` setting.
+     *
+     * @param  {Number} translate
+     * @return {Number}
+     */
+    modify: function(t) {
+      if (c.settings.focusAt >= 0) {
+        var n = e.Peek.value;
+        return Ae(n) ? t - n.before : t - n;
+      }
+      return t;
+    }
+  };
+}
+function ms(c, e) {
+  return {
+    /**
+     * Modifies passed translate value with index in the `focusAt` setting.
+     *
+     * @param  {Number} translate
+     * @return {Number}
+     */
+    modify: function(t) {
+      var n = e.Gaps.value, s = e.Sizes.width, r = c.settings.focusAt, o = e.Sizes.slideWidth;
+      return r === "center" ? t - (s / 2 - o / 2) : t - o * r - n * r;
+    }
+  };
+}
+function bs(c, e, i) {
+  var t = [ps, fs, gs, ms].concat(c._t, [hs]);
+  return {
+    /**
+     * Piplines translate value with registered transformers.
+     *
+     * @param  {Number} translate
+     * @return {Number}
+     */
+    mutate: function(s) {
+      for (var r = 0; r < t.length; r++) {
+        var o = t[r];
+        Je(o) && Je(o().modify) ? s = o(c, e, i).modify(s) : me("Transformer should be a function that returns an object with `modify()` method");
+      }
+      return s;
+    }
+  };
+}
+function ys(c, e, i) {
+  var t = {
+    /**
+     * Sets value of translate on HTML element.
+     *
+     * @param {Number} value
+     * @return {Void}
+     */
+    set: function(s) {
+      var r = bs(c, e).mutate(s), o = "translate3d(".concat(-1 * r, "px, 0px, 0px)");
+      e.Html.wrapper.style.mozTransform = o, e.Html.wrapper.style.webkitTransform = o, e.Html.wrapper.style.transform = o;
+    },
+    /**
+     * Removes value of translate from HTML element.
+     *
+     * @return {Void}
+     */
+    remove: function() {
+      e.Html.wrapper.style.transform = "";
+    },
+    /**
+     * @return {number}
+     */
+    getStartIndex: function() {
+      var s = e.Sizes.length, r = c.index, o = c.settings.perView;
+      return e.Run.isOffset(">") || e.Run.isOffset("|>") ? s + (r - o) : (r + o) % s;
+    },
+    /**
+     * @return {number}
+     */
+    getTravelDistance: function() {
+      var s = e.Sizes.slideWidth * c.settings.perView;
+      return e.Run.isOffset(">") || e.Run.isOffset("|>") ? s * -1 : s;
+    }
+  };
+  return i.on("move", function(n) {
+    if (!c.isType("carousel") || !e.Run.isOffset())
+      return t.set(n.movement);
+    e.Transition.after(function() {
+      i.emit("translate.jump"), t.set(e.Sizes.slideWidth * c.index);
+    });
+    var s = e.Sizes.slideWidth * e.Translate.getStartIndex();
+    return t.set(s - e.Translate.getTravelDistance());
+  }), i.on("destroy", function() {
+    t.remove();
+  }), t;
+}
+function vs(c, e, i) {
+  var t = !1, n = {
+    /**
+     * Composes string of the CSS transition.
+     *
+     * @param {String} property
+     * @return {String}
+     */
+    compose: function(r) {
+      var o = c.settings;
+      return t ? "".concat(r, " 0ms ").concat(o.animationTimingFunc) : "".concat(r, " ").concat(this.duration, "ms ").concat(o.animationTimingFunc);
+    },
+    /**
+     * Sets value of transition on HTML element.
+     *
+     * @param {String=} property
+     * @return {Void}
+     */
+    set: function() {
+      var r = arguments.length > 0 && arguments[0] !== void 0 ? arguments[0] : "transform";
+      e.Html.wrapper.style.transition = this.compose(r);
+    },
+    /**
+     * Removes value of transition from HTML element.
+     *
+     * @return {Void}
+     */
+    remove: function() {
+      e.Html.wrapper.style.transition = "";
+    },
+    /**
+     * Runs callback after animation.
+     *
+     * @param  {Function} callback
+     * @return {Void}
+     */
+    after: function(r) {
+      setTimeout(function() {
+        r();
+      }, this.duration);
+    },
+    /**
+     * Enable transition.
+     *
+     * @return {Void}
+     */
+    enable: function() {
+      t = !1, this.set();
+    },
+    /**
+     * Disable transition.
+     *
+     * @return {Void}
+     */
+    disable: function() {
+      t = !0, this.set();
+    }
+  };
+  return V(n, "duration", {
+    /**
+     * Gets duration of the transition based
+     * on currently running animation type.
+     *
+     * @return {Number}
+     */
+    get: function() {
+      var r = c.settings;
+      return c.isType("slider") && e.Run.offset ? r.rewindDuration : r.animationDuration;
+    }
+  }), i.on("move", function() {
+    n.set();
+  }), i.on(["build.before", "resize", "translate.jump"], function() {
+    n.disable();
+  }), i.on("run", function() {
+    n.enable();
+  }), i.on("destroy", function() {
+    n.remove();
+  }), n;
+}
+var oi = !1;
+try {
+  var Gt = Object.defineProperty({}, "passive", {
+    get: function() {
+      oi = !0;
+    }
+  });
+  window.addEventListener("testPassive", null, Gt), window.removeEventListener("testPassive", null, Gt);
+} catch {
+}
+var gt = oi, je = ["touchstart", "mousedown"], Vt = ["touchmove", "mousemove"], Wt = ["touchend", "touchcancel", "mouseup", "mouseleave"], Yt = ["mousedown", "mousemove", "mouseup", "mouseleave"];
+function ws(c, e, i) {
+  var t = new we(), n = 0, s = 0, r = 0, o = !1, a = gt ? {
+    passive: !0
+  } : !1, d = {
+    /**
+     * Initializes swipe bindings.
+     *
+     * @return {Void}
+     */
+    mount: function() {
+      this.bindSwipeStart();
+    },
+    /**
+     * Handler for `swipestart` event. Calculates entry points of the user's tap.
+     *
+     * @param {Object} event
+     * @return {Void}
+     */
+    start: function(l) {
+      if (!o && !c.disabled) {
+        this.disable();
+        var h = this.touches(l);
+        n = null, s = Q(h.pageX), r = Q(h.pageY), this.bindSwipeMove(), this.bindSwipeEnd(), i.emit("swipe.start");
+      }
+    },
+    /**
+     * Handler for `swipemove` event. Calculates user's tap angle and distance.
+     *
+     * @param {Object} event
+     */
+    move: function(l) {
+      if (!c.disabled) {
+        var h = c.settings, p = h.touchAngle, b = h.touchRatio, w = h.classes, _ = this.touches(l), g = Q(_.pageX) - s, v = Q(_.pageY) - r, f = Math.abs(g << 2), m = Math.abs(v << 2), y = Math.sqrt(f + m), k = Math.sqrt(m);
+        if (n = Math.asin(k / y), n * 180 / Math.PI < p)
+          l.stopPropagation(), e.Move.make(g * Yi(b)), e.Html.root.classList.add(w.dragging), i.emit("swipe.move");
+        else
+          return !1;
+      }
+    },
+    /**
+     * Handler for `swipeend` event. Finitializes user's tap and decides about glide move.
+     *
+     * @param {Object} event
+     * @return {Void}
+     */
+    end: function(l) {
+      if (!c.disabled) {
+        var h = c.settings, p = h.perSwipe, b = h.touchAngle, w = h.classes, _ = this.touches(l), g = this.threshold(l), v = _.pageX - s, f = n * 180 / Math.PI;
+        this.enable(), v > g && f < b ? e.Run.make(e.Direction.resolve("".concat(p, "<"))) : v < -g && f < b ? e.Run.make(e.Direction.resolve("".concat(p, ">"))) : e.Move.make(), e.Html.root.classList.remove(w.dragging), this.unbindSwipeMove(), this.unbindSwipeEnd(), i.emit("swipe.end");
+      }
+    },
+    /**
+     * Binds swipe's starting event.
+     *
+     * @return {Void}
+     */
+    bindSwipeStart: function() {
+      var l = this, h = c.settings, p = h.swipeThreshold, b = h.dragThreshold;
+      p && t.on(je[0], e.Html.wrapper, function(w) {
+        l.start(w);
+      }, a), b && t.on(je[1], e.Html.wrapper, function(w) {
+        l.start(w);
+      }, a);
+    },
+    /**
+     * Unbinds swipe's starting event.
+     *
+     * @return {Void}
+     */
+    unbindSwipeStart: function() {
+      t.off(je[0], e.Html.wrapper, a), t.off(je[1], e.Html.wrapper, a);
+    },
+    /**
+     * Binds swipe's moving event.
+     *
+     * @return {Void}
+     */
+    bindSwipeMove: function() {
+      var l = this;
+      t.on(Vt, e.Html.wrapper, it(function(h) {
+        l.move(h);
+      }, c.settings.throttle), a);
+    },
+    /**
+     * Unbinds swipe's moving event.
+     *
+     * @return {Void}
+     */
+    unbindSwipeMove: function() {
+      t.off(Vt, e.Html.wrapper, a);
+    },
+    /**
+     * Binds swipe's ending event.
+     *
+     * @return {Void}
+     */
+    bindSwipeEnd: function() {
+      var l = this;
+      t.on(Wt, e.Html.wrapper, function(h) {
+        l.end(h);
+      });
+    },
+    /**
+     * Unbinds swipe's ending event.
+     *
+     * @return {Void}
+     */
+    unbindSwipeEnd: function() {
+      t.off(Wt, e.Html.wrapper);
+    },
+    /**
+     * Normalizes event touches points accorting to different types.
+     *
+     * @param {Object} event
+     */
+    touches: function(l) {
+      return Yt.indexOf(l.type) > -1 ? l : l.touches[0] || l.changedTouches[0];
+    },
+    /**
+     * Gets value of minimum swipe distance settings based on event type.
+     *
+     * @return {Number}
+     */
+    threshold: function(l) {
+      var h = c.settings;
+      return Yt.indexOf(l.type) > -1 ? h.dragThreshold : h.swipeThreshold;
+    },
+    /**
+     * Enables swipe event.
+     *
+     * @return {self}
+     */
+    enable: function() {
+      return o = !1, e.Transition.enable(), this;
+    },
+    /**
+     * Disables swipe event.
+     *
+     * @return {self}
+     */
+    disable: function() {
+      return o = !0, e.Transition.disable(), this;
+    }
+  };
+  return i.on("build.after", function() {
+    e.Html.root.classList.add(c.settings.classes.swipeable);
+  }), i.on("destroy", function() {
+    d.unbindSwipeStart(), d.unbindSwipeMove(), d.unbindSwipeEnd(), t.destroy();
+  }), d;
+}
+function xs(c, e, i) {
+  var t = new we(), n = {
+    /**
+     * Binds listener to glide wrapper.
+     *
+     * @return {Void}
+     */
+    mount: function() {
+      this.bind();
+    },
+    /**
+     * Binds `dragstart` event on wrapper to prevent dragging images.
+     *
+     * @return {Void}
+     */
+    bind: function() {
+      t.on("dragstart", e.Html.wrapper, this.dragstart);
+    },
+    /**
+     * Unbinds `dragstart` event on wrapper.
+     *
+     * @return {Void}
+     */
+    unbind: function() {
+      t.off("dragstart", e.Html.wrapper);
+    },
+    /**
+     * Event handler. Prevents dragging.
+     *
+     * @return {Void}
+     */
+    dragstart: function(r) {
+      r.preventDefault();
+    }
+  };
+  return i.on("destroy", function() {
+    n.unbind(), t.destroy();
+  }), n;
+}
+function ks(c, e, i) {
+  var t = new we(), n = !1, s = !1, r = {
+    /**
+     * Setups a initial state of anchors component.
+     *
+     * @returns {Void}
+     */
+    mount: function() {
+      this._a = e.Html.wrapper.querySelectorAll("a"), this.bind();
+    },
+    /**
+     * Binds events to anchors inside a track.
+     *
+     * @return {Void}
+     */
+    bind: function() {
+      t.on("click", e.Html.wrapper, this.click);
+    },
+    /**
+     * Unbinds events attached to anchors inside a track.
+     *
+     * @return {Void}
+     */
+    unbind: function() {
+      t.off("click", e.Html.wrapper);
+    },
+    /**
+     * Handler for click event. Prevents clicks when glide is in `prevent` status.
+     *
+     * @param  {Object} event
+     * @return {Void}
+     */
+    click: function(a) {
+      s && (a.stopPropagation(), a.preventDefault());
+    },
+    /**
+     * Detaches anchors click event inside glide.
+     *
+     * @return {self}
+     */
+    detach: function() {
+      if (s = !0, !n) {
+        for (var a = 0; a < this.items.length; a++)
+          this.items[a].draggable = !1;
+        n = !0;
+      }
+      return this;
+    },
+    /**
+     * Attaches anchors click events inside glide.
+     *
+     * @return {self}
+     */
+    attach: function() {
+      if (s = !1, n) {
+        for (var a = 0; a < this.items.length; a++)
+          this.items[a].draggable = !0;
+        n = !1;
+      }
+      return this;
+    }
+  };
+  return V(r, "items", {
+    /**
+     * Gets collection of the arrows HTML elements.
+     *
+     * @return {HTMLElement[]}
+     */
+    get: function() {
+      return r._a;
+    }
+  }), i.on("swipe.move", function() {
+    r.detach();
+  }), i.on("swipe.end", function() {
+    e.Transition.after(function() {
+      r.attach();
+    });
+  }), i.on("destroy", function() {
+    r.attach(), r.unbind(), t.destroy();
+  }), r;
+}
+var _s = '[data-glide-el="controls[nav]"]', vt = '[data-glide-el^="controls"]', Ss = "".concat(vt, ' [data-glide-dir*="<"]'), Ts = "".concat(vt, ' [data-glide-dir*=">"]');
+function Es(c, e, i) {
+  var t = new we(), n = gt ? {
+    passive: !0
+  } : !1, s = {
+    /**
+     * Inits arrows. Binds events listeners
+     * to the arrows HTML elements.
+     *
+     * @return {Void}
+     */
+    mount: function() {
+      this._n = e.Html.root.querySelectorAll(_s), this._c = e.Html.root.querySelectorAll(vt), this._arrowControls = {
+        previous: e.Html.root.querySelectorAll(Ss),
+        next: e.Html.root.querySelectorAll(Ts)
+      }, this.addBindings();
+    },
+    /**
+     * Sets active class to current slide.
+     *
+     * @return {Void}
+     */
+    setActive: function() {
+      for (var o = 0; o < this._n.length; o++)
+        this.addClass(this._n[o].children);
+    },
+    /**
+     * Removes active class to current slide.
+     *
+     * @return {Void}
+     */
+    removeActive: function() {
+      for (var o = 0; o < this._n.length; o++)
+        this.removeClass(this._n[o].children);
+    },
+    /**
+     * Toggles active class on items inside navigation.
+     *
+     * @param  {HTMLElement} controls
+     * @return {Void}
+     */
+    addClass: function(o) {
+      var a = c.settings, d = o[c.index];
+      d && (d.classList.add(a.classes.nav.active), ri(d).forEach(function(u) {
+        u.classList.remove(a.classes.nav.active);
+      }));
+    },
+    /**
+     * Removes active class from active control.
+     *
+     * @param  {HTMLElement} controls
+     * @return {Void}
+     */
+    removeClass: function(o) {
+      var a = o[c.index];
+      a?.classList.remove(c.settings.classes.nav.active);
+    },
+    /**
+     * Calculates, removes or adds `Glide.settings.classes.disabledArrow` class on the control arrows
+     */
+    setArrowState: function() {
+      if (!c.settings.rewind) {
+        var o = s._arrowControls.next, a = s._arrowControls.previous;
+        this.resetArrowState(o, a), c.index === 0 && this.disableArrow(a), c.index === e.Run.length && this.disableArrow(o);
+      }
+    },
+    /**
+     * Removes `Glide.settings.classes.disabledArrow` from given NodeList elements
+     *
+     * @param {NodeList[]} lists
+     */
+    resetArrowState: function() {
+      for (var o = c.settings, a = arguments.length, d = new Array(a), u = 0; u < a; u++)
+        d[u] = arguments[u];
+      d.forEach(function(l) {
+        ft(l).forEach(function(h) {
+          h.classList.remove(o.classes.arrow.disabled);
+        });
+      });
+    },
+    /**
+     * Adds `Glide.settings.classes.disabledArrow` to given NodeList elements
+     *
+     * @param {NodeList[]} lists
+     */
+    disableArrow: function() {
+      for (var o = c.settings, a = arguments.length, d = new Array(a), u = 0; u < a; u++)
+        d[u] = arguments[u];
+      d.forEach(function(l) {
+        ft(l).forEach(function(h) {
+          h.classList.add(o.classes.arrow.disabled);
+        });
+      });
+    },
+    /**
+     * Adds handles to the each group of controls.
+     *
+     * @return {Void}
+     */
+    addBindings: function() {
+      for (var o = 0; o < this._c.length; o++)
+        this.bind(this._c[o].children);
+    },
+    /**
+     * Removes handles from the each group of controls.
+     *
+     * @return {Void}
+     */
+    removeBindings: function() {
+      for (var o = 0; o < this._c.length; o++)
+        this.unbind(this._c[o].children);
+    },
+    /**
+     * Binds events to arrows HTML elements.
+     *
+     * @param {HTMLCollection} elements
+     * @return {Void}
+     */
+    bind: function(o) {
+      for (var a = 0; a < o.length; a++)
+        t.on("click", o[a], this.click), t.on("touchstart", o[a], this.click, n);
+    },
+    /**
+     * Unbinds events binded to the arrows HTML elements.
+     *
+     * @param {HTMLCollection} elements
+     * @return {Void}
+     */
+    unbind: function(o) {
+      for (var a = 0; a < o.length; a++)
+        t.off(["click", "touchstart"], o[a]);
+    },
+    /**
+     * Handles `click` event on the arrows HTML elements.
+     * Moves slider in direction given via the
+     * `data-glide-dir` attribute.
+     *
+     * @param {Object} event
+     * @return {void}
+     */
+    click: function(o) {
+      !gt && o.type === "touchstart" && o.preventDefault();
+      var a = o.currentTarget.getAttribute("data-glide-dir");
+      e.Run.make(e.Direction.resolve(a));
+    }
+  };
+  return V(s, "items", {
+    /**
+     * Gets collection of the controls HTML elements.
+     *
+     * @return {HTMLElement[]}
+     */
+    get: function() {
+      return s._c;
+    }
+  }), i.on(["mount.after", "move.after"], function() {
+    s.setActive();
+  }), i.on(["mount.after", "run"], function() {
+    s.setArrowState();
+  }), i.on("destroy", function() {
+    s.removeBindings(), s.removeActive(), t.destroy();
+  }), s;
+}
+function Ls(c, e, i) {
+  var t = new we(), n = {
+    /**
+     * Binds keyboard events on component mount.
+     *
+     * @return {Void}
+     */
+    mount: function() {
+      c.settings.keyboard && this.bind();
+    },
+    /**
+     * Adds keyboard press events.
+     *
+     * @return {Void}
+     */
+    bind: function() {
+      t.on("keyup", document, this.press);
+    },
+    /**
+     * Removes keyboard press events.
+     *
+     * @return {Void}
+     */
+    unbind: function() {
+      t.off("keyup", document);
+    },
+    /**
+     * Handles keyboard's arrows press and moving glide foward and backward.
+     *
+     * @param  {Object} event
+     * @return {Void}
+     */
+    press: function(r) {
+      var o = c.settings.perSwipe, a = {
+        ArrowRight: ">",
+        ArrowLeft: "<"
+      };
+      ["ArrowRight", "ArrowLeft"].includes(r.code) && e.Run.make(e.Direction.resolve("".concat(o).concat(a[r.code])));
+    }
+  };
+  return i.on(["destroy", "update"], function() {
+    n.unbind();
+  }), i.on("update", function() {
+    n.mount();
+  }), i.on("destroy", function() {
+    t.destroy();
+  }), n;
+}
+function Cs(c, e, i) {
+  var t = new we(), n = {
+    /**
+     * Initializes autoplaying and events.
+     *
+     * @return {Void}
+     */
+    mount: function() {
+      this.enable(), this.start(), c.settings.hoverpause && this.bind();
+    },
+    /**
+     * Enables autoplaying
+     *
+     * @returns {Void}
+     */
+    enable: function() {
+      this._e = !0;
+    },
+    /**
+     * Disables autoplaying.
+     *
+     * @returns {Void}
+     */
+    disable: function() {
+      this._e = !1;
+    },
+    /**
+     * Starts autoplaying in configured interval.
+     *
+     * @param {Boolean|Number} force Run autoplaying with passed interval regardless of `autoplay` settings
+     * @return {Void}
+     */
+    start: function() {
+      var r = this;
+      this._e && (this.enable(), c.settings.autoplay && ni(this._i) && (this._i = setInterval(function() {
+        r.stop(), e.Run.make(">"), r.start(), i.emit("autoplay");
+      }, this.time)));
+    },
+    /**
+     * Stops autorunning of the glide.
+     *
+     * @return {Void}
+     */
+    stop: function() {
+      this._i = clearInterval(this._i);
+    },
+    /**
+     * Stops autoplaying while mouse is over glide's area.
+     *
+     * @return {Void}
+     */
+    bind: function() {
+      var r = this;
+      t.on("mouseover", e.Html.root, function() {
+        r._e && r.stop();
+      }), t.on("mouseout", e.Html.root, function() {
+        r._e && r.start();
+      });
+    },
+    /**
+     * Unbind mouseover events.
+     *
+     * @returns {Void}
+     */
+    unbind: function() {
+      t.off(["mouseover", "mouseout"], e.Html.root);
+    }
+  };
+  return V(n, "time", {
+    /**
+     * Gets time period value for the autoplay interval. Prioritizes
+     * times in `data-glide-autoplay` attrubutes over options.
+     *
+     * @return {Number}
+     */
+    get: function() {
+      var r = e.Html.slides[c.index].getAttribute("data-glide-autoplay");
+      return Q(r || c.settings.autoplay);
+    }
+  }), i.on(["destroy", "update"], function() {
+    n.unbind();
+  }), i.on(["run.before", "swipe.start", "update"], function() {
+    n.stop();
+  }), i.on(["pause", "destroy"], function() {
+    n.disable(), n.stop();
+  }), i.on(["run.after", "swipe.end"], function() {
+    n.start();
+  }), i.on(["play"], function() {
+    n.enable(), n.start();
+  }), i.on("update", function() {
+    n.mount();
+  }), i.on("destroy", function() {
+    t.destroy();
+  }), n;
+}
+function Xt(c) {
+  return Ae(c) ? Ji(c) : (me("Breakpoints option must be an object"), {});
+}
+function Rs(c, e, i) {
+  var t = new we(), n = c.settings, s = Xt(n.breakpoints), r = Object.assign({}, n), o = {
+    /**
+     * Matches settings for currectly matching media breakpoint.
+     *
+     * @param {Object} points
+     * @returns {Object}
+     */
+    match: function(d) {
+      if (typeof window.matchMedia < "u") {
+        for (var u in d)
+          if (d.hasOwnProperty(u) && window.matchMedia("(max-width: ".concat(u, "px)")).matches)
+            return d[u];
+      }
+      return r;
+    }
+  };
+  return Object.assign(n, o.match(s)), t.on("resize", window, it(function() {
+    c.settings = pt(n, o.match(s));
+  }, c.settings.throttle)), i.on("update", function() {
+    s = Xt(s), r = Object.assign({}, n);
+  }), i.on("destroy", function() {
+    t.off("resize", window);
+  }), o;
+}
+var As = {
+  // Required
+  Html: is,
+  Translate: ys,
+  Transition: vs,
+  Direction: ds,
+  Peek: ss,
+  Sizes: rs,
+  Gaps: es,
+  Move: ns,
+  Clones: ls,
+  Resize: as,
+  Build: os,
+  Run: Ki,
+  // Optional
+  Swipe: ws,
+  Images: xs,
+  Anchors: ks,
+  Controls: Es,
+  Keyboard: Ls,
+  Autoplay: Cs,
+  Breakpoints: Rs
+}, Ms = /* @__PURE__ */ (function(c) {
+  Ui(i, c);
+  var e = Gi(i);
+  function i() {
+    return et(this, i), e.apply(this, arguments);
+  }
+  return tt(i, [{
+    key: "mount",
+    value: function() {
+      var n = arguments.length > 0 && arguments[0] !== void 0 ? arguments[0] : {};
+      return We(Re(i.prototype), "mount", this).call(this, Object.assign({}, As, n));
+    }
+  }]), i;
+})(Qi);
+function wt() {
+  return {
+    async: !1,
+    breaks: !1,
+    extensions: null,
+    gfm: !0,
+    hooks: null,
+    pedantic: !1,
+    renderer: null,
+    silent: !1,
+    tokenizer: null,
+    walkTokens: null
+  };
+}
+let Te = wt();
+function li(c) {
+  Te = c;
+}
+const De = { exec: () => null };
+function B(c, e = "") {
+  let i = typeof c == "string" ? c : c.source;
+  const t = {
+    replace: (n, s) => {
+      let r = typeof s == "string" ? s : s.source;
+      return r = r.replace(ie.caret, "$1"), i = i.replace(n, r), t;
+    },
+    getRegex: () => new RegExp(i, e)
+  };
+  return t;
+}
+const ie = {
+  codeRemoveIndent: /^(?: {1,4}| {0,3}\t)/gm,
+  outputLinkReplace: /\\([\[\]])/g,
+  indentCodeCompensation: /^(\s+)(?:```)/,
+  beginningSpace: /^\s+/,
+  endingHash: /#$/,
+  startingSpaceChar: /^ /,
+  endingSpaceChar: / $/,
+  nonSpaceChar: /[^ ]/,
+  newLineCharGlobal: /\n/g,
+  tabCharGlobal: /\t/g,
+  multipleSpaceGlobal: /\s+/g,
+  blankLine: /^[ \t]*$/,
+  doubleBlankLine: /\n[ \t]*\n[ \t]*$/,
+  blockquoteStart: /^ {0,3}>/,
+  blockquoteSetextReplace: /\n {0,3}((?:=+|-+) *)(?=\n|$)/g,
+  blockquoteSetextReplace2: /^ {0,3}>[ \t]?/gm,
+  listReplaceTabs: /^\t+/,
+  listReplaceNesting: /^ {1,4}(?=( {4})*[^ ])/g,
+  listIsTask: /^\[[ xX]\] /,
+  listReplaceTask: /^\[[ xX]\] +/,
+  anyLine: /\n.*\n/,
+  hrefBrackets: /^<(.*)>$/,
+  tableDelimiter: /[:|]/,
+  tableAlignChars: /^\||\| *$/g,
+  tableRowBlankLine: /\n[ \t]*$/,
+  tableAlignRight: /^ *-+: *$/,
+  tableAlignCenter: /^ *:-+: *$/,
+  tableAlignLeft: /^ *:-+ *$/,
+  startATag: /^<a /i,
+  endATag: /^<\/a>/i,
+  startPreScriptTag: /^<(pre|code|kbd|script)(\s|>)/i,
+  endPreScriptTag: /^<\/(pre|code|kbd|script)(\s|>)/i,
+  startAngleBracket: /^</,
+  endAngleBracket: />$/,
+  pedanticHrefTitle: /^([^'"]*[^\s])\s+(['"])(.*)\2/,
+  unicodeAlphaNumeric: /[\p{L}\p{N}]/u,
+  escapeTest: /[&<>"']/,
+  escapeReplace: /[&<>"']/g,
+  escapeTestNoEncode: /[<>"']|&(?!(#\d{1,7}|#[Xx][a-fA-F0-9]{1,6}|\w+);)/,
+  escapeReplaceNoEncode: /[<>"']|&(?!(#\d{1,7}|#[Xx][a-fA-F0-9]{1,6}|\w+);)/g,
+  unescapeTest: /&(#(?:\d+)|(?:#x[0-9A-Fa-f]+)|(?:\w+));?/ig,
+  caret: /(^|[^\[])\^/g,
+  percentDecode: /%25/g,
+  findPipe: /\|/g,
+  splitPipe: / \|/,
+  slashPipe: /\\\|/g,
+  carriageReturn: /\r\n|\r/g,
+  spaceLine: /^ +$/gm,
+  notSpaceStart: /^\S*/,
+  endingNewline: /\n$/,
+  listItemRegex: (c) => new RegExp(`^( {0,3}${c})((?:[	 ][^\\n]*)?(?:\\n|$))`),
+  nextBulletRegex: (c) => new RegExp(`^ {0,${Math.min(3, c - 1)}}(?:[*+-]|\\d{1,9}[.)])((?:[ 	][^\\n]*)?(?:\\n|$))`),
+  hrRegex: (c) => new RegExp(`^ {0,${Math.min(3, c - 1)}}((?:- *){3,}|(?:_ *){3,}|(?:\\* *){3,})(?:\\n+|$)`),
+  fencesBeginRegex: (c) => new RegExp(`^ {0,${Math.min(3, c - 1)}}(?:\`\`\`|~~~)`),
+  headingBeginRegex: (c) => new RegExp(`^ {0,${Math.min(3, c - 1)}}#`),
+  htmlBeginRegex: (c) => new RegExp(`^ {0,${Math.min(3, c - 1)}}<(?:[a-z].*>|!--)`, "i")
+}, qs = /^(?:[ \t]*(?:\n|$))+/, Is = /^((?: {4}| {0,3}\t)[^\n]+(?:\n(?:[ \t]*(?:\n|$))*)?)+/, Os = /^ {0,3}(`{3,}(?=[^`\n]*(?:\n|$))|~{3,})([^\n]*)(?:\n|$)(?:|([\s\S]*?)(?:\n|$))(?: {0,3}\1[~`]* *(?=\n|$)|$)/, He = /^ {0,3}((?:-[\t ]*){3,}|(?:_[ \t]*){3,}|(?:\*[ \t]*){3,})(?:\n+|$)/, $s = /^ {0,3}(#{1,6})(?=\s|$)(.*)(?:\n+|$)/, xt = /(?:[*+-]|\d{1,9}[.)])/, ai = /^(?!bull |blockCode|fences|blockquote|heading|html|table)((?:.|\n(?!\s*?\n|bull |blockCode|fences|blockquote|heading|html|table))+?)\n {0,3}(=+|-+) *(?:\n+|$)/, ci = B(ai).replace(/bull/g, xt).replace(/blockCode/g, /(?: {4}| {0,3}\t)/).replace(/fences/g, / {0,3}(?:`{3,}|~{3,})/).replace(/blockquote/g, / {0,3}>/).replace(/heading/g, / {0,3}#{1,6}/).replace(/html/g, / {0,3}<[^\n>]+>\n/).replace(/\|table/g, "").getRegex(), Ns = B(ai).replace(/bull/g, xt).replace(/blockCode/g, /(?: {4}| {0,3}\t)/).replace(/fences/g, / {0,3}(?:`{3,}|~{3,})/).replace(/blockquote/g, / {0,3}>/).replace(/heading/g, / {0,3}#{1,6}/).replace(/html/g, / {0,3}<[^\n>]+>\n/).replace(/table/g, / {0,3}\|?(?:[:\- ]*\|)+[\:\- ]*\n/).getRegex(), kt = /^([^\n]+(?:\n(?!hr|heading|lheading|blockquote|fences|list|html|table| +\n)[^\n]+)*)/, Ps = /^[^\n]+/, _t = /(?!\s*\])(?:\\.|[^\[\]\\])+/, Ds = B(/^ {0,3}\[(label)\]: *(?:\n[ \t]*)?([^<\s][^\s]*|<.*?>)(?:(?: +(?:\n[ \t]*)?| *\n[ \t]*)(title))? *(?:\n+|$)/).replace("label", _t).replace("title", /(?:"(?:\\"?|[^"\\])*"|'[^'\n]*(?:\n[^'\n]+)*\n?'|\([^()]*\))/).getRegex(), Hs = B(/^( {0,3}bull)([ \t][^\n]+?)?(?:\n|$)/).replace(/bull/g, xt).getRegex(), st = "address|article|aside|base|basefont|blockquote|body|caption|center|col|colgroup|dd|details|dialog|dir|div|dl|dt|fieldset|figcaption|figure|footer|form|frame|frameset|h[1-6]|head|header|hr|html|iframe|legend|li|link|main|menu|menuitem|meta|nav|noframes|ol|optgroup|option|p|param|search|section|summary|table|tbody|td|tfoot|th|thead|title|tr|track|ul", St = /<!--(?:-?>|[\s\S]*?(?:-->|$))/, zs = B("^ {0,3}(?:<(script|pre|style|textarea)[\\s>][\\s\\S]*?(?:</\\1>[^\\n]*\\n+|$)|comment[^\\n]*(\\n+|$)|<\\?[\\s\\S]*?(?:\\?>\\n*|$)|<![A-Z][\\s\\S]*?(?:>\\n*|$)|<!\\[CDATA\\[[\\s\\S]*?(?:\\]\\]>\\n*|$)|</?(tag)(?: +|\\n|/?>)[\\s\\S]*?(?:(?:\\n[ 	]*)+\\n|$)|<(?!script|pre|style|textarea)([a-z][\\w-]*)(?:attribute)*? */?>(?=[ \\t]*(?:\\n|$))[\\s\\S]*?(?:(?:\\n[ 	]*)+\\n|$)|</(?!script|pre|style|textarea)[a-z][\\w-]*\\s*>(?=[ \\t]*(?:\\n|$))[\\s\\S]*?(?:(?:\\n[ 	]*)+\\n|$))", "i").replace("comment", St).replace("tag", st).replace("attribute", / +[a-zA-Z:_][\w.:-]*(?: *= *"[^"\n]*"| *= *'[^'\n]*'| *= *[^\s"'=<>`]+)?/).getRegex(), ui = B(kt).replace("hr", He).replace("heading", " {0,3}#{1,6}(?:\\s|$)").replace("|lheading", "").replace("|table", "").replace("blockquote", " {0,3}>").replace("fences", " {0,3}(?:`{3,}(?=[^`\\n]*\\n)|~{3,})[^\\n]*\\n").replace("list", " {0,3}(?:[*+-]|1[.)]) ").replace("html", "</?(?:tag)(?: +|\\n|/?>)|<(?:script|pre|style|textarea|!--)").replace("tag", st).getRegex(), Us = B(/^( {0,3}> ?(paragraph|[^\n]*)(?:\n|$))+/).replace("paragraph", ui).getRegex(), Tt = {
+  blockquote: Us,
+  code: Is,
+  def: Ds,
+  fences: Os,
+  heading: $s,
+  hr: He,
+  html: zs,
+  lheading: ci,
+  list: Hs,
+  newline: qs,
+  paragraph: ui,
+  table: De,
+  text: Ps
+}, Jt = B("^ *([^\\n ].*)\\n {0,3}((?:\\| *)?:?-+:? *(?:\\| *:?-+:? *)*(?:\\| *)?)(?:\\n((?:(?! *\\n|hr|heading|blockquote|code|fences|list|html).*(?:\\n|$))*)\\n*|$)").replace("hr", He).replace("heading", " {0,3}#{1,6}(?:\\s|$)").replace("blockquote", " {0,3}>").replace("code", "(?: {4}| {0,3}	)[^\\n]").replace("fences", " {0,3}(?:`{3,}(?=[^`\\n]*\\n)|~{3,})[^\\n]*\\n").replace("list", " {0,3}(?:[*+-]|1[.)]) ").replace("html", "</?(?:tag)(?: +|\\n|/?>)|<(?:script|pre|style|textarea|!--)").replace("tag", st).getRegex(), js = {
+  ...Tt,
+  lheading: Ns,
+  table: Jt,
+  paragraph: B(kt).replace("hr", He).replace("heading", " {0,3}#{1,6}(?:\\s|$)").replace("|lheading", "").replace("table", Jt).replace("blockquote", " {0,3}>").replace("fences", " {0,3}(?:`{3,}(?=[^`\\n]*\\n)|~{3,})[^\\n]*\\n").replace("list", " {0,3}(?:[*+-]|1[.)]) ").replace("html", "</?(?:tag)(?: +|\\n|/?>)|<(?:script|pre|style|textarea|!--)").replace("tag", st).getRegex()
+}, Bs = {
+  ...Tt,
+  html: B(`^ *(?:comment *(?:\\n|\\s*$)|<(tag)[\\s\\S]+?</\\1> *(?:\\n{2,}|\\s*$)|<tag(?:"[^"]*"|'[^']*'|\\s[^'"/>\\s]*)*?/?> *(?:\\n{2,}|\\s*$))`).replace("comment", St).replace(/tag/g, "(?!(?:a|em|strong|small|s|cite|q|dfn|abbr|data|time|code|var|samp|kbd|sub|sup|i|b|u|mark|ruby|rt|rp|bdi|bdo|span|br|wbr|ins|del|img)\\b)\\w+(?!:|[^\\w\\s@]*@)\\b").getRegex(),
+  def: /^ *\[([^\]]+)\]: *<?([^\s>]+)>?(?: +(["(][^\n]+[")]))? *(?:\n+|$)/,
+  heading: /^(#{1,6})(.*)(?:\n+|$)/,
+  fences: De,
+  // fences not supported
+  lheading: /^(.+?)\n {0,3}(=+|-+) *(?:\n+|$)/,
+  paragraph: B(kt).replace("hr", He).replace("heading", ` *#{1,6} *[^
+]`).replace("lheading", ci).replace("|table", "").replace("blockquote", " {0,3}>").replace("|fences", "").replace("|list", "").replace("|html", "").replace("|tag", "").getRegex()
+}, Fs = /^\\([!"#$%&'()*+,\-./:;<=>?@\[\]\\^_`{|}~])/, Gs = /^(`+)([^`]|[^`][\s\S]*?[^`])\1(?!`)/, di = /^( {2,}|\\)\n(?!\s*$)/, Vs = /^(`+|[^`])(?:(?= {2,}\n)|[\s\S]*?(?:(?=[\\<!\[`*_]|\b_|$)|[^ ](?= {2,}\n)))/, nt = /[\p{P}\p{S}]/u, Et = /[\s\p{P}\p{S}]/u, hi = /[^\s\p{P}\p{S}]/u, Ws = B(/^((?![*_])punctSpace)/, "u").replace(/punctSpace/g, Et).getRegex(), pi = /(?!~)[\p{P}\p{S}]/u, Ys = /(?!~)[\s\p{P}\p{S}]/u, Xs = /(?:[^\s\p{P}\p{S}]|~)/u, Js = /\[[^[\]]*?\]\((?:\\.|[^\\\(\)]|\((?:\\.|[^\\\(\)])*\))*\)|`[^`]*?`|<[^<>]*?>/g, fi = /^(?:\*+(?:((?!\*)punct)|[^\s*]))|^_+(?:((?!_)punct)|([^\s_]))/, Zs = B(fi, "u").replace(/punct/g, nt).getRegex(), Qs = B(fi, "u").replace(/punct/g, pi).getRegex(), gi = "^[^_*]*?__[^_*]*?\\*[^_*]*?(?=__)|[^*]+(?=[^*])|(?!\\*)punct(\\*+)(?=[\\s]|$)|notPunctSpace(\\*+)(?!\\*)(?=punctSpace|$)|(?!\\*)punctSpace(\\*+)(?=notPunctSpace)|[\\s](\\*+)(?!\\*)(?=punct)|(?!\\*)punct(\\*+)(?!\\*)(?=punct)|notPunctSpace(\\*+)(?=notPunctSpace)", Ks = B(gi, "gu").replace(/notPunctSpace/g, hi).replace(/punctSpace/g, Et).replace(/punct/g, nt).getRegex(), en = B(gi, "gu").replace(/notPunctSpace/g, Xs).replace(/punctSpace/g, Ys).replace(/punct/g, pi).getRegex(), tn = B("^[^_*]*?\\*\\*[^_*]*?_[^_*]*?(?=\\*\\*)|[^_]+(?=[^_])|(?!_)punct(_+)(?=[\\s]|$)|notPunctSpace(_+)(?!_)(?=punctSpace|$)|(?!_)punctSpace(_+)(?=notPunctSpace)|[\\s](_+)(?!_)(?=punct)|(?!_)punct(_+)(?!_)(?=punct)", "gu").replace(/notPunctSpace/g, hi).replace(/punctSpace/g, Et).replace(/punct/g, nt).getRegex(), sn = B(/\\(punct)/, "gu").replace(/punct/g, nt).getRegex(), nn = B(/^<(scheme:[^\s\x00-\x1f<>]*|email)>/).replace("scheme", /[a-zA-Z][a-zA-Z0-9+.-]{1,31}/).replace("email", /[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+(@)[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)+(?![-_])/).getRegex(), rn = B(St).replace("(?:-->|$)", "-->").getRegex(), on = B("^comment|^</[a-zA-Z][\\w:-]*\\s*>|^<[a-zA-Z][\\w-]*(?:attribute)*?\\s*/?>|^<\\?[\\s\\S]*?\\?>|^<![a-zA-Z]+\\s[\\s\\S]*?>|^<!\\[CDATA\\[[\\s\\S]*?\\]\\]>").replace("comment", rn).replace("attribute", /\s+[a-zA-Z:_][\w.:-]*(?:\s*=\s*"[^"]*"|\s*=\s*'[^']*'|\s*=\s*[^\s"'=<>`]+)?/).getRegex(), Ze = /(?:\[(?:\\.|[^\[\]\\])*\]|\\.|`[^`]*`|[^\[\]\\`])*?/, ln = B(/^!?\[(label)\]\(\s*(href)(?:(?:[ \t]*(?:\n[ \t]*)?)(title))?\s*\)/).replace("label", Ze).replace("href", /<(?:\\.|[^\n<>\\])+>|[^ \t\n\x00-\x1f]*/).replace("title", /"(?:\\"?|[^"\\])*"|'(?:\\'?|[^'\\])*'|\((?:\\\)?|[^)\\])*\)/).getRegex(), mi = B(/^!?\[(label)\]\[(ref)\]/).replace("label", Ze).replace("ref", _t).getRegex(), bi = B(/^!?\[(ref)\](?:\[\])?/).replace("ref", _t).getRegex(), an = B("reflink|nolink(?!\\()", "g").replace("reflink", mi).replace("nolink", bi).getRegex(), Lt = {
+  _backpedal: De,
+  // only used for GFM url
+  anyPunctuation: sn,
+  autolink: nn,
+  blockSkip: Js,
+  br: di,
+  code: Gs,
+  del: De,
+  emStrongLDelim: Zs,
+  emStrongRDelimAst: Ks,
+  emStrongRDelimUnd: tn,
+  escape: Fs,
+  link: ln,
+  nolink: bi,
+  punctuation: Ws,
+  reflink: mi,
+  reflinkSearch: an,
+  tag: on,
+  text: Vs,
+  url: De
+}, cn = {
+  ...Lt,
+  link: B(/^!?\[(label)\]\((.*?)\)/).replace("label", Ze).getRegex(),
+  reflink: B(/^!?\[(label)\]\s*\[([^\]]*)\]/).replace("label", Ze).getRegex()
+}, mt = {
+  ...Lt,
+  emStrongRDelimAst: en,
+  emStrongLDelim: Qs,
+  url: B(/^((?:ftp|https?):\/\/|www\.)(?:[a-zA-Z0-9\-]+\.?)+[^\s<]*|^email/, "i").replace("email", /[A-Za-z0-9._+-]+(@)[a-zA-Z0-9-_]+(?:\.[a-zA-Z0-9-_]*[a-zA-Z0-9])+(?![-_])/).getRegex(),
+  _backpedal: /(?:[^?!.,:;*_'"~()&]+|\([^)]*\)|&(?![a-zA-Z0-9]+;$)|[?!.,:;*_'"~)]+(?!$))+/,
+  del: /^(~~?)(?=[^\s~])((?:\\.|[^\\])*?(?:\\.|[^\s~\\]))\1(?=[^~]|$)/,
+  text: /^([`~]+|[^`~])(?:(?= {2,}\n)|(?=[a-zA-Z0-9.!#$%&'*+\/=?_`{\|}~-]+@)|[\s\S]*?(?:(?=[\\<!\[`*~_]|\b_|https?:\/\/|ftp:\/\/|www\.|$)|[^ ](?= {2,}\n)|[^a-zA-Z0-9.!#$%&'*+\/=?_`{\|}~-](?=[a-zA-Z0-9.!#$%&'*+\/=?_`{\|}~-]+@)))/
+}, un = {
+  ...mt,
+  br: B(di).replace("{2,}", "*").getRegex(),
+  text: B(mt.text).replace("\\b_", "\\b_| {2,}\\n").replace(/\{2,\}/g, "*").getRegex()
+}, Be = {
+  normal: Tt,
+  gfm: js,
+  pedantic: Bs
+}, $e = {
+  normal: Lt,
+  gfm: mt,
+  breaks: un,
+  pedantic: cn
+}, dn = {
+  "&": "&amp;",
+  "<": "&lt;",
+  ">": "&gt;",
+  '"': "&quot;",
+  "'": "&#39;"
+}, Zt = (c) => dn[c];
+function pe(c, e) {
+  if (e) {
+    if (ie.escapeTest.test(c))
+      return c.replace(ie.escapeReplace, Zt);
+  } else if (ie.escapeTestNoEncode.test(c))
+    return c.replace(ie.escapeReplaceNoEncode, Zt);
+  return c;
+}
+function Qt(c) {
+  try {
+    c = encodeURI(c).replace(ie.percentDecode, "%");
+  } catch {
+    return null;
+  }
+  return c;
+}
+function Kt(c, e) {
+  const i = c.replace(ie.findPipe, (s, r, o) => {
+    let a = !1, d = r;
+    for (; --d >= 0 && o[d] === "\\"; )
+      a = !a;
+    return a ? "|" : " |";
+  }), t = i.split(ie.splitPipe);
+  let n = 0;
+  if (t[0].trim() || t.shift(), t.length > 0 && !t.at(-1)?.trim() && t.pop(), e)
+    if (t.length > e)
+      t.splice(e);
+    else
+      for (; t.length < e; )
+        t.push("");
+  for (; n < t.length; n++)
+    t[n] = t[n].trim().replace(ie.slashPipe, "|");
+  return t;
+}
+function Ne(c, e, i) {
+  const t = c.length;
+  if (t === 0)
+    return "";
+  let n = 0;
+  for (; n < t && c.charAt(t - n - 1) === e; )
+    n++;
+  return c.slice(0, t - n);
+}
+function hn(c, e) {
+  if (c.indexOf(e[1]) === -1)
+    return -1;
+  let i = 0;
+  for (let t = 0; t < c.length; t++)
+    if (c[t] === "\\")
+      t++;
+    else if (c[t] === e[0])
+      i++;
+    else if (c[t] === e[1] && (i--, i < 0))
+      return t;
+  return i > 0 ? -2 : -1;
+}
+function ei(c, e, i, t, n) {
+  const s = e.href, r = e.title || null, o = c[1].replace(n.other.outputLinkReplace, "$1");
+  t.state.inLink = !0;
+  const a = {
+    type: c[0].charAt(0) === "!" ? "image" : "link",
+    raw: i,
+    href: s,
+    title: r,
+    text: o,
+    tokens: t.inlineTokens(o)
+  };
+  return t.state.inLink = !1, a;
+}
+function pn(c, e, i) {
+  const t = c.match(i.other.indentCodeCompensation);
+  if (t === null)
+    return e;
+  const n = t[1];
+  return e.split(`
+`).map((s) => {
+    const r = s.match(i.other.beginningSpace);
+    if (r === null)
+      return s;
+    const [o] = r;
+    return o.length >= n.length ? s.slice(n.length) : s;
+  }).join(`
+`);
+}
+class Qe {
+  options;
+  rules;
+  // set by the lexer
+  lexer;
+  // set by the lexer
+  constructor(e) {
+    this.options = e || Te;
+  }
+  space(e) {
+    const i = this.rules.block.newline.exec(e);
+    if (i && i[0].length > 0)
+      return {
+        type: "space",
+        raw: i[0]
+      };
+  }
+  code(e) {
+    const i = this.rules.block.code.exec(e);
+    if (i) {
+      const t = i[0].replace(this.rules.other.codeRemoveIndent, "");
+      return {
+        type: "code",
+        raw: i[0],
+        codeBlockStyle: "indented",
+        text: this.options.pedantic ? t : Ne(t, `
+`)
+      };
+    }
+  }
+  fences(e) {
+    const i = this.rules.block.fences.exec(e);
+    if (i) {
+      const t = i[0], n = pn(t, i[3] || "", this.rules);
+      return {
+        type: "code",
+        raw: t,
+        lang: i[2] ? i[2].trim().replace(this.rules.inline.anyPunctuation, "$1") : i[2],
+        text: n
+      };
+    }
+  }
+  heading(e) {
+    const i = this.rules.block.heading.exec(e);
+    if (i) {
+      let t = i[2].trim();
+      if (this.rules.other.endingHash.test(t)) {
+        const n = Ne(t, "#");
+        (this.options.pedantic || !n || this.rules.other.endingSpaceChar.test(n)) && (t = n.trim());
+      }
+      return {
+        type: "heading",
+        raw: i[0],
+        depth: i[1].length,
+        text: t,
+        tokens: this.lexer.inline(t)
+      };
+    }
+  }
+  hr(e) {
+    const i = this.rules.block.hr.exec(e);
+    if (i)
+      return {
+        type: "hr",
+        raw: Ne(i[0], `
+`)
+      };
+  }
+  blockquote(e) {
+    const i = this.rules.block.blockquote.exec(e);
+    if (i) {
+      let t = Ne(i[0], `
+`).split(`
+`), n = "", s = "";
+      const r = [];
+      for (; t.length > 0; ) {
+        let o = !1;
+        const a = [];
+        let d;
+        for (d = 0; d < t.length; d++)
+          if (this.rules.other.blockquoteStart.test(t[d]))
+            a.push(t[d]), o = !0;
+          else if (!o)
+            a.push(t[d]);
+          else
+            break;
+        t = t.slice(d);
+        const u = a.join(`
+`), l = u.replace(this.rules.other.blockquoteSetextReplace, `
+    $1`).replace(this.rules.other.blockquoteSetextReplace2, "");
+        n = n ? `${n}
+${u}` : u, s = s ? `${s}
+${l}` : l;
+        const h = this.lexer.state.top;
+        if (this.lexer.state.top = !0, this.lexer.blockTokens(l, r, !0), this.lexer.state.top = h, t.length === 0)
+          break;
+        const p = r.at(-1);
+        if (p?.type === "code")
+          break;
+        if (p?.type === "blockquote") {
+          const b = p, w = b.raw + `
+` + t.join(`
+`), _ = this.blockquote(w);
+          r[r.length - 1] = _, n = n.substring(0, n.length - b.raw.length) + _.raw, s = s.substring(0, s.length - b.text.length) + _.text;
+          break;
+        } else if (p?.type === "list") {
+          const b = p, w = b.raw + `
+` + t.join(`
+`), _ = this.list(w);
+          r[r.length - 1] = _, n = n.substring(0, n.length - p.raw.length) + _.raw, s = s.substring(0, s.length - b.raw.length) + _.raw, t = w.substring(r.at(-1).raw.length).split(`
+`);
+          continue;
+        }
+      }
+      return {
+        type: "blockquote",
+        raw: n,
+        tokens: r,
+        text: s
+      };
+    }
+  }
+  list(e) {
+    let i = this.rules.block.list.exec(e);
+    if (i) {
+      let t = i[1].trim();
+      const n = t.length > 1, s = {
+        type: "list",
+        raw: "",
+        ordered: n,
+        start: n ? +t.slice(0, -1) : "",
+        loose: !1,
+        items: []
+      };
+      t = n ? `\\d{1,9}\\${t.slice(-1)}` : `\\${t}`, this.options.pedantic && (t = n ? t : "[*+-]");
+      const r = this.rules.other.listItemRegex(t);
+      let o = !1;
+      for (; e; ) {
+        let d = !1, u = "", l = "";
+        if (!(i = r.exec(e)) || this.rules.block.hr.test(e))
+          break;
+        u = i[0], e = e.substring(u.length);
+        let h = i[2].split(`
+`, 1)[0].replace(this.rules.other.listReplaceTabs, (v) => " ".repeat(3 * v.length)), p = e.split(`
+`, 1)[0], b = !h.trim(), w = 0;
+        if (this.options.pedantic ? (w = 2, l = h.trimStart()) : b ? w = i[1].length + 1 : (w = i[2].search(this.rules.other.nonSpaceChar), w = w > 4 ? 1 : w, l = h.slice(w), w += i[1].length), b && this.rules.other.blankLine.test(p) && (u += p + `
+`, e = e.substring(p.length + 1), d = !0), !d) {
+          const v = this.rules.other.nextBulletRegex(w), f = this.rules.other.hrRegex(w), m = this.rules.other.fencesBeginRegex(w), y = this.rules.other.headingBeginRegex(w), k = this.rules.other.htmlBeginRegex(w);
+          for (; e; ) {
+            const x = e.split(`
+`, 1)[0];
+            let S;
+            if (p = x, this.options.pedantic ? (p = p.replace(this.rules.other.listReplaceNesting, "  "), S = p) : S = p.replace(this.rules.other.tabCharGlobal, "    "), m.test(p) || y.test(p) || k.test(p) || v.test(p) || f.test(p))
+              break;
+            if (S.search(this.rules.other.nonSpaceChar) >= w || !p.trim())
+              l += `
+` + S.slice(w);
+            else {
+              if (b || h.replace(this.rules.other.tabCharGlobal, "    ").search(this.rules.other.nonSpaceChar) >= 4 || m.test(h) || y.test(h) || f.test(h))
+                break;
+              l += `
+` + p;
+            }
+            !b && !p.trim() && (b = !0), u += x + `
+`, e = e.substring(x.length + 1), h = S.slice(w);
+          }
+        }
+        s.loose || (o ? s.loose = !0 : this.rules.other.doubleBlankLine.test(u) && (o = !0));
+        let _ = null, g;
+        this.options.gfm && (_ = this.rules.other.listIsTask.exec(l), _ && (g = _[0] !== "[ ] ", l = l.replace(this.rules.other.listReplaceTask, ""))), s.items.push({
+          type: "list_item",
+          raw: u,
+          task: !!_,
+          checked: g,
+          loose: !1,
+          text: l,
+          tokens: []
+        }), s.raw += u;
+      }
+      const a = s.items.at(-1);
+      if (a)
+        a.raw = a.raw.trimEnd(), a.text = a.text.trimEnd();
+      else
+        return;
+      s.raw = s.raw.trimEnd();
+      for (let d = 0; d < s.items.length; d++)
+        if (this.lexer.state.top = !1, s.items[d].tokens = this.lexer.blockTokens(s.items[d].text, []), !s.loose) {
+          const u = s.items[d].tokens.filter((h) => h.type === "space"), l = u.length > 0 && u.some((h) => this.rules.other.anyLine.test(h.raw));
+          s.loose = l;
+        }
+      if (s.loose)
+        for (let d = 0; d < s.items.length; d++)
+          s.items[d].loose = !0;
+      return s;
+    }
+  }
+  html(e) {
+    const i = this.rules.block.html.exec(e);
+    if (i)
+      return {
+        type: "html",
+        block: !0,
+        raw: i[0],
+        pre: i[1] === "pre" || i[1] === "script" || i[1] === "style",
+        text: i[0]
+      };
+  }
+  def(e) {
+    const i = this.rules.block.def.exec(e);
+    if (i) {
+      const t = i[1].toLowerCase().replace(this.rules.other.multipleSpaceGlobal, " "), n = i[2] ? i[2].replace(this.rules.other.hrefBrackets, "$1").replace(this.rules.inline.anyPunctuation, "$1") : "", s = i[3] ? i[3].substring(1, i[3].length - 1).replace(this.rules.inline.anyPunctuation, "$1") : i[3];
+      return {
+        type: "def",
+        tag: t,
+        raw: i[0],
+        href: n,
+        title: s
+      };
+    }
+  }
+  table(e) {
+    const i = this.rules.block.table.exec(e);
+    if (!i || !this.rules.other.tableDelimiter.test(i[2]))
+      return;
+    const t = Kt(i[1]), n = i[2].replace(this.rules.other.tableAlignChars, "").split("|"), s = i[3]?.trim() ? i[3].replace(this.rules.other.tableRowBlankLine, "").split(`
+`) : [], r = {
+      type: "table",
+      raw: i[0],
+      header: [],
+      align: [],
+      rows: []
+    };
+    if (t.length === n.length) {
+      for (const o of n)
+        this.rules.other.tableAlignRight.test(o) ? r.align.push("right") : this.rules.other.tableAlignCenter.test(o) ? r.align.push("center") : this.rules.other.tableAlignLeft.test(o) ? r.align.push("left") : r.align.push(null);
+      for (let o = 0; o < t.length; o++)
+        r.header.push({
+          text: t[o],
+          tokens: this.lexer.inline(t[o]),
+          header: !0,
+          align: r.align[o]
+        });
+      for (const o of s)
+        r.rows.push(Kt(o, r.header.length).map((a, d) => ({
+          text: a,
+          tokens: this.lexer.inline(a),
+          header: !1,
+          align: r.align[d]
+        })));
+      return r;
+    }
+  }
+  lheading(e) {
+    const i = this.rules.block.lheading.exec(e);
+    if (i)
+      return {
+        type: "heading",
+        raw: i[0],
+        depth: i[2].charAt(0) === "=" ? 1 : 2,
+        text: i[1],
+        tokens: this.lexer.inline(i[1])
+      };
+  }
+  paragraph(e) {
+    const i = this.rules.block.paragraph.exec(e);
+    if (i) {
+      const t = i[1].charAt(i[1].length - 1) === `
+` ? i[1].slice(0, -1) : i[1];
+      return {
+        type: "paragraph",
+        raw: i[0],
+        text: t,
+        tokens: this.lexer.inline(t)
+      };
+    }
+  }
+  text(e) {
+    const i = this.rules.block.text.exec(e);
+    if (i)
+      return {
+        type: "text",
+        raw: i[0],
+        text: i[0],
+        tokens: this.lexer.inline(i[0])
+      };
+  }
+  escape(e) {
+    const i = this.rules.inline.escape.exec(e);
+    if (i)
+      return {
+        type: "escape",
+        raw: i[0],
+        text: i[1]
+      };
+  }
+  tag(e) {
+    const i = this.rules.inline.tag.exec(e);
+    if (i)
+      return !this.lexer.state.inLink && this.rules.other.startATag.test(i[0]) ? this.lexer.state.inLink = !0 : this.lexer.state.inLink && this.rules.other.endATag.test(i[0]) && (this.lexer.state.inLink = !1), !this.lexer.state.inRawBlock && this.rules.other.startPreScriptTag.test(i[0]) ? this.lexer.state.inRawBlock = !0 : this.lexer.state.inRawBlock && this.rules.other.endPreScriptTag.test(i[0]) && (this.lexer.state.inRawBlock = !1), {
+        type: "html",
+        raw: i[0],
+        inLink: this.lexer.state.inLink,
+        inRawBlock: this.lexer.state.inRawBlock,
+        block: !1,
+        text: i[0]
+      };
+  }
+  link(e) {
+    const i = this.rules.inline.link.exec(e);
+    if (i) {
+      const t = i[2].trim();
+      if (!this.options.pedantic && this.rules.other.startAngleBracket.test(t)) {
+        if (!this.rules.other.endAngleBracket.test(t))
+          return;
+        const r = Ne(t.slice(0, -1), "\\");
+        if ((t.length - r.length) % 2 === 0)
+          return;
+      } else {
+        const r = hn(i[2], "()");
+        if (r === -2)
+          return;
+        if (r > -1) {
+          const a = (i[0].indexOf("!") === 0 ? 5 : 4) + i[1].length + r;
+          i[2] = i[2].substring(0, r), i[0] = i[0].substring(0, a).trim(), i[3] = "";
+        }
+      }
+      let n = i[2], s = "";
+      if (this.options.pedantic) {
+        const r = this.rules.other.pedanticHrefTitle.exec(n);
+        r && (n = r[1], s = r[3]);
+      } else
+        s = i[3] ? i[3].slice(1, -1) : "";
+      return n = n.trim(), this.rules.other.startAngleBracket.test(n) && (this.options.pedantic && !this.rules.other.endAngleBracket.test(t) ? n = n.slice(1) : n = n.slice(1, -1)), ei(i, {
+        href: n && n.replace(this.rules.inline.anyPunctuation, "$1"),
+        title: s && s.replace(this.rules.inline.anyPunctuation, "$1")
+      }, i[0], this.lexer, this.rules);
+    }
+  }
+  reflink(e, i) {
+    let t;
+    if ((t = this.rules.inline.reflink.exec(e)) || (t = this.rules.inline.nolink.exec(e))) {
+      const n = (t[2] || t[1]).replace(this.rules.other.multipleSpaceGlobal, " "), s = i[n.toLowerCase()];
+      if (!s) {
+        const r = t[0].charAt(0);
+        return {
+          type: "text",
+          raw: r,
+          text: r
+        };
+      }
+      return ei(t, s, t[0], this.lexer, this.rules);
+    }
+  }
+  emStrong(e, i, t = "") {
+    let n = this.rules.inline.emStrongLDelim.exec(e);
+    if (!n || n[3] && t.match(this.rules.other.unicodeAlphaNumeric))
+      return;
+    if (!(n[1] || n[2] || "") || !t || this.rules.inline.punctuation.exec(t)) {
+      const r = [...n[0]].length - 1;
+      let o, a, d = r, u = 0;
+      const l = n[0][0] === "*" ? this.rules.inline.emStrongRDelimAst : this.rules.inline.emStrongRDelimUnd;
+      for (l.lastIndex = 0, i = i.slice(-1 * e.length + r); (n = l.exec(i)) != null; ) {
+        if (o = n[1] || n[2] || n[3] || n[4] || n[5] || n[6], !o)
+          continue;
+        if (a = [...o].length, n[3] || n[4]) {
+          d += a;
+          continue;
+        } else if ((n[5] || n[6]) && r % 3 && !((r + a) % 3)) {
+          u += a;
+          continue;
+        }
+        if (d -= a, d > 0)
+          continue;
+        a = Math.min(a, a + d + u);
+        const h = [...n[0]][0].length, p = e.slice(0, r + n.index + h + a);
+        if (Math.min(r, a) % 2) {
+          const w = p.slice(1, -1);
+          return {
+            type: "em",
+            raw: p,
+            text: w,
+            tokens: this.lexer.inlineTokens(w)
+          };
+        }
+        const b = p.slice(2, -2);
+        return {
+          type: "strong",
+          raw: p,
+          text: b,
+          tokens: this.lexer.inlineTokens(b)
+        };
+      }
+    }
+  }
+  codespan(e) {
+    const i = this.rules.inline.code.exec(e);
+    if (i) {
+      let t = i[2].replace(this.rules.other.newLineCharGlobal, " ");
+      const n = this.rules.other.nonSpaceChar.test(t), s = this.rules.other.startingSpaceChar.test(t) && this.rules.other.endingSpaceChar.test(t);
+      return n && s && (t = t.substring(1, t.length - 1)), {
+        type: "codespan",
+        raw: i[0],
+        text: t
+      };
+    }
+  }
+  br(e) {
+    const i = this.rules.inline.br.exec(e);
+    if (i)
+      return {
+        type: "br",
+        raw: i[0]
+      };
+  }
+  del(e) {
+    const i = this.rules.inline.del.exec(e);
+    if (i)
+      return {
+        type: "del",
+        raw: i[0],
+        text: i[2],
+        tokens: this.lexer.inlineTokens(i[2])
+      };
+  }
+  autolink(e) {
+    const i = this.rules.inline.autolink.exec(e);
+    if (i) {
+      let t, n;
+      return i[2] === "@" ? (t = i[1], n = "mailto:" + t) : (t = i[1], n = t), {
+        type: "link",
+        raw: i[0],
+        text: t,
+        href: n,
+        tokens: [
+          {
+            type: "text",
+            raw: t,
+            text: t
+          }
+        ]
+      };
+    }
+  }
+  url(e) {
+    let i;
+    if (i = this.rules.inline.url.exec(e)) {
+      let t, n;
+      if (i[2] === "@")
+        t = i[0], n = "mailto:" + t;
+      else {
+        let s;
+        do
+          s = i[0], i[0] = this.rules.inline._backpedal.exec(i[0])?.[0] ?? "";
+        while (s !== i[0]);
+        t = i[0], i[1] === "www." ? n = "http://" + i[0] : n = i[0];
+      }
+      return {
+        type: "link",
+        raw: i[0],
+        text: t,
+        href: n,
+        tokens: [
+          {
+            type: "text",
+            raw: t,
+            text: t
+          }
+        ]
+      };
+    }
+  }
+  inlineText(e) {
+    const i = this.rules.inline.text.exec(e);
+    if (i) {
+      const t = this.lexer.state.inRawBlock;
+      return {
+        type: "text",
+        raw: i[0],
+        text: i[0],
+        escaped: t
+      };
+    }
+  }
+}
+class le {
+  tokens;
+  options;
+  state;
+  tokenizer;
+  inlineQueue;
+  constructor(e) {
+    this.tokens = [], this.tokens.links = /* @__PURE__ */ Object.create(null), this.options = e || Te, this.options.tokenizer = this.options.tokenizer || new Qe(), this.tokenizer = this.options.tokenizer, this.tokenizer.options = this.options, this.tokenizer.lexer = this, this.inlineQueue = [], this.state = {
+      inLink: !1,
+      inRawBlock: !1,
+      top: !0
+    };
+    const i = {
+      other: ie,
+      block: Be.normal,
+      inline: $e.normal
+    };
+    this.options.pedantic ? (i.block = Be.pedantic, i.inline = $e.pedantic) : this.options.gfm && (i.block = Be.gfm, this.options.breaks ? i.inline = $e.breaks : i.inline = $e.gfm), this.tokenizer.rules = i;
+  }
+  /**
+   * Expose Rules
+   */
+  static get rules() {
+    return {
+      block: Be,
+      inline: $e
+    };
+  }
+  /**
+   * Static Lex Method
+   */
+  static lex(e, i) {
+    return new le(i).lex(e);
+  }
+  /**
+   * Static Lex Inline Method
+   */
+  static lexInline(e, i) {
+    return new le(i).inlineTokens(e);
+  }
+  /**
+   * Preprocessing
+   */
+  lex(e) {
+    e = e.replace(ie.carriageReturn, `
+`), this.blockTokens(e, this.tokens);
+    for (let i = 0; i < this.inlineQueue.length; i++) {
+      const t = this.inlineQueue[i];
+      this.inlineTokens(t.src, t.tokens);
+    }
+    return this.inlineQueue = [], this.tokens;
+  }
+  blockTokens(e, i = [], t = !1) {
+    for (this.options.pedantic && (e = e.replace(ie.tabCharGlobal, "    ").replace(ie.spaceLine, "")); e; ) {
+      let n;
+      if (this.options.extensions?.block?.some((r) => (n = r.call({ lexer: this }, e, i)) ? (e = e.substring(n.raw.length), i.push(n), !0) : !1))
+        continue;
+      if (n = this.tokenizer.space(e)) {
+        e = e.substring(n.raw.length);
+        const r = i.at(-1);
+        n.raw.length === 1 && r !== void 0 ? r.raw += `
+` : i.push(n);
+        continue;
+      }
+      if (n = this.tokenizer.code(e)) {
+        e = e.substring(n.raw.length);
+        const r = i.at(-1);
+        r?.type === "paragraph" || r?.type === "text" ? (r.raw += `
+` + n.raw, r.text += `
+` + n.text, this.inlineQueue.at(-1).src = r.text) : i.push(n);
+        continue;
+      }
+      if (n = this.tokenizer.fences(e)) {
+        e = e.substring(n.raw.length), i.push(n);
+        continue;
+      }
+      if (n = this.tokenizer.heading(e)) {
+        e = e.substring(n.raw.length), i.push(n);
+        continue;
+      }
+      if (n = this.tokenizer.hr(e)) {
+        e = e.substring(n.raw.length), i.push(n);
+        continue;
+      }
+      if (n = this.tokenizer.blockquote(e)) {
+        e = e.substring(n.raw.length), i.push(n);
+        continue;
+      }
+      if (n = this.tokenizer.list(e)) {
+        e = e.substring(n.raw.length), i.push(n);
+        continue;
+      }
+      if (n = this.tokenizer.html(e)) {
+        e = e.substring(n.raw.length), i.push(n);
+        continue;
+      }
+      if (n = this.tokenizer.def(e)) {
+        e = e.substring(n.raw.length);
+        const r = i.at(-1);
+        r?.type === "paragraph" || r?.type === "text" ? (r.raw += `
+` + n.raw, r.text += `
+` + n.raw, this.inlineQueue.at(-1).src = r.text) : this.tokens.links[n.tag] || (this.tokens.links[n.tag] = {
+          href: n.href,
+          title: n.title
+        });
+        continue;
+      }
+      if (n = this.tokenizer.table(e)) {
+        e = e.substring(n.raw.length), i.push(n);
+        continue;
+      }
+      if (n = this.tokenizer.lheading(e)) {
+        e = e.substring(n.raw.length), i.push(n);
+        continue;
+      }
+      let s = e;
+      if (this.options.extensions?.startBlock) {
+        let r = 1 / 0;
+        const o = e.slice(1);
+        let a;
+        this.options.extensions.startBlock.forEach((d) => {
+          a = d.call({ lexer: this }, o), typeof a == "number" && a >= 0 && (r = Math.min(r, a));
+        }), r < 1 / 0 && r >= 0 && (s = e.substring(0, r + 1));
+      }
+      if (this.state.top && (n = this.tokenizer.paragraph(s))) {
+        const r = i.at(-1);
+        t && r?.type === "paragraph" ? (r.raw += `
+` + n.raw, r.text += `
+` + n.text, this.inlineQueue.pop(), this.inlineQueue.at(-1).src = r.text) : i.push(n), t = s.length !== e.length, e = e.substring(n.raw.length);
+        continue;
+      }
+      if (n = this.tokenizer.text(e)) {
+        e = e.substring(n.raw.length);
+        const r = i.at(-1);
+        r?.type === "text" ? (r.raw += `
+` + n.raw, r.text += `
+` + n.text, this.inlineQueue.pop(), this.inlineQueue.at(-1).src = r.text) : i.push(n);
+        continue;
+      }
+      if (e) {
+        const r = "Infinite loop on byte: " + e.charCodeAt(0);
+        if (this.options.silent) {
+          console.error(r);
+          break;
+        } else
+          throw new Error(r);
+      }
+    }
+    return this.state.top = !0, i;
+  }
+  inline(e, i = []) {
+    return this.inlineQueue.push({ src: e, tokens: i }), i;
+  }
+  /**
+   * Lexing/Compiling
+   */
+  inlineTokens(e, i = []) {
+    let t = e, n = null;
+    if (this.tokens.links) {
+      const o = Object.keys(this.tokens.links);
+      if (o.length > 0)
+        for (; (n = this.tokenizer.rules.inline.reflinkSearch.exec(t)) != null; )
+          o.includes(n[0].slice(n[0].lastIndexOf("[") + 1, -1)) && (t = t.slice(0, n.index) + "[" + "a".repeat(n[0].length - 2) + "]" + t.slice(this.tokenizer.rules.inline.reflinkSearch.lastIndex));
+    }
+    for (; (n = this.tokenizer.rules.inline.anyPunctuation.exec(t)) != null; )
+      t = t.slice(0, n.index) + "++" + t.slice(this.tokenizer.rules.inline.anyPunctuation.lastIndex);
+    for (; (n = this.tokenizer.rules.inline.blockSkip.exec(t)) != null; )
+      t = t.slice(0, n.index) + "[" + "a".repeat(n[0].length - 2) + "]" + t.slice(this.tokenizer.rules.inline.blockSkip.lastIndex);
+    let s = !1, r = "";
+    for (; e; ) {
+      s || (r = ""), s = !1;
+      let o;
+      if (this.options.extensions?.inline?.some((d) => (o = d.call({ lexer: this }, e, i)) ? (e = e.substring(o.raw.length), i.push(o), !0) : !1))
+        continue;
+      if (o = this.tokenizer.escape(e)) {
+        e = e.substring(o.raw.length), i.push(o);
+        continue;
+      }
+      if (o = this.tokenizer.tag(e)) {
+        e = e.substring(o.raw.length), i.push(o);
+        continue;
+      }
+      if (o = this.tokenizer.link(e)) {
+        e = e.substring(o.raw.length), i.push(o);
+        continue;
+      }
+      if (o = this.tokenizer.reflink(e, this.tokens.links)) {
+        e = e.substring(o.raw.length);
+        const d = i.at(-1);
+        o.type === "text" && d?.type === "text" ? (d.raw += o.raw, d.text += o.text) : i.push(o);
+        continue;
+      }
+      if (o = this.tokenizer.emStrong(e, t, r)) {
+        e = e.substring(o.raw.length), i.push(o);
+        continue;
+      }
+      if (o = this.tokenizer.codespan(e)) {
+        e = e.substring(o.raw.length), i.push(o);
+        continue;
+      }
+      if (o = this.tokenizer.br(e)) {
+        e = e.substring(o.raw.length), i.push(o);
+        continue;
+      }
+      if (o = this.tokenizer.del(e)) {
+        e = e.substring(o.raw.length), i.push(o);
+        continue;
+      }
+      if (o = this.tokenizer.autolink(e)) {
+        e = e.substring(o.raw.length), i.push(o);
+        continue;
+      }
+      if (!this.state.inLink && (o = this.tokenizer.url(e))) {
+        e = e.substring(o.raw.length), i.push(o);
+        continue;
+      }
+      let a = e;
+      if (this.options.extensions?.startInline) {
+        let d = 1 / 0;
+        const u = e.slice(1);
+        let l;
+        this.options.extensions.startInline.forEach((h) => {
+          l = h.call({ lexer: this }, u), typeof l == "number" && l >= 0 && (d = Math.min(d, l));
+        }), d < 1 / 0 && d >= 0 && (a = e.substring(0, d + 1));
+      }
+      if (o = this.tokenizer.inlineText(a)) {
+        e = e.substring(o.raw.length), o.raw.slice(-1) !== "_" && (r = o.raw.slice(-1)), s = !0;
+        const d = i.at(-1);
+        d?.type === "text" ? (d.raw += o.raw, d.text += o.text) : i.push(o);
+        continue;
+      }
+      if (e) {
+        const d = "Infinite loop on byte: " + e.charCodeAt(0);
+        if (this.options.silent) {
+          console.error(d);
+          break;
+        } else
+          throw new Error(d);
+      }
+    }
+    return i;
+  }
+}
+class Ke {
+  options;
+  parser;
+  // set by the parser
+  constructor(e) {
+    this.options = e || Te;
+  }
+  space(e) {
+    return "";
+  }
+  code({ text: e, lang: i, escaped: t }) {
+    const n = (i || "").match(ie.notSpaceStart)?.[0], s = e.replace(ie.endingNewline, "") + `
+`;
+    return n ? '<pre><code class="language-' + pe(n) + '">' + (t ? s : pe(s, !0)) + `</code></pre>
+` : "<pre><code>" + (t ? s : pe(s, !0)) + `</code></pre>
+`;
+  }
+  blockquote({ tokens: e }) {
+    return `<blockquote>
+${this.parser.parse(e)}</blockquote>
+`;
+  }
+  html({ text: e }) {
+    return e;
+  }
+  heading({ tokens: e, depth: i }) {
+    return `<h${i}>${this.parser.parseInline(e)}</h${i}>
+`;
+  }
+  hr(e) {
+    return `<hr>
+`;
+  }
+  list(e) {
+    const i = e.ordered, t = e.start;
+    let n = "";
+    for (let o = 0; o < e.items.length; o++) {
+      const a = e.items[o];
+      n += this.listitem(a);
+    }
+    const s = i ? "ol" : "ul", r = i && t !== 1 ? ' start="' + t + '"' : "";
+    return "<" + s + r + `>
+` + n + "</" + s + `>
+`;
+  }
+  listitem(e) {
+    let i = "";
+    if (e.task) {
+      const t = this.checkbox({ checked: !!e.checked });
+      e.loose ? e.tokens[0]?.type === "paragraph" ? (e.tokens[0].text = t + " " + e.tokens[0].text, e.tokens[0].tokens && e.tokens[0].tokens.length > 0 && e.tokens[0].tokens[0].type === "text" && (e.tokens[0].tokens[0].text = t + " " + pe(e.tokens[0].tokens[0].text), e.tokens[0].tokens[0].escaped = !0)) : e.tokens.unshift({
+        type: "text",
+        raw: t + " ",
+        text: t + " ",
+        escaped: !0
+      }) : i += t + " ";
+    }
+    return i += this.parser.parse(e.tokens, !!e.loose), `<li>${i}</li>
+`;
+  }
+  checkbox({ checked: e }) {
+    return "<input " + (e ? 'checked="" ' : "") + 'disabled="" type="checkbox">';
+  }
+  paragraph({ tokens: e }) {
+    return `<p>${this.parser.parseInline(e)}</p>
+`;
+  }
+  table(e) {
+    let i = "", t = "";
+    for (let s = 0; s < e.header.length; s++)
+      t += this.tablecell(e.header[s]);
+    i += this.tablerow({ text: t });
+    let n = "";
+    for (let s = 0; s < e.rows.length; s++) {
+      const r = e.rows[s];
+      t = "";
+      for (let o = 0; o < r.length; o++)
+        t += this.tablecell(r[o]);
+      n += this.tablerow({ text: t });
+    }
+    return n && (n = `<tbody>${n}</tbody>`), `<table>
+<thead>
+` + i + `</thead>
+` + n + `</table>
+`;
+  }
+  tablerow({ text: e }) {
+    return `<tr>
+${e}</tr>
+`;
+  }
+  tablecell(e) {
+    const i = this.parser.parseInline(e.tokens), t = e.header ? "th" : "td";
+    return (e.align ? `<${t} align="${e.align}">` : `<${t}>`) + i + `</${t}>
+`;
+  }
+  /**
+   * span level renderer
+   */
+  strong({ tokens: e }) {
+    return `<strong>${this.parser.parseInline(e)}</strong>`;
+  }
+  em({ tokens: e }) {
+    return `<em>${this.parser.parseInline(e)}</em>`;
+  }
+  codespan({ text: e }) {
+    return `<code>${pe(e, !0)}</code>`;
+  }
+  br(e) {
+    return "<br>";
+  }
+  del({ tokens: e }) {
+    return `<del>${this.parser.parseInline(e)}</del>`;
+  }
+  link({ href: e, title: i, tokens: t }) {
+    const n = this.parser.parseInline(t), s = Qt(e);
+    if (s === null)
+      return n;
+    e = s;
+    let r = '<a href="' + e + '"';
+    return i && (r += ' title="' + pe(i) + '"'), r += ">" + n + "</a>", r;
+  }
+  image({ href: e, title: i, text: t, tokens: n }) {
+    n && (t = this.parser.parseInline(n, this.parser.textRenderer));
+    const s = Qt(e);
+    if (s === null)
+      return pe(t);
+    e = s;
+    let r = `<img src="${e}" alt="${t}"`;
+    return i && (r += ` title="${pe(i)}"`), r += ">", r;
+  }
+  text(e) {
+    return "tokens" in e && e.tokens ? this.parser.parseInline(e.tokens) : "escaped" in e && e.escaped ? e.text : pe(e.text);
+  }
+}
+class Ct {
+  // no need for block level renderers
+  strong({ text: e }) {
+    return e;
+  }
+  em({ text: e }) {
+    return e;
+  }
+  codespan({ text: e }) {
+    return e;
+  }
+  del({ text: e }) {
+    return e;
+  }
+  html({ text: e }) {
+    return e;
+  }
+  text({ text: e }) {
+    return e;
+  }
+  link({ text: e }) {
+    return "" + e;
+  }
+  image({ text: e }) {
+    return "" + e;
+  }
+  br() {
+    return "";
+  }
+}
+class ae {
+  options;
+  renderer;
+  textRenderer;
+  constructor(e) {
+    this.options = e || Te, this.options.renderer = this.options.renderer || new Ke(), this.renderer = this.options.renderer, this.renderer.options = this.options, this.renderer.parser = this, this.textRenderer = new Ct();
+  }
+  /**
+   * Static Parse Method
+   */
+  static parse(e, i) {
+    return new ae(i).parse(e);
+  }
+  /**
+   * Static Parse Inline Method
+   */
+  static parseInline(e, i) {
+    return new ae(i).parseInline(e);
+  }
+  /**
+   * Parse Loop
+   */
+  parse(e, i = !0) {
+    let t = "";
+    for (let n = 0; n < e.length; n++) {
+      const s = e[n];
+      if (this.options.extensions?.renderers?.[s.type]) {
+        const o = s, a = this.options.extensions.renderers[o.type].call({ parser: this }, o);
+        if (a !== !1 || !["space", "hr", "heading", "code", "table", "blockquote", "list", "html", "paragraph", "text"].includes(o.type)) {
+          t += a || "";
+          continue;
+        }
+      }
+      const r = s;
+      switch (r.type) {
+        case "space": {
+          t += this.renderer.space(r);
+          continue;
+        }
+        case "hr": {
+          t += this.renderer.hr(r);
+          continue;
+        }
+        case "heading": {
+          t += this.renderer.heading(r);
+          continue;
+        }
+        case "code": {
+          t += this.renderer.code(r);
+          continue;
+        }
+        case "table": {
+          t += this.renderer.table(r);
+          continue;
+        }
+        case "blockquote": {
+          t += this.renderer.blockquote(r);
+          continue;
+        }
+        case "list": {
+          t += this.renderer.list(r);
+          continue;
+        }
+        case "html": {
+          t += this.renderer.html(r);
+          continue;
+        }
+        case "paragraph": {
+          t += this.renderer.paragraph(r);
+          continue;
+        }
+        case "text": {
+          let o = r, a = this.renderer.text(o);
+          for (; n + 1 < e.length && e[n + 1].type === "text"; )
+            o = e[++n], a += `
+` + this.renderer.text(o);
+          i ? t += this.renderer.paragraph({
+            type: "paragraph",
+            raw: a,
+            text: a,
+            tokens: [{ type: "text", raw: a, text: a, escaped: !0 }]
+          }) : t += a;
+          continue;
+        }
+        default: {
+          const o = 'Token with "' + r.type + '" type was not found.';
+          if (this.options.silent)
+            return console.error(o), "";
+          throw new Error(o);
+        }
+      }
+    }
+    return t;
+  }
+  /**
+   * Parse Inline Tokens
+   */
+  parseInline(e, i = this.renderer) {
+    let t = "";
+    for (let n = 0; n < e.length; n++) {
+      const s = e[n];
+      if (this.options.extensions?.renderers?.[s.type]) {
+        const o = this.options.extensions.renderers[s.type].call({ parser: this }, s);
+        if (o !== !1 || !["escape", "html", "link", "image", "strong", "em", "codespan", "br", "del", "text"].includes(s.type)) {
+          t += o || "";
+          continue;
+        }
+      }
+      const r = s;
+      switch (r.type) {
+        case "escape": {
+          t += i.text(r);
+          break;
+        }
+        case "html": {
+          t += i.html(r);
+          break;
+        }
+        case "link": {
+          t += i.link(r);
+          break;
+        }
+        case "image": {
+          t += i.image(r);
+          break;
+        }
+        case "strong": {
+          t += i.strong(r);
+          break;
+        }
+        case "em": {
+          t += i.em(r);
+          break;
+        }
+        case "codespan": {
+          t += i.codespan(r);
+          break;
+        }
+        case "br": {
+          t += i.br(r);
+          break;
+        }
+        case "del": {
+          t += i.del(r);
+          break;
+        }
+        case "text": {
+          t += i.text(r);
+          break;
+        }
+        default: {
+          const o = 'Token with "' + r.type + '" type was not found.';
+          if (this.options.silent)
+            return console.error(o), "";
+          throw new Error(o);
+        }
+      }
+    }
+    return t;
+  }
+}
+class Ye {
+  options;
+  block;
+  constructor(e) {
+    this.options = e || Te;
+  }
+  static passThroughHooks = /* @__PURE__ */ new Set([
+    "preprocess",
+    "postprocess",
+    "processAllTokens"
+  ]);
+  /**
+   * Process markdown before marked
+   */
+  preprocess(e) {
+    return e;
+  }
+  /**
+   * Process HTML after marked is finished
+   */
+  postprocess(e) {
+    return e;
+  }
+  /**
+   * Process all tokens before walk tokens
+   */
+  processAllTokens(e) {
+    return e;
+  }
+  /**
+   * Provide function to tokenize markdown
+   */
+  provideLexer() {
+    return this.block ? le.lex : le.lexInline;
+  }
+  /**
+   * Provide function to parse tokens
+   */
+  provideParser() {
+    return this.block ? ae.parse : ae.parseInline;
+  }
+}
+class fn {
+  defaults = wt();
+  options = this.setOptions;
+  parse = this.parseMarkdown(!0);
+  parseInline = this.parseMarkdown(!1);
+  Parser = ae;
+  Renderer = Ke;
+  TextRenderer = Ct;
+  Lexer = le;
+  Tokenizer = Qe;
+  Hooks = Ye;
+  constructor(...e) {
+    this.use(...e);
+  }
+  /**
+   * Run callback for every token
+   */
+  walkTokens(e, i) {
+    let t = [];
+    for (const n of e)
+      switch (t = t.concat(i.call(this, n)), n.type) {
+        case "table": {
+          const s = n;
+          for (const r of s.header)
+            t = t.concat(this.walkTokens(r.tokens, i));
+          for (const r of s.rows)
+            for (const o of r)
+              t = t.concat(this.walkTokens(o.tokens, i));
+          break;
+        }
+        case "list": {
+          const s = n;
+          t = t.concat(this.walkTokens(s.items, i));
+          break;
+        }
+        default: {
+          const s = n;
+          this.defaults.extensions?.childTokens?.[s.type] ? this.defaults.extensions.childTokens[s.type].forEach((r) => {
+            const o = s[r].flat(1 / 0);
+            t = t.concat(this.walkTokens(o, i));
+          }) : s.tokens && (t = t.concat(this.walkTokens(s.tokens, i)));
+        }
+      }
+    return t;
+  }
+  use(...e) {
+    const i = this.defaults.extensions || { renderers: {}, childTokens: {} };
+    return e.forEach((t) => {
+      const n = { ...t };
+      if (n.async = this.defaults.async || n.async || !1, t.extensions && (t.extensions.forEach((s) => {
+        if (!s.name)
+          throw new Error("extension name required");
+        if ("renderer" in s) {
+          const r = i.renderers[s.name];
+          r ? i.renderers[s.name] = function(...o) {
+            let a = s.renderer.apply(this, o);
+            return a === !1 && (a = r.apply(this, o)), a;
+          } : i.renderers[s.name] = s.renderer;
+        }
+        if ("tokenizer" in s) {
+          if (!s.level || s.level !== "block" && s.level !== "inline")
+            throw new Error("extension level must be 'block' or 'inline'");
+          const r = i[s.level];
+          r ? r.unshift(s.tokenizer) : i[s.level] = [s.tokenizer], s.start && (s.level === "block" ? i.startBlock ? i.startBlock.push(s.start) : i.startBlock = [s.start] : s.level === "inline" && (i.startInline ? i.startInline.push(s.start) : i.startInline = [s.start]));
+        }
+        "childTokens" in s && s.childTokens && (i.childTokens[s.name] = s.childTokens);
+      }), n.extensions = i), t.renderer) {
+        const s = this.defaults.renderer || new Ke(this.defaults);
+        for (const r in t.renderer) {
+          if (!(r in s))
+            throw new Error(`renderer '${r}' does not exist`);
+          if (["options", "parser"].includes(r))
+            continue;
+          const o = r, a = t.renderer[o], d = s[o];
+          s[o] = (...u) => {
+            let l = a.apply(s, u);
+            return l === !1 && (l = d.apply(s, u)), l || "";
+          };
+        }
+        n.renderer = s;
+      }
+      if (t.tokenizer) {
+        const s = this.defaults.tokenizer || new Qe(this.defaults);
+        for (const r in t.tokenizer) {
+          if (!(r in s))
+            throw new Error(`tokenizer '${r}' does not exist`);
+          if (["options", "rules", "lexer"].includes(r))
+            continue;
+          const o = r, a = t.tokenizer[o], d = s[o];
+          s[o] = (...u) => {
+            let l = a.apply(s, u);
+            return l === !1 && (l = d.apply(s, u)), l;
+          };
+        }
+        n.tokenizer = s;
+      }
+      if (t.hooks) {
+        const s = this.defaults.hooks || new Ye();
+        for (const r in t.hooks) {
+          if (!(r in s))
+            throw new Error(`hook '${r}' does not exist`);
+          if (["options", "block"].includes(r))
+            continue;
+          const o = r, a = t.hooks[o], d = s[o];
+          Ye.passThroughHooks.has(r) ? s[o] = (u) => {
+            if (this.defaults.async)
+              return Promise.resolve(a.call(s, u)).then((h) => d.call(s, h));
+            const l = a.call(s, u);
+            return d.call(s, l);
+          } : s[o] = (...u) => {
+            let l = a.apply(s, u);
+            return l === !1 && (l = d.apply(s, u)), l;
+          };
+        }
+        n.hooks = s;
+      }
+      if (t.walkTokens) {
+        const s = this.defaults.walkTokens, r = t.walkTokens;
+        n.walkTokens = function(o) {
+          let a = [];
+          return a.push(r.call(this, o)), s && (a = a.concat(s.call(this, o))), a;
+        };
+      }
+      this.defaults = { ...this.defaults, ...n };
+    }), this;
+  }
+  setOptions(e) {
+    return this.defaults = { ...this.defaults, ...e }, this;
+  }
+  lexer(e, i) {
+    return le.lex(e, i ?? this.defaults);
+  }
+  parser(e, i) {
+    return ae.parse(e, i ?? this.defaults);
+  }
+  parseMarkdown(e) {
+    return (t, n) => {
+      const s = { ...n }, r = { ...this.defaults, ...s }, o = this.onError(!!r.silent, !!r.async);
+      if (this.defaults.async === !0 && s.async === !1)
+        return o(new Error("marked(): The async option was set to true by an extension. Remove async: false from the parse options object to return a Promise."));
+      if (typeof t > "u" || t === null)
+        return o(new Error("marked(): input parameter is undefined or null"));
+      if (typeof t != "string")
+        return o(new Error("marked(): input parameter is of type " + Object.prototype.toString.call(t) + ", string expected"));
+      r.hooks && (r.hooks.options = r, r.hooks.block = e);
+      const a = r.hooks ? r.hooks.provideLexer() : e ? le.lex : le.lexInline, d = r.hooks ? r.hooks.provideParser() : e ? ae.parse : ae.parseInline;
+      if (r.async)
+        return Promise.resolve(r.hooks ? r.hooks.preprocess(t) : t).then((u) => a(u, r)).then((u) => r.hooks ? r.hooks.processAllTokens(u) : u).then((u) => r.walkTokens ? Promise.all(this.walkTokens(u, r.walkTokens)).then(() => u) : u).then((u) => d(u, r)).then((u) => r.hooks ? r.hooks.postprocess(u) : u).catch(o);
+      try {
+        r.hooks && (t = r.hooks.preprocess(t));
+        let u = a(t, r);
+        r.hooks && (u = r.hooks.processAllTokens(u)), r.walkTokens && this.walkTokens(u, r.walkTokens);
+        let l = d(u, r);
+        return r.hooks && (l = r.hooks.postprocess(l)), l;
+      } catch (u) {
+        return o(u);
+      }
+    };
+  }
+  onError(e, i) {
+    return (t) => {
+      if (t.message += `
+Please report this to https://github.com/markedjs/marked.`, e) {
+        const n = "<p>An error occurred:</p><pre>" + pe(t.message + "", !0) + "</pre>";
+        return i ? Promise.resolve(n) : n;
+      }
+      if (i)
+        return Promise.reject(t);
+      throw t;
+    };
+  }
+}
+const Se = new fn();
+function z(c, e) {
+  return Se.parse(c, e);
+}
+z.options = z.setOptions = function(c) {
+  return Se.setOptions(c), z.defaults = Se.defaults, li(z.defaults), z;
+};
+z.getDefaults = wt;
+z.defaults = Te;
+z.use = function(...c) {
+  return Se.use(...c), z.defaults = Se.defaults, li(z.defaults), z;
+};
+z.walkTokens = function(c, e) {
+  return Se.walkTokens(c, e);
+};
+z.parseInline = Se.parseInline;
+z.Parser = ae;
+z.parser = ae.parse;
+z.Renderer = Ke;
+z.TextRenderer = Ct;
+z.Lexer = le;
+z.lexer = le.lex;
+z.Tokenizer = Qe;
+z.Hooks = Ye;
+z.parse = z;
+z.options;
+z.setOptions;
+z.use;
+z.walkTokens;
+z.parseInline;
+ae.parse;
+le.lex;
+class gn {
+  constructor(e = {}, i) {
+    const t = {
+      lang: []
+    };
+    this.builder = i, this.opts = Object.assign({}, t, e);
+  }
+  async checkIntent(e, i, t) {
+    let n = "You are an assistant", s = "", r = `This is the user's request:
+
+${e}`, o, a, d;
+    if (t.image && i === "openai")
+      return r += `
+Extract some information.
+`, o = [{
+        name: "check_request",
+        description: "Check request and extract information.",
+        parameters: {
+          type: "object",
+          properties: {
+            prompt: {
+              type: "string",
+              description: "Return user's instruction/prompt for generating the image."
+            },
+            num_images: {
+              type: "number",
+              description: "The number of images to generate, only if specified."
+            },
+            // width:{
+            //     type: 'number', 
+            //     description: 'Return image width to generate, only if specified.',
+            // },
+            // height:{
+            //     type: 'number', 
+            //     description: 'Return image height to generate, only if specified.',
+            // },
+            size: {
+              type: "string",
+              description: "Choose specified size: auto, 1024x1024, 1536x1024, 1024x1536"
+            },
+            quality: {
+              type: "string",
+              description: "Choose: auto, low, medium, high"
+            },
+            background: {
+              type: "string",
+              description: "Choose: auto, transparent, opaque"
+            },
+            output_format: {
+              type: "string",
+              description: "Choose: png, jpeg, webp"
+            }
+          },
+          required: []
+        }
+      }], a = await this.builder.send(r, s, n, "", o), a ? (d = JSON.parse(a), d) : !1;
+    if (t.image) {
+      if (r += `
+
+Check the type of the request:
+- Text/Prompt to Image Generation
+- Text/Prompt to 2D Illustration Generation
+- Text/Prompt to Digital Illustration Generation
+- Text/Prompt to Book Cover Generation
+- Upscale Image
+- Upscale Video
+- Minimize Image
+- Remove Background of an Image
+- Change/Replace Background of an Image
+- Erase/Remove Unwanted Objects from Image
+- Edit Area in Image
+- Generate Variation of an Image
+- Describe an image or ask questions about the image
+`, o = [{
+        name: "check_request",
+        description: "Check request.",
+        parameters: {
+          type: "object",
+          properties: {
+            text_to_image_generation: {
+              type: "boolean",
+              description: "Check if the request asks to create or generate an image based on the prompt."
+            },
+            text_to_2d_illustration_generation: {
+              type: "boolean",
+              description: "Check if the request asks to create or generate a 2D illustration based on the prompt."
+            },
+            text_to_digital_illustration_generation: {
+              type: "boolean",
+              description: "Check if the request asks to create or generate a digital illustration based on the prompt."
+            },
+            text_to_book_cover_generation: {
+              type: "boolean",
+              description: "Check if the request asks to create or generate a book cover based on the prompt."
+            },
+            upscale_image: {
+              type: "boolean",
+              description: "Check if the request asks to upscale or enlarge an image."
+            },
+            minimize_image: {
+              type: "boolean",
+              description: "Check if the request asks to minimize (compress) the size of an image."
+            },
+            edit_area_in_image: {
+              type: "boolean",
+              // description: 'Check if the request asks to edit an area in an image.',
+              description: "Check if the request asks to edit an image."
+            },
+            describe_image: {
+              type: "boolean",
+              description: "Check if the request is asking to describe an image or asking questions about the image."
+            }
+          },
+          required: []
+        }
+      }], a = await this.builder.send(r, s, n, "", o), !a)
+        return !1;
+      d = JSON.parse(a);
+    } else if (t.video) {
+      if (r += `
+
+Check the type of the request:
+- Image to Video Generation (generate a video based on image)
+- Prompt/text to Video Generation (generate a video based on prompt)
+- Upscale video
+- Add sound to video
+`, o = [{
+        name: "check_request",
+        description: "Check request.",
+        parameters: {
+          type: "object",
+          properties: {
+            image_to_video_generation: {
+              type: "boolean",
+              description: "Check if the request asked to create or generate a video based on image, not prompt."
+            },
+            text_to_video_generation: {
+              type: "boolean",
+              description: "Check if the request asked to create or generate a video based on prompt, not image."
+            }
+          },
+          required: []
+        }
+      }], a = await this.builder.send(r, s, n, "", o), !a)
+        return !1;
+      d = JSON.parse(a);
+    } else if (t.audio) {
+      if (r += `
+
+Check the type of the request:
+- Prompt/text to Audio Generation (generate sound or audio based on prompt)
+- Text to Speech (generate speech from text)
+`, o = [{
+        name: "check_request",
+        description: "Check request.",
+        parameters: {
+          type: "object",
+          properties: {
+            text_to_speech: {
+              type: "boolean",
+              description: "heck if the request is asking to generate speech from text."
+            }
+          },
+          required: []
+        }
+      }], a = await this.builder.send(r, s, n, "", o), !a)
+        return !1;
+      d = JSON.parse(a);
+    }
+    return this.builder.settings.consoleLog && console.log(d), this.extractInfo(d, i, e);
+  }
+  async extractInfo(e, i, t) {
+    const n = this.builder.settings.defaultModels;
+    if (e.text_to_image_generation) {
+      const s = "You are an assistant", o = `
+Thie is the list of models:
+- ${n.text_to_image_generation[i].join(`
+- `)}
+`, a = `This is user's request:
+
+${t}
+
+Check the request and return the details.
+    `;
+      let d = [{
+        name: "check_request",
+        description: "Check user request.",
+        parameters: {
+          type: "object",
+          properties: {
+            model: {
+              type: "string",
+              description: "Return the chosen model name from the model list."
+            },
+            prompt: {
+              type: "string",
+              description: "Return user's instruction/prompt for generating the image."
+            },
+            num_images: {
+              type: "number",
+              description: "The number of images to generate, only if specified."
+            },
+            width: {
+              type: "number",
+              description: "Return image width to generate, only if specified."
+            },
+            height: {
+              type: "number",
+              description: "Return image height to generate, only if specified."
+            },
+            aspect_ratio: {
+              type: "string",
+              description: "Return the aspect ration, only if specified. Example: 3:4, 16:9, etc"
+            },
+            color1_red: {
+              type: "string",
+              description: "Return red part from color1 rgb."
+            },
+            color1_green: {
+              type: "string",
+              description: "Return green part from color1 rgb."
+            },
+            color1_blue: {
+              type: "string",
+              description: "Return blue part from color1 rgb."
+            },
+            color2_red: {
+              type: "string",
+              description: "Return red part from color2 rgb."
+            },
+            color2_green: {
+              type: "string",
+              description: "Return green part from color2 rgb."
+            },
+            color2_blue: {
+              type: "string",
+              description: "Return blue part from color2 rgb."
+            },
+            color3_red: {
+              type: "string",
+              description: "Return red part from color3 rgb."
+            },
+            color3_green: {
+              type: "string",
+              description: "Return green part from color3 rgb."
+            },
+            color3_blue: {
+              type: "string",
+              description: "Return blue part from color3 rgb."
+            },
+            color4_red: {
+              type: "string",
+              description: "Return red part from color4 rgb."
+            },
+            color4_green: {
+              type: "string",
+              description: "Return green part from color4 rgb."
+            },
+            color4_blue: {
+              type: "string",
+              description: "Return blue part from color4 rgb."
+            },
+            color5_red: {
+              type: "string",
+              description: "Return red part from color5 rgb."
+            },
+            color5_green: {
+              type: "string",
+              description: "Return green part from color5 rgb."
+            },
+            color5_blue: {
+              type: "string",
+              description: "Return blue part from color5 rgb."
+            }
+          },
+          required: [
+            // 'prompt'
+          ]
+        }
+      }], u = await this.builder.send(a, o, s, "", d);
+      if (!u)
+        return !1;
+      let l = JSON.parse(u);
+      return {
+        ...e,
+        ...l
+      };
+    } else if (e.image_to_video_generation) {
+      const s = "You are an assistant", o = `
+Thie is the list of models:
+- ${n.image_to_video_generation[i].join(`
+- `)}
+`, a = `This is user's request:
+
+${t}
+
+Check the request and return the details.
+    `;
+      let d = [{
+        name: "check_request",
+        description: "Check user request.",
+        parameters: {
+          type: "object",
+          properties: {
+            model: {
+              type: "string",
+              description: "Return the chosen model name from the model list."
+            },
+            prompt: {
+              type: "string",
+              description: "Return user's instruction/prompt for generating the video."
+            },
+            image_url: {
+              type: "string",
+              description: "Return user's image reference URL (if JPG or PNG image URL is specified)."
+            },
+            duration: {
+              type: "number",
+              description: "Return duration of the video to generate."
+            }
+          },
+          required: [
+            // 'image_url'
+          ]
+        }
+      }], u = await this.builder.send(a, o, s, "", d);
+      if (!u)
+        return !1;
+      let l = JSON.parse(u);
+      return {
+        ...e,
+        ...l
+      };
+    } else if (e.text_to_video_generation) {
+      const s = "You are an assistant", o = `
+Thie is the list of models:
+- ${n.text_to_video_generation[i].join(`
+- `)}
+`;
+      let a = `This is user's request:
+
+${t}
+
+Check the request and return the details.
+    `, d = [{
+        name: "check_request",
+        description: "Check user request.",
+        parameters: {
+          type: "object",
+          properties: {
+            model: {
+              type: "string",
+              description: "Return the chosen model name from the model list."
+            },
+            prompt: {
+              type: "string",
+              description: "Return user's instruction/prompt for generating the video."
+            },
+            duration: {
+              type: "number",
+              description: "Return duration of the video to generate. If not explicitely specified, return 5"
+            }
+          },
+          required: [
+            // 'prompt'
+          ]
+        }
+      }], u = await this.builder.send(a, o, s, "", d);
+      if (!u)
+        return !1;
+      let l = JSON.parse(u);
+      return {
+        ...e,
+        ...l
+      };
+    } else if (e.minimize_image) {
+      let s = "You are an assistant", r = "", o = `This is user's request:
+
+${t}
+
+Check the request and return the details.
+    `, a = [{
+        name: "check_request",
+        description: "Check user request.",
+        parameters: {
+          type: "object",
+          properties: {
+            image_url: {
+              type: "string",
+              description: "Return user's image reference URL (if JPG or PNG image URL is specified)."
+            }
+          },
+          required: ["image_url"]
+        }
+      }], d = await this.builder.send(o, r, s, "", a);
+      if (!d)
+        return !1;
+      let u = JSON.parse(d);
+      return {
+        ...e,
+        ...u
+      };
+    } else if (e.upscale_image) {
+      const s = "You are an assistant", o = `
+Thie is the list of models:
+- ${n.upscale_image[i].join(`
+- `)}
+`;
+      let a = `This is user's request:
+
+${t}
+
+Check the request and return the details.
+    `, d = [{
+        name: "check_request",
+        description: "Check user request.",
+        parameters: {
+          type: "object",
+          properties: {
+            model: {
+              type: "string",
+              description: "Return the chosen model name from the model list."
+            },
+            image_url: {
+              type: "string",
+              description: "Return user's image reference URL (if JPG or PNG image URL is specified)."
+            }
+          },
+          required: [
+            // 'image_url'
+          ]
+        }
+      }], u = await this.builder.send(a, o, s, "", d);
+      if (!u)
+        return !1;
+      let l = JSON.parse(u);
+      return {
+        ...e,
+        ...l
+      };
+    } else if (e.describe_image) {
+      const s = "You are an assistant", o = `
+Thie is the list of models:
+- ${n.describe_image[i].join(`
+- `)}
+`;
+      let a = `This is user's request:
+
+${t}
+
+Check the request and return the details.
+    `, d = [{
+        name: "check_request",
+        description: "Check user request.",
+        parameters: {
+          type: "object",
+          properties: {
+            model: {
+              type: "string",
+              description: "Return the chosen model name from the model list."
+            },
+            image_url: {
+              type: "string",
+              description: "Return user's image reference URL (if JPG or PNG image URL is specified)."
+            },
+            prompt: {
+              type: "string",
+              description: "Return user's instruction/prompt for generating the video."
+            }
+          },
+          required: ["image_url", "prompt"]
+        }
+      }], u = await this.builder.send(a, o, s, "", d);
+      if (!u)
+        return !1;
+      let l = JSON.parse(u);
+      return {
+        ...e,
+        ...l
+      };
+    } else if (e.edit_area_in_image) {
+      const s = "You are an assistant", r = n.edit_area_in_image[i];
+      let o = "";
+      r && (o = `
+Thie is the list of models:
+- ${r.join(`
+- `)}
+`);
+      let a = `This is user's request:
+
+${t}
+
+Check the request and return the details.
+    `, d = [{
+        name: "check_request",
+        description: "Check user request.",
+        parameters: {
+          type: "object",
+          properties: {
+            model: {
+              type: "string",
+              description: "Return the chosen model name from the model list."
+            },
+            image_url: {
+              type: "string",
+              description: "Return user's image reference URL (if JPG or PNG image URL is specified)."
+            },
+            prompt: {
+              type: "string",
+              description: "Return user's instruction/prompt for generating the video."
+            },
+            num_images: {
+              type: "number",
+              description: "The number of images to generate."
+            }
+          },
+          required: [
+            // 'image_url'
+          ]
+        }
+      }], u = await this.builder.send(a, o, s, "", d);
+      if (!u)
+        return !1;
+      let l = JSON.parse(u);
+      return {
+        ...e,
+        ...l
+      };
+    } else if (e.text_to_2d_illustration_generation) {
+      const s = "You are an assistant", o = `
+Thie is the list of models:
+- ${n.text_to_2d_illustration_generation[i].join(`
+- `)}
+`;
+      let a = `This is user's request:
+
+${t}
+
+Check the request and return the details.
+    `, d = [{
+        name: "check_request",
+        description: "Check user request.",
+        parameters: {
+          type: "object",
+          properties: {
+            model: {
+              type: "string",
+              description: "Return the chosen model name from the model list."
+            },
+            prompt: {
+              type: "string",
+              description: "Return user's instruction/prompt for generating the image."
+            },
+            style: {
+              type: "string",
+              description: 'Return "digital_illustration"'
+            },
+            style_id: {
+              type: "string",
+              description: "Return specified style_id for generating the image."
+            },
+            num_images: {
+              type: "number",
+              description: "The number of images to generate."
+            },
+            width: {
+              type: "number",
+              description: "Return image width to generate."
+            },
+            height: {
+              type: "number",
+              description: "Return image height to generate."
+            },
+            aspect_ratio: {
+              type: "string",
+              description: "Example: 3:4, 16:9, etc"
+            },
+            color1_red: {
+              type: "string",
+              description: "Return red part from color1 rgb."
+            },
+            color1_green: {
+              type: "string",
+              description: "Return green part from color1 rgb."
+            },
+            color1_blue: {
+              type: "string",
+              description: "Return blue part from color1 rgb."
+            },
+            color2_red: {
+              type: "string",
+              description: "Return red part from color2 rgb."
+            },
+            color2_green: {
+              type: "string",
+              description: "Return green part from color2 rgb."
+            },
+            color2_blue: {
+              type: "string",
+              description: "Return blue part from color2 rgb."
+            },
+            color3_red: {
+              type: "string",
+              description: "Return red part from color3 rgb."
+            },
+            color3_green: {
+              type: "string",
+              description: "Return green part from color3 rgb."
+            },
+            color3_blue: {
+              type: "string",
+              description: "Return blue part from color3 rgb."
+            },
+            color4_red: {
+              type: "string",
+              description: "Return red part from color4 rgb."
+            },
+            color4_green: {
+              type: "string",
+              description: "Return green part from color4 rgb."
+            },
+            color4_blue: {
+              type: "string",
+              description: "Return blue part from color4 rgb."
+            },
+            color5_red: {
+              type: "string",
+              description: "Return red part from color5 rgb."
+            },
+            color5_green: {
+              type: "string",
+              description: "Return green part from color5 rgb."
+            },
+            color5_blue: {
+              type: "string",
+              description: "Return blue part from color5 rgb."
+            }
+          },
+          required: [
+            // 'prompt'
+          ]
+        }
+      }], u = await this.builder.send(a, o, s, "", d);
+      if (!u)
+        return !1;
+      let l = JSON.parse(u);
+      return {
+        ...e,
+        ...l
+      };
+    } else if (e.text_to_digital_illustration_generation) {
+      const s = "You are an assistant", o = `
+Thie is the list of models:
+- ${n.text_to_digital_illustration_generation[i].join(`
+- `)}
+`;
+      let a = `This is user's request:
+
+${t}
+
+Check the request and return the details.
+    `, d = [{
+        name: "check_request",
+        description: "Check user request.",
+        parameters: {
+          type: "object",
+          properties: {
+            model: {
+              type: "string",
+              description: "Return the chosen model name from the model list."
+            },
+            prompt: {
+              type: "string",
+              description: "Return user's instruction/prompt for generating the image."
+            },
+            style: {
+              type: "string",
+              description: 'Return "digital_illustration"'
+            },
+            style_id: {
+              type: "string",
+              description: "Return specified style_id for generating the image."
+            },
+            num_images: {
+              type: "number",
+              description: "The number of images to generate."
+            },
+            width: {
+              type: "number",
+              description: "Return image width to generate."
+            },
+            height: {
+              type: "number",
+              description: "Return image height to generate."
+            },
+            aspect_ratio: {
+              type: "string",
+              description: "Example: 3:4, 16:9, etc"
+            },
+            color1_red: {
+              type: "string",
+              description: "Return red part from color1 rgb."
+            },
+            color1_green: {
+              type: "string",
+              description: "Return green part from color1 rgb."
+            },
+            color1_blue: {
+              type: "string",
+              description: "Return blue part from color1 rgb."
+            },
+            color2_red: {
+              type: "string",
+              description: "Return red part from color2 rgb."
+            },
+            color2_green: {
+              type: "string",
+              description: "Return green part from color2 rgb."
+            },
+            color2_blue: {
+              type: "string",
+              description: "Return blue part from color2 rgb."
+            },
+            color3_red: {
+              type: "string",
+              description: "Return red part from color3 rgb."
+            },
+            color3_green: {
+              type: "string",
+              description: "Return green part from color3 rgb."
+            },
+            color3_blue: {
+              type: "string",
+              description: "Return blue part from color3 rgb."
+            },
+            color4_red: {
+              type: "string",
+              description: "Return red part from color4 rgb."
+            },
+            color4_green: {
+              type: "string",
+              description: "Return green part from color4 rgb."
+            },
+            color4_blue: {
+              type: "string",
+              description: "Return blue part from color4 rgb."
+            },
+            color5_red: {
+              type: "string",
+              description: "Return red part from color5 rgb."
+            },
+            color5_green: {
+              type: "string",
+              description: "Return green part from color5 rgb."
+            },
+            color5_blue: {
+              type: "string",
+              description: "Return blue part from color5 rgb."
+            }
+          },
+          required: [
+            // 'prompt'
+          ]
+        }
+      }], u = await this.builder.send(a, o, s, "", d);
+      if (!u)
+        return !1;
+      let l = JSON.parse(u);
+      return {
+        ...e,
+        ...l
+      };
+    } else if (e.text_to_book_cover_generation) {
+      const s = "You are an assistant", o = `
+Thie is the list of models:
+- ${n.text_to_book_cover_generation[i].join(`
+- `)}
+`;
+      let a = `This is user's request:
+
+${t}
+
+Check the request and return the details.
+    `, d = [{
+        name: "check_request",
+        description: "Check user request.",
+        parameters: {
+          type: "object",
+          properties: {
+            model: {
+              type: "string",
+              description: "Return the chosen model name from the model list."
+            },
+            prompt: {
+              type: "string",
+              description: "Return user's instruction/prompt for generating the image."
+            },
+            style: {
+              type: "string",
+              description: 'Return "digital_illustration/cover"'
+            },
+            num_images: {
+              type: "number",
+              description: "The number of images to generate."
+            },
+            width: {
+              type: "number",
+              description: "Return image width to generate."
+            },
+            height: {
+              type: "number",
+              description: "Return image height to generate."
+            },
+            aspect_ratio: {
+              type: "string",
+              description: "Example: 3:4, 16:9, etc"
+            },
+            color1_red: {
+              type: "string",
+              description: "Return red part from color1 rgb."
+            },
+            color1_green: {
+              type: "string",
+              description: "Return green part from color1 rgb."
+            },
+            color1_blue: {
+              type: "string",
+              description: "Return blue part from color1 rgb."
+            },
+            color2_red: {
+              type: "string",
+              description: "Return red part from color2 rgb."
+            },
+            color2_green: {
+              type: "string",
+              description: "Return green part from color2 rgb."
+            },
+            color2_blue: {
+              type: "string",
+              description: "Return blue part from color2 rgb."
+            },
+            color3_red: {
+              type: "string",
+              description: "Return red part from color3 rgb."
+            },
+            color3_green: {
+              type: "string",
+              description: "Return green part from color3 rgb."
+            },
+            color3_blue: {
+              type: "string",
+              description: "Return blue part from color3 rgb."
+            },
+            color4_red: {
+              type: "string",
+              description: "Return red part from color4 rgb."
+            },
+            color4_green: {
+              type: "string",
+              description: "Return green part from color4 rgb."
+            },
+            color4_blue: {
+              type: "string",
+              description: "Return blue part from color4 rgb."
+            },
+            color5_red: {
+              type: "string",
+              description: "Return red part from color5 rgb."
+            },
+            color5_green: {
+              type: "string",
+              description: "Return green part from color5 rgb."
+            },
+            color5_blue: {
+              type: "string",
+              description: "Return blue part from color5 rgb."
+            }
+          },
+          required: [
+            // 'prompt'
+          ]
+        }
+      }], u = await this.builder.send(a, o, s, "", d);
+      if (!u)
+        return !1;
+      let l = JSON.parse(u);
+      return {
+        ...e,
+        ...l
+      };
+    } else if (e.text_to_speech) {
+      const s = "You are an assistant", o = `
+Thie is the list of models:
+- ${n.text_to_speech[i].join(`
+- `)}
+`;
+      let a = `This is user's request:
+
+${t}
+
+Check the request and return the details.
+    `, d = [{
+        name: "check_request",
+        description: "Check user request.",
+        parameters: {
+          type: "object",
+          properties: {
+            model: {
+              type: "string",
+              description: "Return the chosen model name from the model list."
+            },
+            text: {
+              type: "string",
+              description: "Return text or prompt to convert to speech."
+            },
+            voice: {
+              type: "string",
+              description: "Return the voice reference to use."
+            },
+            speed: {
+              type: "string",
+              description: "Return the speed."
+            }
+          },
+          required: ["text"]
+        }
+      }], u = await this.builder.send(a, o, s, "", d);
+      if (!u)
+        return !1;
+      let l = JSON.parse(u);
+      return {
+        ...e,
+        ...l
+      };
+    }
+    return !1;
+  }
+  async checkModel(e) {
+    let i = "You are an assistant", t = "", n = `This is the information:
+
+${e}
+
+Check the information and return the details.
+`, s = [{
+      name: "check_request",
+      description: "Check information.",
+      parameters: {
+        type: "object",
+        properties: {
+          model: {
+            type: "string",
+            description: "Return the model name."
+          }
+        },
+        required: ["model"]
+      }
+    }], r = await this.builder.send(n, t, i, "", s);
+    return r ? JSON.parse(r) : !1;
+  }
+  getDimension(e) {
+    let i, t;
+    return e ? e === "1:1" ? (i = 1024, t = 1024) : e === "3:2" ? (i = 1216, t = 832) : e === "4:3" ? (i = 1152, t = 896) : e === "5:4" ? (i = 1088, t = 896) : e === "16:9" ? (i = 1344, t = 768) : e === "21:9" ? (i = 1536, t = 640) : e === "2:3" ? (i = 832, t = 1216) : e === "3:4" ? (i = 896, t = 1152) : e === "4:5" ? (i = 896, t = 1088) : e === "9:16" ? (i = 768, t = 1344) : e === "9:21" ? (i = 640, t = 1536) : (i = 1344, t = 768) : (i = 1344, t = 768), {
+      w: i,
+      h: t
+    };
+  }
+  /*
+  // Example: const endpoint = this.getEndpoint(model, requestId, this.builder.settings.falStatusEndpointList);
+  getEndpoint(model, requestId, endpointList) {
+      
+       // Try to find a matching config (ignoring the default marker '*')
+      let config = endpointList.find(item => item.model !== '*' && model && model.includes(item.model));
+      
+      // If no specific config is found, use the default entry
+      if (!config) {
+          config = endpointList.find(item => item.model === '*');
+      }
+       let endpoint = config.endpoint;
+       // Replace {REQUEST_ID} with actual requestId
+      endpoint = endpoint.replace('{REQUEST_ID}', requestId);
+       // Replace {model} with the actual model if needed
+       let firstTwoParts = model.split('/').slice(0, 2).join('/');
+      console.log(firstTwoParts);
+       if (endpoint.includes('{MODEL}')) {
+          endpoint = endpoint.replace('{MODEL}', firstTwoParts);
+      }
+       return endpoint;
+  }
+  */
+  getEndpoint(e, i, t) {
+    t = t.replace("{REQUEST_ID}", i);
+    let n = e.split("/").slice(0, 2).join("/");
+    return t = t.replace("{MODEL}", n), t;
+  }
+  async waitingResultFal(e, i, t, n) {
+    let s, r;
+    e.request_id = i;
+    const o = this.getEndpoint(e.model, i, this.builder.settings.falResultEndpoint);
+    e.endpoint = o;
+    let a = {
+      "Content-Type": "application/json",
+      ...this.builder.settings.headers
+    };
+    s = await fetch(this.builder.settings.getResultUrl_Fal, {
+      signal: this.builder.mediaSignal,
+      method: "POST",
+      headers: a,
+      body: JSON.stringify(e)
+    });
+    let d = await s.text();
+    try {
+      r = JSON.parse(d);
+    } catch {
+      return {
+        mediaGenerated: !1,
+        status: "error",
+        message: d
+      };
+    }
+    if (this.builder.output.push(r), r.error)
+      return this.builder.settings.consoleLog && console.log(r.error), {
+        mediaGenerated: !1,
+        status: "error",
+        message: r.error
+        //this.out('Request failed.')
+      };
+    {
+      const u = r.data;
+      let l = "", h = "", p, b = !1, w = [], _ = [];
+      return u.entries && u.entries.forEach((g) => {
+        p = g.url.split(".").pop().toLowerCase(), p === "mp4" ? (l += `
+                        <p class="responsive-video">
+                            <video controls>
+                                <source src="${g.url}" type="video/mp4">
+                                Your browser does not support the video tag.
+                            </video>
+                        </p>
+                    `, h += `![](${g.url})`) : p === "wav" || p === "mp3" ? (l += `
+                    <p class="responsive-audio">
+                        <audio controls>
+                            <source src="${g.url}" type="audio/mpeg">
+                            Your browser does not support the audio tag.
+                        </audio>
+                    </p>
+                    `, h += `![](${g.url})`) : (l += `
+                        <div>
+                            <img src="${g.url}" />
+                            <div>
+                                <a class="link-view" href="${g.url}" target="_blank" rel="noopener noreferrer">${this.out("View")}</a>
+                                <a class="link-download" href="${g.url}" download>${this.out("Download")}</a>
+                            </div>
+                        </div>
+                    `, h += `![](${g.url})`, b = !0), w.push(g.url), _.push(g.file_url);
+      }), b && (l = `<div class="image-container">${l}</div>`), typeof u == "string" && (l = u, h = u), n ? (t.innerHTML = "", t.remove()) : (t.innerHTML = l, this.builder.outputHtml += `<div class="result-container">${l}</div>`), {
+        mediaGenerated: !0,
+        status: "success",
+        markdown: h,
+        output: w,
+        output2: _
+      };
+    }
+  }
+  async waitingResultReplicate(e, i, t, n) {
+    let s, r;
+    e.request_id = i;
+    let o = this.builder.settings.replicateStatusEndpoint;
+    o = o.replace("{REQUEST_ID}", i), e.endpoint = o;
+    let a = {
+      "Content-Type": "application/json",
+      ...this.builder.settings.headers
+    };
+    s = await fetch(this.builder.settings.getResultUrl_Replicate, {
+      signal: this.builder.mediaSignal,
+      method: "POST",
+      headers: a,
+      body: JSON.stringify(e)
+    });
+    let d = await s.text();
+    try {
+      r = JSON.parse(d);
+    } catch {
+      return {
+        mediaGenerated: !1,
+        status: "error",
+        message: d
+      };
+    }
+    if (this.builder.output.push(r), r.error)
+      return this.builder.settings.consoleLog && console.log(r.error), {
+        mediaGenerated: !1,
+        status: "error",
+        message: r.error
+        //this.out('Request failed.')
+      };
+    {
+      const u = r.data;
+      let l = this.renderResult(u, t, n);
+      return {
+        mediaGenerated: !0,
+        status: "success",
+        markdown: l.markdown,
+        output: l.output,
+        output2: l.output2
+      };
+    }
+  }
+  async waitingReplicate(e, i, t, n) {
+    let s, r, o, a = e.model, d = this.builder.settings.replicateStatusEndpoint;
+    d = d.replace("{REQUEST_ID}", i);
+    let u = {
+      "Content-Type": "application/json",
+      ...this.builder.settings.headers
+    }, l = {
+      model: a,
+      endpoint: d,
+      request_id: i
+      // customData: this.builder.settings.customData
+    };
+    do {
+      if (r = await fetch(this.builder.settings.checkRequestStatusUrl_Replicate, {
+        signal: this.builder.mediaSignal,
+        method: "POST",
+        headers: u,
+        body: JSON.stringify(l)
+      }), o = await r.json(), o.ok && (s = o.data.status), !s)
+        return {
+          mediaGenerated: !1,
+          status: "error",
+          result: o,
+          // for future debugging
+          message: o.error || o.data && JSON.stringify(o.data) || this.out("Request failed.")
+        };
+      s === "succeeded" || s === "failed" || s === "canceled" || (this.builder.settings.consoleLog && console.log(s), await new Promise((h) => setTimeout(h, 5e3)));
+    } while (!(s === "succeeded" || s === "failed" || s === "canceled"));
+    return s === "succeeded" ? await this.waitingResultReplicate(e, i, t, n) : {
+      mediaGenerated: !1,
+      status: "error",
+      result: o,
+      // for future debugging
+      message: o.data && o.data.error || this.out("Request failed.")
+    };
+  }
+  async waitingFal(e, i, t, n) {
+    let s, r, o, a = e.model;
+    const d = this.getEndpoint(a, i, this.builder.settings.falStatusEndpoint);
+    let u = {
+      "Content-Type": "application/json",
+      ...this.builder.settings.headers
+    }, l = {
+      model: a,
+      endpoint: d,
+      request_id: i
+      // customData: this.builder.settings.customData
+    };
+    do {
+      if (r = await fetch(this.builder.settings.checkRequestStatusUrl_Fal, {
+        signal: this.builder.mediaSignal,
+        method: "POST",
+        headers: u,
+        body: JSON.stringify(l)
+      }), o = await r.json(), o.ok && o.status)
+        s = o.status;
+      else if (o.data) {
+        let h = o.data;
+        h.image || h.audio || h.audio_file || h.video ? s = "COMPLETED" : h.detail && typeof h.detail == "string" && h.detail.startsWith("Request is still in progress") ? s = "IN_PROGRESS" : h.status && !h.error && (s = h.status);
+      }
+      if (!s)
+        return {
+          mediaGenerated: !1,
+          status: "error",
+          result: o,
+          // for future debugging
+          message: o.error || o.data && JSON.stringify(o.data) || this.out("Request failed.")
+        };
+      s !== "COMPLETED" && (this.builder.settings.consoleLog && console.log(s), this.builder.settings.consoleLog && console.log(o), await new Promise((h) => setTimeout(h, 5e3)));
+    } while (s !== "COMPLETED");
+    if (s === "COMPLETED")
+      return await this.waitingResultFal(e, i, t, n);
+  }
+  renderResult(e, i, t) {
+    let n = "", s = "", r = [], o = [];
+    if (e.entries) {
+      let a, d = !1;
+      e.entries.forEach((u) => {
+        a = u.url.split(".").pop().toLowerCase(), a === "mp4" ? (n += `
+                        <p class="responsive-video">
+                            <video controls>
+                                <source src="${u.url}" type="video/mp4">
+                                Your browser does not support the video tag.
+                            </video>
+                        </p>
+                    `, s += `![](${u.url})`, r.push(u.url), o.push(u.file_url)) : a === "wav" || a === "mp3" ? (n += `
+                    <p class="responsive-audio">
+                        <audio controls>
+                            <source src="${u.url}" type="audio/mpeg">
+                            Your browser does not support the audio tag.
+                        </audio>
+                    </p>
+                    `, s += `![](${u.url})`, r.push(u.url), o.push(u.file_url)) : (n += `
+                        <div>
+                            <img src="${u.url}" />
+                            <div>
+                                <a class="link-view" href="${u.url}" target="_blank" rel="noopener noreferrer">${this.out("View")}</a>
+                                <a class="link-download" href="${u.url}" download>${this.out("Download")}</a>
+                            </div>
+                        </div>
+                    `, s += `![](${u.url})`, r.push(u.url), o.push(u.file_url), d = !0);
+      }), d && (n = `<div class="image-container">${n}</div>`);
+    } else typeof e == "string" && (n = `
+            <p>
+            ${e}
+            </p>`, s = e);
+    return t ? (i.innerHTML = "", i.remove()) : (i.innerHTML = n, this.builder.outputHtml += `<div class="result-container">${n}</div>`), {
+      markdown: s,
+      output: r,
+      output2: o
+    };
+  }
+  async generateReplicate(e, i, t) {
+    let n, s = {};
+    const r = "replicate";
+    if (e.text_to_image_generation) {
+      let a = this.validateModel(e.model, r, "text_to_image_generation");
+      if (!a)
+        return {
+          mediaGenerated: !1,
+          status: "error",
+          message: this.out("Model not found.")
+        };
+      let d = e.prompt;
+      if (!d)
+        return {
+          mediaGenerated: !1,
+          status: "error",
+          message: this.out("Please input a prompt.")
+        };
+      let u = e.aspect_ratio || "16:9", l = e.num_images || 1;
+      l > 4 && (l = 4), n = {
+        prompt: d,
+        aspect_ratio: u,
+        num_outputs: l
+      }, s.model = a, s.customData = this.builder.settings.customData;
+    } else if (e.edit_area_in_image) {
+      let a = this.validateModel(e.model, l, "edit_area_in_image");
+      if (!a)
+        return {
+          mediaGenerated: !1,
+          status: "error",
+          message: this.out("Model not found.")
+        };
+      let d = e.prompt;
+      if (!d)
+        return {
+          mediaGenerated: !1,
+          status: "error",
+          message: this.out("Please input a prompt.")
+        };
+      if (!e.image_url)
+        return {
+          mediaGenerated: !1,
+          status: "error",
+          message: this.out("Image reference not found.")
+        };
+      let l = "replicate";
+      const h = await this.builder.upload.getInputURLs(l, !0);
+      if (h.error)
+        return {
+          mediaGenerated: !1,
+          status: "error",
+          message: h.error
+        };
+      let p = h[e.image_url], b = h[e.image_url + "_mask"];
+      if (!b)
+        return {
+          mediaGenerated: !1,
+          status: "error",
+          message: this.out("Image mask not found.")
+        };
+      n = {
+        prompt: d,
+        image: p,
+        mask: b
+        // num_images,
+      }, s.model = a, s.customData = this.builder.settings.customData;
+    } else if (e.text_to_digital_illustration_generation) {
+      let a = this.validateModel(e.model, r, "text_to_digital_illustration_generation");
+      if (!a)
+        return {
+          mediaGenerated: !1,
+          status: "error",
+          message: this.out("Model not found.")
+        };
+      let d = e.prompt;
+      if (!d)
+        return {
+          mediaGenerated: !1,
+          status: "error",
+          message: this.out("Please input a prompt.")
+        };
+      let u = e.width || 1280, l = e.height || 768;
+      e.num_images, n = {
+        prompt: d,
+        size: `${u}x${l}`,
+        // num_images,
+        style: "digital_illustration"
+        // style_id,
+        // colors,
+      }, s.model = a, s.customData = this.builder.settings.customData;
+    } else if (e.upscale_image) {
+      let a = this.validateModel(e.model, u, "upscale_image");
+      if (!a)
+        return {
+          mediaGenerated: !1,
+          status: "error",
+          message: this.out("Model not found.")
+        };
+      if (!e.image_url)
+        return {
+          mediaGenerated: !1,
+          status: "error",
+          message: this.out("Image reference not found.")
+        };
+      let u = "replicate";
+      const l = await this.builder.upload.getInputURLs(u);
+      if (l.error)
+        return {
+          mediaGenerated: !1,
+          status: "error",
+          message: l.error
+        };
+      let h = l[e.image_url];
+      if (!h)
+        return {
+          mediaGenerated: !1,
+          status: "error",
+          message: this.out("Image not provided.")
+        };
+      n = {
+        image: h
+        // scale_factor: 2,
+      }, s.model = a, s.customData = this.builder.settings.customData;
+    } else if (e.describe_image) {
+      let a = this.validateModel(e.model, l, "describe_image");
+      if (!a)
+        return {
+          mediaGenerated: !1,
+          status: "error",
+          message: this.out("Model not found.")
+        };
+      let d = e.prompt;
+      if (!d)
+        return {
+          mediaGenerated: !1,
+          status: "error",
+          message: this.out("Please input a prompt.")
+        };
+      if (!e.image_url)
+        return {
+          mediaGenerated: !1,
+          status: "error",
+          message: this.out("Image reference not found.")
+        };
+      let l = "replicate";
+      const h = await this.builder.upload.getInputURLs(l);
+      if (h.error)
+        return {
+          mediaGenerated: !1,
+          status: "error",
+          message: h.error
+        };
+      let p = h[e.image_url];
+      if (!p)
+        return {
+          mediaGenerated: !1,
+          status: "error",
+          message: this.out("Image not provided.")
+        };
+      n = {
+        image: p,
+        prompt: `${d}. No talk. Answer only.`
+      }, s.model = a, s.customData = this.builder.settings.customData;
+    } else if (e.image_to_video_generation) {
+      let a = this.validateModel(e.model, l, "image_to_video_generation");
+      if (!a)
+        return {
+          mediaGenerated: !1,
+          status: "error",
+          message: this.out("Model not found.")
+        };
+      let d = e.prompt || "stunning video", u = e.duration || 5;
+      u > 10 && (u = 5);
+      let l = "replicate";
+      const h = await this.builder.upload.getInputURLs(l);
+      if (h.error)
+        return {
+          mediaGenerated: !1,
+          status: "error",
+          message: h.error
+        };
+      let p = h[e.image_url];
+      if (!p)
+        return {
+          mediaGenerated: !1,
+          status: "error",
+          message: this.out("Image reference not found.")
+        };
+      a === "kwaivgi/kling-v1.6-pro" && (n = {
+        start_image: p,
+        prompt: d,
+        duration: u
+      }), a === "kwaivgi/kling-v1.6-standard" && (n = {
+        start_image: p,
+        prompt: d,
+        duration: u
+      }), a === "minimax/video-01-live" && (n = {
+        first_frame_image: p,
+        prompt: d
+      }), a === "luma/ray" && (n = {
+        start_image_url: p,
+        prompt: d
+      }), s.model = a, s.customData = this.builder.settings.customData;
+    } else if (e.text_to_video_generation) {
+      let a = this.validateModel(e.model, r, "text_to_video_generation");
+      if (!a)
+        return {
+          mediaGenerated: !1,
+          status: "error",
+          message: this.out("Model not found.")
+        };
+      let d = e.prompt;
+      if (!d)
+        return {
+          mediaGenerated: !1,
+          status: "error",
+          message: this.out("Please input a prompt.")
+        };
+      let u = e.duration || 5;
+      u > 10 && (u = 5), a === "kwaivgi/kling-v1.6-standard" && (n = {
+        prompt: d,
+        duration: u
+      }), a === "minimax/video-01" && (n = {
+        prompt: d
+      }), a === "luma/ray" && (n = {
+        prompt: d
+      }), s.model = a, s.customData = this.builder.settings.customData;
+    } else if (e.text_to_speech) {
+      let a = this.validateModel(e.model, r, "text_to_speech");
+      if (!a)
+        return {
+          mediaGenerated: !1,
+          status: "error",
+          message: this.out("Model not found.")
+        };
+      if (e.text.length > this.builder.settings.ttsMaxCharacters)
+        return {
+          mediaGenerated: !1,
+          status: "error",
+          message: this.out("The text exceeds the allowed limit.")
+        };
+      n = {
+        text: e.text,
+        voice: e.voice || "af_nicole",
+        speed: parseFloat(e.speed) || 1
+      }, s.model = a, s.customData = this.builder.settings.customData;
+    }
+    if (s.model.indexOf(":") !== -1) {
+      const d = s.model.split(":")[1];
+      s.version = d;
+      let u = this.builder.settings.replicateEndpoint1;
+      s.endpoint = u, s.payload = n, this.builder.settings.consoleLog && console.log("PAYLOAD 1");
+    } else {
+      let a = this.builder.settings.replicateEndpoint2;
+      a = a.replace("{MODEL}", s.model), s.endpoint = a, s.payload = n, this.builder.settings.consoleLog && console.log("PAYLOAD 2");
+    }
+    this.builder.payloads.push(s), this.builder.settings.consoleLog && console.log(s);
+    let o = !1;
+    if (this.builder.settings.generateMediaUrl_Replicate && (o = !0), o) {
+      let a = this.builder.settings.generateMediaUrl_Replicate;
+      if (!a)
+        return {
+          mediaGenerated: !1,
+          status: "error",
+          message: this.out("Endpoint not configured.")
+        };
+      let d, u = {
+        "Content-Type": "application/json",
+        ...this.builder.settings.headers
+      }, h = await (await fetch(a, {
+        signal: this.builder.mediaSignal,
+        method: "POST",
+        headers: u,
+        body: JSON.stringify(s)
+      })).json();
+      if (h.ok) {
+        if (d = h.data.id, !d)
+          return {
+            mediaGenerated: !1,
+            status: "error",
+            message: h.data && h.data.detail
+          };
+      } else
+        return {
+          mediaGenerated: !1,
+          status: "error",
+          message: h.error
+        };
+      const p = this.waitingReplicate(s, d, i, t);
+      return this.builder.isMediaGenerating = !1, p;
+    } else {
+      let a = this.builder.settings.generateMediaUrl;
+      if (!a)
+        return {
+          mediaGenerated: !1,
+          status: "error",
+          message: this.out("Endpoint not configured: generateMediaUrl.")
+        };
+      let d = {
+        "Content-Type": "application/json",
+        ...this.builder.settings.headers
+      };
+      const l = await (await fetch(a, {
+        signal: this.builder.mediaSignal,
+        method: "POST",
+        headers: d,
+        body: JSON.stringify(s)
+      })).json();
+      if (this.builder.isMediaGenerating = !1, l.error)
+        return this.builder.settings.consoleLog && console.log(l.error), {
+          mediaGenerated: !1,
+          status: "error",
+          message: l.error
+          //this.out('Request failed.')
+        };
+      {
+        const h = l.data;
+        let p = this.renderResult(h, i, t);
+        return {
+          mediaGenerated: !0,
+          status: "success",
+          markdown: p.markdown,
+          output: p.output,
+          output2: p.output2
+        };
+      }
+    }
+  }
+  async generateOpenAI(e, i, t) {
+    let n, s = {}, o = this.validateModel(e.model, "openai", "image_generation"), a = e.prompt;
+    if (!a)
+      return {
+        mediaGenerated: !1,
+        status: "error",
+        message: this.out("Please input a prompt.")
+      };
+    const d = new FormData();
+    d.append("customData", JSON.stringify(this.builder.settings.customData)), d.append("model", o), d.append("prompt", a);
+    let u = !1, l = this.builder.getFormValues();
+    for (const f of l) {
+      if (f.value instanceof FileList && f.type === "multifile") {
+        const m = f.value;
+        if (m.length > 0)
+          for (const y of m)
+            d.append("file[]", y), u = !0;
+      }
+      if (f.value instanceof FileList && f.type === "file") {
+        const m = f.value;
+        if (m.length > 0) {
+          const y = m[0];
+          d.append("file[]", y), u = !0;
+        }
+      }
+      if (typeof f.value == "string" && f.value.indexOf("base64") !== -1) {
+        let m = f.value.replace(/^data:image\/(png|svg\+xml|jpeg|gif|webp);base64,/, "");
+        d.append("mask", m);
+      }
+    }
+    if (this.builder.selectedFiles && this.builder.selectedFiles.length > 0)
+      for (let f = 0; f < this.builder.selectedFiles.length; f++) {
+        const m = this.builder.selectedFiles[f];
+        d.append("file[]", m), u = !0;
+      }
+    let h, p = e.size || "auto", b = e.quality || "auto", w = e.num_images || 1;
+    if (u) {
+      d.append("size", p), d.append("n", w), d.append("quality", b), n = {
+        prompt: a,
+        size: p,
+        quality: b,
+        n: w
+      }, s.model = o, s.customData = this.builder.settings.customData, s.payload = n, this.builder.payloads.push(s);
+      let f = this.builder.settings.generateMediaUrl_OpenAI_CreateImageEdit;
+      h = await fetch(f, {
+        method: "POST",
+        body: d
+      });
+    } else {
+      let f = e.background || "auto", m = e.output_format || "png";
+      n = {
+        prompt: a,
+        background: f,
+        output_format: m,
+        size: p,
+        quality: b,
+        n: w
+      }, s.model = o, s.customData = this.builder.settings.customData, s.payload = n, this.builder.payloads.push(s), this.builder.settings.consoleLog && console.log(s);
+      const y = this.builder.settings.generateMediaUrl_OpenAI_CreateImage;
+      let k = {
+        "Content-Type": "application/json",
+        ...this.builder.settings.headers
+      };
+      h = await fetch(y, {
+        signal: this.builder.mediaSignal,
+        method: "POST",
+        headers: k,
+        body: JSON.stringify(s)
+      });
+    }
+    const _ = await h.json();
+    this.builder.settings.consoleLog && console.log(_), this.builder.isMediaGenerating = !1;
+    const g = _.data;
+    this.builder.output.push(_);
+    let v = this.renderResult(g, i, t);
+    return {
+      mediaGenerated: !0,
+      status: "success",
+      markdown: v.markdown,
+      output: v.output,
+      output2: v.output2
+    };
+  }
+  async generateGoogle(e, i, t) {
+    let n, s = {}, o = this.validateModel(e.model, "google", "edit_area_in_image");
+    if (!o)
+      return {
+        mediaGenerated: !1,
+        status: "error",
+        message: this.out("Model not found.")
+      };
+    let a = e.prompt;
+    if (!a)
+      return {
+        mediaGenerated: !1,
+        status: "error",
+        message: this.out("Please input a prompt.")
+      };
+    let d = [];
+    d.push({
+      text: a
+    });
+    let u = this.builder.getFormValues();
+    if (!(u && Object.keys(u).length === 0)) {
+      for (const g of u)
+        if (g.value instanceof FileList && g.type === "multifile") {
+          const v = g.value;
+          if (v.length > 0)
+            for (const f of v) {
+              const m = await new Promise((y, k) => {
+                const x = new FileReader();
+                x.onload = (S) => {
+                  const E = S.target.result.split(",")[1];
+                  y(E);
+                }, x.onerror = k, x.readAsDataURL(f);
+              });
+              d.push({
+                inlineData: {
+                  mimeType: "image/png",
+                  data: m
+                }
+              });
+            }
+        }
+    }
+    n = {
+      contents: d
+    }, s.model = o, s.customData = this.builder.settings.customData, s.payload = n, this.builder.payloads.push(s), this.builder.settings.consoleLog && console.log(s);
+    const l = this.builder.settings.generateMediaUrl_Google;
+    let h = {
+      "Content-Type": "application/json",
+      ...this.builder.settings.headers
+    };
+    const b = await (await fetch(l, {
+      signal: this.builder.mediaSignal,
+      method: "POST",
+      headers: h,
+      body: JSON.stringify(s)
+    })).json();
+    this.builder.settings.consoleLog && console.log(b), this.builder.isMediaGenerating = !1;
+    const w = b.data;
+    let _ = this.renderResult(w, i, t);
+    return {
+      mediaGenerated: !0,
+      status: "success",
+      markdown: _.markdown,
+      output: _.output,
+      output2: _.output2
+    };
+  }
+  async generateFal(e, i, t) {
+    let n = "fal", s, r = {};
+    if (e.text_to_image_generation) {
+      let b = this.validateModel(e.model, n, "text_to_image_generation");
+      if (!b)
+        return {
+          mediaGenerated: !1,
+          status: "error",
+          message: this.out("Model not found.")
+        };
+      let w = e.prompt;
+      if (!w)
+        return {
+          mediaGenerated: !1,
+          status: "error",
+          message: this.out("Please input a prompt.")
+        };
+      let _ = e.width || 1280, g = e.height || 768, v = e.aspect_ratio, f = e.num_images || 1;
+      if (f > 4 && (f = 4), v) {
+        let {
+          w: U,
+          h: F
+        } = this.getDimension(v);
+        _ = U, g = F;
+      }
+      let m = e.color1_red, y = e.color1_green, k = e.color1_blue, x = e.color2_red, S = e.color2_green, E = e.color2_blue, L = e.color3_red, M = e.color3_green, C = e.color3_blue, D = e.color4_red, O = e.color4_green, $ = e.color4_blue, R = e.color5_red, q = e.color5_green, A = e.color5_blue, T = [];
+      m && y && k && !(m === "0" && y === "0" && k === "0") && T.push({
+        r: m,
+        g: y,
+        b: k
+      }), x && S && E && !(x === "0" && S === "0" && E === "0") && T.push({
+        r: x,
+        g: S,
+        b: E
+      }), L && M && C && !(L === "0" && M === "0" && C === "0") && T.push({
+        r: L,
+        g: M,
+        b: C
+      }), D && O && $ && !(D === "0" && O === "0" && $ === "0") && T.push({
+        r: D,
+        g: O,
+        b: $
+      }), R && q && A && !(R === "0" && q === "0" && A === "0") && T.push({
+        r: R,
+        g: q,
+        b: A
+      });
+      let P = await (async () => {
+        let U = [], F = this.builder.getFormValues();
+        for (const W of F)
+          if (W.value instanceof FileList && W.type === "multifile") {
+            const de = W.value;
+            if (de.length > 0) {
+              let ne = 0;
+              for (const be of de) {
+                ne++;
+                const Ee = new FormData();
+                Ee.append("file", be), Ee.append("customData", this.builder.settings.customData);
+                let Me = this.builder.settings.uploadMediaUrl_Fal;
+                const qe = await (await fetch(Me, {
+                  method: "POST",
+                  body: Ee
+                })).json();
+                if (qe.ok) {
+                  const Ie = qe.url;
+                  U.push(Ie), this.builder.filesUploaded["file_" + ne] = Ie;
+                }
+              }
+            }
+          }
+        return U;
+      })();
+      s = {
+        prompt: w,
+        image_size: {
+          width: _,
+          height: g
+        },
+        num_images: f
+      }, b.indexOf("gemini") !== -1 && (s = {
+        prompt: w,
+        input_image_urls: P
+      }), b === "fal-ai/ideogram/v2a" && (v = this.getClosestAspectRatio(_, g), s = {
+        prompt: w,
+        aspect_ratio: v,
+        num_images: f
+      }), b.indexOf("recraft") !== -1 && (s = {
+        prompt: w,
+        image_size: {
+          width: _,
+          height: g
+        },
+        num_images: f,
+        // style,
+        colors: T
+      }), r.model = b, r.customData = this.builder.settings.customData;
+    } else if (e.edit_area_in_image) {
+      let b = this.validateModel(e.model, n, "edit_area_in_image");
+      if (!b)
+        return {
+          mediaGenerated: !1,
+          status: "error",
+          message: this.out("Model not found.")
+        };
+      let w = e.prompt;
+      if (!w)
+        return {
+          mediaGenerated: !1,
+          status: "error",
+          message: this.out("Please input a prompt.")
+        };
+      if (!e.image_url)
+        return {
+          mediaGenerated: !1,
+          status: "error",
+          message: this.out("Image reference not found.")
+        };
+      const g = await this.builder.upload.getInputURLs(n);
+      if (g.error)
+        return {
+          mediaGenerated: !1,
+          status: "error",
+          message: g.error
+        };
+      let v = g[e.image_url], f = g[e.image_url + "_mask"];
+      if (s = {
+        image_url: v,
+        mask_url: f,
+        prompt: w
+        // num_images,
+      }, r.model = b, !f) {
+        s = {
+          image_url: v,
+          prompt: w
+        };
+        let m = this.validateModel(e.model, n, "edit_image");
+        r.model = m;
+      }
+      r.customData = this.builder.settings.customData;
+    } else if (e.text_to_2d_illustration_generation) {
+      let b = this.validateModel(e.model, n, "text_to_2d_illustration_generation");
+      if (!b)
+        return {
+          mediaGenerated: !1,
+          status: "error",
+          message: this.out("Model not found.")
+        };
+      let w = e.prompt;
+      if (!w)
+        return {
+          mediaGenerated: !1,
+          status: "error",
+          message: this.out("Please input a prompt.")
+        };
+      let _ = e.width || 1280, g = e.height || 768, v = e.num_images || 1;
+      v > 4 && (v = 4);
+      let f = e.style || "any", m = e.style_id || this.builder.settings._2dIllustrationStyleId, y = e.color1_red, k = e.color1_green, x = e.color1_blue, S = e.color2_red, E = e.color2_green, L = e.color2_blue, M = e.color3_red, C = e.color3_green, D = e.color3_blue, O = e.color4_red, $ = e.color4_green, R = e.color4_blue, q = e.color5_red, A = e.color5_green, T = e.color5_blue, N = [];
+      y && k && x && !(y === "0" && k === "0" && x === "0") && N.push({
+        r: y,
+        g: k,
+        b: x
+      }), S && E && L && !(S === "0" && E === "0" && L === "0") && N.push({
+        r: S,
+        g: E,
+        b: L
+      }), M && C && D && !(M === "0" && C === "0" && D === "0") && N.push({
+        r: M,
+        g: C,
+        b: D
+      }), O && $ && R && !(O === "0" && $ === "0" && R === "0") && N.push({
+        r: O,
+        g: $,
+        b: R
+      }), q && A && T && !(q === "0" && A === "0" && T === "0") && N.push({
+        r: q,
+        g: A,
+        b: T
+      }), s = {
+        prompt: w,
+        image_size: {
+          width: _,
+          height: g
+        },
+        num_images: v,
+        style: f,
+        style_id: m,
+        colors: N
+      }, r.model = b, r.customData = this.builder.settings.customData;
+    } else if (e.text_to_digital_illustration_generation) {
+      let b = this.validateModel(e.model, n, "text_to_digital_illustration_generation");
+      if (!b)
+        return {
+          mediaGenerated: !1,
+          status: "error",
+          message: this.out("Model not found.")
+        };
+      let w = e.prompt;
+      if (!w)
+        return {
+          mediaGenerated: !1,
+          status: "error",
+          message: this.out("Please input a prompt.")
+        };
+      let _ = e.width || 1280, g = e.height || 768, v = e.num_images || 1;
+      v > 4 && (v = 4);
+      let f = e.style || "digital_illustration", m = e.color1_red, y = e.color1_green, k = e.color1_blue, x = e.color2_red, S = e.color2_green, E = e.color2_blue, L = e.color3_red, M = e.color3_green, C = e.color3_blue, D = e.color4_red, O = e.color4_green, $ = e.color4_blue, R = e.color5_red, q = e.color5_green, A = e.color5_blue, T = [];
+      m && y && k && !(m === "0" && y === "0" && k === "0") && T.push({
+        r: m,
+        g: y,
+        b: k
+      }), x && S && E && !(x === "0" && S === "0" && E === "0") && T.push({
+        r: x,
+        g: S,
+        b: E
+      }), L && M && C && !(L === "0" && M === "0" && C === "0") && T.push({
+        r: L,
+        g: M,
+        b: C
+      }), D && O && $ && !(D === "0" && O === "0" && $ === "0") && T.push({
+        r: D,
+        g: O,
+        b: $
+      }), R && q && A && !(R === "0" && q === "0" && A === "0") && T.push({
+        r: R,
+        g: q,
+        b: A
+      }), s = {
+        prompt: w,
+        image_size: {
+          width: _,
+          height: g
+        },
+        num_images: v,
+        style: f,
+        // style_id,
+        colors: T
+      }, r.model = b, r.customData = this.builder.settings.customData;
+    } else if (e.text_to_book_cover_generation) {
+      let b = this.validateModel(e.model, n, "text_to_book_cover_generation");
+      if (!b)
+        return {
+          mediaGenerated: !1,
+          status: "error",
+          message: this.out("Model not found.")
+        };
+      let w = e.prompt;
+      if (!w)
+        return {
+          mediaGenerated: !1,
+          status: "error",
+          message: this.out("Please input a prompt.")
+        };
+      let _ = e.width || 1024, g = e.height || 1365, v = e.num_images || 1;
+      v > 4 && (v = 1);
+      let f = "digital_illustration/cover", m = e.color1_red, y = e.color1_green, k = e.color1_blue, x = e.color2_red, S = e.color2_green, E = e.color2_blue, L = e.color3_red, M = e.color3_green, C = e.color3_blue, D = e.color4_red, O = e.color4_green, $ = e.color4_blue, R = e.color5_red, q = e.color5_green, A = e.color5_blue, T = [];
+      m && y && k && !(m === "0" && y === "0" && k === "0") && T.push({
+        r: m,
+        g: y,
+        b: k
+      }), x && S && E && !(x === "0" && S === "0" && E === "0") && T.push({
+        r: x,
+        g: S,
+        b: E
+      }), L && M && C && !(L === "0" && M === "0" && C === "0") && T.push({
+        r: L,
+        g: M,
+        b: C
+      }), D && O && $ && !(D === "0" && O === "0" && $ === "0") && T.push({
+        r: D,
+        g: O,
+        b: $
+      }), R && q && A && !(R === "0" && q === "0" && A === "0") && T.push({
+        r: R,
+        g: q,
+        b: A
+      }), s = {
+        prompt: w,
+        image_size: {
+          width: _,
+          height: g
+        },
+        num_images: v,
+        style: f,
+        // style_id,
+        colors: T
+      }, r.model = b, r.customData = this.builder.settings.customData;
+    } else if (e.upscale_image) {
+      let b = this.validateModel(e.model, n, "upscale_image");
+      if (!b)
+        return {
+          mediaGenerated: !1,
+          status: "error",
+          message: this.out("Model not found.")
+        };
+      if (!e.image_url)
+        return {
+          mediaGenerated: !1,
+          status: "error",
+          message: this.out("Image reference not found.")
+        };
+      const _ = await this.builder.upload.getInputURLs(n);
+      if (_.error)
+        return {
+          mediaGenerated: !1,
+          status: "error",
+          message: _.error
+        };
+      let g = _[e.image_url];
+      if (!g)
+        return {
+          mediaGenerated: !1,
+          status: "error",
+          message: this.out("Image not provided.")
+        };
+      s = {
+        image_url: g,
+        upscale_factor: 2
+      }, r.model = b, r.customData = this.builder.settings.customData;
+    } else if (e.describe_image) {
+      let b = this.validateModel(e.model, n, "describe_image");
+      if (!b)
+        return {
+          mediaGenerated: !1,
+          status: "error",
+          message: this.out("Model not found.")
+        };
+      let w = e.prompt;
+      if (!w)
+        return {
+          mediaGenerated: !1,
+          status: "error",
+          message: this.out("Please input a prompt.")
+        };
+      if (!e.image_url)
+        return {
+          mediaGenerated: !1,
+          status: "error",
+          message: this.out("Image reference not found.")
+        };
+      const g = await this.builder.upload.getInputURLs(n);
+      if (g.error)
+        return {
+          mediaGenerated: !1,
+          status: "error",
+          message: g.error
+        };
+      let v = g[e.image_url];
+      if (!v)
+        return {
+          mediaGenerated: !1,
+          status: "error",
+          message: this.out("Image not provided.")
+        };
+      s = {
+        image_url: v,
+        prompt: `${w}. No talk. Answer only.`
+      }, r.model = b, r.customData = this.builder.settings.customData;
+    } else if (e.image_to_video_generation) {
+      let b = this.validateModel(e.model, n, "image_to_video_generation");
+      if (!b)
+        return {
+          mediaGenerated: !1,
+          status: "error",
+          message: this.out("Model not found.")
+        };
+      let w = e.prompt;
+      w = e.prompt || "stunning video";
+      let _ = e.duration || 5;
+      _ > 10 && (_ = 5);
+      const g = await this.builder.upload.getInputURLs(n);
+      if (g.error)
+        return {
+          mediaGenerated: !1,
+          status: "error",
+          message: g.error
+        };
+      let v = g[e.image_url];
+      if (!v)
+        return {
+          mediaGenerated: !1,
+          status: "error",
+          message: this.out("Image reference not found.")
+        };
+      s = {
+        prompt: w,
+        image_url: v,
+        duration: _,
+        aspect_ratio: "16:9"
+        // 9:16, 1:1
+      }, b.indexOf("fal-ai/luma-dream-machine") !== -1 && delete s.duration, r.model = b, r.customData = this.builder.settings.customData;
+    } else if (e.text_to_video_generation) {
+      let b = this.validateModel(e.model, n, "text_to_video_generation");
+      if (!b)
+        return {
+          mediaGenerated: !1,
+          status: "error",
+          message: this.out("Model not found.")
+        };
+      let w = e.prompt;
+      if (!w)
+        return {
+          mediaGenerated: !1,
+          status: "error",
+          message: this.out("Please input a prompt.")
+        };
+      let _ = e.duration || 5;
+      _ > 10 && (_ = 5), s = {
+        prompt: w,
+        duration: _,
+        aspect_ratio: "16:9"
+        // 9:16, 1:1
+      }, b.indexOf("fal-ai/luma-dream-machine") !== -1 && delete s.duration, r.model = b, r.customData = this.builder.settings.customData;
+    } else if (e.text_to_speech) {
+      let b = this.validateModel(e.model, n, "text_to_speech");
+      if (!b)
+        return {
+          mediaGenerated: !1,
+          status: "error",
+          message: this.out("Model not found.")
+        };
+      if (e.text.length > this.builder.settings.ttsMaxCharacters)
+        return {
+          mediaGenerated: !1,
+          status: "error",
+          message: this.out("The text exceeds the allowed limit.")
+        };
+      s = {
+        text: e.text,
+        voice: e.voice || "Matilda"
+        // River
+      }, r.model = b, r.customData = this.builder.settings.customData;
+    }
+    let o = `https://queue.fal.run/${r.model}`;
+    r.endpoint = o, r.payload = s, this.builder.payloads.push(r), this.builder.settings.consoleLog && console.log(r);
+    let a = this.builder.settings.generateMediaUrl_Fal;
+    if (!a)
+      return {
+        mediaGenerated: !1,
+        status: "error",
+        message: this.out("Endpoint not configured: generateMediaUrl_Fal.")
+      };
+    let d, u = {
+      "Content-Type": "application/json",
+      ...this.builder.settings.headers
+    }, h = await (await fetch(a, {
+      signal: this.builder.mediaSignal,
+      method: "POST",
+      headers: u,
+      body: JSON.stringify(r)
+    })).json();
+    if (h.ok)
+      d = h.request_id;
+    else
+      return {
+        mediaGenerated: !1,
+        status: "error",
+        message: h.error
+        //this.out('Generating video request failed.')
+      };
+    const p = this.waitingFal(r, d, i, t);
+    return this.builder.isMediaGenerating = !1, p;
+  }
+  validateModel(e, i, t) {
+    const s = this.builder.settings.defaultModels[t][i];
+    return this.builder.settings.modelFallback ? s.length === 1 ? (this.builder.settings.consoleLog && console.log("Fixed model: " + s[0]), s[0]) : e && s && s.includes(e) ? (this.builder.settings.consoleLog && console.log("Model is valid: " + e), e) : s.length >= 1 ? (this.builder.settings.consoleLog && console.log("Use default: " + s[0]), s[0]) : !1 : e ? e && s && s.includes(e) ? (this.builder.settings.consoleLog && console.log("Model is valid: " + e), e) : !1 : (this.builder.settings.consoleLog && console.log("Fixed model: " + s[0]), s[0]);
+  }
+  async generate_GoogleMediaByJSON(e, i, t, n) {
+    this.builder.isMediaGenerating = !0, this.mediaController = new AbortController(), this.builder.mediaSignal = this.mediaController.signal;
+    let s;
+    if (e.trim().startsWith("{"))
+      try {
+        s = JSON.parse(e);
+      } catch {
+        return {
+          mediaGenerated: !1,
+          status: "error",
+          message: this.out("Incorrect JSON format.")
+        };
+      }
+    let r = i.trim();
+    if (!r)
+      return {
+        mediaGenerated: !1,
+        status: "error",
+        message: this.out("Please provide model information in the context.")
+      };
+    let o = {};
+    o.model = r, o.customData = this.builder.settings.customData, o.payload = s, this.builder.payloads.push(o), this.builder.settings.consoleLog && console.log(o);
+    const a = this.builder.settings.generateMediaUrl_Google;
+    let d = {
+      "Content-Type": "application/json",
+      ...this.builder.settings.headers
+    };
+    const l = await (await fetch(a, {
+      signal: this.builder.mediaSignal,
+      method: "POST",
+      headers: d,
+      body: JSON.stringify(o)
+    })).json();
+    this.builder.settings.consoleLog && console.log(l);
+    const h = l.data;
+    let p = this.renderResult(h, t, n);
+    return {
+      mediaGenerated: !0,
+      status: "success",
+      markdown: p.markdown,
+      output: p.output,
+      output2: p.output2
+    };
+  }
+  async uploadMultiple() {
+    let e = [], i = this.builder.getFormValues();
+    for (const t of i)
+      if (t.value instanceof FileList && t.type === "multifile") {
+        const n = {};
+        if (n.name = t.name, n.files = [], this.builder.selectedFiles && this.builder.selectedFiles.length > 0) {
+          const r = [];
+          for (let o = 0; o < this.builder.selectedFiles.length; o++) {
+            const a = this.builder.selectedFiles[o], d = new FormData();
+            d.append("file", a), d.append("customData", this.builder.settings.customData);
+            let u = this.builder.settings.uploadMediaUrl_Fal;
+            const h = await (await fetch(u, {
+              method: "POST",
+              body: d
+            })).json();
+            if (h.ok) {
+              const p = h.url;
+              n.files.push(p), this.builder.filesUploaded["file_" + o] = p;
+            }
+            r.push(n);
+          }
+          return r;
+        }
+        const s = t.value;
+        if (s.length > 0) {
+          let r = 0;
+          for (const o of s) {
+            r++;
+            const a = new FormData();
+            a.append("file", o), a.append("customData", this.builder.settings.customData);
+            let d = this.builder.settings.uploadMediaUrl_Fal;
+            const l = await (await fetch(d, {
+              method: "POST",
+              body: a
+            })).json();
+            if (l.ok) {
+              const h = l.url;
+              n.files.push(h), this.builder.filesUploaded["file_" + r] = h;
+            }
+          }
+        }
+        e.push(n);
+      }
+    return e;
+  }
+  async generate(e, i, t, n, s, r, o) {
+    if (t = t || this.builder.settings.defaultMediaGenerationProvider, t === "google" && e.trim().startsWith("{"))
+      return this.generate_GoogleMediaByJSON(e, i, r, o);
+    this.builder.isMediaGenerating = !0, this.mediaController = new AbortController(), this.builder.mediaSignal = this.mediaController.signal;
+    let a, d = !1, u;
+    if (e.trim().startsWith("{"))
+      try {
+        u = JSON.parse(e), u && typeof u == "object" && (d = !0);
+      } catch {
+        return {
+          mediaGenerated: !1,
+          status: "error",
+          message: this.out("Incorrect JSON format.")
+        };
+      }
+    if (d) {
+      let l = i.trim();
+      if (!l)
+        return {
+          mediaGenerated: !1,
+          status: "error",
+          message: this.out("Please provide model information in the context.")
+        };
+      let h = await this.uploadMultiple();
+      ((g, v) => {
+        const f = (m) => {
+          if (Array.isArray(m)) {
+            const y = m[0], k = v.find((x) => x.name === y);
+            if (k && m.every((x) => x === y))
+              return k.files;
+            for (let x = 0; x < m.length; x++)
+              m[x] = f(m[x]);
+          } else if (typeof m == "object" && m !== null)
+            for (let y in m)
+              m[y] = f(m[y]);
+          return m;
+        };
+        return f(g);
+      })(u, h), t || (l.startsWith("fal") ? t = "fal" : t = "replicate");
+      const b = (g) => typeof g == "object" && g !== null && !Array.isArray(g), w = await this.builder.upload.getInputURLs(t);
+      if (w.error)
+        return {
+          mediaGenerated: !1,
+          status: "error",
+          message: w.error
+        };
+      Object.keys(u).forEach((g) => {
+        Object.keys(w).forEach((v) => {
+          if (u[g] === v) {
+            let f = w[v];
+            u[g] = f;
+          }
+          if (Array.isArray(u[g])) {
+            for (let f = 0; f < u[g].length; f++)
+              if (u[g][f] === v) {
+                let m = w[v];
+                u[g][f] = m;
+              }
+          }
+        });
+      }), Object.keys(u).forEach((g) => {
+        let v = u[g];
+        if (b(v))
+          for (const f in v)
+            Object.prototype.hasOwnProperty.call(v, f) && Object.keys(w).forEach((m) => {
+              if (v[f] === m) {
+                let y = w[m];
+                v[f] = y, m === y && !y.startsWith("http") && (v[f] = "");
+              }
+            });
+        if (Array.isArray(v)) {
+          for (let f = 0; f < v.length; f++)
+            if (b(v[f]))
+              for (const m in v[f])
+                Object.prototype.hasOwnProperty.call(v[f], m) && Object.keys(w).forEach((y) => {
+                  if (v[f][m] === y) {
+                    let k = w[y];
+                    v[f][m] = k, y === k && !k.startsWith("http") && (v[f][m] = "");
+                  }
+                });
+          u[g] = [...v.filter((f) => f !== "")];
+        }
+      });
+      let _ = {};
+      if (_.model = l, _.customData = this.builder.settings.customData, t === "replicate" && l.indexOf(":") !== -1) {
+        const g = l.split(":");
+        _.version = g[1];
+      }
+      if (t === "replicate")
+        if (l.indexOf(":") !== -1) {
+          let g = this.builder.settings.replicateEndpoint1;
+          _.endpoint = g, _.payload = u, this.builder.settings.consoleLog && console.log("JSON PAYLOAD 1");
+        } else {
+          let g = this.builder.settings.replicateEndpoint2;
+          g = g.replace("{MODEL}", _.model), _.endpoint = g, _.payload = u, this.builder.settings.consoleLog && console.log("JSON PAYLOAD 2");
+        }
+      else if (t === "fal") {
+        let g = `https://queue.fal.run/${_.model}`;
+        _.endpoint = g, _.payload = u, this.builder.settings.consoleLog && console.log("JSON PAYLOAD");
+      }
+      return this.builder.payloads.push(_), this.builder.settings.consoleLog && console.log(_), this.generateMediaByJSON(_, t, r, o);
+    }
+    try {
+      if (a = await this.checkIntent(e, t, s), this.builder.settings.consoleLog && console.log(a), !a)
+        return {
+          mediaGenerated: !1,
+          status: "aborted",
+          message: this.out("Request aborted.")
+        };
+      if (a.minimize_image) {
+        if (!a.image_url)
+          return {
+            mediaGenerated: !1,
+            status: "error",
+            message: this.out("Image reference not found.")
+          };
+        const h = await this.builder.upload.getInputURLs();
+        if (h.error)
+          return {
+            mediaGenerated: !1,
+            status: "error",
+            message: h.error
+          };
+        let b = {
+          image_url: h[a.image_url] || a.image_url,
+          // cleanup,
+          customData: this.builder.settings.customData
+        };
+        this.builder.payloads.push(b), this.builder.settings.consoleLog && console.log(b);
+        let w = {
+          "Content-Type": "application/json",
+          ...this.builder.settings.headers
+        };
+        const g = await (await fetch(this.builder.settings.minimizeImageUrl, {
+          signal: this.builder.mediaSignal,
+          method: "POST",
+          headers: w,
+          body: JSON.stringify(b)
+        })).json();
+        if (this.builder.output.push(g), g.error)
+          return this.builder.settings.consoleLog && console.log(g.error), this.builder.isMediaGenerating = !1, {
+            mediaGenerated: !1,
+            status: "error",
+            message: g.error
+            //this.out('Request failed.')
+          };
+        {
+          const v = g.url, f = `
+                    <div class="image-container">
+                        <div>
+                            <img src="${v}" />
+                            <div>
+                                <a class="link-view" href="${v}" target="_blank" rel="noopener noreferrer">${this.out("View")}</a>
+                                <a class="link-download" href="${v}" download>${this.out("Download")}</a>
+                            </div>
+                        </div>
+                    </div>`;
+          let m = `![](${v})`;
+          return o ? (r.innerHTML = "", r.remove()) : (r.innerHTML = f, this.builder.outputHtml += `<div class="result-container">${f}</div>`), this.builder.isMediaGenerating = !1, {
+            mediaGenerated: !0,
+            status: "success",
+            markdown: m,
+            output: [v]
+          };
+        }
+      } else {
+        if (t === "fal")
+          return this.generateFal(a, r, o);
+        if (t === "replicate")
+          return this.generateReplicate(a, r, o);
+        if (t === "google")
+          return this.generateGoogle(a, r, o);
+        if (t === "openai")
+          return this.generateOpenAI(a, r, o);
+      }
+    } catch (l) {
+      return this.builder.settings.consoleLog && console.log(l), this.builder.isMediaGenerating = !1, l.name === "AbortError" ? {
+        mediaGenerated: !1,
+        status: "aborted",
+        message: this.out("Request aborted.")
+      } : {
+        mediaGenerated: !1,
+        status: "error",
+        message: this.out("Request failed.")
+      };
+    }
+    return this.builder.isMediaGenerating = !1, {
+      mediaGenerated: !1,
+      status: "error",
+      message: this.out("Request failed.")
+    };
+  }
+  async generateMediaByJSON(e, i, t, n) {
+    let s, r = !1;
+    if (i === "replicate" && this.builder.settings.generateMediaUrl) {
+      if (s = this.builder.settings.generateMediaUrl, !s)
+        return {
+          mediaGenerated: !1,
+          status: "error",
+          message: this.out("Endpoint not configured: generateMediaUrl.")
+        };
+    } else if (i === "replicate" && this.builder.settings.generateMediaUrl_Replicate) {
+      if (s = this.builder.settings.generateMediaUrl_Replicate, !s)
+        return {
+          mediaGenerated: !1,
+          status: "error",
+          message: this.out("Endpoint not configured: generateMediaUrl_Replicate.")
+        };
+      r = !0;
+    } else if (i === "fal" && (s = this.builder.settings.generateMediaUrl_Fal, !s))
+      return {
+        mediaGenerated: !1,
+        status: "error",
+        message: this.out("Endpoint not configured: generateMediaUrl_Fal.")
+      };
+    let o = {
+      "Content-Type": "application/json",
+      ...this.builder.settings.headers
+    };
+    const d = await (await fetch(s, {
+      signal: this.builder.mediaSignal,
+      method: "POST",
+      headers: o,
+      body: JSON.stringify(e)
+    })).json();
+    if (this.builder.isMediaGenerating = !1, i === "fal") {
+      let u = d.request_id;
+      return this.waitingFal(e, u, t, n);
+    }
+    if (d.error)
+      return this.builder.settings.consoleLog && console.log(d.error), {
+        mediaGenerated: !1,
+        status: "error",
+        message: d.error
+        //this.out('Request failed.') 
+      };
+    if (r) {
+      let u;
+      if (d.ok) {
+        if (u = d.data.id, !u)
+          return {
+            mediaGenerated: !1,
+            status: "error",
+            message: d.data && d.data.detail
+          };
+      } else
+        return {
+          mediaGenerated: !1,
+          status: "error",
+          message: d.error
+          //this.out('Generating video request failed.')
+        };
+      return this.waitingReplicate(e, u, t, n);
+    } else {
+      const u = d.data;
+      let l = this.renderResult(u, t, n);
+      return {
+        mediaGenerated: !0,
+        status: "success",
+        markdown: l.markdown,
+        output: l.output,
+        output2: l.output2
+      };
+    }
+  }
+  getClosestAspectRatio(e, i) {
+    if (i === 0)
+      return "3:2";
+    const t = e / i, n = [{
+      aspect: "10:16",
+      ratio: 10 / 16
+    }, {
+      aspect: "16:10",
+      ratio: 16 / 10
+    }, {
+      aspect: "9:16",
+      ratio: 9 / 16
+    }, {
+      aspect: "16:9",
+      ratio: 16 / 9
+    }, {
+      aspect: "4:3",
+      ratio: 4 / 3
+    }, {
+      aspect: "3:4",
+      ratio: 3 / 4
+    }, {
+      aspect: "1:1",
+      ratio: 1
+    }, {
+      aspect: "1:3",
+      ratio: 1 / 3
+    }, {
+      aspect: "3:1",
+      ratio: 3
+    }, {
+      aspect: "3:2",
+      ratio: 3 / 2
+    }, {
+      aspect: "2:3",
+      ratio: 2 / 3
+    }];
+    let s = n[0], r = Math.abs(t - n[0].ratio);
+    for (let o = 1; o < n.length; o++) {
+      const a = Math.abs(t - n[o].ratio);
+      a < r && (r = a, s = n[o]);
+    }
+    return s.aspect;
+  }
+  out(e) {
+    if (this.opts.lang) {
+      let i = this.opts.lang[e];
+      return i || e;
+    } else
+      return e;
+  }
+}
+class mn {
+  constructor(e = {}, i) {
+    const t = {
+      lang: []
+    };
+    this.builder = i, this.opts = Object.assign({}, t, e);
+  }
+  async getInputURLs(e) {
+    let i = this.builder.getFormValues();
+    const t = this.builder.filesUploaded;
+    if (Object.keys(t).length !== 0) return t;
+    for (const n of i)
+      if (n.value instanceof FileList) {
+        let s = await this.processMediaInput(n.name, e), r = s.url;
+        n.name === s.url && (r = ""), t[n.name] = r;
+      } else {
+        if (n.name.indexOf("_mask") !== -1) {
+          let s = await this.processMaskInput(n.name, e);
+          if (s.error)
+            return {
+              error: s.error
+            };
+          {
+            let r = s.url;
+            t[n.name] = r;
+          }
+        }
+        if (n.name.indexOf("__url") !== -1) {
+          let s;
+          this.builder.settings.isBuilder ? s = document.querySelector(this.builder.settings.previewSelector) : s = this.builder.element;
+          const r = s.querySelector(`input[name="${n.name}"]`);
+          if (r) {
+            const o = r.value;
+            t[n.name] = o;
+          }
+        }
+      }
+    return Object.keys(t).forEach((n) => {
+      if (n.endsWith("__url")) {
+        const s = n.replace("__url", "");
+        Object.prototype.hasOwnProperty.call(t, s) && (t[s] = t[n]), delete t[n];
+      }
+    }), t;
+  }
+  async processMaskInput(e, i) {
+    let t;
+    if (this.builder.settings.isBuilder) {
+      if (!this.builder.settings.previewSelector)
+        return {
+          error: this.out("previewSelector not set.")
+        };
+      t = document.querySelector(this.builder.settings.previewSelector);
+    } else
+      t = this.builder.element;
+    const n = t.querySelector(`input[type="hidden"][name="${e}"]`);
+    if (!n) return {
+      error: this.out("Unable to perform the request.")
+      // must be image_to_image_generation, not edit_area_in_image
+    };
+    if (n.value === "")
+      return {
+        error: this.out("Please brush the area you want to edit.")
+      };
+    let s = n.value.replace(/^data:image\/(png|svg\+xml|jpeg|gif|webp);base64,/, "");
+    if (s === "")
+      return {
+        error: this.out("Please brush over the areas to remove objects before continuing.")
+      };
+    let r, o = this.builder.getId(), a = {
+      image: s,
+      filename: `${e}_${o}.png`,
+      // inputName + '.png',
+      customData: this.builder.settings.customData
+    }, d;
+    i === "replicate" ? d = this.builder.settings.uploadBase64Url : i === "fal" ? d = this.builder.settings.uploadBase64Url_Fal : d = this.builder.settings.uploadBase64Url_Fal || this.builder.settings.uploadBase64Url;
+    let u = {
+      "Content-Type": "application/json",
+      ...this.builder.settings.headers
+    }, h = await (await fetch(d, {
+      signal: this.builder.mediaSignal,
+      method: "POST",
+      headers: u,
+      body: JSON.stringify(a)
+    })).json();
+    return h.ok && (r = h.url), r ? {
+      url: r
+    } : {
+      error: this.out("Upload mask failed.")
+    };
+  }
+  async processMediaInput(e, i) {
+    if (!e)
+      return !1;
+    let t;
+    if (!this.isFullUrl(e)) {
+      let r = e;
+      t = this.getFileInput(r) || this.getFileInput();
+    }
+    let n = "", s;
+    if (this.builder.photoBlob[e]) {
+      let r = this.builder.getId();
+      const o = new FormData();
+      o.append("file", this.builder.photoBlob[e], `photo_${r}.jpg`), o.append("customData", this.builder.settings.customData);
+      let a;
+      i === "replicate" ? a = this.builder.settings.uploadMediaUrl : i === "fal" ? a = this.builder.settings.uploadMediaUrl_Fal : a = this.builder.settings.uploadMediaUrl_Fal || this.builder.settings.uploadMediaUrl;
+      const u = await (await fetch(a, {
+        method: "POST",
+        body: o
+      })).json();
+      return u.ok ? (s = u.url, n = u.filename, {
+        filename: n,
+        url: s
+      }) : {
+        error: this.out("Upload file failed.")
+      };
+    }
+    if (this.builder.selectedFiles && this.builder.selectedFiles.length > 0) {
+      const r = new FormData();
+      r.append("file", this.builder.selectedFiles[0]), r.append("customData", this.builder.settings.customData);
+      let o;
+      i === "replicate" ? o = this.builder.settings.uploadMediaUrl : i === "fal" ? o = this.builder.settings.uploadMediaUrl_Fal : o = this.builder.settings.uploadMediaUrl_Fal || this.builder.settings.uploadMediaUrl;
+      const d = await (await fetch(o, {
+        method: "POST",
+        body: r
+      })).json();
+      return d.ok ? (s = d.url, n = d.filename, {
+        filename: n,
+        url: s
+      }) : {
+        error: this.out("Upload file failed.")
+      };
+    }
+    if (t) {
+      const r = t.files[0];
+      if (r) {
+        n = r.name;
+        const o = new FormData();
+        o.append("file", r), o.append("customData", this.builder.settings.customData);
+        let a;
+        i === "replicate" ? a = this.builder.settings.uploadMediaUrl : i === "fal" ? a = this.builder.settings.uploadMediaUrl_Fal : a = this.builder.settings.uploadMediaUrl_Fal || this.builder.settings.uploadMediaUrl;
+        const u = await (await fetch(a, {
+          method: "POST",
+          body: o
+        })).json();
+        if (u.ok)
+          s = u.url, n = u.filename;
+        else
+          return {
+            error: this.out("Upload file failed.")
+          };
+      } else
+        s = e;
+    } else
+      s = e;
+    return {
+      filename: n,
+      url: s
+    };
+  }
+  getFileInput(e) {
+    let i;
+    if (this.builder.settings.isBuilder) {
+      if (!this.builder.settings.previewSelector)
+        return console.log("previewSelector not set."), null;
+      i = document.querySelector(this.builder.settings.previewSelector);
+    } else
+      i = this.builder.element;
+    return i ? e ? i.querySelector(`input[type="file"][name="${e}"]`) : i.querySelector('input[type="file"]') : null;
+  }
+  isFullUrl(e) {
+    return e.indexOf("/") !== -1;
+  }
+  out(e) {
+    if (this.opts.lang) {
+      let i = this.opts.lang[e];
+      return i || e;
+    } else
+      return e;
+  }
+}
+class bn {
+  constructor(e, i = {}) {
+    const t = {
+      lang: []
+      // name: ''
+    };
+    this.settings = Object.assign({}, t, i), this.empty = !0, this.element = e, this.init();
+  }
+  loadUrl(e) {
+    const i = this.element.querySelector("img");
+    i.src = e, this.loaded();
+  }
+  loadImage(e) {
+    if (e) {
+      const i = new FileReader();
+      i.onload = (t) => {
+        this.element.querySelector("img").setAttribute("src", t.target.result);
+      }, i.readAsDataURL(e);
+    }
+  }
+  setImage(e) {
+    if (e) {
+      const i = this.element.querySelector("img");
+      i.src = e;
+    }
+  }
+  clearImage() {
+    this.element.style.display = "";
+  }
+  out(e) {
+    let i = this.settings.lang[e];
+    return i || e;
+  }
+  init() {
+    const e = this.element;
+    e.className = "imagemask-wrapper";
+    const i = document.createElement("div");
+    i.className = "imagemask-overlay", e.appendChild(i);
+    const t = document.createElement("button");
+    t.className = "btn-close-imagemask", t.title = this.out("Close"), t.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" 
+        viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"  
+        stroke-linejoin="round" class="icon-close">
+            <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+            <path d="M18 6l-12 12" /><path d="M6 6l12 12" />
+        </svg>`, e.appendChild(t);
+    const n = document.createElement("div");
+    n.className = "imagemask-body", e.appendChild(n);
+    const s = document.createElement("div");
+    s.className = "imagemask-container", n.appendChild(s);
+    const r = document.createElement("div");
+    r.className = "imagemask-controls", n.appendChild(r);
+    const o = document.createElement("label");
+    r.appendChild(o), o.innerHTML = `${this.out("Brush Size")}: 
+            <input type="range" class="brush-size" min="5" max="100" value="30">`;
+    const a = o.querySelector(".brush-size"), d = document.createElement("button");
+    d.className = "btn-undobrush", d.title = this.out("Undo"), d.innerHTML = `
+        <svg  xmlns="http://www.w3.org/2000/svg"  width="24"  height="24"  viewBox="0 0 24 24"  fill="none"  stroke="currentColor"  stroke-width="2"  stroke-linecap="round"  stroke-linejoin="round"  
+        class="icon-undo">
+                <path stroke="none" d="M0 0h24v24H0z" fill="none"></path>
+                <path d="M9 14l-4 -4l4 -4"></path>
+                <path d="M5 10h11a4 4 0 1 1 0 8h-1"></path>
+        </svg>`, r.appendChild(d);
+    const u = document.createElement("button");
+    u.className = "btn-redobrush", u.title = this.out("Redo"), u.innerHTML = `
+        <svg  xmlns="http://www.w3.org/2000/svg"  width="24"  height="24"  viewBox="0 0 24 24"  fill="none"  stroke="currentColor"  stroke-width="2"  stroke-linecap="round"  stroke-linejoin="round"  
+        class="icon-redo">
+            <path stroke="none" d="M0 0h24v24H0z" fill="none"></path>
+            <path d="M15 14l4 -4l-4 -4"></path>
+            <path d="M19 10h-11a4 4 0 1 0 0 8h1"></path>
+        </svg>`, r.appendChild(u);
+    const l = document.createElement("button");
+    l.className = "btn-clearbrush", l.title = this.out("Clear"), l.innerHTML = `
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" 
+        stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" 
+        class="icon-eraser">
+            <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+            <path d="M19 20h-10.5l-4.21 -4.3a1 1 0 0 1 0 -1.41l10 -10a1 1 0 0 1 1.41 0l5 5a1 1 0 0 1 0 1.41l-9.2 9.3" />
+            <path d="M18 13.3l-6.3 -6.3" /><
+        /svg>`, r.appendChild(l);
+    const h = document.createElement("button");
+    h.className = "btn-enlargemask", l.title = this.out("Enlarge"), h.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"  
+        fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" 
+        class="icon-maximize">
+        <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+            <path d="M16 4l4 0l0 4" /><path d="M14 10l6 -6" />
+            <path d="M8 20l-4 0l0 -4" /><path d="M4 20l6 -6" />
+            <path d="M16 20l4 0l0 -4" /><path d="M14 14l6 6" />
+            <path d="M8 4l-4 0l0 4" /><path d="M4 4l6 6" />
+        </svg>`, r.appendChild(h);
+    const p = document.createElement("input");
+    p.type = "hidden", p.name = this.settings.name, p.className = "inp-imagemask", p.value = "", n.appendChild(p);
+    const b = document.createElement("canvas");
+    b.className = "imagemask";
+    const w = b.getContext("2d", {
+      willReadFrequently: !0
+    }), _ = document.createElement("canvas"), g = _.getContext("2d", {
+      willReadFrequently: !0
+    }), v = this.element.querySelector(".inp-imagemask"), f = (T) => {
+      const N = document.createElement("canvas"), P = N.getContext("2d", {
+        willReadFrequently: !0
+      });
+      N.width = T.width, N.height = T.height, P.clearRect(0, 0, T.width, T.height), P.fillStyle = "black", P.fillRect(0, 0, T.width, T.height), P.drawImage(T, 0, 0);
+      const U = N.toDataURL("image/png");
+      let F = document.querySelector(".imagemask-output");
+      F || (F = document.createElement("img"), F.className = "imagemask-output", document.body.appendChild(F)), F.src = U, this.empty || (v.value = U);
+    };
+    let m = [], y = [];
+    const k = () => {
+      m.push(_.toDataURL()), m.length > 10 && m.shift(), y = [];
+    }, x = (T) => {
+      const N = new Image();
+      N.src = T, N.onload = () => {
+        w.clearRect(0, 0, b.width, b.height), w.drawImage(N, 0, 0, b.width, b.height), g.clearRect(0, 0, _.width, _.height), g.drawImage(N, 0, 0, _.width, _.height), f(_);
+      };
+    };
+    b.addEventListener("mousedown", () => {
+      k();
+    }), d.addEventListener("click", (T) => {
+      T.preventDefault(), m.length > 0 && (y.push(b.toDataURL()), x(m.pop()));
+    }), u.addEventListener("click", (T) => {
+      T.preventDefault(), y.length > 0 && (m.push(b.toDataURL()), x(y.pop()));
+    });
+    const S = document.createElement("img");
+    s.appendChild(S), s.appendChild(b), this.loaded = () => {
+      s.style.display = "flex";
+      const T = document.querySelector(".imagemask-controls");
+      T.style.display = "flex", e.style.display = "flex", M(), m = [], y = [], w.clearRect(0, 0, b.width, b.height), g.clearRect(0, 0, _.width, _.height), this.empty = !0, v.value = "";
+      try {
+        f(_);
+      } catch {
+      }
+    }, S.onload = () => {
+      this.loaded();
+    };
+    let E = null, L = null;
+    const M = () => {
+      b.width > 0 && b.height > 0 && (E = w.getImageData(0, 0, b.width, b.height), L = g.getImageData(0, 0, _.width, _.height));
+      const T = S.offsetWidth, N = S.offsetHeight, P = window.devicePixelRatio || 1;
+      b.width = T * P, b.height = N * P, w.scale(P, P), b.style.width = `${T}px`, b.style.height = `${N}px`;
+      const U = S.naturalWidth, F = S.naturalHeight;
+      if (_.width = U * P, _.height = F * P, g.scale(P, P), _.style.width = `${U}px`, _.style.height = `${F}px`, E) {
+        const W = document.createElement("canvas");
+        W.width = E.width, W.height = E.height, W.getContext("2d").putImageData(E, 0, 0);
+        const ne = document.createElement("canvas");
+        ne.width = L.width, ne.height = L.height, ne.getContext("2d").putImageData(L, 0, 0), w.drawImage(W, 0, 0, E.width, E.height, 0, 0, b.width, b.height), g.drawImage(ne, 0, 0, L.width, L.height, 0, 0, _.width, _.height);
+      }
+    };
+    let C = !1, D = parseInt(a.value, 10);
+    a.addEventListener("input", (T) => {
+      D = parseInt(T.target.value, 10);
+    });
+    const O = (T) => {
+      const N = b.getBoundingClientRect();
+      if (T.touches) {
+        const P = T.touches[0];
+        return {
+          x: P.clientX - N.left,
+          y: P.clientY - N.top
+        };
+      }
+      return {
+        x: T.clientX - N.left,
+        y: T.clientY - N.top
+      };
+    }, $ = (T) => {
+      C = !0, q(T);
+    }, R = () => {
+      C = !1, w.beginPath(), this.empty = !1, f(_);
+    }, q = (T) => {
+      if (!C) return;
+      const {
+        x: N,
+        y: P
+      } = O(T), U = _.width / b.width, F = _.height / b.height, W = N * U, de = P * F;
+      w.fillStyle = "rgb(255, 255, 255)", w.beginPath(), w.arc(N, P, D / 2, 0, Math.PI * 2), w.fill(), g.fillStyle = "rgb(255, 255, 255)", g.beginPath(), g.arc(W, de, D / 2 * U, 0, Math.PI * 2), g.fill();
+    };
+    b.addEventListener("mousedown", $), b.addEventListener("mouseup", R), b.addEventListener("mousemove", q), b.addEventListener("touchstart", (T) => {
+      $(T), T.preventDefault();
+    }, {
+      passive: !1
+    }), b.addEventListener("touchend", (T) => {
+      R(), T.preventDefault();
+    }), b.addEventListener("touchmove", (T) => {
+      q(T), T.preventDefault();
+    }, {
+      passive: !1
+    }), l.addEventListener("click", (T) => {
+      T.preventDefault(), k(), w.clearRect(0, 0, b.width, b.height), g.clearRect(0, 0, _.width, _.height), this.empty = !0, v.value = "", f(_);
+    }), window.addEventListener("resize", M);
+    const A = (T) => {
+      T ? (e.setAttribute("aria-modal", "true"), e.setAttribute("role", "dialog"), e.classList.add("fullscreen"), i.style.display = "block", t.style.display = "flex", h.style.display = "none") : (e.removeAttribute("aria-modal"), e.removeAttribute("role"), e.classList.remove("fullscreen"), i.style.display = "none", t.style.display = "none", h.style.display = ""), M();
+    };
+    h.addEventListener("click", (T) => {
+      T.preventDefault(), A(!0);
+    }), t.addEventListener("click", (T) => {
+      T.preventDefault(), A(!1);
+    }), document.addEventListener("keydown", (T) => {
+      T.key === "Escape" && A(!1);
+    });
+  }
+}
+class yn {
+  constructor(e, i = {}) {
+    const t = {
+      lang: [],
+      headers: {},
+      fileUploadText: "Drag and drop your file here.",
+      multiFileUploadText: "Drag and drop your files here.",
+      model: "gpt-4o-mini",
+      model2: "gpt-4o-mini",
+      // onChange: (json)=>{},
+      // onSubmit: (e) => { },
+      // onUsage: (cost => { },
+      sendCommandUrl: "/sendcommand",
+      sendCommandStreamUrl: "/getstream",
+      // searchCommandUrl: '',
+      // scrapeCommandUrl: '',
+      consoleLog: !1,
+      saveResults: !1,
+      disableMediaGeneration: !1,
+      disableMediaGenerationTitle: "Demo Info",
+      disableMediaGenerationMessage: "This is an online demo and media generation is currently disabled. Get the full version for complete functionality.",
+      //'AI media generation is currently disabled, so your request cannot be processed.',
+      submitText: "Submit",
+      resetText: "Reset",
+      scrapeProvider: "firecrawl",
+      scrapeLimit: 6,
+      scrapeExclude: ["youtube.com", "reddit.com", "microsoft.com", "mozilla.org"],
+      // Domains to exclude
+      inputCost: 0.15,
+      // gpt-4o-mini (per million token)
+      outputCost: 0.6,
+      _2dIllustrationStyleId: "bcaa0104-98ef-4cb8-a012-124dad015756",
+      // templatesUrl: '/templates.json',
+      templateFilters: ["all", "image", "video", "audio", "text"],
+      // 'web', 
+      templatesConfig: {
+        fal: !0,
+        replicate: !1,
+        web: !1
+      },
+      // templateButtons: {
+      //     viewButton: {
+      //         text: 'View'
+      //     },
+      //     useButton:  {
+      //         text: 'Clone'
+      //     },
+      // },
+      defaultMediaGenerationProvider: "fal",
+      replicateEndpoint1: "https://api.replicate.com/v1/predictions",
+      // use with version
+      replicateEndpoint2: "https://api.replicate.com/v1/models/{MODEL}/predictions",
+      // These configuration only used if the server is using API request (without SDK)
+      // A validation to check if endpoint config starts with 'https://queue.fal.run' is needed on the server side.
+      falStatusEndpoint: "https://queue.fal.run/{MODEL}/requests/{REQUEST_ID}/status",
+      falResultEndpoint: "https://queue.fal.run/{MODEL}/requests/{REQUEST_ID}",
+      replicateStatusEndpoint: "https://api.replicate.com/v1/predictions/{REQUEST_ID}",
+      modelFallback: !1,
+      defaultModels: {
+        image_generation: {
+          openai: ["gpt-image-1"]
+        },
+        image_variation_generation: {
+          openai: ["gpt-image-1"]
+        },
+        text_to_image_generation: {
+          fal: ["fal-ai/flux-1/schnell", "fal-ai/flux-1/dev", "fal-ai/flux-pro/v1.1", "fal-ai/flux-pro/v1.1-ultra", "fal-ai/recraft-v3", "fal-ai/recraft-20b", "fal-ai/ideogram/v2a", "fal-ai/hidream-i1-fast", "fal-ai/hidream-i1-dev", "fal-ai/hidream-i1-full", "fal-ai/gemini-flash-edit/multi"],
+          replicate: ["black-forest-labs/flux-schnell", "black-forest-labs/flux-dev", "black-forest-labs/flux-1.1-pro", "black-forest-labs/flux-1.1-pro-ultra", "recraft-ai/recraft-v3", "ideogram-ai/ideogram-v2a"],
+          google: ["gemini-2.0-flash-exp-image-generation"],
+          openai: ["gpt-image-1"]
+        },
+        image_to_video_generation: {
+          fal: ["fal-ai/kling-video/v1.6/standard/image-to-video", "fal-ai/kling-video/v1.6/pro/image-to-video", "fal-ai/kling-video/v2.1/standard/image-to-video", "fal-ai/kling-video/v2.1/pro/image-to-video", "fal-ai/kling-video/v2.1/master/image-to-video", "fal-ai/minimax/video-01-live/image-to-video", "fal-ai/luma-dream-machine/ray-2/image-to-video"],
+          replicate: ["kwaivgi/kling-v1.6-standard", "kwaivgi/kling-v1.6-pro", "minimax/video-01-live", "luma/ray"]
+        },
+        text_to_video_generation: {
+          fal: ["fal-ai/kling-video/v1.6/standard/text-to-video", "fal-ai/kling-video/v2.1/master/text-to-video", "fal-ai/minimax/video-01-live ", "fal-ai/luma-dream-machine/ray-2"],
+          replicate: ["kwaivgi/kling-v1.6-standard", "minimax/video-01", "luma/ray"]
+        },
+        upscale_image: {
+          fal: ["fal-ai/clarity-upscaler"],
+          replicate: ["recraft-ai/recraft-crisp-upscale"]
+        },
+        describe_image: {
+          fal: ["fal-ai/any-llm/vision"],
+          replicate: [
+            // 'daanelson/minigpt-4:e447a8583cffd86ce3b93f9c2cd24f2eae603d99ace6afa94b33a08e94a3cd06'
+            // 'lucataco/moondream2:72ccb656353c348c1385df54b237eeb7bfa874bf11486cf0b9473e691b662d31'
+            // 'yorickvp/llava-v1.6-vicuna-13b:0603dec596080fa084e26f0ae6d605fc5788ed2b1a0358cd25010619487eae63'
+            // 'yorickvp/llava-13b:80537f9eead1a5bfa72d5ac6ea6414379be41d4d4f6679fd776e9535d1eb58bb' // note
+          ]
+        },
+        edit_area_in_image: {
+          fal: [
+            "fal-ai/flux-pro/v1/fill"
+            // 'fal-ai/flux-lora-fill',
+            // 'fal-ai/ideogram/v2/edit',
+          ],
+          replicate: [
+            "black-forest-labs/flux-fill-pro"
+            // 'black-forest-labs/flux-fill-dev',
+          ],
+          google: ["gemini-2.0-flash-exp-image-generation"],
+          openai: ["gpt-image-1"]
+        },
+        edit_image: {
+          // will be used if no selection mask (see media.js)
+          fal: ["fal-ai/gemini-flash-edit"],
+          replicate: [
+            // not available
+          ],
+          openai: ["gpt-image-1"]
+        },
+        text_to_2d_illustration_generation: {
+          fal: ["fal-ai/recraft-v3"],
+          replicate: [
+            // not available
+          ]
+        },
+        text_to_digital_illustration_generation: {
+          fal: ["fal-ai/recraft-v3"],
+          replicate: ["recraft-ai/recraft-v3"]
+        },
+        text_to_book_cover_generation: {
+          fal: ["fal-ai/recraft-v3"],
+          replicate: [
+            // not available
+          ]
+        },
+        text_to_speech: {
+          fal: [
+            "fal-ai/elevenlabs/tts/multilingual-v2"
+            // 'fal-ai/kokoro/american-english'
+          ],
+          replicate: ["jaaari/kokoro-82m:f559560eb822dc509045f3921a1921234918b91739db4bf3daab2169b71c7a13"]
+        }
+      },
+      ttsMaxCharacters: 3e3,
+      // characters
+      alwaysVisibleSubmit: !1
+    };
+    this.settings = Object.assign({}, t, i), this.listeners = {}, window._txt && (this.settings.lang = window._txt), this.steps = [];
+    let n = this.settings.onChange;
+    if (this.settings.onChange = (s) => {
+      n && n.call(this, s);
+    }, !e)
+      throw new Error("A valid DOM element is required.");
+    e.classList.add("formview-container"), e.classList.add("fb-ui"), this.element = e, this.media = new gn({
+      lang: this.settings.lang
+    }, this), this.upload = new mn({
+      lang: this.settings.lang
+    }, this);
+  }
+  //constructor
+  on(e, i) {
+    return this.listeners[e] || (this.listeners[e] = /* @__PURE__ */ new Set()), this.listeners[e].add(i), this;
+  }
+  off(e, i) {
+    this.listeners[e] && this.listeners[e].delete(i);
+  }
+  trigger(e, i) {
+    this.listeners[e] && this.listeners[e].forEach((t) => t(i));
+  }
+  async loadTemplates() {
+    if (!this.settings.templatesUrl) {
+      console.log(this.out("Template URL is not set."));
+      return;
+    }
+    let e = document.querySelector(this.settings.templatesSelector);
+    if (e) {
+      e.classList.remove("hidden"), e.classList.add("formtemplates-container"), e.classList.add("fb-ui");
+      let n = (await (await fetch(this.settings.templatesUrl, {
+        method: "GET"
+      })).json()).data;
+      e.innerHTML = "", n = n.filter((l) => {
+        const h = l.supports || [];
+        if (h.length === 0) return !0;
+        const {
+          fal: p,
+          replicate: b,
+          web: w,
+          openai: _,
+          google: g
+        } = this.settings.templatesConfig;
+        return !w && h.includes("web") || !g && h.includes("google") || !_ && h.includes("openai") ? !1 : !p && !b ? !(h.includes("fal") || h.includes("replicate")) : !p && h.includes("fal") ? h.includes("replicate") : !b && h.includes("replicate") ? h.includes("fal") : !0;
+      });
+      const r = this.settings.templateFilters, o = {
+        all: {
+          desc: this.out("All")
+        },
+        image: {
+          desc: this.out("Image")
+        },
+        video: {
+          desc: this.out("Video")
+        },
+        audio: {
+          desc: this.out("Audio")
+        },
+        web: {
+          desc: this.out("Web")
+        },
+        text: {
+          desc: this.out("Text")
+        }
+      }, a = document.createElement("div");
+      a.className = "app-filters", e.appendChild(a);
+      const d = document.createElement("ul");
+      d.className = "app-list", e.appendChild(d);
+      const u = (l) => {
+        let h = n.filter((b) => l === "all" || b.categories.includes(l));
+        const p = this.settings.templateOutput || ["image", "video", "audio", "text"];
+        h = h.filter((b) => b.categories.every((w) => p.includes(w))), this.renderList(h, d);
+      };
+      r.forEach((l) => {
+        const h = document.createElement("button");
+        h.textContent = o[l].desc, h.setAttribute("data-value", l), l === "all" && h.classList.add("active"), h.addEventListener("click", () => {
+          a.querySelectorAll("button").forEach((b) => b.classList.remove("active")), h.classList.add("active"), u(l);
+        }), a.appendChild(h);
+      }), u("all");
+    }
+  }
+  //NEW
+  //------ Select Image Support -------
+  async selectFile(e) {
+    const i = this.element.querySelector(".file-input-wrapper");
+    if (!i) return;
+    const t = i.querySelector('input[type="file"]');
+    if (!t || !this.acceptsImagesOnly(t))
+      return;
+    let n;
+    e.startsWith("http") ? n = this.settings.viewFileUrl + "?url=" + e : n = e;
+    const r = await (await fetch(n)).blob(), o = new File([r], e.split("/").pop(), {
+      type: r.type
+    });
+    this.element.querySelector(".div-selected-preview") || (this.selectedFiles = []), t && t.hasAttribute("multiple") ? this.selectedFiles.some((u) => u.name === o.name) || this.selectedFiles.push(o) : this.selectedFiles = [o], this.setSelectedFiles(this.selectedFiles), this.renderSelectedFiles(), i.closest(".image-mask") && this.objImageMask && this.objImageMask.loadImage(o);
+  }
+  setSelectedFiles(e) {
+    this.selectedFiles = e;
+    const i = this.element.querySelector('input[type="file"]');
+    i && i.removeAttribute("required");
+  }
+  renderSelectedFiles() {
+    const e = this.element.querySelector(".file-input-wrapper");
+    if (!e) return;
+    let i = this.element.querySelector(".div-selected-preview");
+    i ? i.innerHTML = "" : (i = document.createElement("div"), i.classList.add("div-selected-preview"), e.appendChild(i)), this.clearFileInput(), this.selectedFiles && this.selectedFiles.forEach((t, n) => {
+      const s = document.createElement("div"), r = document.createElement("img");
+      r.src = URL.createObjectURL(t);
+      const o = document.createElement("button");
+      o.innerHTML = `<svg  xmlns="http://www.w3.org/2000/svg"  width="24"  height="24"  viewBox="0 0 24 24"  fill="none"  stroke="currentColor"  stroke-width="1.4"  stroke-linecap="round"  stroke-linejoin="round"  class="">
+                <path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M4 7l16 0" /><path d="M10 11l0 6" /><path d="M14 11l0 6" /><path d="M5 7l1 12a2 2 0 0 0 2 2h8a2 2 0 0 0 2 -2l1 -12" /><path d="M9 7v-3a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v3" />
+            </svg>`, o.addEventListener("click", () => {
+        this.selectedFiles.splice(n, 1), this.setSelectedFiles(this.selectedFiles), this.renderSelectedFiles(), e.closest(".image-mask") && this.objImageMask && this.objImageMask.clearImage();
+      }), s.appendChild(r), s.appendChild(o), i.appendChild(s);
+    });
+  }
+  clearSelectedFiles() {
+    this.selectedFiles = [], this.setSelectedFiles(this.selectedFiles);
+    let e = this.element.querySelector(".div-selected-preview");
+    e && (e.innerHTML = "");
+  }
+  clearFileInput() {
+    const e = this.element.querySelector(".file-input-wrapper");
+    if (!e) return;
+    const i = e.querySelector('input[type="file"]');
+    if (!i) return;
+    try {
+      if (i.value = "", i.files && i.files.length > 0) {
+        const a = new DataTransfer();
+        i.files = a.files;
+      }
+    } catch {
+    }
+    const t = e.querySelector(".file-drop-info-highlight");
+    t && (t.innerHTML = "");
+    const n = e.querySelector(".img-preview");
+    n && n.remove();
+    const s = e.querySelector(".file-preview-container");
+    s && (s.innerHTML = "");
+    const r = e.querySelector(".btn-clearphoto");
+    r && r.click();
+    const o = this.element.querySelector('input[type="file"]');
+    o && o.removeAttribute("required");
+  }
+  acceptsImagesOnly(e) {
+    const i = (e.getAttribute("accept") || "").split(",").map((t) => t.trim());
+    return i.length === 0 ? !1 : i.every((t) => t.startsWith("image/") || t === "image/*");
+  }
+  //------
+  // Render templates
+  renderList(e, i) {
+    i.innerHTML = "", e.forEach((t) => {
+      if (t.name) {
+        const n = document.createElement("li");
+        i.appendChild(n);
+        const s = document.createElement("a");
+        s.setAttribute("href", "#");
+        let r = this.settings.assetsFolder, o = t.form.thumbnail, a = "";
+        if (r && o) {
+          let h = r + o;
+          a = `<img class="thumbnail" src="${h}" alt="${t.name}" />`, t.form.thumbnailFit && (a = `<img class="thumbnail" style="object-fit:${t.form.thumbnailFit}" src="${h}" alt="${t.name}" />`);
+        }
+        const d = document.createElement("div");
+        d.className = "div-template-buttons";
+        let u = !1, l = !1;
+        if (this.settings.templateButtons && this.settings.templateButtons.viewButton && this.settings.templateButtons.viewButton.text) {
+          const h = document.createElement("button");
+          h.className = "btn-template-view", h.innerText = this.out(this.settings.templateButtons.viewButton.text), d.appendChild(h), h.addEventListener("click", (p) => {
+            if (p.preventDefault(), this.isGenerating) {
+              alert(this.out("Please wait until generation is complete."));
+              return;
+            }
+            this.settings.onSelectTemplate && this.settings.onSelectTemplate(t), this.trigger("templateView", t);
+          }), u = !0;
+        }
+        if (this.settings.templateButtons && this.settings.templateButtons.useButton && this.settings.templateButtons.useButton.text) {
+          const h = document.createElement("button");
+          h.className = "btn-template-use", h.innerText = this.out(this.settings.templateButtons.useButton.text), d.appendChild(h), h.addEventListener("click", (p) => {
+            p.preventDefault(), this.settings.onSelectTemplate && this.settings.onSelectTemplate(t), this.trigger("templateUse", t);
+          }), l = !0;
+        }
+        s.innerHTML = `
+                    ${a}
+                    <div class="card-text">
+                        <div class="title">${t.name}</div>
+                        <div class="description">${t.form.description}</div>
+                        ${t.info ? ` <div class="info mt-1">${t.info}</div>` : ""}
+                    </div>
+                `, u || l ? (s.querySelector(".card-text").appendChild(d), s.classList.remove("cursor-pointer"), s.classList.add("cursor-default")) : (s.classList.add("cursor-pointer"), s.classList.remove("cursor-default")), n.appendChild(s), u || l || s.addEventListener("click", (h) => {
+          if (h.preventDefault(), this.isGenerating) {
+            alert(this.out("Please wait until generation is complete."));
+            return;
+          }
+          this.settings.onSelectTemplate && this.settings.onSelectTemplate(t), this.trigger("templateSelect", t);
+        });
+      }
+    });
+  }
+  addResultTool() {
+    const e = document.querySelector(this.settings.resultSelector);
+    if (!e) return;
+    let i = e.innerHTML;
+    const n = new DOMParser().parseFromString(i, "text/html"), s = n.querySelector(".result-tool");
+    s && s.remove(), n.querySelectorAll(".link-view, .link-download, video, audio").forEach((h) => {
+      h.remove();
+    });
+    let o = !1;
+    n.body.innerText.trim() === "" && (o = !0);
+    const d = document.createElement("div");
+    d.className = "result-tool", e.appendChild(d);
+    const u = document.createElement("button");
+    u.className = "btn-result-tool", u.innerHTML = `
+        <svg  xmlns="http://www.w3.org/2000/svg"  width="24"  height="24"  viewBox="0 0 24 24"  fill="none"  stroke="currentColor"  stroke-width="1.2"  stroke-linecap="round"  stroke-linejoin="round">
+            <path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M7 7m0 2.667a2.667 2.667 0 0 1 2.667 -2.667h8.666a2.667 2.667 0 0 1 2.667 2.667v8.666a2.667 2.667 0 0 1 -2.667 2.667h-8.666a2.667 2.667 0 0 1 -2.667 -2.667z" /><path d="M4.012 16.737a2.005 2.005 0 0 1 -1.012 -1.737v-10c0 -1.1 .9 -2 2 -2h10c.75 0 1.158 .385 1.5 1" />
+        </svg>
+        <span>${this.out("Copy")}</span>
+        `, o || d.appendChild(u);
+    const l = document.createElement("button");
+    l.className = "btn-result-tool", l.innerHTML = `
+        <svg  xmlns="http://www.w3.org/2000/svg"  width="24"  height="24"  viewBox="0 0 24 24"  fill="none"  stroke="currentColor"  stroke-width="1.2"  stroke-linecap="round"  stroke-linejoin="round">
+            <path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M4 7l16 0" /><path d="M10 11l0 6" /><path d="M14 11l0 6" /><path d="M5 7l1 12a2 2 0 0 0 2 2h8a2 2 0 0 0 2 -2l1 -12" /><path d="M9 7v-3a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v3" />
+        </svg>
+        <span>${this.out("Clear")}</span>
+        `, d.appendChild(l), u && u.addEventListener("click", (h) => {
+      h.preventDefault();
+      const p = e.cloneNode(!0), b = p.querySelector(".result-tool");
+      b && b.remove(), p.querySelectorAll(".link-view, .link-download").forEach((g) => {
+        g.remove();
+      }), p.style.position = "fixed", p.style.left = "-9999px", document.body.appendChild(p);
+      const _ = p.innerText.trim();
+      document.body.removeChild(p), navigator.clipboard.writeText(_), u.innerHTML = `
+            <svg  xmlns="http://www.w3.org/2000/svg"  width="24"  height="24"  viewBox="0 0 24 24"  fill="none"  stroke="currentColor"  stroke-width="1.2"  stroke-linecap="round"  stroke-linejoin="round">
+                <path stroke="none" d="M0 0h24v24H0z" fill="none"/><path stroke="none" d="M0 0h24v24H0z" /><path d="M7 9.667a2.667 2.667 0 0 1 2.667 -2.667h8.666a2.667 2.667 0 0 1 2.667 2.667v8.666a2.667 2.667 0 0 1 -2.667 2.667h-8.666a2.667 2.667 0 0 1 -2.667 -2.667z" /><path d="M4.012 16.737a2 2 0 0 1 -1.012 -1.737v-10c0 -1.1 .9 -2 2 -2h10c.75 0 1.158 .385 1.5 1" /><path d="M11 14l2 2l4 -4" />
+            </svg>
+            <span>${this.out("Copied")}</span>
+            `, setTimeout(() => {
+        u.innerHTML = `
+                <svg  xmlns="http://www.w3.org/2000/svg"  width="24"  height="24"  viewBox="0 0 24 24"  fill="none"  stroke="currentColor"  stroke-width="1.2"  stroke-linecap="round"  stroke-linejoin="round">
+                    <path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M7 7m0 2.667a2.667 2.667 0 0 1 2.667 -2.667h8.666a2.667 2.667 0 0 1 2.667 2.667v8.666a2.667 2.667 0 0 1 -2.667 2.667h-8.666a2.667 2.667 0 0 1 -2.667 -2.667z" /><path d="M4.012 16.737a2.005 2.005 0 0 1 -1.012 -1.737v-10c0 -1.1 .9 -2 2 -2h10c.75 0 1.158 .385 1.5 1" />
+                </svg>
+                <span>${this.out("Copy")}</span>
+                `;
+      }, 600);
+    }), l.addEventListener("click", (h) => {
+      h.preventDefault(), localStorage.removeItem("_results"), localStorage.removeItem("_results_html"), e.innerHTML = "";
+    });
+  }
+  getScrollableParent(e) {
+    for (; e.parentElement; ) {
+      const t = window.getComputedStyle(e.parentElement).overflowY;
+      if ((t === "auto" || t === "scroll") && e.parentElement.scrollHeight > e.parentElement.clientHeight)
+        return e.parentElement;
+      e = e.parentElement;
+    }
+    return null;
+  }
+  stickyElement(e) {
+    if (!this.settings.alwaysVisibleSubmit) return;
+    const i = this.getScrollableParent(e);
+    this._scrollListener && (i ? i.removeEventListener("scroll", this._scrollListener) : window.removeEventListener("scroll", this._scrollListener), window.removeEventListener("resize", this._resizeListener));
+    let t;
+    const n = () => {
+      e.style.position = "", i ? t = e.offsetTop + e.offsetHeight - i.offsetTop : t = e.offsetTop + e.offsetHeight;
+    }, s = () => {
+      if (i)
+        if (i.offsetHeight + i.scrollTop > t)
+          e.style.position = "", e.style.top = "";
+        else {
+          const a = window.innerHeight - e.offsetHeight;
+          e.style.position = "fixed", e.style.top = `${a}px`;
+        }
+      else if (window.innerHeight + window.scrollY > t)
+        e.style.position = "", e.style.top = "";
+      else {
+        const a = window.innerHeight - e.offsetHeight;
+        e.style.position = "fixed", e.style.top = `${a}px`;
+      }
+      e.parentNode.offsetWidth !== 0 && (e.style.width = `${e.parentNode.offsetWidth}px`);
+    };
+    this._scrollListener = s;
+    let r;
+    this._resizeListener = () => {
+      r && clearTimeout(r), r = setTimeout(() => {
+        let o = null;
+        const a = () => {
+          const d = e.offsetTop;
+          d === o ? (n(), s()) : (o = d, requestAnimationFrame(a));
+        };
+        a();
+      }, 200);
+    }, n(), s(), i ? i.addEventListener("scroll", s) : window.addEventListener("scroll", s), window.addEventListener("resize", this._resizeListener);
+  }
+  view(e) {
+    if (!e) return;
+    let i;
+    try {
+      i = JSON.parse(e);
+    } catch {
+      console.log("Invalid JSON Form.");
+      return;
+    }
+    this.json = i, this.inputListener = () => {
+      clearTimeout(this.debounceTimeout), this.debounceTimeout = setTimeout(() => {
+        const s = this.getFormValues();
+        this.settings.onInputChange && this.settings.onInputChange(s);
+      }, 300);
+    }, this.changeListener = () => {
+      const s = this.getFormValues();
+      this.settings.onInputChange && this.settings.onInputChange(s);
+    };
+    let t;
+    if (this.settings.isBuilder) {
+      if (!this.settings.previewSelector) {
+        this.settings.consoleLog && console.log("previewSelector not set.");
+        return;
+      }
+      t = document.querySelector(this.settings.previewSelector);
+    } else
+      t = this.element;
+    if (t) {
+      if (t.classList.remove("hidden"), t.classList.add("formview-container"), t.classList.add("fb-ui"), t.innerHTML = "", !(i.hideHeader || !1)) {
+        const l = document.createElement("div");
+        l.className = "form-header", t.appendChild(l);
+        const h = document.createElement("h1");
+        h.className = "form-title", h.innerText = i.title || this.out("Your Form Title Here"), l.appendChild(h);
+        const p = document.createElement("p");
+        p.className = "form-desc", p.innerText = i.description || this.out("Your Description Here"), l.appendChild(p);
+      }
+      let r;
+      this.settings.isBuilder ? r = document.createElement("form") : r = document.createElement("div"), r.className = "form-wrapper", r.style.flexFlow = "wrap", t.appendChild(r);
+      let o = 1;
+      i.elements && i.elements.forEach((l) => {
+        if (l.type === "spacer") {
+          const g = document.createElement("div");
+          g.className = "form-spacer", l.spacerHeight && !isNaN(parseFloat(l.spacerHeight)) && (g.style.height = l.spacerHeight + "px"), l.displayInOutput || r.appendChild(g);
+          return;
+        }
+        if (l.type === "separator") {
+          const g = document.createElement("hr");
+          g.style.borderTopColor = l.color, l.displayInOutput || r.appendChild(g);
+          return;
+        }
+        if (l.type === "html") {
+          if (l.html) {
+            const g = document.createElement("div");
+            g.innerHTML = l.html, l.displayInOutput || r.appendChild(g);
+          }
+          return;
+        }
+        if (l.type === "heading") {
+          const g = document.createElement(l.heading || "h2");
+          g.innerHTML = l.headingText || this.out("Your Heading Here!"), l.displayInOutput || r.appendChild(g);
+          return;
+        }
+        if (l.type === "paragraph") {
+          const g = document.createElement("p");
+          g.innerHTML = l.paragraphText || this.out("Your paragraph content here!"), l.displayInOutput || r.appendChild(g);
+          return;
+        }
+        if (l.type === "media") {
+          if (l.tag === "video") {
+            const g = document.createElement("video");
+            g.style.width = "100%", g.style.height = "auto", g.controls = !0;
+            var h = document.createElement("source");
+            h.src = l.url, h.type = "video/mp4", g.appendChild(h), l.displayInOutput || r.appendChild(g);
+          } else if (l.tag === "audio") {
+            const g = document.createElement("audio");
+            g.controls = !0;
+            let v = document.createElement("source");
+            v.src = l.url, v.type = "audio/mp3", g.appendChild(v), l.displayInOutput || r.appendChild(g);
+          } else if (l.tag === "img") {
+            const g = document.createElement("img");
+            g.src = l.url, g.setAttribute("alt", this.out("Output Image")), l.displayInOutput || r.appendChild(g);
+          }
+          return;
+        }
+        if (l.type === "image") {
+          const g = document.createElement("img");
+          g.src = l.url, g.setAttribute("alt", this.out("Output Image")), l.displayInOutput || r.appendChild(g);
+          return;
+        }
+        if (l.type === "video") {
+          const g = document.createElement("video");
+          g.style.width = "100%", g.style.height = "auto", g.controls = !0;
+          let v = document.createElement("source");
+          v.src = l.url, v.type = "video/mp4", g.appendChild(v), l.displayInOutput || r.appendChild(g);
+          return;
+        }
+        if (l.type === "audio") {
+          const g = document.createElement("audio");
+          g.controls = !0;
+          let v = document.createElement("source");
+          v.src = l.url, v.type = "audio/mp3", g.appendChild(v), l.displayInOutput || r.appendChild(g);
+          return;
+        }
+        const p = document.createElement("div");
+        p.className = "form-field", l.type === "hidden" && (p.className = "hidden"), l.displayInOutput || r.appendChild(p), l.type === "color" && p.classList.add("field-color");
+        const b = l.type;
+        let w = l.name;
+        if (r.querySelector(`[name="${w}"]`) && (o++, w = w + "_" + o), b === "short-text") {
+          let g = this.getId();
+          const v = document.createElement("label");
+          if (v.setAttribute("for", `short_text_label_${g}`), v.className = "field-label", v.innerHTML = l.title + (l.isRequired ? ' <span class="text-red-500">*</span>' : ""), p.appendChild(v), l.fieldNote) {
+            const m = document.createElement("div");
+            m.className = "field-note", m.innerHTML = l.fieldNote, p.appendChild(m);
+          }
+          const f = document.createElement("input");
+          f.id = `short_text_label_${g}`, f.type = "text", f.name = w, f.value = l.value || "", f.className = "inp-base", f.placeholder = l.placeholder, l.isRequired && f.setAttribute("required", "required"), p.appendChild(f), f.addEventListener("input", this.inputListener);
+        }
+        if (b === "long-text") {
+          let g = this.getId();
+          const v = document.createElement("label");
+          if (v.setAttribute("for", `long_text_label_${g}`), v.className = "field-label", v.innerHTML = l.title + (l.isRequired ? ' <span class="text-red-500">*</span>' : ""), p.appendChild(v), l.fieldNote) {
+            const m = document.createElement("div");
+            m.className = "field-note", m.innerHTML = l.fieldNote, p.appendChild(m);
+          }
+          const f = document.createElement("textarea");
+          f.id = `long_text_label_${g}`, f.name = w, f.value = l.value || "", f.className = "inp-base", f.style.height = l.height + "px", f.placeholder = l.placeholder, l.isRequired && f.setAttribute("required", "required"), p.appendChild(f), f.addEventListener("input", this.inputListener);
+        }
+        if (b === "number") {
+          let g = this.getId();
+          const v = document.createElement("label");
+          if (v.setAttribute("for", `number_label_${g}`), v.className = "field-label", v.innerHTML = l.title + (l.isRequired ? ' <span class="text-red-500">*</span>' : ""), p.appendChild(v), l.fieldNote) {
+            const m = document.createElement("div");
+            m.className = "field-note", m.innerHTML = l.fieldNote, p.appendChild(m);
+          }
+          const f = document.createElement("input");
+          f.id = `number_label_${g}`, f.type = "number", f.name = w, f.value = l.value || "", f.className = "inp-base", f.placeholder = l.placeholder, l.isRequired && f.setAttribute("required", "required"), p.appendChild(f), f.addEventListener("input", this.inputListener);
+        }
+        if (b === "slider") {
+          p.classList.add("input-slider");
+          let g = this.getId();
+          const v = document.createElement("label");
+          if (v.setAttribute("for", `number_label_${g}`), v.className = "field-label", v.innerHTML = l.title + (l.isRequired ? ' <span class="text-red-500">*</span>' : ""), p.appendChild(v), l.fieldNote) {
+            const E = document.createElement("div");
+            E.className = "field-note", E.innerHTML = l.fieldNote, p.appendChild(E);
+          }
+          const f = document.createElement("div");
+          f.className = "slider-container", p.appendChild(f);
+          const m = document.createElement("div");
+          m.className = "slider-values", f.appendChild(m);
+          const y = document.createElement("span");
+          m.appendChild(y), y.innerText = l.minValue;
+          const k = document.createElement("span");
+          m.appendChild(k), k.innerText = l.maxValue;
+          const x = document.createElement("input");
+          x.id = `number_label_${g}`, x.type = "range", x.name = w, x.setAttribute("min", l.minValue), x.setAttribute("max", l.maxValue), x.setAttribute("step", l.step), x.setAttribute("value", l.value || 0), f.appendChild(x);
+          const S = document.createElement("div");
+          S.className = "current-value", f.appendChild(S), f.querySelector(".current-value").textContent = l.value || 0, x.addEventListener("input", () => {
+            f.querySelector(".current-value").textContent = x.value;
+          });
+        }
+        if (b === "select") {
+          let g = this.getId();
+          const v = document.createElement("div");
+          if (v.id = `radio_group_label_${g}`, v.className = "field-label-normal", v.innerHTML = l.title + (l.isRequired ? ' <span class="text-red-500">*</span>' : ""), p.appendChild(v), l.fieldNote) {
+            const m = document.createElement("div");
+            m.className = "field-note", m.innerHTML = l.fieldNote, p.appendChild(m);
+          }
+          const f = document.createElement("div");
+          if (f.setAttribute("aria-labelledby", `radio_group_label_${g}`), f.setAttribute("role", "group"), f.className = "div-options", p.appendChild(f), l.choices && l.choices.forEach((m, y) => {
+            let k = m;
+            l.choicesText && (k = l.choicesText[y] || m);
+            const x = document.createElement("label");
+            x.setAttribute("for", `${g}_${y}`), x.className = "option-label", f.appendChild(x);
+            const S = document.createElement("input");
+            S.type = "radio", S.className = "peer", S.id = `${g}_${y}`, S.name = w, S.value = m, x.appendChild(S), y === l.selected && (S.checked = !0);
+            const E = document.createElement("span");
+            E.className = "peer-span-rounded", x.appendChild(E);
+            const L = '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path stroke="none" d="M0 0h24v24H0z" fill="none"></path><path d="M12 7a5 5 0 1 1 -4.995 5.217l-.005 -.217l.005 -.217a5 5 0 0 1 4.995 -4.783z"></path></svg>';
+            E.innerHTML = L, y === 0 && l.isRequired && S.setAttribute("required", "required");
+            const M = document.createElement("span");
+            M.innerText = k, x.appendChild(M), S.addEventListener("change", this.changeListener);
+          }), l.showOtherItem) {
+            const m = document.createElement("label");
+            m.setAttribute("for", g + "_other"), m.className = "option-label", f.appendChild(m);
+            const y = document.createElement("input");
+            y.type = "radio", y.className = "peer", y.id = g + "_other", y.name = w, y.value = "other", m.appendChild(y);
+            const k = document.createElement("span");
+            k.className = "peer-span-rounded", m.appendChild(k);
+            const x = '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path stroke="none" d="M0 0h24v24H0z" fill="none"></path><path d="M12 7a5 5 0 1 1 -4.995 5.217l-.005 -.217l.005 -.217a5 5 0 0 1 4.995 -4.783z"></path></svg>';
+            k.innerHTML = x;
+            const S = document.createElement("span");
+            S.innerText = l.otherText, m.appendChild(S);
+            const E = document.createElement("div");
+            p.appendChild(E);
+            const L = document.createElement("input");
+            L.type = "text", L.name = w + "_other", L.className = "inp-base", E.appendChild(L), y.addEventListener("change", this.changeListener), L.addEventListener("input", this.inputListener);
+          }
+        }
+        if (b === "multi-select") {
+          let g = this.getId();
+          const v = document.createElement("div");
+          if (v.id = `checkbox_group_label_${g}`, v.className = "field-label-normal", v.innerHTML = l.title + (l.isRequired ? ' <span class="text-red-500">*</span>' : ""), p.appendChild(v), l.fieldNote) {
+            const m = document.createElement("div");
+            m.className = "field-note", m.innerHTML = l.fieldNote, p.appendChild(m);
+          }
+          const f = document.createElement("div");
+          if (f.setAttribute("aria-labelledby", `checkbox_group_label_${g}`), f.setAttribute("role", "group"), f.className = "div-options", p.appendChild(f), l.choices && l.choices.forEach((m, y) => {
+            let k = m;
+            l.choicesText && (k = l.choicesText[y] || m);
+            const x = document.createElement("label");
+            x.setAttribute("for", `${g}_${y}`), x.className = "option-label", f.appendChild(x);
+            const S = document.createElement("input");
+            S.type = "checkbox", S.className = "peer", S.id = `${g}_${y}`, S.name = w + "[]", S.value = m, x.appendChild(S);
+            const E = document.createElement("span");
+            E.className = "peer-span-square", x.appendChild(E);
+            const L = `<svg  xmlns="http://www.w3.org/2000/svg"  width="24"  height="24"  viewBox="0 0 24 24"  fill="none"  stroke="currentColor"  stroke-width="4"  stroke-linecap="round"  stroke-linejoin="round">
+                                <path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M5 12l5 5l10 -10" />
+                            </svg>`;
+            E.innerHTML = L;
+            const M = document.createElement("span");
+            M.innerText = k, x.appendChild(M), S.addEventListener("change", this.changeListener);
+          }), l.showOtherItem) {
+            const m = document.createElement("label");
+            m.setAttribute("for", g + "_other"), m.className = "option-label", f.appendChild(m);
+            const y = document.createElement("input");
+            y.type = "checkbox", y.className = "peer", y.id = g + "_other", y.name = w, y.value = "other", m.appendChild(y);
+            const k = document.createElement("span");
+            k.className = "peer-span-square", m.appendChild(k);
+            const x = `<svg  xmlns="http://www.w3.org/2000/svg"  width="24"  height="24"  viewBox="0 0 24 24"  fill="none"  stroke="currentColor"  stroke-width="4"  stroke-linecap="round"  stroke-linejoin="round">
+                            <path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M5 12l5 5l10 -10" />
+                        </svg>`;
+            k.innerHTML = x;
+            const S = document.createElement("span");
+            S.innerText = l.otherText, m.appendChild(S);
+            const E = document.createElement("div");
+            p.appendChild(E);
+            const L = document.createElement("input");
+            L.type = "text", L.name = w + "_other", L.className = "inp-base", E.appendChild(L), y.addEventListener("change", this.changeListener), L.addEventListener("input", this.inputListener);
+          }
+        }
+        if (b === "switch") {
+          let g = this.getId();
+          const v = document.createElement("label");
+          if (v.className = "field-label", v.innerHTML = l.title + (l.isRequired ? ' <span class="text-red-500">*</span>' : ""), v.id = `switch_${g}`, p.appendChild(v), l.fieldNote) {
+            const x = document.createElement("div");
+            x.className = "field-note", x.innerHTML = l.fieldNote, p.appendChild(x);
+          }
+          const f = document.createElement("div");
+          f.className = "switch", f.tabIndex = 0, f.role = "switch", f.setAttribute("aria-labelledby", `switch_${g}`), f.setAttribute("aria-checked", "false"), f.setAttribute("data-checked", "false"), p.appendChild(f);
+          const m = document.createElement("div");
+          m.className = "switch-thumb", f.appendChild(m);
+          const y = document.createElement("input");
+          y.id = `switch_${g}`, y.type = "text", y.name = w, y.style.cssText = "opacity:0.01;width:1px;height:1px;position:absolute;bottom:0px;left:25px;", y.setAttribute("tabindex", "-1"), l.isRequired && (y.setAttribute("required", "required"), y.setCustomValidity(this.out("Please toggle this switch to proceed."))), f.appendChild(y), l.value === "true" ? (f.setAttribute("aria-checked", "true"), f.setAttribute("data-checked", "true"), y.value = "true", l.isRequired && y.setCustomValidity("")) : (f.setAttribute("aria-checked", "false"), f.setAttribute("data-checked", "false"), y.value = "false", l.isRequired && y.setCustomValidity(this.out("Please toggle this switch to proceed."))), v.addEventListener("click", () => {
+            f.focus();
+          });
+          const k = () => {
+            const x = f.getAttribute("aria-checked") === "true";
+            f.setAttribute("aria-checked", !x), f.setAttribute("data-checked", !x), x ? (y.value = "false", l.isRequired && y.setCustomValidity(this.out("Please toggle this switch to proceed."))) : (y.value = "true", l.isRequired && y.setCustomValidity(""));
+            const S = this.getFormValues();
+            this.settings.onInputChange && this.settings.onInputChange(S);
+          };
+          f.addEventListener("keydown", (x) => {
+            (x.key === " " || x.key === "Enter") && (x.preventDefault(), k());
+          }), f.addEventListener("click", () => {
+            k();
+          });
+        }
+        if (b === "dropdown") {
+          let g = this.getId();
+          const v = document.createElement("label");
+          if (v.setAttribute("for", `dropdown_${g}`), v.className = "field-label", v.innerHTML = l.title + (l.isRequired ? ' <span class="text-red-500">*</span>' : ""), p.appendChild(v), l.fieldNote) {
+            const M = document.createElement("div");
+            M.className = "field-note", M.innerHTML = l.fieldNote, p.appendChild(M);
+          }
+          const f = document.createElement("div");
+          f.className = "relative", p.appendChild(f);
+          const m = document.createElement("div");
+          m.className = "relative inline-block", f.appendChild(m);
+          const y = document.createElement("select");
+          y.id = `dropdown_${g}`, y.name = w, l.isRequired && y.setAttribute("required", "required"), m.appendChild(y);
+          const k = document.createElement("option");
+          if (k.setAttribute("selected", "selected"), k.setAttribute("disabled", "disabled"), k.value = "", k.innerText = l.placeholder, y.appendChild(k), l.choices && l.choices.forEach((M, C) => {
+            let D = M;
+            l.choicesText && (D = l.choicesText[C] || M);
+            const O = document.createElement("option");
+            O.value = M, O.innerText = D, y.appendChild(O), C === l.selected && (k.remove(), O.setAttribute("selected", "selected"));
+          }), l.showOtherItem) {
+            const M = document.createElement("option");
+            M.value = "other", M.innerText = l.otherText, y.appendChild(M);
+          }
+          const x = document.createElement("div");
+          x.className = "select-arrow", m.appendChild(x), this.appendHtml(x, `
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                        </svg>
+                        `);
+          const S = document.createElement("input");
+          S.type = "text", S.id = `input_other_${g}`, S.name = w + "_other", S.className = "input-other hidden inp-base", p.appendChild(S);
+          const E = p.querySelector(`#dropdown_${g}`), L = p.querySelector(`#input_other_${g}`);
+          E.addEventListener("change", () => {
+            E.value === "other" ? (L.classList.remove("hidden"), L.focus()) : L.classList.add("hidden");
+            const M = this.getFormValues();
+            this.settings.onInputChange && this.settings.onInputChange(M);
+          }), S.addEventListener("input", this.inputListener);
+        }
+        if (b === "date") {
+          let g = this.getId();
+          const v = document.createElement("label");
+          if (v.setAttribute("for", `date_${g}`), v.className = "field-label", v.innerHTML = l.title + (l.isRequired ? ' <span class="text-red-500">*</span>' : ""), p.appendChild(v), l.fieldNote) {
+            const m = document.createElement("div");
+            m.className = "field-note", m.innerHTML = l.fieldNote, p.appendChild(m);
+          }
+          const f = document.createElement("input");
+          f.id = `date_${g}`, f.type = "date", f.name = w, f.className = "inp-base", f.placeholder = l.placeholder, l.isRequired && f.setAttribute("required", "required"), p.appendChild(f), f.addEventListener("change", this.changeListener);
+        }
+        if (b === "time") {
+          let g = this.getId();
+          const v = document.createElement("label");
+          if (v.setAttribute("for", `time_${g}`), v.className = "field-label", v.innerHTML = l.title + (l.isRequired ? ' <span class="text-red-500">*</span>' : ""), p.appendChild(v), l.fieldNote) {
+            const m = document.createElement("div");
+            m.className = "field-note", m.innerHTML = l.fieldNote, p.appendChild(m);
+          }
+          const f = document.createElement("input");
+          f.id = `time_${g}`, f.type = "time", f.name = w, f.className = "inp-base", f.placeholder = l.placeholder, l.isRequired && f.setAttribute("required", "required"), p.appendChild(f), f.addEventListener("change", this.changeListener);
+        }
+        if (b === "datetime") {
+          let g = this.getId();
+          const v = document.createElement("label");
+          if (v.setAttribute("for", `datetime_${g}`), v.className = "field-label", v.innerHTML = l.title + (l.isRequired ? ' <span class="text-red-500">*</span>' : ""), p.appendChild(v), l.fieldNote) {
+            const m = document.createElement("div");
+            m.className = "field-note", m.innerHTML = l.fieldNote, p.appendChild(m);
+          }
+          const f = document.createElement("input");
+          f.id = `datetime_${g}`, f.type = "datetime-local", f.name = w, f.className = "inp-base", f.placeholder = l.placeholder, l.isRequired && f.setAttribute("required", "required"), p.appendChild(f), f.addEventListener("change", this.changeListener);
+        }
+        if (b === "color") {
+          let g = this.getId();
+          const v = document.createElement("label");
+          if (v.setAttribute("for", `color_${g}`), v.className = "field-label", v.innerHTML = l.title + (l.isRequired ? ' <span class="text-red-500">*</span>' : ""), p.appendChild(v), l.fieldNote) {
+            const m = document.createElement("div");
+            m.className = "field-note", m.innerHTML = l.fieldNote, p.appendChild(m);
+          }
+          const f = document.createElement("input");
+          f.id = `color_${g}`, f.type = "color", f.name = w, f.value = l.value || "", f.className = "input-color", f.placeholder = l.placeholder, l.isRequired && f.setAttribute("required", "required"), p.appendChild(f), f.addEventListener("input", this.inputListener);
+        }
+        if (b === "file" || b === "multifile") {
+          let g = this.getId();
+          const v = document.createElement("label");
+          if (v.setAttribute("for", `file_${g}`), v.className = "field-label", v.innerHTML = l.title + (l.isRequired ? ' <span class="text-red-500">*</span>' : ""), p.appendChild(v), l.fieldNote) {
+            const I = document.createElement("div");
+            I.className = "field-note", I.innerHTML = l.fieldNote, p.appendChild(I);
+          }
+          const f = document.createElement("div");
+          f.className = "file-input-wrapper", b === "file" && f.setAttribute("aria-label", this.out(this.settings.fileUploadText)), b === "multifile" && f.setAttribute("aria-label", this.out(this.settings.multiFileUploadText)), p.appendChild(f);
+          const m = document.createElement("input");
+          m.id = `input_url_label_${g}`, m.type = "text", m.name = w + "__url", m.value = l.value || "", m.className = "inp-base input-file-url", m.placeholder = l.placeholder || this.out("Enter URL."), p.appendChild(m), m.addEventListener("input", () => {
+            const I = p.querySelector(".btn-clearfile");
+            I && I.click(), this.inputListener(), m.value !== "" ? l.isRequired && y.removeAttribute("required") : l.isRequired && y.setAttribute("required", "required"), rt(m.value), this.clearSelectedFiles();
+          }), l.useURL ? m.style.display = "" : m.style.display = "none";
+          const y = document.createElement("input");
+          y.id = `file_${g}`, y.type = "file", b === "multifile" && (y.multiple = !0), y.name = w, l.isRequired && y.setAttribute("required", "required"), y.className = "peer", f.appendChild(y);
+          const k = document.createElement("div");
+          k.className = "file-drop-area", f.appendChild(k);
+          const x = document.createElement("div");
+          x.className = "file-controls", x.id = `drag_message_${g}`, f.appendChild(x);
+          let S;
+          (!l.source || l.source && l.source === "local" || l.source && l.source === "local_and_camera") && (S = document.createElement("div"), S.className = "file-drop-info", b === "file" && (S.innerHTML = this.out(this.settings.fileUploadText)), b === "multifile" && (S.innerHTML = this.out(this.settings.multiFileUploadText)), x.appendChild(S));
+          let E;
+          (!l.source || l.source && l.source === "local" || l.source && l.source === "local_and_camera") && (E = document.createElement("button"), E.className = "btn-selectfile", E.innerHTML = `
+                        <svg style="fill:none"xmlns="http://www.w3.org/2000/svg"  width="24"  height="24"  viewBox="0 0 24 24"  fill="none"  stroke="currentColor"  stroke-width="1.2"  stroke-linecap="round"  stroke-linejoin="round"  class="icon-folder-open"><path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+                            <path d="M5 19l2.757 -7.351a1 1 0 0 1 .936 -.649h12.307a1 1 0 0 1 .986 1.164l-.996 5.211a2 2 0 0 1 -1.964 1.625h-14.026a2 2 0 0 1 -2 -2v-11a2 2 0 0 1 2 -2h4l3 3h7a2 2 0 0 1 2 2v2" />
+                        </svg>
+                        ${this.out("Select File")}
+                        `, x.appendChild(E));
+          let L;
+          (l.source && l.source === "camera" || l.source && l.source === "local_and_camera") && (L = document.createElement("button"), L.className = "btn-takephoto", L.innerHTML = `
+                        <svg style="fill:none"xmlns="http://www.w3.org/2000/svg"  width="24"  height="24"  viewBox="0 0 24 24"  fill="none"  stroke="currentColor"  stroke-width="1.2"  stroke-linecap="round"  stroke-linejoin="round"  class="icon-camera">
+                            <path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M5 7h1a2 2 0 0 0 2 -2a1 1 0 0 1 1 -1h6a1 1 0 0 1 1 1a2 2 0 0 0 2 2h1a2 2 0 0 1 2 2v9a2 2 0 0 1 -2 2h-14a2 2 0 0 1 -2 -2v-9a2 2 0 0 1 2 -2" /><path d="M9 13a3 3 0 1 0 6 0a3 3 0 0 0 -6 0" />
+                        </svg>
+                        ${this.out("Take Photo")}
+                        `, x.appendChild(L));
+          const M = document.createElement("div");
+          M.className = "file-preview-container", f.appendChild(M);
+          const C = document.createElement("div");
+          C.className = "file-drop-info-highlight", C.id = `file_name_${g}`, f.appendChild(C), E && E.addEventListener("click", (I) => {
+            I.preventDefault(), y.click();
+          }), f.classList.add("disabledrop"), (!l.source || l.source && l.source === "local" || l.source && l.source === "local_and_camera") && (f.classList.remove("disabledrop"), f.addEventListener("dragover", (I) => {
+            I.preventDefault(), Array.from(I.dataTransfer.items).some((se) => se.kind === "file") && f.classList.add("drag-over");
+          }), f.addEventListener("dragleave", () => {
+            f.classList.remove("drag-over");
+          }), b === "file" ? f.addEventListener("drop", (I) => {
+            if (I.preventDefault(), I.dataTransfer.files && I.dataTransfer.files.length > 0) {
+              f.classList.remove("drag-over");
+              const Y = I.dataTransfer.files[0];
+              Y && (y.files = I.dataTransfer.files, qe(Y), this.clearSelectedFiles());
+            }
+          }) : b === "multifile" && f.addEventListener("drop", (I) => {
+            if (I.preventDefault(), I.dataTransfer.files && I.dataTransfer.files.length > 0) {
+              f.classList.remove("drag-over"), M.innerHTML = "";
+              const Y = I.dataTransfer.files;
+              Y.length > 0 && (y.files = Y, Array.from(Y).forEach((se) => {
+                Ie(se);
+              }), this.clearSelectedFiles());
+            }
+          })), b === "file" ? y.addEventListener("change", () => {
+            const I = y.files[0];
+            I && (qe(I), this.clearSelectedFiles());
+          }) : b === "multifile" && y.addEventListener("change", () => {
+            M.innerHTML = "";
+            const I = y.files;
+            Array.from(I).forEach((Y) => {
+              Y && (Ie(Y), this.clearSelectedFiles());
+            });
+          });
+          const D = {
+            images: [{
+              type: "image/jpeg",
+              extensions: ".jpg, .jpeg"
+            }, {
+              type: "image/png",
+              extensions: ".png"
+            }, {
+              type: "image/gif",
+              extensions: ".gif"
+            }, {
+              type: "image/webp",
+              extensions: ".webp"
+            }],
+            videos: [{
+              type: "video/mp4",
+              extensions: ".mp4"
+            }, {
+              type: "video/webm",
+              extensions: ".webm"
+            }, {
+              type: "video/ogg",
+              extensions: ".ogg"
+            }, {
+              type: "video/quicktime",
+              extensions: ".mov"
+            }],
+            audio: [{
+              type: "audio/mpeg",
+              extensions: ".mp3"
+            }, {
+              type: "audio/wav",
+              extensions: ".wav"
+            }],
+            documents: [{
+              type: "application/pdf",
+              extensions: ".pdf"
+            }, {
+              type: "application/json",
+              extensions: ".json"
+            }, {
+              type: "text/plain",
+              extensions: ".txt"
+            }, {
+              type: "text/csv",
+              extensions: ".csv"
+            }, {
+              type: "application/msword",
+              extensions: ".doc"
+            }, {
+              type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+              extensions: ".docx"
+            }, {
+              type: "application/vnd.ms-excel",
+              extensions: ".xls"
+            }, {
+              type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+              extensions: ".xlsx"
+            }],
+            others: [{
+              type: "application/zip",
+              extensions: ".zip"
+            }, {
+              type: "application/x-rar-compressed",
+              extensions: ".rar"
+            }]
+          };
+          let O = [];
+          (l.allowedFileTypes || ["images", "videos", "audio", "documents", "others"]).forEach((I) => {
+            switch (I) {
+              case "images":
+                O = O.concat(D.images);
+                break;
+              case "videos":
+                O = O.concat(D.videos);
+                break;
+              case "audio":
+                O = O.concat(D.audio);
+                break;
+              case "documents":
+                O = O.concat(D.documents);
+                break;
+              case "others":
+                O = O.concat(D.others);
+                break;
+            }
+          });
+          const R = O.map((I) => I.type).join(",");
+          y.setAttribute("accept", R);
+          let q;
+          if (l.useImageMask) {
+            p.classList.add("image-mask");
+            const I = document.createElement("div");
+            p.appendChild(I), q = new bn(I, {
+              lang: this.settings.lang,
+              name: w + "_mask"
+            }), this.objImageMask = q;
+          }
+          l.largePreview && p.classList.add("large-preview");
+          const A = () => {
+            const I = f.querySelector(".img-preview");
+            I && (I.remove(), l.useImageMask && q.clearImage());
+          };
+          let T = `
+                        <div class="div-livevideo">
+                            <video class="livevideo" autoplay playsinline style="display:none"></video>
+                            <canvas class="photo-captured" style="display:none"></canvas>
+                            ${!l.source || l.source && l.source === "local" || l.source && l.source === "local_and_camera" ? `<button class="btn-selectfile2" title="${this.out("Select File")}" style="display:none">
+                                    <svg style="fill:none" xmlns="http://www.w3.org/2000/svg"  width="24"  height="24"  viewBox="0 0 24 24"  fill="none"  stroke="currentColor"  stroke-width="1.2"  stroke-linecap="round"  stroke-linejoin="round"  class="icon-folder-open"><path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+                                        <path d="M5 19l2.757 -7.351a1 1 0 0 1 .936 -.649h12.307a1 1 0 0 1 .986 1.164l-.996 5.211a2 2 0 0 1 -1.964 1.625h-14.026a2 2 0 0 1 -2 -2v-11a2 2 0 0 1 2 -2h4l3 3h7a2 2 0 0 1 2 2v2" />
+                                    </svg>
+                                </button>
+                            ` : ""}
+                            <button class="btn-takephoto2" title="${this.out("Take Photo")}" style="display:none">
+                                <svg style="fill:none" xmlns="http://www.w3.org/2000/svg"  width="24"  height="24"  viewBox="0 0 24 24"  fill="none"  stroke="currentColor"  stroke-width="1.2"  stroke-linecap="round"  stroke-linejoin="round"  class="icon-camera">
+                                    <path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M5 7h1a2 2 0 0 0 2 -2a1 1 0 0 1 1 -1h6a1 1 0 0 1 1 1a2 2 0 0 0 2 2h1a2 2 0 0 1 2 2v9a2 2 0 0 1 -2 2h-14a2 2 0 0 1 -2 -2v-9a2 2 0 0 1 2 -2" /><path d="M9 13a3 3 0 1 0 6 0a3 3 0 0 0 -6 0" />
+                                </svg>
+                            </button>
+
+                            <button class="btn-capturephoto" title="${this.out("Capture")}" style="display:none">
+                                <svg style="fill:none" xmlns="http://www.w3.org/2000/svg"  width="24"  height="24"  viewBox="0 0 24 24"  fill="none"  stroke="currentColor"  stroke-width="1.2"  stroke-linecap="round"  stroke-linejoin="round"  class="icon-camera">
+                                    <path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M5 7h1a2 2 0 0 0 2 -2a1 1 0 0 1 1 -1h6a1 1 0 0 1 1 1a2 2 0 0 0 2 2h1a2 2 0 0 1 2 2v9a2 2 0 0 1 -2 2h-14a2 2 0 0 1 -2 -2v-9a2 2 0 0 1 2 -2" /><path d="M9 13a3 3 0 1 0 6 0a3 3 0 0 0 -6 0" />
+                                </svg>
+                            </button>
+                            <button type="button" class="btn-clearphoto" title="${this.out("Clear")}" style="display: none;">
+                                <svg style="fill:none" xmlns="http://www.w3.org/2000/svg"  width="24"  height="24"  viewBox="0 0 24 24"  fill="none"  stroke="currentColor"  stroke-width="1.2"  stroke-linecap="round"  stroke-linejoin="round"  class="icon-eraser">
+                                    <path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M19 20h-10.5l-4.21 -4.3a1 1 0 0 1 0 -1.41l10 -10a1 1 0 0 1 1.41 0l5 5a1 1 0 0 1 0 1.41l-9.2 9.3" /><path d="M18 13.3l-6.3 -6.3" />
+                                </svg>
+                            </button>
+                            <button type="button" class="btn-stopcamera" title="${this.out("Close")}" style="display: none;">
+                                <svg style="fill:none" xmlns="http://www.w3.org/2000/svg"  width="24"  height="24"  viewBox="0 0 24 24"  fill="none"  stroke="currentColor"  stroke-width="2"  stroke-linecap="round"  stroke-linejoin="round"  class="icon-close">
+                                    <path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M18 6l-12 12" /><path d="M6 6l12 12" />
+                                </svg>
+                            </button>
+                        </div>
+                    `;
+          this.appendHtml(f, T);
+          const N = p.querySelector(".livevideo"), P = p.querySelector(".photo-captured"), U = p.querySelector(".btn-selectfile2"), F = p.querySelector(".btn-takephoto2"), W = p.querySelector(".btn-capturephoto"), de = p.querySelector(".btn-clearphoto"), ne = p.querySelector(".btn-stopcamera");
+          this.photoBlob = {};
+          let be;
+          U && U.addEventListener("click", (I) => {
+            I.preventDefault(), E.click();
+          });
+          const Ee = async () => {
+            const I = p.querySelector(".btn-clearfile");
+            I && I.click();
+            try {
+              be = await navigator.mediaDevices.getUserMedia({
+                video: !0
+              }), N.srcObject = be;
+            } catch {
+              alert("Unable to access the camera."), N.style.display = "none", W.style.display = "none", ne.style.display = "none", x.style.display = "none", C.style.display = "none";
+            }
+            setTimeout(() => {
+              F.style.display = "none", P.style.display = "none", N.style.display = "", W.style.display = "", de.style.display = "none", U && (U.style.display = "none"), F.style.display = "none", ne.style.display = "", x.style.display = "none", C.style.display = "none";
+            }, 100);
+          };
+          L && L.addEventListener("click", async (I) => {
+            I.preventDefault(), Ee();
+          }), F.addEventListener("click", async (I) => {
+            I.preventDefault(), Ee();
+          }), ne.addEventListener("click", () => {
+            be && be.getTracks().forEach((I) => I.stop()), N.style.display = "none", W.style.display = "none", ne.style.display = "none", F.style.display = "none", x.style.display = "", C.style.display = "";
+          }), W.addEventListener("click", (I) => {
+            if (I.preventDefault(), P.style.display = "", P.width = N.videoWidth, P.height = N.videoHeight, P.getContext("2d").drawImage(N, 0, 0, P.width, P.height), be.getTracks().forEach((Y) => Y.stop()), N.style.display = "none", W.style.display = "none", de.style.display = "", U && (U.style.display = ""), F.style.display = "", ne.style.display = "none", P.toBlob((Y) => {
+              this.photoBlob[w] = Y, y.removeAttribute("required");
+            }, "image/jpeg"), F.style.display = "", l.useImageMask) {
+              const Y = P.toDataURL("image/jpeg");
+              q.setImage(Y);
+            }
+            this.clearSelectedFiles();
+          });
+          const Me = () => {
+            this.photoBlob[w] = null, P.style.display = "none", P.getContext("2d").clearRect(0, 0, P.width, P.height), m.value !== "" ? l.isRequired && y.removeAttribute("required") : l.isRequired && y.setAttribute("required", "required"), de.style.display = "none", U && (U.style.display = "none"), F.style.display = "none", x.style.display = "", C.style.display = "";
+          };
+          de.addEventListener("click", () => {
+            Me();
+          });
+          const rt = (I, Y) => {
+            const se = `.${I.split(".").pop().toLowerCase()}`;
+            if (!O.some((j) => j.extensions.split(", ").includes(se)))
+              return;
+            let xe = D.images.some((j) => j.extensions.split(", ").includes(se));
+            if (l.useImageMask) {
+              if (!xe)
+                return;
+              q.loadUrl(I);
+            }
+            Me(), C.innerHTML = "";
+            const he = document.createElement("div");
+            C.appendChild(he);
+            const K = document.createElement("button");
+            if (K.className = "btn-clearfile", K.innerHTML = `
+                            <svg  xmlns="http://www.w3.org/2000/svg"  width="24"  height="24"  viewBox="0 0 24 24"  fill="none"  stroke="currentColor"  stroke-width="1.4"  stroke-linecap="round"  stroke-linejoin="round">
+                            <path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M19 20h-10.5l-4.21 -4.3a1 1 0 0 1 0 -1.41l10 -10a1 1 0 0 1 1.41 0l5 5a1 1 0 0 1 0 1.41l-9.2 9.3" /><path d="M18 13.3l-6.3 -6.3" />
+                            </svg>
+                        `, C.appendChild(K), K.addEventListener("click", (j) => {
+              let ke = K.closest(".form-field").querySelector(".img-preview");
+              ke && ke.remove(), m.value = "", y.value = "", C.innerHTML = "", S.innerText = this.out(this.settings.fileUploadText), l.useImageMask && q.clearImage();
+              const Oe = document.querySelector(".formview-container .submit-container");
+              Oe && setTimeout(() => {
+                this.stickyElement(Oe);
+              }, 1e3), j.preventDefault(), j.stopImmediatePropagation();
+            }), xe) {
+              let j = f.querySelector(".formview-container .img-preview");
+              j || (j = document.createElement("img"), j.className = "img-preview", f.appendChild(j)), j.src = I;
+            } else
+              A();
+            if (!Y) {
+              const j = this.getFormValues();
+              this.settings.onInputChange && this.settings.onInputChange(j);
+            }
+            const ye = document.querySelector(".formview-container .submit-container");
+            ye && setTimeout(() => {
+              this.stickyElement(ye);
+            }, 1e3);
+          };
+          l.value && rt(l.value, !0);
+          const qe = (I) => {
+            if (I) {
+              if (!O.some((K) => K.type === I.type)) {
+                alert(this.out("Invalid file type."));
+                return;
+              }
+              if (l.useImageMask) {
+                if (!["image/jpeg", "image/png", "image/webp"].includes(I.type)) {
+                  alert(this.out("Invalid file type."));
+                  return;
+                }
+                q.loadImage(I);
+              }
+              Me(), m.value = "", C.innerHTML = "";
+              const se = document.createElement("div");
+              se.innerText = I.name, C.appendChild(se);
+              const ce = document.createElement("button");
+              if (ce.className = "btn-clearfile", ce.innerHTML = `
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0" />
+                                </svg>
+                            `, C.appendChild(ce), ce.addEventListener("click", (K) => {
+                let j = ce.closest(".form-field").querySelector(".img-preview");
+                j && j.remove(), y.value = "", C.innerHTML = "", S.innerText = this.out(this.settings.fileUploadText), l.useImageMask && q.clearImage();
+                const ve = document.querySelector(".formview-container .submit-container");
+                ve && setTimeout(() => {
+                  this.stickyElement(ve);
+                }, 1e3), K.preventDefault(), K.stopImmediatePropagation();
+              }), I.type.startsWith("image/")) {
+                const K = new FileReader();
+                K.onload = function(ye) {
+                  let j = f.querySelector(".formview-container .img-preview");
+                  j || (j = document.createElement("img"), j.className = "img-preview", f.appendChild(j)), j.src = ye.target.result;
+                }, K.readAsDataURL(I);
+              } else
+                A();
+              const xe = this.getFormValues();
+              this.settings.onInputChange && this.settings.onInputChange(xe);
+              const he = document.querySelector(".formview-container .submit-container");
+              he && setTimeout(() => {
+                this.stickyElement(he);
+              }, 1e3);
+            }
+          }, Ie = (I) => {
+            if (I) {
+              if (O = O.concat(D.images), !O.some((j) => j.type === I.type)) {
+                alert(this.out("Invalid file type."));
+                return;
+              }
+              const se = document.createElement("div");
+              se.className = "image-item", M.appendChild(se);
+              const ce = document.createElement("div");
+              ce.className = "file-drop-info-highlight", se.appendChild(ce);
+              const xe = document.createElement("div");
+              xe.innerText = I.name, ce.appendChild(xe);
+              const he = document.createElement("button");
+              if (he.className = "btn-clearfile", he.innerHTML = `
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0" />
+                                </svg>
+                            `, ce.appendChild(he), he.addEventListener("click", (j) => {
+                const ve = he.closest(".image-item");
+                ve && ve.remove(), ((yi) => {
+                  const Rt = new DataTransfer(), vi = y.files;
+                  Array.from(vi).forEach((At) => {
+                    At !== yi && Rt.items.add(At);
+                  }), y.files = Rt.files;
+                })(I);
+                const Oe = document.querySelector(".formview-container .submit-container");
+                Oe && setTimeout(() => {
+                  this.stickyElement(Oe);
+                }, 1e3), j.preventDefault(), j.stopImmediatePropagation();
+              }), I.type.startsWith("image/")) {
+                const j = new FileReader();
+                j.onload = function(ve) {
+                  let ke = document.createElement("img");
+                  ke.className = "img-preview", se.appendChild(ke), ke.src = ve.target.result;
+                }, j.readAsDataURL(I);
+              }
+              const K = this.getFormValues();
+              this.settings.onInputChange && this.settings.onInputChange(K);
+              const ye = document.querySelector(".formview-container .submit-container");
+              ye && setTimeout(() => {
+                this.stickyElement(ye);
+              }, 1e3);
+            }
+          };
+        }
+        if (b === "email") {
+          let g = this.getId();
+          const v = document.createElement("label");
+          if (v.setAttribute("for", `email_label_${g}`), v.className = "field-label", v.innerHTML = l.title + (l.isRequired ? ' <span class="text-red-500">*</span>' : ""), p.appendChild(v), l.fieldNote) {
+            const m = document.createElement("div");
+            m.className = "field-note", m.innerHTML = l.fieldNote, p.appendChild(m);
+          }
+          const f = document.createElement("input");
+          f.id = `email_label_${g}`, f.type = "email", f.name = w, f.className = "inp-base", f.placeholder = l.placeholder, l.isRequired && f.setAttribute("required", "required"), p.appendChild(f), f.addEventListener("input", this.inputListener);
+        }
+        if (b === "phone") {
+          let g = this.getId();
+          const v = document.createElement("label");
+          if (v.setAttribute("for", `phone_label_${g}`), v.className = "field-label", v.innerHTML = l.title + (l.isRequired ? ' <span class="text-red-500">*</span>' : ""), p.appendChild(v), l.fieldNote) {
+            const m = document.createElement("div");
+            m.className = "field-note", m.innerHTML = l.fieldNote, p.appendChild(m);
+          }
+          const f = document.createElement("input");
+          f.id = `phone_label_${g}`, f.type = "tel", f.name = w, f.className = "inp-base", f.placeholder = l.placeholder, l.isRequired && f.setAttribute("required", "required"), p.appendChild(f), f.addEventListener("input", this.inputListener);
+        }
+        if (b === "url") {
+          let g = this.getId();
+          const v = document.createElement("label");
+          if (v.setAttribute("for", `url_label_${g}`), v.className = "field-label", v.innerHTML = l.title + (l.isRequired ? ' <span class="text-red-500">*</span>' : ""), p.appendChild(v), l.fieldNote) {
+            const m = document.createElement("div");
+            m.className = "field-note", m.innerHTML = l.fieldNote, p.appendChild(m);
+          }
+          const f = document.createElement("input");
+          f.id = `url_label_${g}`, f.type = "url", f.name = w, f.value = l.value || "", f.className = "inp-base", f.placeholder = l.placeholder, l.isRequired && f.setAttribute("required", "required"), p.appendChild(f), f.addEventListener("input", this.inputListener);
+        }
+        if (b === "hidden") {
+          let g = this.getId();
+          const v = document.createElement("label");
+          v.setAttribute("for", `hidden_label_${g}`), v.className = "field-label hidden", v.innerText = l.title, p.appendChild(v);
+          const f = document.createElement("input");
+          f.id = `hidden_label_${g}`, f.type = "hidden", f.name = w, f.value = l.value, p.appendChild(f);
+        }
+      });
+      const a = r.closest("[data-site-token]");
+      if (a) {
+        const l = a.getAttribute("data-site-token"), h = document.createElement("input");
+        h.type = "hidden", h.name = "form_token", h.value = l, r.appendChild(h);
+      }
+      if (this.settings.isBuilder) {
+        const l = document.createElement("div");
+        l.className = "submit-container", r.appendChild(l);
+        let h = !0;
+        if ("hideReset" in i && (h = i.hideReset), !h) {
+          const _ = document.createElement("button");
+          _.className = "btn-resetform";
+          const g = i.resetText || this.settings.resetText;
+          _.innerText = g, l.appendChild(_), _.addEventListener("click", (f) => {
+            f.preventDefault();
+            const m = _.closest("form");
+            m && (m.reset(), m.querySelectorAll(".btn-clearfile").forEach((x) => {
+              x.click();
+            }), m.querySelectorAll(".slider-container").forEach((x) => {
+              const S = x.querySelector("input");
+              x.querySelector(".current-value").textContent = S.value;
+            }));
+          }), (i.fullWidthButton || !1) && _.classList.add("w-full");
+        }
+        const p = document.createElement("button");
+        p.className = "btn-submitform";
+        const b = i.submitText || this.settings.submitText;
+        p.innerText = b, l.appendChild(p), (i.fullWidthButton || !1) && p.classList.add("w-full"), this.settings.alwaysVisibleSubmit && l.classList.add("always-visible"), this.stickyElement(l), r.addEventListener("submit", async (_) => {
+          _.preventDefault(), this.steps && this.steps.length > 0 && this.process();
+        });
+      } else {
+        let l = "Reference Code:", h = "reference_code", p = "reference_code";
+        const b = document.createElement("div");
+        b.className = "form-field ", b.classList.add(p), r.appendChild(b);
+        let w = this.getId();
+        const _ = document.createElement("label");
+        _.setAttribute("for", `short_text_label_${w}`), _.className = "field-label", _.innerHTML = l, b.appendChild(_);
+        const g = document.createElement("input");
+        if (g.id = `short_text_label_${w}`, g.type = "text", g.name = h, g.autocomplete = "off", g.setAttribute("aria-hidden", "true"), g.setAttribute("tabindex", "-1"), g.className = "inp-base", b.appendChild(g), this.settings.captchaContainer) {
+          const v = this.settings.captchaContainerClassName, f = document.createElement("div");
+          f.className = "captcha-container", v && f.classList.add(v), r.appendChild(f);
+        }
+        if (i.useSubmitButton) {
+          const v = document.createElement("div");
+          v.className = "submit-container", r.appendChild(v);
+          let f = !0;
+          if ("hideReset" in i && (f = i.hideReset), !f) {
+            const S = document.createElement("button");
+            S.className = "btn-resetform";
+            const E = i.resetText || this.settings.resetText;
+            S.innerText = E, v.appendChild(S), S.addEventListener("click", (M) => {
+              M.preventDefault();
+              const C = S.closest("form");
+              C && (C.reset(), C.querySelectorAll(".btn-clearfile").forEach(($) => {
+                $.click();
+              }), C.querySelectorAll(".slider-container").forEach(($) => {
+                const R = $.querySelector("input");
+                $.querySelector(".current-value").textContent = R.value;
+              }));
+            }), (i.fullWidthButton || !1) && S.classList.add("w-full");
+          }
+          const m = document.createElement("button");
+          m.className = "btn-submitform";
+          const y = i.submitText;
+          m.innerText = y, v.appendChild(m), (i.fullWidthButton || !1) && m.classList.add("w-full"), this.settings.alwaysVisibleSubmit && v.classList.add("always-visible"), this.stickyElement(v), m.addEventListener("click", async (S) => {
+            this.trigger("submit", S);
+          });
+          const x = r.closest("form");
+          x ? x.addEventListener("submit", async (S) => {
+            this.steps && this.steps.length > 0 && (S.preventDefault(), S.stopImmediatePropagation(), this.process());
+          }) : m.addEventListener("click", async (S) => {
+            this.steps && this.steps.length > 0 && (S.preventDefault(), this.process());
+          });
+        }
+      }
+      let d, u;
+      this.settings.resultSelector && (d = document.querySelector(this.settings.resultSelector), d.classList.add("result-wrapper"), d.innerHTML = "", u = document.createElement("div"), u.classList.add("result-container"), d.appendChild(u)), i.elements && d && i.elements.forEach((l) => {
+        if (l.displayInOutput) {
+          if (l.type === "spacer") {
+            const p = document.createElement("div");
+            p.className = "form-spacer", l.spacerHeight && !isNaN(parseFloat(l.spacerHeight)) && (p.style.height = l.spacerHeight + "px"), u.appendChild(p);
+            return;
+          }
+          if (l.type === "separator") {
+            const p = document.createElement("hr");
+            p.style.borderTopColor = l.color, u.appendChild(p);
+            return;
+          }
+          if (l.type === "html") {
+            if (l.html) {
+              const p = document.createElement("div");
+              p.innerHTML = l.html, u.appendChild(p);
+            }
+            return;
+          }
+          if (l.type === "heading") {
+            const p = document.createElement(l.heading || "h2");
+            p.innerHTML = l.headingText || this.out("Your Heading Here!"), u.appendChild(p);
+            return;
+          }
+          if (l.type === "paragraph") {
+            const p = document.createElement("p");
+            p.innerHTML = l.paragraphText || this.out("Your paragraph content here!"), u.appendChild(p);
+            return;
+          }
+          if (l.type === "media") {
+            if (l.tag === "video") {
+              const p = document.createElement("video");
+              p.style.width = "100%", p.style.height = "auto", p.controls = !0;
+              var h = document.createElement("source");
+              h.src = l.url, h.type = "video/mp4", p.appendChild(h), u.appendChild(p);
+            } else if (l.tag === "audio") {
+              const p = document.createElement("audio");
+              p.controls = !0;
+              let b = document.createElement("source");
+              b.src = l.url, b.type = "audio/mp3", p.appendChild(b), u.appendChild(p);
+            } else if (l.tag === "img") {
+              const p = document.createElement("img");
+              p.src = l.url, p.setAttribute("alt", this.out("Output Image")), u.appendChild(p);
+            }
+            return;
+          }
+          if (l.type === "image") {
+            const p = document.createElement("img");
+            p.src = l.url, p.setAttribute("alt", this.out("Output Image")), u.appendChild(p);
+            return;
+          }
+          if (l.type === "video") {
+            const p = document.createElement("video");
+            p.style.width = "100%", p.style.height = "auto", p.controls = !0;
+            let b = document.createElement("source");
+            b.src = l.url, b.type = "video/mp4", p.appendChild(b), u.appendChild(p);
+            return;
+          }
+          if (l.type === "audio") {
+            const p = document.createElement("audio");
+            p.controls = !0;
+            let b = document.createElement("source");
+            b.src = l.url, b.type = "audio/mp3", p.appendChild(b), u.appendChild(p);
+            return;
+          }
+        }
+      });
+    }
+    if (this.settings.resultSelector && document.querySelector(this.settings.resultSelector).classList.add("result-wrapper"), this.settings.saveResults && this.settings.resultSelector && localStorage.getItem("_results"))
+      try {
+        this.previousResults = JSON.parse(localStorage.getItem("_results"));
+        let s = localStorage.getItem("_results_html");
+        const r = document.querySelector(this.settings.resultSelector);
+        r.innerHTML = s, this.addResultTool(), r.querySelectorAll(".link-download").forEach((a) => {
+          a.addEventListener("click", async (d) => {
+            d.preventDefault();
+            const u = d.target.href;
+            try {
+              const l = await fetch(u, {
+                mode: "cors"
+              });
+              if (!l.ok) throw new Error("Failed to fetch the image.");
+              const h = await l.blob(), p = u.substring(u.lastIndexOf("/") + 1), b = document.createElement("a");
+              b.href = URL.createObjectURL(h), b.download = p, b.click(), URL.revokeObjectURL(b.href);
+            } catch (l) {
+              console.error("Error downloading the image:", l);
+            }
+          });
+        });
+      } catch {
+      }
+    const n = document.querySelector(".formview-container .submit-container");
+    n && setTimeout(() => {
+      this.stickyElement(n);
+    }, 1e3);
+  }
+  abort() {
+    this.controller && this.controller.abort();
+  }
+  async search(e) {
+    let i = {
+      "Content-Type": "application/json",
+      ...this.settings.headers
+    };
+    try {
+      const t = await fetch(this.settings.searchUrl, {
+        method: "POST",
+        headers: i,
+        body: JSON.stringify({
+          query: e,
+          customData: this.settings.customData
+        })
+      });
+      if (!t.ok)
+        throw new Error("Failed to fetch data");
+      const n = await t.json(), s = n.organic_results ? "organic_results" : "organic";
+      return (n[s] || []).map((r) => ({
+        title: r.title,
+        link: r.link,
+        snippet: r.snippet || r.description
+      }));
+    } catch (t) {
+      return console.error("Error in search:", t.message || t), [];
+    }
+  }
+  async scrapeUrls(e) {
+    if (e.length === 0) return {
+      data: "",
+      urls: [],
+      failed: []
+    };
+    this.settings.consoleLog && console.log(e);
+    let i = {
+      "Content-Type": "application/json",
+      ...this.settings.headers
+    };
+    const t = await fetch(this.settings.scrapeUrl, {
+      method: "POST",
+      headers: i,
+      body: JSON.stringify({
+        urls: e,
+        customData: this.settings.customData
+      })
+    });
+    if (!t.ok)
+      throw new Error(`Error: ${t.statusText}`);
+    let n = "";
+    const s = await t.json();
+    if (this.settings.consoleLog && console.log(s), s.error)
+      return this.settings.consoleLog && console.log(s.error), {
+        data: "",
+        urls: [],
+        failed: []
+      };
+    let r = [], o = [];
+    if (this.settings.scrapeProvider === "firecrawl" && s.forEach((a) => {
+      if (a.success) {
+        const d = a.metadata.title, u = a.markdown, l = a.metadata.url;
+        r.push(l), n += `
+
+
+    ## ${d}
+
+    Source: ${l}
+                    
+    ${u}
+
+
+    ----------------
+
+
+    `;
+      } else {
+        let d = a.url;
+        if (d) {
+          const u = a.url;
+          o.push(u);
+        } else
+          d = a.url.link, o.push(d);
+      }
+    }), this.settings.scrapeProvider === "scrapingbee")
+      for (let a = 0; a < s.length; a++) {
+        let d = e[a];
+        r.push(d);
+        let u = s[a];
+        n += `
+    
+    
+## ${d}
+                
+${u}
+
+
+----------------
+
+
+`;
+      }
+    return n = `These are the information from the URLs:
+
+${n}
+`, {
+      data: n,
+      urls: r,
+      failed: o
+    };
+  }
+  async checkPrompt(e) {
+    let i = "You are an assistant", t = `This is user's request:
+
+${e}        
+        `, n = `
+Check if the request requires checking certain URLs. If so, returns the URLs.  
+Also check if the request requires search to find answers by searching on the web to get the current relevant information.      
+`, s = [{
+      name: "check_request",
+      description: "Check user request.",
+      parameters: {
+        type: "object",
+        properties: {
+          needscrape: {
+            type: "boolean",
+            description: "Check the if request requires search on the web or not."
+          },
+          url: {
+            type: "string",
+            description: "If request need to check certail URL, return the URL."
+          },
+          url2: {
+            type: "string",
+            description: "If the request needs to check a certail URL, return the URL."
+          },
+          url3: {
+            type: "string",
+            description: "If the request needs to check a certail URL, return the URL."
+          },
+          url4: {
+            type: "string",
+            description: "If the request needs to check a certail URL, return the URL."
+          },
+          url5: {
+            type: "string",
+            description: "If the request needs to check a certail URL, return the URL."
+          },
+          url6: {
+            type: "string",
+            description: "If the request needs to check a certail URL, return the URL."
+          },
+          url7: {
+            type: "string",
+            description: "If the request needs to check a certail URL, return the URL."
+          },
+          url8: {
+            type: "string",
+            description: "If the request needs to check a certail URL, return the URL."
+          },
+          needsearch: {
+            type: "boolean",
+            description: "Check the if request requires search on the web or not."
+          }
+        },
+        required: ["needsearch", "needscrape"]
+      }
+    }], r = await this.send(n, t, i, s);
+    return r ? JSON.parse(r) : !1;
+  }
+  async getRelevantInfo(e, i, t) {
+    if (!this.settings.searchUrl && !this.settings.scrapeUrl) return {
+      data: "",
+      urls: [],
+      failed: []
+    };
+    const n = document.createElement("div");
+    n.classList.add("status"), t.appendChild(n);
+    let s = "", r = await this.checkPrompt(`${i}
+
+${e}`);
+    this.settings.consoleLog && console.log(r);
+    let o = [], a = [];
+    if (r.url && r.needscrape && this.settings.scrapeUrl) {
+      let d = document.createElement("p");
+      d.innerHTML = this.out("Fetching data from the web..."), n.appendChild(d);
+      let u = [];
+      r.url && u.push(r.url), r.url2 && u.push(r.url2), r.url3 && u.push(r.url3), r.url4 && u.push(r.url4), r.url5 && u.push(r.url5), r.url6 && u.push(r.url6), r.url7 && u.push(r.url7), r.url8 && u.push(r.url8);
+      let l = await this.scrapeUrls(u);
+      s += l.data, o = l.urls, a = l.failed;
+    } else if (this.settings.searchUrl && this.settings.scrapeUrl) {
+      let d = document.createElement("p");
+      d.innerHTML = this.out("Searching the web.."), n.appendChild(d);
+      let u = await this.search(e);
+      const l = this.settings.scrapeExclude;
+      let h = u.filter((g) => {
+        let v = new URL(g.link).hostname;
+        return !l.some((f) => v.includes(f));
+      });
+      const p = this.settings.scrapeLimit, b = h.slice(0, p);
+      n.innerHTML = "", d = document.createElement("p"), d.innerHTML = this.out("Getting more information..."), n.appendChild(d);
+      let w = [];
+      for (let g = 0; g < b.length; g++)
+        w.push(u[g].link);
+      let _ = await this.scrapeUrls(w);
+      s += _.data, o = _.urls, a = _.failed;
+    }
+    return {
+      data: s,
+      urls: o,
+      failed: a
+    };
+  }
+  showDemoInfo(e) {
+    if (!this.settings.resultSelector) {
+      this.settings.consoleLog && console.log("resultSelector not set.");
+      return;
+    }
+    const i = document.querySelector(this.settings.resultSelector);
+    i.innerHTML = "";
+    const t = document.createElement("div");
+    t.classList.add("result-container"), i.appendChild(t), t.innerHTML = `
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 20" width="27" height="20" fill="currentColor">
+            <circle cx="15" cy="15" r="10">
+                <animate attributeName="cy" dur="0.6s" values="15;5;15" repeatCount="indefinite"></animate>
+            </circle>
+            <circle cx="60" cy="15" r="10">
+                <animate attributeName="cy" begin="0.2s" dur="0.6s" values="15;5;15" repeatCount="indefinite"></animate>
+            </circle>
+            <circle cx="105" cy="15" r="10">
+                <animate attributeName="cy" begin="0.4s" dur="0.6s" values="15;5;15" repeatCount="indefinite"></animate>
+            </circle>
+        </svg>
+        `;
+    let n;
+    if (this.settings.isBuilder) {
+      if (!this.settings.previewSelector) {
+        this.settings.consoleLog && console.log("previewSelector not set.");
+        return;
+      }
+      n = document.querySelector(this.settings.previewSelector);
+    } else
+      n = this.element;
+    let s = n.querySelector(".btn-submitform"), r = s.innerHTML;
+    s.innerHTML = `&nbsp;
+            <span class="loading-icon" style="width:60px;display:flex;align-items:center;justify-content:center">
+                <svg class="animate-spin" style="margin: 0;width: 1.25rem;height: 1.25rem;" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle style="opacity: 0.25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path style="opacity: 0.75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+            </span>
+            &nbsp;
+        `, setTimeout(() => {
+      t.innerHTML = e, s.innerHTML = r;
+    }, 400);
+  }
+  async process(e) {
+    if (this.trigger("generate"), this.payloads = [], this.output = [], this.mediaGenerated = [], this.needCleanup = !1, this.outputHtml = "", !this.settings.resultSelector) {
+      this.settings.consoleLog && console.log("resultSelector not set.");
+      return;
+    }
+    const i = document.querySelector(this.settings.resultSelector);
+    if (!i) {
+      console.log("resultElement not found.");
+      return;
+    }
+    let t = !1, n = !1;
+    this.steps.forEach((m) => {
+      m.prompt.trim().startsWith("{") && (t = !0), m.tools && (m.tools.image || m.tools.video || m.tools.audio) && (t = !0), m.tools && m.tools.search && (n = !0);
+    });
+    let s;
+    if (t && this.settings.disableMediaGeneration) {
+      s = `
+                <div class="form-info">
+                    <h3>${this.out(this.settings.disableMediaGenerationTitle)}</h3> 
+                    <p>
+                        <b>${this.out(this.settings.disableMediaGenerationMessage)}</b>
+                    </p>
+                </div>`, this.showDemoInfo(s);
+      return;
+    }
+    if (!this.settings.scrapeUrl && n) {
+      this.settings.demo ? s = `
+                <div class="form-info">
+                    <h3>Demo Info</h3> 
+                    <p>
+                    <b>This is an online demo, so web searching and scraping features are currently disabled. In the full version, you’ll have access to all these features!</b>
+                    </p>
+                </div>` : s = `
+                    <div class="form-info">
+                        <p>
+                            <b>Web searching and scraping are currently disabled, so your request cannot be processed.</b>
+                        </p>
+                    </div>`, this.showDemoInfo(s);
+      return;
+    }
+    let r;
+    if (this.settings.isBuilder) {
+      if (!this.settings.previewSelector) {
+        this.settings.consoleLog && console.log("previewSelector not set.");
+        return;
+      }
+      r = document.querySelector(this.settings.previewSelector);
+    } else
+      r = this.element;
+    let o = r.querySelector(".btn-submitform"), a = o.innerHTML;
+    this.tokenInput = 0, this.tokenOutput = 0;
+    let d = !1;
+    if (e != null && (d = !0), this.singleStep = d, d || (this.filesUploaded = {}), this.isNormal && !d) {
+      if (this.isMediaGenerating) {
+        alert(this.out("The media generation process cannot be aborted."));
+        return;
+      }
+      this.abort(), o.innerHTML = a, o.removeAttribute("disabled"), this.isGenerating = !1;
+      return;
+    }
+    if (this.isNormal && d || this.isSingle && !d || this.isSingle && d)
+      return;
+    this.isNormal = !1, this.isSingle = !1, d ? (o.innerHTML = `
+                <span class="loading-icon">
+                    <svg class="animate-spin" style="margin: 0;margin-right: 0.6rem;width: 1rem;height: 1rem;" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle style="opacity: 0.25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path style="opacity: 0.75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                </span>
+            `, this.isSingle = !0) : (o.innerHTML = `
+                <span class="loading-icon">
+                    <svg class="animate-spin" style="margin: 0;margin-right: 0.6rem;width: 1.25rem;height: 1.25rem;" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle style="opacity: 0.25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path style="opacity: 0.75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                </span>
+                ${this.out("Abort")}
+            `, this.isNormal = !0), this.isGenerating = !0;
+    let u = (m, y) => {
+      if (m === void 0) return "";
+      if (!isNaN(m)) return m;
+      let k = m;
+      return y && y.trim().startsWith("{") && (k = JSON.stringify(m).slice(1, -1)), k;
+    };
+    i.innerHTML = "";
+    let l = JSON.parse(JSON.stringify(this.steps)), h = this.getFormValues();
+    if (!h) return;
+    if (!(h && Object.keys(h).length === 0)) {
+      for (const m of l) {
+        let y = m.prompt;
+        if (m.provider === "google") {
+          for (const x of h)
+            if (x.value instanceof FileList && x.value.length > 0) {
+              const E = x.value[0];
+              if (!E) continue;
+              const L = await new Promise((M, C) => {
+                const D = new FileReader();
+                D.onload = (O) => {
+                  const $ = O.target.result.split(",")[1];
+                  M($);
+                }, D.onerror = C, D.readAsDataURL(E);
+              });
+              y = y.replaceAll(`{{${x.name}}}`, L), y = y.replaceAll(`{{${x.name.toUpperCase()}}}`, L);
+            }
+        }
+        m.prompt = y;
+      }
+      l.forEach((m) => {
+        let y = m.prompt;
+        h.forEach((k) => {
+          if (k.value === void 0 && (k.value = ""), typeof k.value == "object" && Array.isArray(k.value)) {
+            const x = k.value.join(", ");
+            y = y.replaceAll(`{{${k.name}}}`, x), y = y.replaceAll(`{{${k.name.toUpperCase()}}}`, x);
+          } else k.value instanceof FileList || typeof k.value == "string" && k.value.indexOf("base64") !== -1 ? (y = y.replaceAll(`{{${k.name}}}`, k.name), y = y.replaceAll(`{{${k.name.toUpperCase()}}}`, k.name)) : (y = y.replaceAll(`{{${k.name}}}`, u(k.value, m.prompt)), y = y.replaceAll(`{{${k.name.toUpperCase()}}}`, u(k.value, m.prompt)));
+        }), m.prompt = y;
+      }), l.forEach((m) => {
+        let y = m.context;
+        h.forEach((k) => {
+          if (k.value || (k.value = ""), typeof k.value == "object" && Array.isArray(k.value)) {
+            const x = k.value.join(", ");
+            y = y.replaceAll(`{{${k.name}}}`, x), y = y.replaceAll(`{{${k.name.toUpperCase()}}}`, x);
+          } else k.value instanceof FileList || typeof k.value == "string" && k.value.indexOf("base64") !== -1 ? (y = y.replaceAll(`{{${k.name}}}`, k.name), y = y.replaceAll(`{{${k.name.toUpperCase()}}}`, k.name)) : (y = y.replaceAll(`{{${k.name}}}`, u(k.value, m.prompt)), y = y.replaceAll(`{{${k.name.toUpperCase()}}}`, u(k.value, m.prompt)));
+        }), m.context = y;
+      });
+    }
+    const p = async (m, y, k, x, S, E, L, M) => {
+      const C = document.createElement("div");
+      C.classList.add("result-container"), i.appendChild(C), C.innerHTML = `
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 20" width="27" height="20" fill="currentColor">
+                <circle cx="15" cy="15" r="10">
+                    <animate attributeName="cy" dur="0.6s" values="15;5;15" repeatCount="indefinite"></animate>
+                </circle>
+                <circle cx="60" cy="15" r="10">
+                    <animate attributeName="cy" begin="0.2s" dur="0.6s" values="15;5;15" repeatCount="indefinite"></animate>
+                </circle>
+                <circle cx="105" cy="15" r="10">
+                    <animate attributeName="cy" begin="0.4s" dur="0.6s" values="15;5;15" repeatCount="indefinite"></animate>
+                </circle>
+            </svg>
+            `;
+      let D = !1, O;
+      if (m.trim().startsWith("{"))
+        try {
+          O = JSON.parse(m), O && typeof O == "object" && (D = !0);
+        } catch {
+          return C.innerHTML = `<p>${this.out("Incorrect JSON format.")}</p>`, !1;
+        }
+      (L && (L.image || L.video || L.audio) || D) && (d || (o.innerHTML = `&nbsp;
+                        <span class="loading-icon" style="width:60px;display:flex;align-items:center;justify-content:center">
+                            <svg class="animate-spin" style="margin: 0;width: 1.25rem;height: 1.25rem;" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                <circle style="opacity: 0.25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                <path style="opacity: 0.75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            </svg>
+                        </span>
+                        &nbsp;
+                    `, o.setAttribute("disabled", "")));
+      let $ = "", R = "", q;
+      if (L && L.search && (q = await this.getRelevantInfo(m, y, C), q.data !== "" && (y += `
+Use the following information to answer the request:
+
+${q.data}
+`)), L && (L.image || L.video || L.audio) || D) {
+        const A = await this.media.generate(m, y, k, x, L, C, M);
+        return this.needCleanup = !0, this.settings.consoleLog && console.log(A), A.mediaGenerated ? {
+          media: A.output,
+          media2: A.output2,
+          markdown: A.markdown
+        } : (C.innerHTML = `<p>${A.message}</p>`, !1);
+      }
+      if (this.settings.assistantId) {
+        if (this.settings.assistantStreamUrl)
+          await this.assistantStream(m, y, S, E, async (A) => {
+            if (!(A && typeof A == "object")) {
+              if ($ += A, !M) {
+                const T = z.parse($);
+                C.innerHTML = T, R += T;
+              }
+              await new Promise((T) => setTimeout(T, 50));
+            }
+          }), await new Promise((A) => {
+            const T = setInterval(() => {
+              C.innerHTML === z.parse($) && (clearInterval(T), A());
+            }, 10);
+          }), M && (C.innerHTML = "", C.remove()), this.outputHtml += `<div class="result-container">${R}</div>`;
+        else if (this.settings.assistantUrl) {
+          let A = await this.assistant(m, y, S, E);
+          if (!A)
+            return !1;
+          if ($ = A, M)
+            C.innerHTML = "", C.remove();
+          else {
+            const T = z.parse(A);
+            C.innerHTML = T, this.outputHtml += `<div class="result-container">${T}</div>`;
+          }
+        }
+      } else if (this.settings.sendCommandStreamUrl) {
+        let A = "", T = "", N = "";
+        const P = async (U) => {
+          let F = 0;
+          for (; F < U.length; ) {
+            if (N = A.slice(0, N.length + 1), F++, !M) {
+              const W = z.parse(N);
+              C.innerHTML = W, T = W;
+            }
+            await new Promise((W) => setTimeout(W, 50));
+          }
+        };
+        await this.sendStream(m, y, S, x, E, async (U) => {
+          $ += U, A += U, await P(U);
+        }), await new Promise((U) => {
+          const F = setInterval(() => {
+            N.length === A.length && (clearInterval(F), U());
+          }, 10);
+        }), M && (C.innerHTML = "", C.remove()), this.outputHtml += `<div class="result-container">${T}</div>`;
+      } else {
+        let A = await this.send(m, y, S, x, E);
+        if (!A)
+          return !1;
+        if ($ = A, M)
+          C.innerHTML = "", C.remove();
+        else {
+          const T = z.parse(A);
+          C.innerHTML = T, this.outputHtml += `<div class="result-container">${T}</div>`;
+        }
+      }
+      if (!M) {
+        let A = "";
+        if (q && q.urls.forEach((N) => {
+          let P = N;
+          P.length > 75 && (P = P.slice(0, 75) + "..."), A += `<div><a class="source_url" href="${N}">${P}</url></div>`;
+        }), q && q.failed.forEach((N) => {
+          let P = N;
+          P.length > 75 && (P = P.slice(0, 75) + "..."), A += `<div><a class="source_url" style="opacity:0.5" href="${N}">${P}</url></div>`;
+        }), A !== "") {
+          const N = document.createElement("div");
+          N.classList.add("result-container"), i.appendChild(N), N.innerHTML = A;
+        }
+      }
+      return this.payloads.push({
+        prompt: m,
+        context: y
+      }), this.output.push($), {
+        media: [],
+        markdown: $
+      };
+    };
+    d || await (async (m) => {
+      this.previousResults = [], this.outputHtml = "";
+      for (let y = 0; y < m.length; y++) {
+        if (!this.isGenerating)
+          return;
+        let {
+          prompt: k,
+          context: x,
+          provider: S,
+          model: E,
+          system: L,
+          functs: M,
+          tools: C,
+          hideOutput: D
+        } = m[y];
+        S = S || "", x = x || "", L = L || "You are an assistant", M = M || [];
+        let O = k;
+        this.previousResults.forEach((R, q) => {
+          const A = `{{output_step_${q + 1}}}`;
+          O = O.replace(new RegExp(A, "g"), u(R, k)), O = O.replace(new RegExp(A.toUpperCase(), "g"), u(R, k));
+        }), k = O, k = k.replace(/[\u00A0\u2000-\u200B\u202F\u205F\u3000\uFEFF]/g, " ").trim(), this.settings.consoleLog && console.log(k), O = x, this.previousResults.forEach((R, q) => {
+          const A = `{{output_step_${q + 1}}}`;
+          O = O.replace(new RegExp(A, "g"), u(R, k)), O = O.replace(new RegExp(A.toUpperCase(), "g"), u(R, k));
+        }), x = O, x = x.replace(/[\u00A0\u2000-\u200B\u202F\u205F\u3000\uFEFF]/g, " ").trim();
+        let $ = await p(k, x, S, E, L, M, C, D);
+        if (!$)
+          break;
+        if (this.mediaGenerated.push(...$.media), $.media && $.media.length === 1) {
+          let R = $.media[0], q = $.media2 && $.media2.length === 1 && $.media2[0];
+          this.previousResults.push(q || R), D && (this.filesUploaded[`output_step_${y}`] = R);
+        } else
+          this.previousResults.push($.markdown);
+      }
+    })(l), d && (e === 0 && (this.previousResults = []), await (async (y, k) => {
+      if (!this.isGenerating)
+        return;
+      let {
+        prompt: x,
+        context: S,
+        provider: E,
+        model: L,
+        system: M,
+        functs: C,
+        tools: D,
+        hideOutput: O
+      } = y[k];
+      S = S || "", M = M || "You are an assistant", C = C || [];
+      let $ = x;
+      this.previousResults && this.previousResults.forEach((q, A) => {
+        const T = `{{output_step_${A + 1}}}`;
+        $ = $.replace(new RegExp(T, "g"), q), $ = $.replace(new RegExp(T.toUpperCase(), "g"), q);
+      }), x = $, x = x.replace(/[\u00A0\u2000-\u200B\u202F\u205F\u3000\uFEFF]/g, " ").trim(), this.settings.consoleLog && console.log(x), $ = S, this.previousResults && this.previousResults.forEach((q, A) => {
+        const T = `{{output_step_${A + 1}}}`;
+        $ = $.replace(new RegExp(T, "g"), q), $ = $.replace(new RegExp(T.toUpperCase(), "g"), q);
+      }), S = $, S = S.replace(/[\u00A0\u2000-\u200B\u202F\u205F\u3000\uFEFF]/g, " ").trim(), this.settings.consoleLog && console.log(S);
+      let R = await p(x, S, E, L, M, C, D, O);
+      if (R && (this.mediaGenerated.push(...R.media), !!this.previousResults))
+        if (R.media && R.media.length === 1) {
+          let q = R.media[0], A = R.media2 && R.media2.length === 1 && R.media2[0];
+          this.previousResults[k] = A || q, O && (this.filesUploaded[`output_step_${k}`] = q);
+        } else
+          this.previousResults[k] = R.markdown;
+    })(l, e)), o.innerHTML = a, o.removeAttribute("disabled"), this.isGenerating = !1;
+    const w = this.calculateCost();
+    this.settings.onUsage && this.settings.onUsage(w), this.trigger("usage", w), this.isNormal = !1, this.isSingle = !1;
+    const _ = (m, y = 100) => {
+      const k = document.createElement("div");
+      if (k.innerHTML = m, k.querySelector("video"))
+        return "Video";
+      if (k.querySelector("img"))
+        return "Image";
+      if (k.querySelector("audio"))
+        return "Audio";
+      const x = k.textContent.trim();
+      return x.length > y ? x.substring(0, y) + "..." : x;
+    }, g = Object.keys(this.filesUploaded).length === 0 && this.filesUploaded.constructor === Object;
+    if (this.needCleanup && !g) {
+      this.settings.consoleLog && (console.log("Cleanup"), console.log(this.filesUploaded));
+      let m = {
+        "Content-Type": "application/json",
+        ...this.settings.headers
+      };
+      await fetch(this.settings.cleanup, {
+        method: "POST",
+        headers: m,
+        body: JSON.stringify(this.filesUploaded)
+      });
+    }
+    let v = this.outputHtml;
+    this.mediaGenerated = this.mediaGenerated.filter((m) => v.indexOf(m) !== -1), this.trigger("resultReady", {
+      previewText: _(v),
+      markdown: this.previousResults,
+      html: v,
+      media: this.mediaGenerated,
+      // return the collected generated media from all steps
+      input: this.payloads,
+      output: this.output
+    }), this.settings.saveResults && (localStorage.setItem("_results", JSON.stringify(this.previousResults)), localStorage.setItem("_results_html", v)), this.addResultTool(), i.querySelectorAll(".link-download").forEach((m) => {
+      m.addEventListener("click", async (y) => {
+        y.preventDefault();
+        const k = y.target.href;
+        try {
+          const x = await fetch(k, {
+            mode: "cors"
+          });
+          if (!x.ok) throw new Error("Failed to fetch the image.");
+          const S = await x.blob(), E = k.substring(k.lastIndexOf("/") + 1), L = document.createElement("a");
+          L.href = URL.createObjectURL(S), L.download = E, L.click(), URL.revokeObjectURL(L.href);
+        } catch (x) {
+          console.error("Error downloading the image:", x);
+        }
+      });
+    });
+  }
+  calculateCost() {
+    const e = this.settings.inputCost / 1e6, i = this.settings.outputCost / 1e6, t = this.tokenInput * e, n = this.tokenOutput * i;
+    return t + n;
+  }
+  loadWorkflow(e) {
+    if (!e) return;
+    const t = JSON.parse(e).steps;
+    t.forEach((n) => {
+      Object.prototype.hasOwnProperty.call(n, "context") || (n.context = "");
+    }), this.steps = t;
+  }
+  getFileInput(e) {
+    let i;
+    if (this.settings.isBuilder) {
+      if (!this.settings.previewSelector) {
+        this.settings.consoleLog && console.log("previewSelector not set.");
+        return;
+      }
+      i = document.querySelector(this.settings.previewSelector);
+    } else
+      i = this.element;
+    return i ? e ? i.querySelector(`input[type="file"][name="${e}"]`) : i.querySelector('input[type="file"]') : null;
+  }
+  // getFormValues is only used in process
+  getFormValues() {
+    const e = this.element;
+    if (!e) return [];
+    const i = e.querySelectorAll("[name]");
+    if (i.length === 0)
+      return {};
+    const t = {};
+    i.forEach((r) => {
+      let {
+        name: o,
+        type: a,
+        value: d,
+        checked: u,
+        files: l
+      } = r;
+      if (a === "checkbox")
+        o = o.replace("[]", ""), u && (t[o] = t[o] || [], d === "other" && (d = e.querySelector(`[name="${o + "_other"}"]`).value), t[o].push(d));
+      else if (a === "radio")
+        u && (d === "other" && (d = e.querySelector(`[name="${o + "_other"}"]`).value), t[o] = d);
+      else if (a === "select-one")
+        d === "other" && (d = e.querySelector(`[name="${o + "_other"}"]`).value), t[o] = d;
+      else if (a === "file")
+        t[o] = l;
+      else if (a === "select-multiple") {
+        const h = Array.from(r.selectedOptions);
+        t[o] = h.map((p) => p.value);
+      } else if (a === "color") {
+        t[o] = d;
+        const h = this.hexToRgb(d);
+        t[o + "_red"] = h.red, t[o + "_green"] = h.green, t[o + "_blue"] = h.blue;
+      } else
+        t[o] = d;
+    });
+    let n = [];
+    return this.json.elements.forEach((r) => {
+      let o = r.title, a = r.name, d = r.type;
+      if (a === "") return;
+      let u = t[a], l = {
+        questions: o,
+        name: a,
+        value: u,
+        type: d
+      };
+      n.push(l);
+      let h = a + "__url";
+      u = t[h], u && (l = {
+        questions: o,
+        name: h,
+        value: u
+      }, n.push(l)), r.useImageMask && (a = a + "_mask", u = t[a], l = {
+        questions: o,
+        name: a,
+        value: u
+      }, n.push(l));
+      let p = a + "_red";
+      u = t[p], u !== void 0 && (l = {
+        questions: o,
+        name: p,
+        value: u
+      }, n.push(l));
+      let b = a + "_green";
+      u = t[b], u !== void 0 && (l = {
+        questions: o,
+        name: b,
+        value: u
+      }, n.push(l));
+      let w = a + "_blue";
+      u = t[w], u !== void 0 && (l = {
+        questions: o,
+        name: w,
+        value: u
+      }, n.push(l));
+    }), this.settings.consoleLog && console.log(n), n;
+  }
+  setTheme(e, i) {
+    let t;
+    if (!e) t = {};
+    else
+      try {
+        t = JSON.parse(e);
+      } catch {
+        t = {};
+      }
+    this.themeData = e;
+    const n = t.cssVariables;
+    let s, r = document.documentElement;
+    i && (r = i), s = n && n["--form-text-color"] || "", r.style.setProperty("--form-text-color", s), s = n && n["--form-primary-color"] || "#3b82f6", r.style.setProperty("--form-primary-color", s), s = n && n["--form-title-color"] || "", r.style.setProperty("--form-title-color", s), s = n && n["--form-desc-color"] || "", r.style.setProperty("--form-desc-color", s), s = n && n["--form-label-color"] || "", r.style.setProperty("--form-label-color", s), s = n && n["--form-label-font-size"] || "", r.style.setProperty("--form-label-font-size", s), s = n && n["--form-input-font-size"] || "", r.style.setProperty("--form-input-font-size", s), s = n && n["--form-input-border-color"] || "", r.style.setProperty("--form-input-border-color", s), s = n && n["--form-primary-border-width"] || "1px", r.style.setProperty("--form-primary-border-width", s), s = n && n["--form-secondary-border-width"] || "2px", r.style.setProperty("--form-secondary-border-width", s), s = n && n["--form-input-background-color"] || "", r.style.setProperty("--form-input-background-color", s), s = n && n["--form-input-text-color"] || "", r.style.setProperty("--form-input-text-color", s), s = n && n["--form-input-placeholder-color"] || "", r.style.setProperty("--form-input-placeholder-color", s), s = n && n["--form-choice-border-color"] || "", r.style.setProperty("--form-choice-border-color", s), s = n && n["--form-switch-background-color"] || "", r.style.setProperty("--form-switch-background-color", s), s = n && n["--form-switch-knob-color"] || "", r.style.setProperty("--form-switch-knob-color", s), s = n && n["--form-switch-focus-offset-color"] || "", r.style.setProperty("--form-switch-focus-offset-color", s), s = n && n["--form-dropfile-border-color"] || "rgb(194 194 194)", r.style.setProperty("--form-dropfile-border-color", s), s = n && n["--form-dropfile-hover-color"] || "", r.style.setProperty("--form-dropfile-hover-color", s), s = n && n["--form-button-background-color"] || "", r.style.setProperty("--form-button-background-color", s), s = n && n["--form-button-hover-background-color"] || "", r.style.setProperty("--form-button-hover-background-color", s), s = n && n["--form-button-text-color"] || "", r.style.setProperty("--form-button-text-color", s), s = n && n["--form-button-hover-text-color"] || "", r.style.setProperty("--form-button-hover-text-color", s), s = n && n["--form-button-border-width"] || "1px", r.style.setProperty("--form-button-border-width", s), s = n && n["--form-button-border-color"] || "", r.style.setProperty("--form-button-border-color", s), s = n && n["--form-button-hover-border-color"] || "", r.style.setProperty("--form-button-hover-border-color", s), s = n && n["--form-reset-background-color"] || "", r.style.setProperty("--form-reset-background-color", s), s = n && n["--form-reset-hover-background-color"] || "", r.style.setProperty("--form-reset-hover-background-color", s), s = n && n["--form-reset-text-color"] || "", r.style.setProperty("--form-reset-text-color", s), s = n && n["--form-reset-hover-text-color"] || "", r.style.setProperty("--form-reset-hover-text-color", s), s = n && n["--form-reset-border-width"] || "1px", r.style.setProperty("--form-reset-border-width", s), s = n && n["--form-reset-border-color"] || "", r.style.setProperty("--form-reset-border-color", s), s = n && n["--form-reset-hover-border-color"] || "", r.style.setProperty("--form-reset-hover-border-color", s);
+  }
+  async send(e, i, t, n, s) {
+    this.controller = new AbortController(), this.signal = this.controller.signal;
+    let r = 0.6, o = 0.9, a = 1;
+    s || (s = []), n = n || this.settings.model, s.length > 0 && (n = this.settings.model2);
+    const d = {
+      question: e,
+      context: i,
+      system: t,
+      functs: s,
+      temperature: r,
+      topP: o,
+      num: a,
+      model: n,
+      customData: this.settings.customData
+    };
+    try {
+      let u = {
+        "Content-Type": "application/json",
+        ...this.settings.headers
+      }, h = await (await fetch(this.settings.sendCommandUrl, {
+        signal: this.signal,
+        // Abort
+        method: "POST",
+        headers: u,
+        body: JSON.stringify(d)
+      })).json();
+      if (h.error)
+        return console.log(`Error:
+` + h.error), !1;
+      if (h.answer.usage && (this.tokenInput += h.answer.usage.prompt_tokens, this.tokenOutput += h.answer.usage.completion_tokens), s.length === 0) {
+        let p;
+        return h.answer.choices.forEach((b) => {
+          p = b.message.content;
+        }), p;
+      } else
+        return h.answer;
+    } catch (u) {
+      return u.name === "AbortError" ? this.settings.consoleLog && console.log("Request aborted by user.") : console.error("Error:", u), !1;
+    }
+  }
+  async sendStream(e, i, t, n, s, r) {
+    this.controller = new AbortController(), this.signal = this.controller.signal;
+    let o = 0.6, a = 0.9, d = 1;
+    s || (s = []), n = n || this.settings.model;
+    const u = {
+      question: e,
+      context: i,
+      system: t,
+      functs: s,
+      temperature: o,
+      topP: a,
+      num: d,
+      model: n,
+      customData: this.settings.customData
+    };
+    try {
+      let l = {
+        "Content-Type": "application/json",
+        ...this.settings.headers
+      };
+      const h = await fetch(this.settings.sendCommandStreamUrl, {
+        signal: this.signal,
+        // Abort
+        method: "POST",
+        headers: l,
+        body: JSON.stringify(u)
+      });
+      if (!h.ok)
+        return console.error("Error:", h.statusText), !1;
+      const p = h.body.getReader(), b = new TextDecoder();
+      let w = "", _ = !1;
+      for (; !_; ) {
+        const {
+          done: g,
+          value: v
+        } = await p.read();
+        if (_ = g, _) break;
+        const f = b.decode(v, {
+          stream: !0
+        });
+        w += f;
+        const m = w.split(`
+`);
+        w = "";
+        let y = 0, k = 0;
+        for (const x of m)
+          if (x.trim() !== "" && x.startsWith("data:")) {
+            const S = x.slice(5).trim();
+            if (S === "[DONE]") {
+              this.settings.consoleLog && console.log("Stream completed.");
+              break;
+            }
+            try {
+              const E = JSON.parse(S);
+              if (E.usage && (y = E.usage.prompt_tokens, k = E.usage.completion_tokens), E.choices && E.choices[0].delta && E.choices[0].delta.content) {
+                const L = E.choices[0].delta.content;
+                r && r(L);
+              }
+            } catch {
+              w += x + `
+`;
+            }
+          }
+        this.tokenInput += y, this.tokenOutput += k;
+      }
+      return !0;
+    } catch (l) {
+      return l.name === "AbortError" ? this.settings.consoleLog && console.log("Request aborted by user.") : console.error("Error:", l), !1;
+    }
+  }
+  async assistant(e, i, t, n) {
+    this.controller = new AbortController(), this.signal = this.controller.signal;
+    let s = 0.6, r = 0.9, o = 1;
+    n || (n = []);
+    let a = this.settings.model;
+    n.length > 0 && (a = this.settings.model2);
+    const d = {
+      assistantId: this.settings.assistantId,
+      question: e,
+      context: i,
+      system: t,
+      functs: n,
+      temperature: s,
+      topP: r,
+      num: o,
+      model: a,
+      customData: this.settings.customData
+    };
+    try {
+      let u = {
+        "Content-Type": "application/json",
+        ...this.settings.headers
+      }, h = await (await fetch(this.settings.assistantUrl, {
+        signal: this.signal,
+        // Abort
+        method: "POST",
+        headers: u,
+        body: JSON.stringify(d)
+      })).json();
+      return h.error ? (console.log(`Error:
+` + h.error), !1) : (h.usage && (this.tokenInput += h.usage.prompt_tokens, this.tokenOutput += h.usage.completion_tokens), h.answer.content[0].text.value);
+    } catch (u) {
+      return u.name === "AbortError" ? this.settings.consoleLog && console.log("Request aborted by user.") : console.error("Error:", u), !1;
+    }
+  }
+  async assistantStream(e, i, t, n, s) {
+    this.controller = new AbortController(), this.signal = this.controller.signal;
+    let r = 0.6, o = 0.9, a = 1;
+    n || (n = []);
+    const d = {
+      assistantId: this.settings.assistantId,
+      question: e,
+      context: i,
+      system: t,
+      functs: n,
+      temperature: r,
+      topP: o,
+      num: a,
+      model: this.settings.model,
+      customData: this.settings.customData
+    };
+    try {
+      let u = {
+        "Content-Type": "application/json",
+        ...this.settings.headers
+      };
+      const l = await fetch(this.settings.assistantStreamUrl, {
+        signal: this.signal,
+        // Abort
+        method: "POST",
+        headers: u,
+        body: JSON.stringify(d)
+      });
+      if (!l.ok)
+        return console.error("Error:", l.statusText), !1;
+      const h = l.body.getReader(), p = new TextDecoder();
+      let b = "", w = !1;
+      for (; !w; ) {
+        const {
+          done: _,
+          value: g
+        } = await h.read();
+        if (w = _, w) break;
+        const v = p.decode(g, {
+          stream: !0
+        });
+        b += v;
+        const f = b.split(`
+`);
+        b = "";
+        for (const m of f)
+          if (m.trim() !== "")
+            if (m.startsWith("data:")) {
+              const y = m.slice(5).trim();
+              y === "[DONE]" && this.settings.consoleLog && console.log("Stream completed.");
+              try {
+                const k = JSON.parse(y);
+                if (k.choices && k.choices[0].delta && k.choices[0].delta.content) {
+                  const x = k.choices[0].delta.content;
+                  s && s(x);
+                }
+              } catch {
+                b += m + `
+`;
+              }
+            } else {
+              const y = JSON.parse(m);
+              this.tokenInput += y.prompt_tokens, this.tokenOutput += y.completion_tokens;
+              break;
+            }
+      }
+      return !0;
+    } catch (u) {
+      return u.name === "AbortError" ? this.settings.consoleLog && console.log("Request aborted by user.") : console.error("Error:", u), !1;
+    }
+  }
+  hexToRgb(e) {
+    const i = e.replace("#", ""), t = parseInt(i, 16), n = t >> 16 & 255, s = t >> 8 & 255, r = t & 255;
+    return {
+      red: n,
+      green: s,
+      blue: r
+    };
+  }
+  getId(e = "id") {
+    return `${e}-${Math.random().toString(36).substr(2, 9)}`;
+  }
+  appendHtml(e, i) {
+    e && i && e.insertAdjacentHTML("beforeend", i);
+  }
+  cleanup() {
+    if (this.element) {
+      let e = this.element.querySelectorAll('input[type="text"], input[type="number"], input[type="email"], input[type="tel"], input[type="url"], textarea');
+      e.forEach((i) => {
+        i.removeEventListener("input", this.inputListener);
+      }), e = this.element.querySelectorAll('input[type="date"], input[type="radio"], input[type="checkbox"]'), e.forEach((i) => {
+        i.removeEventListener("change", this.changeListener);
+      }), this.debounceTimeout && (clearTimeout(this.debounceTimeout), this.debounceTimeout = null);
+    }
+  }
+  destroy() {
+    try {
+      if (this._scrollListener) {
+        let e;
+        this.settings.isBuilder ? e = document.querySelector(this.settings.previewSelector) : e = this.element;
+        const i = e.querySelector(".submit-container"), t = this.getScrollableParent(i);
+        t ? t.removeEventListener("scroll", this._scrollListener) : window.removeEventListener("scroll", this._scrollListener), window.removeEventListener("resize", this._scrollListener);
+      }
+    } catch {
+    }
+    this.element && (this.cleanup(), this.element.innerHTML = "", this.element = null);
+    for (const e in this.listeners)
+      this.listeners[e].clear();
+    this.listeners = {};
+  }
+  out(e) {
+    let i = this.settings.lang[e];
+    return i || e;
+  }
+}
+class vn {
+  constructor(e = {}) {
+    const i = {
+      skin: "light"
+    };
+    this.settings = { ...i, ...e }, window.Glide = Ms, window.FormViewer = yn;
+  }
+  init() {
+    this.blockInit();
+    const e = {
+      touchNavigation: !0,
+      selector: ".glightbox",
+      // do not use .is-lightbox if used for programmatically open
+      loop: !0,
+      autoplayVideos: !0,
+      zoomable: !0,
+      slideEffect: "slide",
+      descPosition: "bottom",
+      skin: this.settings.skin
+    };
+    this.refreshLightbox(e), document.querySelectorAll(".is-lightbox,.block-click").forEach((t) => {
+      const n = (s) => {
+        if (t.closest('[contenteditable="true"]'))
+          return s.preventDefault(), !1;
+        {
+          let r = t.getAttribute("href") || t.getAttribute("data-modal-url");
+          this.openLightbox(r, t, e), s.preventDefault(), s.stopImmediatePropagation();
+        }
+      };
+      t.addEventListener("click", n), t._lightboxHandler = n;
+    });
+  }
+  refreshLightbox(e) {
+    this.glightbox && this.glightbox.destroy(), this.glightbox = new Ut(e), window.GLightbox = Ut.default;
+  }
+  openLightbox(e, i, t) {
+    let n = [], s = 0;
+    if (i) {
+      const o = i.closest("[data-gallery]");
+      let a = [];
+      o ? a = o.querySelectorAll(".is-lightbox") : document.querySelectorAll(".is-lightbox,.block-click").forEach((u) => {
+        u.closest("[data-gallery]") || a.push(u);
+      }), a.forEach((d, u) => {
+        let l = d.getAttribute("href");
+        l || (l = d.getAttribute("data-modal-url")), n.push({
+          href: l
+        }), e === l && (s = u);
+      });
+    }
+    const r = document.activeElement;
+    r?.blur(), n.length > 0 ? (this.glightbox.setElements(n), this.glightbox.openAt(s)) : (this.glightbox.setElements([
+      {
+        href: e
+      }
+    ]), this.glightbox.open()), this.glightbox.on("close", () => {
+      this.refreshLightbox(t), r?.focus();
+    });
+  }
+  // box-canvas
+  /*
+  Refresh:
+      this.Block.start();
+      this.Block.resize();
+  */
+  blockInit() {
+    const e = {
+      start: () => {
+        document.querySelectorAll(".is-block").forEach((t) => {
+          t.hasAttribute("data--t") || t.setAttribute("data--t", t.style.top), t.hasAttribute("data--l") || t.setAttribute("data--l", t.style.left), t.hasAttribute("data--b") || t.setAttribute("data--b", t.style.bottom), t.hasAttribute("data--r") || t.setAttribute("data--r", t.style.right), t.hasAttribute("data--w") || t.setAttribute("data--w", t.style.width), t.hasAttribute("data--h") || t.setAttribute("data--h", t.style.height), t.removeAttribute("data-prev"), t.removeAttribute("data-fluid"), t.removeAttribute("data-fluid-val"), t.classList.remove("fluid"), t.style.transition = "";
+        });
+      },
+      apply: (t, n, s) => {
+        if (n && t.getAttribute("data-prev") !== n + "") {
+          if (s || (t.style.transition = "all 0.35s ease"), n !== 1e4) {
+            if (t.setAttribute("data-breakpoint", n), t.hasAttribute("data--t-" + n)) {
+              let r = t.getAttribute("data--t-" + n);
+              t.style.top = r;
+            }
+            if (t.hasAttribute("data--l-" + n)) {
+              let r = t.getAttribute("data--l-" + n);
+              t.style.left = r;
+            }
+            if (t.hasAttribute("data--b-" + n)) {
+              let r = t.getAttribute("data--b-" + n);
+              t.style.bottom = r;
+            }
+            if (t.hasAttribute("data--r-" + n)) {
+              let r = t.getAttribute("data--r-" + n);
+              t.style.right = r;
+            }
+            if (t.hasAttribute("data--w-" + n)) {
+              let r = t.getAttribute("data--w-" + n);
+              t.style.width = r;
+            }
+            if (t.hasAttribute("data--h-" + n)) {
+              let r = t.getAttribute("data--h-" + n);
+              t.style.height = r;
+            }
+            if (t.hasAttribute("data--transform-" + n)) {
+              let r = t.getAttribute("data--transform-" + n);
+              t.style.transform = r, t.setAttribute("data--transform-val", n);
+            }
+          } else {
+            if (t.removeAttribute("data-breakpoint"), t.hasAttribute("data--t")) {
+              let r = t.getAttribute("data--t");
+              t.style.top = r;
+            }
+            if (t.hasAttribute("data--l")) {
+              let r = t.getAttribute("data--l");
+              t.style.left = r;
+            }
+            if (t.hasAttribute("data--b")) {
+              let r = t.getAttribute("data--b");
+              t.style.bottom = r;
+            }
+            if (t.hasAttribute("data--r")) {
+              let r = t.getAttribute("data--r");
+              t.style.right = r;
+            }
+            if (t.hasAttribute("data--w")) {
+              let r = t.getAttribute("data--w");
+              t.style.width = r;
+            }
+            if (t.hasAttribute("data--h")) {
+              let r = t.getAttribute("data--h");
+              t.style.height = r;
+            }
+            if (t.hasAttribute("data--transform")) {
+              let r = t.getAttribute("data--transform");
+              t.style.transform = r, t.setAttribute("data--transform-val", "");
+            }
+          }
+          t.setAttribute("data-prev", n), setTimeout(() => {
+            s || (t.style.transition = "");
+          }, 400);
+        }
+      },
+      applyFluid: (t, n) => {
+        t.classList.toggle("fluid", n === "yes"), t.setAttribute("data-fluid", n);
+      },
+      resize: (t) => {
+        const n = window.innerWidth;
+        document.querySelectorAll(".is-box").forEach((s) => {
+          let r = [];
+          const o = s.attributes;
+          for (let a = 0; a < o.length; a++) {
+            let u = o[a].name.match(/^data--h-(\d+)$/);
+            if (u) {
+              const l = parseInt(u[1], 10);
+              r.push(l);
+            }
+          }
+          r = [...new Set(r)], r.sort((a, d) => d - a);
+          for (let a = 0; a < r.length; a++) {
+            const d = r[a];
+            if (a === 0) {
+              if (n > d) {
+                let u = s.getAttribute("data--h");
+                u ? s.style.height = u : s.style.height = "";
+              }
+            } else {
+              const u = r[a - 1];
+              if (u >= n && n > d) {
+                let l = s.getAttribute("data--h-" + u);
+                l && (s.style.height = l);
+              }
+            }
+          }
+          if (r.length > 0 && r[r.length - 1] >= n) {
+            const d = r[r.length - 1];
+            let u = s.getAttribute("data--h-" + d);
+            u && (s.style.height = u);
+          }
+        }), document.querySelectorAll(".is-block").forEach((s) => {
+          if (!s.classList.contains("locked")) {
+            s.offsetWidth + 60 > n && !s.classList.contains("fluid") && (s.setAttribute("data-fluid-val", s.offsetWidth), e.applyFluid(s, "yes"));
+            let a = s.getAttribute("data-fluid-val");
+            a && parseInt(a) + 60 <= n && s.classList.contains("fluid") && e.applyFluid(s, "no");
+          }
+          let r = [];
+          const o = s.attributes;
+          for (let a = 0; a < o.length; a++) {
+            const d = o[a].name;
+            let u = d.match(/^data--t-(\d+)$/);
+            if (u) {
+              const l = parseInt(u[1], 10);
+              r.push(l);
+            }
+            if (u = d.match(/^data--w-(\d+)$/), u) {
+              const l = parseInt(u[1], 10);
+              r.push(l);
+            }
+            if (u = d.match(/^data--transform-(\d+)$/), u) {
+              const l = parseInt(u[1], 10);
+              r.push(l);
+            }
+          }
+          r = [...new Set(r)], r.sort((a, d) => d - a);
+          for (let a = 0; a < r.length; a++) {
+            const d = r[a];
+            if (a === 0)
+              n > d && e.apply(s, 1e4, t);
+            else {
+              const u = r[a - 1];
+              u >= n && n > d && e.apply(s, u, t);
+            }
+          }
+          if (r.length > 0) {
+            const a = r[r.length - 1];
+            a >= n && e.apply(s, a, t);
+          }
+        });
+      },
+      render: () => {
+        e.start(), e.resize(!0);
+      },
+      renderPageCss: (t) => {
+        const n = document.querySelector(t);
+        n.classList.add("is-page");
+        const r = n.querySelector("[data-pagesize]").getAttribute("data-pagesize"), o = document.querySelector("#__css_pagesize");
+        o && o.remove();
+        let a = "";
+        if (r) {
+          const d = r.split(",");
+          let u = d[0].trim(), l = d[1].trim();
+          d.length === 3 ? a = `
+                        <style id="__css_pagesize">
+                        .is-page {
+                            position: relative;
+                            display: flex;
+                            align-items: center;
+                            flex-direction: column;
+                        }
+                        .is-page {
+                            ${(u === "100%" || u === "100vw") && (l === "100%" || l === "100vh") ? "" : "margin-top: 150px;"}
+                        }
+                        .is-box {
+                            width: 100%;
+                            max-width: ${u};
+                            height: ${l};
+                            margin: 0 auto;
+                        }
+                        ${(u === "100%" || u === "100vw") && (l === "100%" || l === "100vh") ? `
+                        @media print { 
+                            .is-page {
+                                margin-top: 0;
+                                margin-bottom: 0;
+                                gap: 0;
+                            }
+                            .is-box {
+                                width: 1920px;
+                                height: 1024px
+                            } 
+                        }
+                        @page {
+                            size:1920px 1024px; 
+                            margin: 0; 
+                        }
+                        ` : `
+                        @media print { 
+                            .is-page {
+                                margin-top: 0;
+                                margin-bottom: 0;
+                                gap: 0;
+                            }
+                            .is-box {
+                                width: ${u};
+                                height: ${l};
+                            } 
+                            .hide-on-print {
+                                display: none !important;
+                            }
+                        }
+                        @page {
+                            size:${u} ${l};; 
+                            margin: 0; 
+                        }
+                        `}
+                        
+                        </style>
+                        ` : (document.body.classList.add("print"), a = `
+                        <style id="__css_pagesize">
+                        .is-page {
+                            margin-top:150px;
+                            gap: 45px;
+
+                            position: relative;
+                            display: flex;
+                            align-items: center;
+                            flex-direction: column;
+                        }
+                        .is-box {
+                            width: ${u};
+                            height: ${l};
+                        }
+                        @media print { 
+                            .is-page {
+                                margin-top: 0;
+                                margin-bottom: 0;
+                                gap: 0;
+                            }
+                            .is-box {
+                                width: ${u}; 
+                                height: ${l};
+                            } 
+                            .hide-on-print {
+                                display: none !important;
+                            }
+                        }
+                        @page {
+                            size:${u} ${l};
+                            margin: 0; 
+                        }
+                        </style>
+                        `), document.head.insertAdjacentHTML("beforeend", a), n.style.opacity = "";
+        }
+      }
+    }, i = (t, n) => {
+      let s;
+      return (...r) => {
+        clearTimeout(s), s = setTimeout(() => t(...r), n);
+      };
+    };
+    this.resize = i(() => {
+      e.resize();
+    }, 0), window.addEventListener("resize", this.resize), e.start(), e.resize(!0), this.Block = e;
+  }
+  renderPageCss(e) {
+    this.Block.renderPageCss(e);
+  }
+  destroy() {
+    this.glightbox && (this.glightbox.destroy(), this.glightbox = null), document.querySelectorAll(".is-lightbox,.block-click").forEach((i) => {
+      i._lightboxHandler && (i.removeEventListener("click", i._lightboxHandler), delete i._lightboxHandler);
+    }), this.resize && window.removeEventListener("resize", this.resize);
+  }
+}
+export {
+  vn as default
+};

@@ -1,0 +1,189 @@
+/* Sticky Category Navigation */
+
+div.is-section.sticky-nav { /* this is the placement of the sticky-category-nav plugin */
+    position: sticky;
+    height: 70px;
+    top: 0;
+    z-index: 1;
+}
+
+/* The sticky-category-nav plugin */
+[data-cb-type="sticky-category-nav"] {
+    height: 100%;
+
+    --background-color: rgb(245, 245, 245);
+    --color: #666;
+    --accent-color: #1a1a1a;
+    
+    background-color: var(--background-color);
+}
+
+/* Container wrapper */
+[data-cb-type="sticky-category-nav"] .category-nav-container {
+    max-width: 980px;
+    margin: 0 auto;
+    padding: 0 20px;
+}
+
+/* Navigation List */
+[data-cb-type="sticky-category-nav"] .category-nav-list {
+    display: flex;
+    gap: 30px;
+    list-style: none;
+    margin: 0;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+/* Custom Scrollbar Styling */
+[data-cb-type="sticky-category-nav"] .category-nav-list::-webkit-scrollbar {
+    height: 3px;
+}
+
+[data-cb-type="sticky-category-nav"] .category-nav-list::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+[data-cb-type="sticky-category-nav"] .category-nav-list::-webkit-scrollbar-thumb {
+    background: #ddd;
+    border-radius: 10px;
+}
+
+[data-cb-type="sticky-category-nav"] .category-nav-list::-webkit-scrollbar-thumb:hover {
+    background: #bbb;
+}
+
+/* List Items */
+[data-cb-type="sticky-category-nav"] .category-nav-list li {
+    display: inline-flex;
+    align-items: center;
+    padding: 21px 0;
+}
+
+/* Links */
+[data-cb-type="sticky-category-nav"] .category-nav-list a {
+    font-size: 13px;
+    font-weight: 400;
+    text-decoration: none;
+    white-space: nowrap;
+    padding-top: 4px;
+    padding-bottom: 2px;
+    border-bottom: 2px solid transparent;
+    transition: all 0.2s ease;
+    display: inline-block;
+
+    color: var(--color);
+}
+
+/* Hover State */
+[data-cb-type="sticky-category-nav"] .category-nav-list a:hover {
+    color: var(--color);
+    border-bottom-color: var(--accent-color);
+}
+
+/* Active State */
+[data-cb-type="sticky-category-nav"] .category-nav-list a.active,
+[data-cb-type="sticky-category-nav"] .category-nav-list a[aria-current="true"] {
+    color: var(--accent-color);
+    border-bottom-color: var(--accent-color);
+    /* font-weight: 500; */
+}
+
+/* Focus State for Accessibility */
+[data-cb-type="sticky-category-nav"] .category-nav-list a:focus {
+    outline: 2px solid #2563eb;
+    outline-offset: 4px;
+    border-radius: 2px;
+}
+
+[data-cb-type="sticky-category-nav"] .category-nav-list a:focus:not(:focus-visible) {
+    outline: none;
+}
+
+/* Skip Link (Accessibility) */
+[data-cb-type="sticky-category-nav"] .skip-link {
+    position: absolute;
+    left: -10000px;
+    top: auto;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+}
+
+[data-cb-type="sticky-category-nav"] .skip-link:focus {
+    position: absolute;
+    left: 10px;
+    top: 10px;
+    z-index: 10000;
+    padding: 8px 12px;
+    background: #000;
+    color: #fff;
+    text-decoration: none;
+    border-radius: 4px;
+    width: auto;
+    height: auto;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    [data-cb-type="sticky-category-nav"] {
+        padding: 15px 0;
+        margin-bottom: 60px;
+    }
+
+    [data-cb-type="sticky-category-nav"] .category-nav-container {
+        padding: 0 15px;
+    }
+
+    [data-cb-type="sticky-category-nav"] .category-nav-list {
+        gap: 20px;
+    }
+
+    [data-cb-type="sticky-category-nav"] .category-nav-list a {
+        font-size: 12px;
+    }
+}
+
+@media (max-width: 480px) {
+    [data-cb-type="sticky-category-nav"] {
+        top: 60px;
+        padding: 12px 0;
+    }
+
+    [data-cb-type="sticky-category-nav"] .category-nav-list {
+        gap: 16px;
+    }
+}
+
+/* High Contrast Mode Support */
+@media (prefers-contrast: high) {
+    [data-cb-type="sticky-category-nav"] {
+        border-bottom: 2px solid #000;
+    }
+
+    [data-cb-type="sticky-category-nav"] .category-nav-list a {
+        color: #000;
+    }
+
+    [data-cb-type="sticky-category-nav"] .category-nav-list a.active,
+    [data-cb-type="sticky-category-nav"] .category-nav-list a:hover {
+        border-bottom-color: #000;
+        border-bottom-width: 3px;
+    }
+}
+
+/* Reduced Motion Support */
+@media (prefers-reduced-motion: reduce) {
+    [data-cb-type="sticky-category-nav"] .category-nav-list a {
+        transition: none;
+    }
+}
+
+/* Print Styles */
+@media print {
+    [data-cb-type="sticky-category-nav"] {
+        position: static;
+        border-bottom: 1px solid #ccc;
+        page-break-after: avoid;
+    }
+}

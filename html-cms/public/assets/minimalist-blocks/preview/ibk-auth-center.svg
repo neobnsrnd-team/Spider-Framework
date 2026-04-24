@@ -1,0 +1,47 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 200" width="300" height="200">
+  <rect width="300" height="200" fill="white" rx="12"/>
+
+  <!-- Header -->
+  <line x1="0" y1="46" x2="300" y2="46" stroke="#F3F4F6" stroke-width="1"/>
+  <text x="18" y="24" font-family="sans-serif" font-size="15" fill="#1A1A2E" font-weight="700">인증센터</text>
+  <text x="18" y="38" font-family="sans-serif" font-size="10" fill="#6B7280">안전한 금융거래를 위한 인증 서비스</text>
+
+  <!-- Card 1 - 공동인증서 -->
+  <rect x="0" y="46" width="300" height="36" fill="white"/>
+  <rect x="14" y="53" width="26" height="26" fill="#E8F0FC" rx="8"/>
+  <text x="27" y="70" font-family="sans-serif" font-size="13" text-anchor="middle">📄</text>
+  <text x="52" y="64" font-family="sans-serif" font-size="12" fill="#1A1A2E" font-weight="700">공동인증서</text>
+  <text x="52" y="76" font-family="sans-serif" font-size="9" fill="#6B7280">발급 · 갱신 · 복사</text>
+  <text x="282" y="69" font-family="sans-serif" font-size="14" fill="#D1D5DB" text-anchor="middle">›</text>
+  <line x1="12" y1="82" x2="288" y2="82" stroke="#F9FAFB" stroke-width="1"/>
+
+  <!-- Card 2 - 금융인증서 -->
+  <rect x="0" y="82" width="300" height="36" fill="white"/>
+  <rect x="14" y="89" width="26" height="26" fill="#E8F0FC" rx="8"/>
+  <text x="27" y="106" font-family="sans-serif" font-size="13" text-anchor="middle">🔐</text>
+  <text x="52" y="100" font-family="sans-serif" font-size="12" fill="#1A1A2E" font-weight="700">금융인증서</text>
+  <text x="52" y="112" font-family="sans-serif" font-size="9" fill="#6B7280">클라우드 기반 인증</text>
+  <text x="282" y="105" font-family="sans-serif" font-size="14" fill="#D1D5DB" text-anchor="middle">›</text>
+  <line x1="12" y1="118" x2="288" y2="118" stroke="#F9FAFB" stroke-width="1"/>
+
+  <!-- Card 3 - OTP -->
+  <rect x="0" y="118" width="300" height="36" fill="white"/>
+  <rect x="14" y="125" width="26" height="26" fill="#FFF3EC" rx="8"/>
+  <text x="27" y="142" font-family="sans-serif" font-size="13" text-anchor="middle">📱</text>
+  <text x="52" y="136" font-family="sans-serif" font-size="12" fill="#1A1A2E" font-weight="700">OTP</text>
+  <text x="52" y="148" font-family="sans-serif" font-size="9" fill="#6B7280">일회용 비밀번호 생성기</text>
+  <text x="282" y="141" font-family="sans-serif" font-size="14" fill="#D1D5DB" text-anchor="middle">›</text>
+  <line x1="12" y1="154" x2="288" y2="154" stroke="#F9FAFB" stroke-width="1"/>
+
+  <!-- Card 4 - 보안카드 -->
+  <rect x="0" y="154" width="300" height="30" fill="white"/>
+  <rect x="14" y="159" width="26" height="22" fill="#F0FFF4" rx="7"/>
+  <text x="27" y="174" font-family="sans-serif" font-size="12" text-anchor="middle">🛡</text>
+  <text x="52" y="170" font-family="sans-serif" font-size="12" fill="#1A1A2E" font-weight="700">보안카드</text>
+  <text x="52" y="180" font-family="sans-serif" font-size="9" fill="#6B7280">보안카드 분실 · 재발급</text>
+  <text x="282" y="175" font-family="sans-serif" font-size="14" fill="#D1D5DB" text-anchor="middle">›</text>
+
+  <!-- Security notice -->
+  <rect x="0" y="184" width="300" height="16" fill="#FEF9C3"/>
+  <text x="18" y="195" font-family="sans-serif" font-size="8" fill="#78350F">🔒 IBK기업은행은 보안카드 번호 전체를 요구하지 않습니다.</text>
+</svg>

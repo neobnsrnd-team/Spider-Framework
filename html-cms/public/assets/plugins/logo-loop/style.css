@@ -1,0 +1,122 @@
+/**
+ * ContentBox Logo Loop Plugin Styles
+ * @version 1.0.0
+ * 
+ * Usage with ContentBox Runtime:
+ * plugins/logo-loop/style.css
+ */
+
+.cb-logo-loop {
+    --loop-duration: 20s;
+    --loop-distance: 1000px;
+    --loop-direction: -1;
+    
+    position: relative;
+    width: 100%;
+    overflow: hidden;
+    user-select: none;
+}
+
+.cb-logo-loop__container {
+    display: flex;
+    width: 100%;
+    overflow: hidden;
+}
+
+.cb-logo-loop__track {
+    display: flex;
+    align-items: center;
+    width: fit-content;
+    will-change: transform;
+}
+
+.cb-logo-loop__track--animating {
+    animation: cb-logo-loop-scroll var(--loop-duration) linear infinite;
+}
+
+.cb-logo-loop__item {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Ensure images maintain aspect ratio */
+.cb-logo-loop__item img {
+    display: block;
+    /* max-width: 100%; */
+    max-width: 60px;
+    height: auto;
+    object-fit: contain;
+}
+
+/* Animation */
+@keyframes cb-logo-loop-scroll {
+    0% {
+        transform: translateX(0);
+    }
+    100% {
+        transform: translateX(calc(var(--loop-distance) * var(--loop-direction)));
+    }
+}
+
+/* Smooth animation performance */
+.cb-logo-loop__track--animating {
+    backface-visibility: hidden;
+    perspective: 1000px;
+}
+
+/* Accessibility: Respect reduced motion preference */
+@media (prefers-reduced-motion: reduce) {
+    .cb-logo-loop__track--animating {
+        animation: none;
+    }
+    
+    /* Show only original items when motion is reduced */
+    .cb-logo-loop__item[data-clone] {
+        display: none;
+    }
+}
+
+/* Optional: Fade edges for better visual effect */
+.cb-logo-loop--fade-edges {
+    mask-image: linear-gradient(
+        to right,
+        transparent 0%,
+        black 10%,
+        black 90%,
+        transparent 100%
+    );
+    -webkit-mask-image: linear-gradient(
+        to right,
+        transparent 0%,
+        black 10%,
+        black 90%,
+        transparent 100%
+    );
+}
+
+/* Hover state indicator (optional) */
+.cb-logo-loop:hover .cb-logo-loop__item {
+    opacity: 0.8;
+    transition: opacity 0.3s ease;
+}
+
+.cb-logo-loop:hover .cb-logo-loop__item:hover {
+    opacity: 1;
+}
+
+/* Dark mode support */
+[data-cb-skin="dark"] .cb-logo-loop__item img {
+    filter: brightness(0.9);
+}
+
+/* Loading state */
+.cb-logo-loop[data-cb-logo-loop-initialized="false"] {
+    opacity: 0;
+}
+
+.cb-logo-loop[data-cb-logo-loop-initialized="true"] {
+    opacity: 1;
+    transition: opacity 0.3s ease;
+}

@@ -1,0 +1,60 @@
+{
+  "name": "contentbuilder-next",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "dev:clean": "rimraf .next && next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint",
+    "lint:fix": "eslint --fix",
+    "format": "prettier --write \"src/**/*.{ts,tsx}\"",
+    "format:check": "prettier --check \"src/**/*.{ts,tsx}\"",
+    "seed": "npx tsx src/db/seed/run-seed.ts",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
+    "test:e2e:report": "playwright show-report",
+    "prepare": "husky"
+  },
+  "lint-staged": {
+    "src/**/*.{ts,tsx}": [
+      "prettier --write",
+      "eslint --fix"
+    ]
+  },
+  "dependencies": {
+    "@fal-ai/client": "^1.6.2",
+    "@innovastudio/contentbuilder": "^1.5.192",
+    "@innovastudio/contentbuilder-runtime": "^1.0.33",
+    "axios": "^1.12.2",
+    "html2canvas": "^1.4.1",
+    "jose": "^6.2.2",
+    "lucide-react": "^0.544.0",
+    "next": "15.5.4",
+    "node-cron": "^4.2.1",
+    "oracledb": "^6.10.0",
+    "react": "19.1.0",
+    "react-dom": "19.1.0"
+  },
+  "devDependencies": {
+    "@eslint/eslintrc": "^3",
+    "@playwright/test": "^1.59.1",
+    "@tailwindcss/postcss": "^4",
+    "@types/node": "^20",
+    "@types/node-cron": "^3.0.11",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "dotenv": "^17.3.1",
+    "eslint": "^9",
+    "eslint-config-next": "15.5.4",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-playwright": "^2.10.1",
+    "eslint-plugin-security": "^4.0.0",
+    "husky": "^9.1.7",
+    "lint-staged": "^16.4.0",
+    "prettier": "^3.8.1",
+    "tailwindcss": "^4",
+    "typescript": "^5"
+  }
+}

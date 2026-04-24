@@ -1,0 +1,222 @@
+/* IBK Exchange Rate Board - Mobile First */
+[data-cb-type="exchange-board"] {
+    container-type: inline-size;
+    --eb-accent: #0046A4;
+    --eb-up: #DC2626;
+    --eb-down: #2563EB;
+    position: relative;
+    background: #fff;
+    border-radius: 20px;
+    /* overflow: hidden 제거 — ContentBuilder 툴바 클리핑 방지 */
+    box-shadow: 0 2px 16px rgba(0, 70, 164, 0.07);
+    font-family: -apple-system, BlinkMacSystemFont, 'Malgun Gothic', sans-serif;
+}
+
+[data-cb-type="exchange-board"] .eb-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 18px 20px 14px;
+    border-bottom: 1px solid #F3F4F6;
+}
+
+[data-cb-type="exchange-board"] .eb-title {
+    font-size: 17px;
+    font-weight: 700;
+    color: #1A1A2E;
+}
+
+[data-cb-type="exchange-board"] .eb-updated {
+    font-size: 11px;
+    color: #9CA3AF;
+    font-weight: 500;
+}
+
+/* List */
+[data-cb-type="exchange-board"] .eb-list {
+    padding: 0;
+}
+
+[data-cb-type="exchange-board"] .eb-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 20px;
+    border-bottom: 1px solid #F9FAFB;
+    transition: background 0.15s ease;
+    min-height: 64px;
+}
+
+[data-cb-type="exchange-board"] .eb-item:last-child {
+    border-bottom: none;
+}
+
+[data-cb-type="exchange-board"] .eb-item:active {
+    background: #F8FAFF;
+}
+
+/* Left section */
+[data-cb-type="exchange-board"] .eb-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex: 1;
+}
+
+[data-cb-type="exchange-board"] .eb-flag {
+    width: 36px;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+[data-cb-type="exchange-board"] .eb-flag img {
+    width: 28px;
+    height: auto;
+    display: block;
+}
+
+[data-cb-type="exchange-board"] .eb-currency-info {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+[data-cb-type="exchange-board"] .eb-code {
+    font-size: 15px;
+    font-weight: 700;
+    color: #1A1A2E;
+    letter-spacing: 0.5px;
+}
+
+[data-cb-type="exchange-board"] .eb-name {
+    font-size: 11px;
+    color: #9CA3AF;
+    font-weight: 500;
+}
+
+/* Right section */
+[data-cb-type="exchange-board"] .eb-right {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 4px;
+}
+
+[data-cb-type="exchange-board"] .eb-rates {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    align-items: flex-end;
+}
+
+[data-cb-type="exchange-board"] .eb-rate-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+[data-cb-type="exchange-board"] .eb-label {
+    font-size: 10px;
+    color: #9CA3AF;
+    background: #F3F4F6;
+    padding: 2px 6px;
+    border-radius: 4px;
+}
+
+[data-cb-type="exchange-board"] .eb-buy,
+[data-cb-type="exchange-board"] .eb-sell {
+    font-size: 14px;
+    font-weight: 600;
+    color: #1A1A2E;
+    font-variant-numeric: tabular-nums;
+    min-width: 70px;
+    text-align: right;
+}
+
+/* Change indicator */
+[data-cb-type="exchange-board"] .eb-change {
+    font-size: 11px;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 6px;
+}
+
+[data-cb-type="exchange-board"] .eb-change.up {
+    color: var(--eb-up);
+    background: #FEF2F2;
+}
+
+[data-cb-type="exchange-board"] .eb-change.down {
+    color: var(--eb-down);
+    background: #EFF6FF;
+}
+
+/* Footer */
+[data-cb-type="exchange-board"] .eb-footer {
+    padding: 12px 20px 16px;
+    border-top: 1px solid #F3F4F6;
+}
+
+[data-cb-type="exchange-board"] .eb-exchange-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    background: var(--eb-accent);
+    color: #fff;
+    text-decoration: none;
+    font-size: 15px;
+    font-weight: 600;
+    padding: 14px;
+    border-radius: 12px;
+    min-height: 48px;
+    transition: opacity 0.2s ease;
+    -webkit-tap-highlight-color: transparent;
+    box-sizing: border-box;
+}
+
+[data-cb-type="exchange-board"] .eb-exchange-btn:active {
+    opacity: 0.85;
+}
+
+/* Dark mode */
+[data-cb-skin="dark"] [data-cb-type="exchange-board"] {
+    background: #1F2937;
+    box-shadow: 0 2px 16px rgba(0, 0, 0, 0.3);
+}
+
+[data-cb-skin="dark"] [data-cb-type="exchange-board"] .eb-title {
+    color: #F9FAFB;
+}
+
+[data-cb-skin="dark"] [data-cb-type="exchange-board"] .eb-header {
+    border-bottom-color: #374151;
+}
+
+[data-cb-skin="dark"] [data-cb-type="exchange-board"] .eb-item {
+    border-bottom-color: #374151;
+}
+
+[data-cb-skin="dark"] [data-cb-type="exchange-board"] .eb-item:active {
+    background: #111827;
+}
+
+[data-cb-skin="dark"] [data-cb-type="exchange-board"] .eb-code {
+    color: #F9FAFB;
+}
+
+[data-cb-skin="dark"] [data-cb-type="exchange-board"] .eb-buy,
+[data-cb-skin="dark"] [data-cb-type="exchange-board"] .eb-sell {
+    color: #F9FAFB;
+}
+
+[data-cb-skin="dark"] [data-cb-type="exchange-board"] .eb-label {
+    background: #374151;
+    color: #9CA3AF;
+}
+
+[data-cb-skin="dark"] [data-cb-type="exchange-board"] .eb-footer {
+    border-top-color: #374151;
+}
