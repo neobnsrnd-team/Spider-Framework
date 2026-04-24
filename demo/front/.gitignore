@@ -12,6 +12,11 @@ dist
 dist-ssr
 *.local
 
+# AI 생성 파일 — local 배포 모드 테스트 시 생성되는 임시 파일
+# git-pr 모드로 배포 시 PR을 통해 관리되므로 로컬에서는 추적하지 않음
+src/generated/
+src/containers/
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

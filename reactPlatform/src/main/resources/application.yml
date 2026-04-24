@@ -90,6 +90,13 @@ menu:
     - v3_emergency_notice # 긴급공지
     - v3_cms_manage # HTML CMS
 
+# Swagger / OpenAPI Configuration
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+  api-docs:
+    path: /v3/api-docs
+
 # React 코드 배포 전략 설정
 # mode: local  — 서버 로컬 파일시스템에 UI 컴포넌트 + Container scaffold 기록
 # mode: git-pr — 대상 GitHub 레포에 브랜치를 생성하고 PR을 자동으로 올림
