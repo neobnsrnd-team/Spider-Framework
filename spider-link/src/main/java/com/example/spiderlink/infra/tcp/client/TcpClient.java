@@ -50,12 +50,6 @@ public class TcpClient {
     @Nullable
     private final MessageInstanceRecorder recorder;
 
-    /** 기록기 없는 생성자 (하위 호환) */
-    public TcpClient(ObjectMapper objectMapper) {
-        this(objectMapper, null);
-    }
-
-    /** 기록기 포함 생성자 */
     public TcpClient(ObjectMapper objectMapper, @Nullable MessageInstanceRecorder recorder) {
         this.objectMapper = objectMapper;
         this.recorder = recorder;
