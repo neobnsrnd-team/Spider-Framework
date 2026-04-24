@@ -127,6 +127,7 @@ public class CmsBuilderClient {
             cmsBuilderRestClient
                     .delete()
                     .uri(DELETE_PATH_TEMPLATE, assetId)
+                    .header("x-deploy-token", properties.getDeploySecret())
                     .retrieve()
                     .toBodilessEntity();
 

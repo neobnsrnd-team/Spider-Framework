@@ -1,19 +1,38 @@
 // src/app/api/assets/[assetId]/route.ts
 // 에셋 단건 삭제 API
 
+import { timingSafeEqual } from 'crypto';
 import { unlink } from 'fs/promises';
 
 import { NextRequest } from 'next/server';
 
 import { deleteAsset, getAssetById, hardDeleteAsset } from '@/db/repository/asset.repository';
+import { errorResponse, getErrorMessage, successResponse } from '@/lib/api-response';
 import { canWriteCms, getCurrentUser } from '@/lib/current-user';
-import { successResponse, errorResponse, getErrorMessage } from '@/lib/api-response';
+import { DEPLOY_SECRET } from '@/lib/env';
+
+/**
+ * Admin 백엔드 등 서버 간 호출 시 x-deploy-token 헤더로 인증한다.
+ * 타이밍 공격 방지를 위해 timingSafeEqual로 비교한다.
+ */
+function isValidToken(token: string | null): boolean {
+    if (!DEPLOY_SECRET || !token) return false;
+    try {
+        const expected = Buffer.from(DEPLOY_SECRET, 'utf8');
+        const received = Buffer.from(token, 'utf8');
+        if (expected.length !== received.length) return false;
+        return timingSafeEqual(expected, received);
+    } catch {
+        return false;
+    }
+}
 
 /**
  * DELETE /api/assets/:assetId — 에셋 삭제
  * - APPROVED: 논리 삭제 (USE_YN = 'N') — 페이지 참조 보존
  * - WORK/PENDING/REJECTED: 물리 삭제 (DB row 완전 제거)
  * - 모든 상태에서 물리 파일은 제거
+ * - x-deploy-token 헤더 유효 시 세션 없이 서버 간 호출 허용 (Admin 백엔드용)
  */
 export async function DELETE(req: NextRequest, { params }: { params: Promise<{ assetId: string }> }) {
     try {
@@ -24,11 +43,21 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ a
             return errorResponse('에셋을 찾을 수 없습니다.', 404);
         }
 
-        const currentUser = await getCurrentUser();
-        if (!canWriteCms(currentUser)) {
-            return errorResponse('Permission denied.', 403);
+        let userId: string;
+        let userName: string;
+
+        if (isValidToken(req.headers.get('x-deploy-token'))) {
+            // 서버 간 호출(Admin 백엔드): 세션 없이 시스템 계정으로 처리
+            userId = 'SYSTEM';
+            userName = 'SYSTEM';
+        } else {
+            const currentUser = await getCurrentUser();
+            if (!canWriteCms(currentUser)) {
+                return errorResponse('Permission denied.', 403);
+            }
+            userId = currentUser.userId;
+            userName = currentUser.userName;
         }
-        const { userId, userName } = currentUser;
 
         // 상태별 DB 삭제 처리
         if (asset.ASSET_STATE === 'APPROVED') {
