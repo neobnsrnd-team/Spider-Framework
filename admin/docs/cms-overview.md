@@ -101,7 +101,6 @@ v3_cms_admin_statistics / v3_cms_admin_ab_tests / v3_cms_admin_components:
 | URL | 화면 | 비고 |
 | --- | --- | --- |
 | `/cms/dashboard` | 페이지 제작자 dashboard | spider-admin Thymeleaf 구현 (`pages/cms-dashboard/`). `/api/cms-dashboard/*` API 사용 |
-| `/react-cms/dashboard` | 페이지 제작자 dashboard (React 버전) | spider-admin React 구현 (`pages/react-cms-dashboard/`) |
 
 ### 라우팅 규칙
 
