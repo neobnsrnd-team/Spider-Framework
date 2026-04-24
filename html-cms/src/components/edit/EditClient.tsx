@@ -1934,15 +1934,23 @@ export default function EditClient({
     //   · 교체 모드 (imageReplaceTargetRef 가 있을 때): 첫 URL 로 activeImage src 교체
     //   · 삽입 모드: selectAsset 루프 호출
     // - PICKER_CLOSE: iframe 모달 내부 닫기 버튼에서 부모에게 모달 종료 요청
+    //
+    // cms-file-picker 유틸(EventBanner/PopupBanner 등 6개 에디터가 사용)이 동시에
+    // 같은 메시지를 수신하므로, 유틸 모달이 활성이면 이 리스너는 개입하지 않는다.
+    // (그렇지 않으면 슬라이드 업데이트 + 캔버스에 이미지가 추가 삽입되는 이중 처리 발생)
     useEffect(() => {
+        const isCmsFilePickerActive = () => document.getElementById('spw-cms-file-picker-modal') !== null;
+
         const handleMessage = (event: MessageEvent) => {
             switch (event.data.type) {
                 case 'ASSET_SELECTED':
+                    if (isCmsFilePickerActive()) break;
                     builderRef.current?.selectAsset(event.data.url);
                     setImagePickerOpen(false);
                     window.focus();
                     break;
                 case 'ASSETS_SELECTED': {
+                    if (isCmsFilePickerActive()) break;
                     const urls: string[] = Array.isArray(event.data.urls) ? event.data.urls : [];
                     const replaceTarget = imageReplaceTargetRef.current;
 
@@ -1963,6 +1971,8 @@ export default function EditClient({
                 }
                 case 'PICKER_CLOSE':
                     // iframe 내부 AssetBrowser의 닫기(X) 버튼 → 모달 종료
+                    // 유틸 모달이면 유틸이 자체 cleanup하므로 개입하지 않는다.
+                    if (isCmsFilePickerActive()) break;
                     imageReplaceTargetRef.current = null;
                     setImagePickerOpen(false);
                     break;
