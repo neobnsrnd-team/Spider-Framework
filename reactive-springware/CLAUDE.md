@@ -1,8 +1,8 @@
 # Reactive-Springware Claude Code 지침
 
-## 컴포넌트 신규 추가 시
+## 컴포넌트 신규 추가 / 수정 시
 
-`component-library/`에 새 컴포넌트를 추가할 때는 반드시 아래 파일을 먼저 읽고 체크리스트를 따른다.
+`component-library/`에 새 컴포넌트를 추가하거나 기존 컴포넌트를 수정할 때는 반드시 아래 파일을 먼저 읽고 체크리스트를 따른다.
 
 ```
 docs/component-checklist.md
