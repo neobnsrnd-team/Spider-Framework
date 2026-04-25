@@ -175,7 +175,7 @@ function PinConfirmSheetRenderer({ open, onClose, container, props }: OverlayRen
  */
 function ModalSlideOverRenderer({ open, onClose, children, container, props }: OverlayRendererProps) {
   if (!open) return null;
-  const direction = (props?.direction as 'right' | 'bottom' | undefined) ?? 'right';
+  const direction = props?.direction === 'bottom' ? 'bottom' : 'right';
   return (
     <ModalSlideOver direction={direction} onClose={onClose} container={container ?? undefined}>
       {children}
