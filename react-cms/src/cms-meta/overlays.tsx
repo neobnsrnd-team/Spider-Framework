@@ -148,8 +148,8 @@ function UsageHistoryFilterSheetRenderer({ open, onClose, container }: OverlayRe
  */
 function PinConfirmSheetRenderer({ open, onClose, container, props }: OverlayRendererProps) {
   if (!open) return null;
-  const title     = (props?.title     as string | undefined) ?? '비밀번호 입력';
-  const pinLength = (props?.pinLength as number | undefined) ?? 4;
+  const title     = typeof props?.title === 'string' ? props.title : '비밀번호 입력';
+  const pinLength = typeof props?.pinLength === 'number' ? props.pinLength : 4;
   return (
     <PinConfirmSheet
       open={open}
